@@ -28,6 +28,14 @@ export function synthCue(context: BaseAudioContext, destination: AudioNode, type
     source.connect(filter).connect(envelope).connect(destination); source.start(when); source.stop(when + duration); source.onended = () => { source.disconnect(); filter.disconnect(); envelope.disconnect(); }; nodes.push(source);
     if (!scrape) { tone(90, 0.22, 0, 0.36, 32, 'triangle'); tone(430, 0.1, 0.005, 0.1, 140); }
   }
+  else if (type === 'takeoff') { tone(140, 0.22, 0, 0.12, 430, 'triangle'); }
+  else if (type === 'landing') { tone(85, 0.2, 0, 0.32, 28, 'triangle'); tone(190, 0.09, 0, 0.07, 65); }
+  else if (type === 'splash') {
+    const source = context.createBufferSource(), filter = context.createBiquadFilter(), envelope = context.createGain();
+    source.buffer = noise; filter.type = 'lowpass'; filter.frequency.setValueAtTime(2400, when); filter.frequency.exponentialRampToValueAtTime(180, when + 0.65);
+    envelope.gain.setValueAtTime(0.7, when); envelope.gain.exponentialRampToValueAtTime(0.0001, when + 0.7);
+    source.connect(filter).connect(envelope).connect(destination); source.start(when); source.stop(when + 0.72); source.onended = () => { source.disconnect(); filter.disconnect(); envelope.disconnect(); }; nodes.push(source);
+  }
   else if (type === 'collision') { tone(100, 0.2, 0, 0.35, 35, 'triangle'); tone(170, 0.08, 0.01, 0.08, 60); }
   else if (type === 'recovery') { tone(260, 0.18, 0, 0.1, 390); tone(520, 0.15, 0.15, 0.08); }
   else if (type === 'thrust' || type === 'drift') {

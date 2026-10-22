@@ -18,6 +18,7 @@ describe('playable circuit registry', () => {
     test('solid footprints preserve at least five metres of deliberate runoff', () => {
       const track = circuit.track;
       for (const barrier of track.barriers) {
+        if (barrier.kind === 'pier-rail') { expect(track.supports?.length).toBeGreaterThan(0); continue; }
         if (barrier.kind === 'bridge-rail' || barrier.kind === 'bridge-support') {
           expect(track.bridges?.some(b => b.id === barrier.bridgeId)).toBe(true); continue;
         }
@@ -41,7 +42,7 @@ describe('playable circuit registry', () => {
       const track = circuit.track, samples = createPracticeSamples(track, 7).map((p, i, all) => {
         const a = all[Math.max(0, i - 1)], b = all[Math.min(all.length - 1, i + 1)], len = Math.hypot(b.x - a.x, b.z - a.z) || 1;
         const winding = Math.sign(track.centerline.slice(1).reduce((sum, q, j) => sum + all[j].x * q.z - q.x * all[j].z, 0));
-        const phase = (track.distances[i] - 8) / 72, offset = phase > 0 && phase < 1 ? Math.sin(phase * Math.PI) ** 2 * 12 * winding : 0;
+        const phase = (track.distances[i] - (track.supports ? track.length - 85 : 8)) / 72, offset = phase > 0 && phase < 1 ? Math.sin(phase * Math.PI) ** 2 * 12 * winding : 0;
         return { ...p, x: p.x + (b.z - a.z) / len * offset, z: p.z - (b.x - a.x) / len * offset };
       });
       const result = compileRoute(samples, track); if (!result.ok) throw new Error(result.message);

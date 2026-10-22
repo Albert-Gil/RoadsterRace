@@ -114,22 +114,25 @@ export class VehicleView {
   clearEffects() { this.vapor.clear(); this.tireMarks.clear(); this.previousTime = 0; this.wheelDistance = 0; this.impactUntil = -1; }
   setPaint(color: string) { this.selectedPaint = color; this.paint.albedoColor = Color3.FromHexString(color).toLinearSpace(); }
   setTheme(theme: PresentationTheme) { this.paint.albedoColor = Color3.FromHexString(this.selectedPaint ?? (this.identity === null ? theme.scene.paint : theme.players[this.identity])).toLinearSpace(); this.glass.albedoColor = Color3.FromHexString(theme.scene.glass).toLinearSpace(); this.dustMaterial.emissiveColor = Color3.FromHexString(theme.scene.terrain); }
-  update(position: { x: number; z: number; heading: number }, speed = 0, thrust = false, time = 0, sandAmount = 0, drifting = false, steeringRate = 0, acceleration = 0) {
+  update(position: { x: number; z: number; heading: number; y?: number; pitch?: number; airborne?: boolean; shadowY?: number }, speed = 0, thrust = false, time = 0, sandAmount = 0, drifting = false, steeringRate = 0, acceleration = 0) {
     const reduced = this.reducedMotion.matches, dt = Math.max(0, Math.min(0.1, time - this.previousTime)); this.previousTime = time;
-    this.root.position.set(position.x, 0.13, position.z); this.root.rotation.y = position.heading;
+    this.root.position.set(position.x, 0.13 + (position.y ?? 0), position.z); this.root.rotation.y = position.heading; this.root.rotation.x = -(position.pitch ?? 0);
     const blend = 1 - Math.exp(-12 * dt);
     this.chassis.rotation.z += ((reduced ? 0 : Math.max(-0.045, Math.min(0.045, -steeringRate * speed * 0.0016))) - this.chassis.rotation.z) * blend;
     this.chassis.rotation.x += ((reduced ? 0 : Math.max(-0.035, Math.min(0.035, acceleration * 0.004))) - this.chassis.rotation.x) * blend;
     this.tail.emissiveColor.set(acceleration < -0.8 ? 2.5 : 0.5, 0.015, 0.005);
-    this.shadow.position.set(position.x + 0.15, this.detail === 'showcase' ? 0.135 : 0.125, position.z); this.shadow.rotation.y = position.heading;
-    this.tireMarks.update(position, time, this.detail === 'race' && !reduced && drifting && sandAmount < 0.2 && speed > 4);
+    this.chassis.position.y = !reduced && time < this.impactUntil ? -0.05 * Math.sin((this.impactUntil - time) / 0.22 * Math.PI) : 0;
+    const shadowY = position.airborne ? position.shadowY ?? 0 : position.y ?? 0, clearance = Math.max(0, (position.y ?? 0) - shadowY);
+    this.shadow.position.set(position.x + 0.15, (this.detail === 'showcase' ? 0.135 : 0.125) + shadowY, position.z); this.shadow.rotation.y = position.heading;
+    this.shadow.scaling.setAll(1 + clearance * 0.08); (this.shadow.material as StandardMaterial).alpha = 0.5 / (1 + clearance * 0.2);
+    this.tireMarks.update(position, time, this.detail === 'race' && !position.airborne && !reduced && drifting && sandAmount < 0.2 && speed > 4);
     this.wheelDistance += speed * dt;
     for (const w of this.wheels) { w.mesh.rotation.x = this.wheelDistance / w.radius; w.pivot.rotation.y = w.front ? Math.max(-0.43, Math.min(0.43, steeringRate * 2.8 / Math.max(5, speed))) : 0; }
     if (this.detail === 'race') this.vapor.update(position, speed, thrust, dt, reduced);
     this.jets.forEach((j, i) => { j.isVisible = thrust; j.scaling.y = 1 + (reduced ? 0 : Math.sin(time * 55 + i) * 0.14); });
     const impact = time < this.impactUntil;
     this.dustMaterial.alpha = impact ? 0.6 : sandAmount * 0.28;
-    this.dust.isVisible = !reduced && ((sandAmount > 0.08 && speed > 2) || impact);
+    this.dust.isVisible = !position.airborne && !reduced && ((sandAmount > 0.08 && speed > 2) || impact);
     if (this.dust.isVisible) {
       for (let i = 0; i < 6; i++) {
         const age = (time * 2 + i / 6) % 1, back = impact ? -1 : 2 + age * 5, side = Math.sin(i * 3.7) * (0.5 + age);

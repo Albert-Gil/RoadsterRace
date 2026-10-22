@@ -1,3 +1,4 @@
+import { rampAt, supported, FLIGHT_RULES } from './core/support';
 import './style.css';
 import { angleDelta, clamp, distance, lerp } from './core/geometry';
 import { LocalRace, gridPose } from './core/local-race';
@@ -74,7 +75,7 @@ const bestTimes = new Map<string, number>();
 const bestKey = () => `${activeTrack.id}:${activeTrack.version}:${lapCount}:${RULES.version}:${COMPILER_VERSION}`;
 let drawingTrim: DrawingTrim | undefined;
 let stroke: DrawSample[] = [], drawingPointer: number | null = null;
-let countdownRemaining = 0, resuming = false, best: number | null = null, previousPoses: { x: number; z: number; heading: number }[] = [], noticeUntil = 0, lastFrame = performance.now();
+let countdownRemaining = 0, resuming = false, best: number | null = null, previousPoses: { x: number; z: number; heading: number; y: number }[] = [], noticeUntil = 0, lastFrame = performance.now();
 let countdownBeat = 3, rechargeAnnounced: boolean[] = [];
 let world: GameScene;
 const clock = new FixedStepClock(), keys = ['KeyA', 'KeyL', 'KeyQ', 'KeyP'];
@@ -202,9 +203,9 @@ function beginDrawing() {
   world.vehicles.forEach(vehicle => vehicle.clearEffects());
   world.drawLine(null); world.showError(); world.vehicles[turn].update(startPose()); notice.textContent = ''; setPhase('drawing');
 }
-function usePractice() {
+function usePractice(jumpBranch = false) {
   if (phase !== 'drawing') return;
-  const result = compileRoute(createPracticeSamples(activeTrack, 7), activeTrack);
+  const result = compileRoute(createPracticeSamples(activeTrack, 7, jumpBranch), activeTrack);
   if (result.ok) { route = result.route; drawingTrim = result.drawing; world.drawLine(route, drawingTrim); world.showError(); setPhase('preview'); }
 }
 function confirmRoute() {
@@ -253,7 +254,7 @@ function updateHud() {
   }
   controls.querySelectorAll<HTMLButtonElement>('.racer-pad').forEach((pad, i) => {
     const s = race?.racers[i].state, remaining = s ? Math.max(0, s.thrustReadyAt - s.time) : 0;
-    const recovering = !!s && s.time < s.recoveringUntil;
+    const recovering = !!s && (s.time < s.recoveringUntil || s.recoveryWaiting);
     pad.disabled = phase === 'countdown' || (phase === 'racing' && (!!s?.finished || recovering));
     pad.style.setProperty('--charge', `${clamp(1 - remaining / RULES.thrustRecharge, 0, 1) * 360}deg`);
     pad.dataset.ready = String(phase === 'ready' ? readyPlayers[i] : remaining < 0.001); pad.dataset.firing = String(phase === 'racing' && !!s && s.time < s.thrustUntil);
@@ -268,9 +269,13 @@ function updateVehicles(alpha: number) {
     const pose = s ? {
       x: previous && !s.finished ? lerp(previous.x, s.position.x, alpha) : s.position.x,
       z: previous && !s.finished ? lerp(previous.z, s.position.z, alpha) : s.position.z,
+      y: previous && !s.finished ? lerp(previous.y, s.elevation, alpha) : s.elevation,
+      airborne: s.movement === 'airborne',
+      shadowY: supported(s.position, activeTrack) ? 0 : FLIGHT_RULES.waterHeight,
+      pitch: s.movement === 'airborne' ? Math.atan2(s.verticalVelocity, Math.max(1, s.speed)) : (() => { const j = rampAt(s.position, activeTrack); return j ? Math.atan(j.lipHeight / j.rampLength) * (Math.sin(s.heading) * j.forward.x + Math.cos(s.heading) * j.forward.z) : 0; })(),
       heading: previous && !s.finished ? previous.heading + angleDelta(previous.heading, s.heading) * alpha : s.heading,
     } : playerCount > 1 ? gridPose(activeTrack, (i + (activeTour ? roundIndex % playerCount : 0)) % playerCount) : sampleRoute(line, 0);
-    const absent = playerCount > 1 && !!s && (s.finished || s.time < s.recoveringUntil);
+    const absent = !!s && (playerCount > 1 && s.finished || s.time < s.recoveringUntil || s.recoveryWaiting);
     world.vehicles[i].setEnabled(!absent); if (playerCount > 1) labels[i].hidden = absent;
     world.vehicles[i].update(pose, s?.finished ? 0 : s?.speed, !!s && !s.finished && s.time < s.thrustUntil, s?.time, s?.sandAmount, s?.drifting, s?.steeringRate, s?.acceleration);
     if (playerCount > 1) { const point = world.project(pose); labels[i].style.left = `${point.x + (i - (playerCount - 1) / 2) * 13}px`; labels[i].style.top = `${point.y - 17 - i % 2 * 13}px`; }
@@ -419,12 +424,14 @@ try {
     }
     if (phase === 'racing' && race) {
       const session = race;
-      const alpha = clock.advance(elapsed, () => { previousPoses = session.racers.map(racer => ({ ...racer.state.position, heading: racer.state.heading })); session.step(); });
+      const alpha = clock.advance(elapsed, () => { previousPoses = session.racers.map(racer => ({ ...racer.state.position, heading: racer.state.heading, y: racer.state.elevation })); session.step(); });
       for (const event of session.drainEvents()) {
         audio.cue(event.type, event.intensity); if (event.type === 'thrust') rechargeAnnounced[event.player] = false; const prefix = playerCount > 1 ? `${driverName(event.player)} · ` : '';
+        if ((event.type === 'landing' || event.type === 'splash') && event.point) world.feedback(event.point, event.type === 'splash');
+        if (event.type === 'landing') world.vehicles[event.player].impact(event.time);
         if (event.type === 'car-impact') { world.vehicles[event.player].impact(event.time); world.vehicles[event.otherPlayer!].impact(event.time); }
         if (event.type === 'collision') { world.vehicles[event.player].impact(event.time); showNotice(`${prefix}Barrier contact`); }
-        if (event.type === 'recovery') { previousPoses[event.player] = { ...session.racers[event.player].state.position, heading: session.racers[event.player].state.heading }; showNotice(`${prefix}Recovering`); }
+        if (event.type === 'recovery') { previousPoses[event.player] = { ...session.racers[event.player].state.position, heading: session.racers[event.player].state.heading, y: session.racers[event.player].state.elevation }; showNotice(`${prefix}Recovering`); }
         if (event.type === 'lap') showNotice(`${prefix}${session.racers[event.player].state.lap === lapCount ? 'Final lap' : `Lap ${session.racers[event.player].state.lap} / ${lapCount}`}`);
         if (event.type === 'finish' && playerCount > 1) showNotice(`${driverName(event.player)} finished · ${formatTime(event.time)}`);
       }
@@ -441,7 +448,7 @@ try {
     usePracticeLine: usePractice,
     getState: () => ({ phase, tournament: activeTour ? structuredClone(activeTour.state) : null, roundIndex, contactCount: race?.contactCount ?? 0, circuitId: activeCircuit.id, theme: theme.id, playerCount, lapCount, drivers: preferences.drivers.map((driver, i) => ({ name: driverName(i), paint: driver.paint, color: finishFor(driver.paint).color })), turn, confirmedCount: confirmedRoutes.length, readyPlayers: [...readyPlayers], visibleRouteCount: world.visibleRouteCount, route: route ? { length: route.length, drawingDuration: route.drawingDuration, joined: drawingTrim?.joined ?? false, leadInCount: drawingTrim?.leadIn.length ?? 0, tailCount: drawingTrim?.tail.length ?? 0, cleanup: route.cleanup ? { ...route.cleanup } : null } : null, race: race ? { ...race.racers[0].state } : null, best,
       players: race?.racers.map(racer => ({ ...racer.state })) ?? [], standings: race?.standings() ?? [], ghostStartRemaining: race?.ghostStartRemaining ?? 0,
-      renderedPlayers: world.vehicles.slice(0, playerCount).map(vehicle => ({ x: vehicle.root.position.x, z: vehicle.root.position.z, heading: vehicle.root.rotation.y })),
+      renderedPlayers: world.vehicles.slice(0, playerCount).map(vehicle => ({ x: vehicle.root.position.x, y: vehicle.root.position.y, z: vehicle.root.position.z, heading: vehicle.root.rotation.y })),
       raceInputs: { activations: [...raceTouches.activations], cancellations: [...raceTouches.cancellations], active: [0, 1, 2, 3].map(i => raceTouches.active(i)) },
       inputs: { activations: [...ownership.activations], cancellations: [...ownership.cancellations], active: [0, 1, 2, 3].map(i => ownership.active(i)) } }),
     getAudio: () => audio.getStatus(),
@@ -449,6 +456,7 @@ try {
     inspectVehicle: (view: 'front' | 'side' | 'rear') => world.inspectVehicle(view),
     getGraphics: () => ({ circuitId: activeCircuit.id, engineScenes: world.engine.scenes.length, ...world.depthFeatures, roadVisible: !!world.scene.getMeshByName('asphalt') && world.scene.getActiveMeshes().contains(world.scene.getMeshByName('asphalt')!), vaporParticles: world.vehicles.map(v => v.vapor.liveCount), meshes: world.scene.meshes.length, activeMeshes: world.scene.getActiveMeshes().length, drawCalls: world.drawCalls, fps: world.engine.getFps(), textures: world.scene.textures.length, hardwareScaling: world.engine.getHardwareScalingLevel() }),
     project: (point: { x: number; z: number }) => world.project(point), getTrack: () => ({ ...activeTrack, centerline: activeTrack.centerline.map(p => ({ ...p })) }),
+    getRawStroke: () => structuredClone(stroke),
     getRoute: () => route ? structuredClone(route) : null,
     getProjectionError: () => { const p = world.project(activeTrack.start), ground = world.groundPoint(p.x, p.y); return ground ? distance(ground, activeTrack.start) : Infinity; },
   } });

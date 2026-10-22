@@ -83,3 +83,7 @@ Only after Orbital is fun, legible and stable. Reuse the registry, collision/rou
 - Before calling a circuit ready: inspect desktop/phone/tablet, complete every player count and lap length, verify interruption/retry/rematch and capture actual gameplay.
 
 A and B are implemented, with a first lightweight C scenery pass. The current Orbital centerline measures approximately 450 m (the compiled practice route is about 448 m), above the original 360–420 m design target. Preserve the current runoff while playtesting whether to shorten the layout. Next: real-device testing, course balancing and a more detailed environment pass. Do not build four unfinished environments at once.
+
+## Santa Monica implementation — 2026-10-22
+
+The approved fourth venue now extends the registry with a sunset beachfront/pier loop, original wheel/coaster scenery, a normal flat bypass and a physical automatic ramp over a water opening. This supersedes the earlier proposed next-venue order above; Alpine Relay and Neon Harbour remain future concepts. Manual hop controls and global leaderboards remain deferred. The supported-surface/flight contracts and version-8 compatibility policy are documented in `SANTA_MONICA.md`. New Full Tours include all four venues; existing schedules remain unchanged.

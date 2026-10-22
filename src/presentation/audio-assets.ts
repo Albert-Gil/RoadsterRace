@@ -1,5 +1,5 @@
 /** Replace these roles with local recordings (including future ElevenLabs exports). */
-export type SoundCue = 'countdown' | 'start' | 'thrust' | 'drift' | 'lap' | 'finish' | 'ready' | 'collision' | 'car-impact' | 'scrape' | 'recovery';
+export type SoundCue = 'countdown' | 'start' | 'thrust' | 'drift' | 'lap' | 'finish' | 'ready' | 'collision' | 'car-impact' | 'scrape' | 'recovery' | 'takeoff' | 'landing' | 'splash';
 export type SoundLoop = 'drive' | 'tire' | 'sand' | 'coast';
 export interface SoundAsset { url: string; gain?: number; loopStart?: number; loopEnd?: number }
 export interface AudioAssets { cues: Partial<Record<SoundCue, SoundAsset>>; loops: Partial<Record<SoundLoop, SoundAsset>> }

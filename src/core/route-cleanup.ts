@@ -1,5 +1,6 @@
 import { clamp, cumulative, distance, lerp, mix } from './geometry';
 import type { DrawSample, Point, TrackDefinition } from './types';
+import { branchProjection } from './support';
 
 export const DRAWING_RULES = Object.freeze({ runoffRoadWidths: 1, backwardTolerance: 0.08, localLoopRoadWidths: 2.5 });
 
@@ -16,6 +17,14 @@ export function projectCourse(point: Point, track: TrackDefinition, previous?: {
     const jump = previous ? Math.max(0, Math.abs(progress - previous.progress) - movement * 1.75 - 2) : 0;
     const score = gap + jump * 0.65;
     if (score < best.score) best = { distance: gap, progress, score };
+  }
+  const branch = branchProjection(point, track);
+  if (branch) {
+    let progress = branch.progress;
+    if (previous) progress += Math.round((previous.progress - progress) / track.length) * track.length;
+    const jump = previous ? Math.max(0, Math.abs(progress - previous.progress) - movement * 1.75 - 2) : 0;
+    const score = branch.distance + jump * 0.65;
+    if (score < best.score) best = { distance: branch.distance, progress, score };
   }
   return best;
 }

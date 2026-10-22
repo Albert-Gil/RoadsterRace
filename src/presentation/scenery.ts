@@ -7,12 +7,14 @@ import { buildBay } from './bay';
 import { buildCoast } from './coast';
 import { buildSpaceport } from './spaceport';
 import { buildCircuitDetails } from './circuit-details';
+import { buildSantaMonica } from './santa-monica';
 
 export interface SceneryRuntime {
   shadowCasterMaterials: Set<StandardMaterial>;
   update(time: number, reducedMotion: boolean): void;
 }
 export function buildScenery(id: SceneryId, scene: Scene, track: TrackDefinition, theme: PresentationTheme, materials: Map<string, StandardMaterial>): SceneryRuntime {
+  if (id === 'sunset') { const result = buildSantaMonica(scene, track, theme, materials); buildCircuitDetails(scene, track, theme, materials, result.shadowCasterMaterials, false); return result; }
   if (id === 'bay') { const result = buildBay(scene, track, theme, materials); buildCircuitDetails(scene, track, theme, materials, result.shadowCasterMaterials, false); return result; }
   if (id === 'spaceport') {
     const result = buildSpaceport(scene, track, theme, materials);

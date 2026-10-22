@@ -6,11 +6,11 @@ import { defaultPreferences } from '../../src/presentation/race-settings';
 const rounds = circuits.map(c => ({ circuitId: c.id, trackVersion: c.track.version }));
 const finishes = (times: number[]) => times.map((finishTime, player) => ({ player, finishTime, rank: 1 + times.filter(t => Math.round(t * 100) < Math.round(finishTime * 100)).length }));
 describe('local championship', () => {
-  test.each([2, 3, 4])('%i drivers score a complete three-circuit tour', count => {
+  test.each([2, 3, 4])('%i drivers score a complete four-circuit tour', count => {
     let state = createTournament(rounds, count, 6);
-    for (let i = 0; i < 3; i++) state = finalizeRound(state, i, rounds[i], finishes(Array.from({ length: count }, (_, p) => 30 + (p + i) % count)));
-    expect(state.results).toHaveLength(3); expect(state.results[0].points).toEqual([10, 6, 4, 0].slice(0, count));
-    expect(championshipStandings(state).reduce((sum, p) => sum + p.points, 0)).toBe([16, 20, 20][count - 2] * 3);
+    for (let i = 0; i < rounds.length; i++) state = finalizeRound(state, i, rounds[i], finishes(Array.from({ length: count }, (_, p) => 30 + (p + i) % count)));
+    expect(state.results).toHaveLength(rounds.length); expect(state.results[0].points).toEqual([10, 6, 4, 0].slice(0, count));
+    expect(championshipStandings(state).reduce((sum, p) => sum + p.points, 0)).toBe([16, 20, 20][count - 2] * rounds.length);
   });
   test('hundredth ties share points, skip places and share champions', () => {
     let state = createTournament(rounds.slice(0, 2), 4, 1);

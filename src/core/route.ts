@@ -1,10 +1,11 @@
-import { clamp, cumulative, distance, lerp, mix, modulo, projectToPolyline } from './geometry';
+import { clamp, cumulative, distance, lerp, mix, modulo, projectToPolyline, samplePolyline } from './geometry';
 import type { CompiledRoute, DrawSample, Point, RouteResult, TrackDefinition } from './types';
 import { cleanDrawnRoute, DRAWING_RULES, projectCourse } from './route-cleanup';
 import { canStartDrawing, trimDrawing, joinLap, gateCoordinates, gatePoint } from './start-finish';
 import { blockedRouteSection } from './barriers';
+import { validateSupports, branchProjection } from './support';
 
-export const COMPILER_VERSION = 7;
+export const COMPILER_VERSION = 8;
 export const PACE_RANGE = Object.freeze({ min: 9, max: 30 });
 export const PACE_FILTER = Object.freeze({ gestureRadius: 5, compiledRadius: 8 });
 
@@ -14,13 +15,14 @@ export function paceToSpeed(worldUnitsPerSecond: number, trackLength: number): n
 }
 
 function validateGeometry(points: Point[], track: TrackDefinition): RouteResult | null {
+  const support = validateSupports(points, track); if (!support.ok) return support;
   const blocked = blockedRouteSection(points, track);
   if (blocked) return { ok: false, message: 'Your line crosses an inner barrier. Leave room for the car and redraw this section.', ...blocked };
   let unwrapped = 0, backwards = 0, previous = projectCourse(points[0], track), nextCheckpoint = 1;
   const roadLimit = (track.roadWidth - track.carWidth) / 2 + track.roadWidth * DRAWING_RULES.runoffRoadWidths;
   for (let i = 0; i < points.length; i++) {
     const p = points[i], projection = projectCourse(p, track, i ? { point: points[i - 1], progress: previous.progress } : undefined);
-    if (projectToPolyline(p, track.centerline, track.distances).distance > roadLimit) return { ok: false, message: 'That line goes too far from the circuit. Stay closer to the road and surrounding sand.', point: p };
+    if (Math.min(projectToPolyline(p, track.centerline, track.distances).distance, branchProjection(p, track)?.distance ?? Infinity) > roadLimit) return { ok: false, message: 'That line goes too far from the circuit. Stay closer to the road and surrounding sand.', point: p };
     const delta = i ? projection.progress - previous.progress : 0;
     if (delta < 0) backwards -= delta;
     unwrapped += delta;
@@ -30,7 +32,7 @@ function validateGeometry(points: Point[], track: TrackDefinition): RouteResult 
       const steps = Math.ceil(distance(points[i - 1], p) / 2);
       for (let j = 1; j < steps; j++) {
         const probe = mix(points[i - 1], p, j / steps);
-        if (projectToPolyline(probe, track.centerline, track.distances).distance > roadLimit) return { ok: false, message: 'That line cuts too far across the infield. Follow the circuit through the surrounding sand.', point: probe };
+        if (Math.min(projectToPolyline(probe, track.centerline, track.distances).distance, branchProjection(probe, track)?.distance ?? Infinity) > roadLimit) return { ok: false, message: 'That line cuts too far across the infield. Follow the circuit through the surrounding sand.', point: probe };
       }
     }
     previous = projection;
@@ -68,6 +70,7 @@ export function compileRoute(input: DrawSample[], track: TrackDefinition): Route
   if (samples.length < 12) return { ok: false, message: 'Draw all the way around the circuit.' };
   const rawDuration = trimmed.samples.at(-1)!.time / 1000;
   const retainedCrossing = blockedRouteSection(samples, track);
+  const retainedSupport = validateSupports(samples, track); if (!retainedSupport.ok) return retainedSupport;
   if (retainedCrossing) return { ok: false, message: 'Your line crosses an inner barrier. Leave room for the car and redraw this section.', ...retainedCrossing };
   const cleaned = cleanDrawnRoute(samples, track, true);
   samples = cleaned.samples;
@@ -137,7 +140,8 @@ export function compileRoute(input: DrawSample[], track: TrackDefinition): Route
   points[count].curvature = points[0].curvature;
   const seamSpeed = (points[0].desiredSpeed + points[count].desiredSpeed) / 2;
   points[0].desiredSpeed = points[count].desiredSpeed = seamSpeed;
-  return { ok: true, drawing: { leadIn: trimmed.leadIn, tail: trimmed.tail, joined: connection.joined }, route: { version: COMPILER_VERSION, trackId: track.id, trackVersion: track.version, points, length: smoothLength, drawingDuration: rawDuration, ...(cleaned.removedPoints ? { cleanup: { removedPoints: cleaned.removedPoints, removedSeconds: cleaned.removedSeconds } } : {}) } };
+  const support = validateSupports(points, track); if (!support.ok) return support;
+  return { ok: true, drawing: { leadIn: trimmed.leadIn, tail: trimmed.tail, joined: connection.joined }, route: { version: COMPILER_VERSION, trackId: track.id, trackVersion: track.version, points, length: smoothLength, drawingDuration: rawDuration, ...(support.jumps.length ? { jumps: support.jumps } : {}), ...(cleaned.removedPoints ? { cleanup: { removedPoints: cleaned.removedPoints, removedSeconds: cleaned.removedSeconds } } : {}) } };
 }
 
 export function sampleRoute(route: CompiledRoute, value: number) {
@@ -147,6 +151,12 @@ export function sampleRoute(route: CompiledRoute, value: number) {
 }
 
 /** Used for route fixtures and a clearly labelled optional practice line. */
-export function createPracticeSamples(track: TrackDefinition, durationSeconds = 7): DrawSample[] {
+export function createPracticeSamples(track: TrackDefinition, durationSeconds = 7, jumpBranch = false): DrawSample[] {
+  if (jumpBranch && track.jumps?.length) {
+    const j = track.jumps[0], a = track.distances.findIndex(d => d >= j.entryProgress), b = track.distances.findIndex(d => d >= j.exitProgress), branchDistances = cumulative(j.branch);
+    const branch = Array.from({ length: 78 }, (_, i) => samplePolyline(j.branch, branchDistances, i / 77 * branchDistances.at(-1)!));
+    const points = [...track.centerline.slice(0, a), ...branch, ...track.centerline.slice(b)], ds = cumulative(points);
+    return points.map((p, i) => ({ ...p, time: ds[i] / ds.at(-1)! * durationSeconds * 1000 }));
+  }
   return track.centerline.map((p, i) => ({ ...p, time: track.distances[i] / track.length * durationSeconds * 1000 }));
 }

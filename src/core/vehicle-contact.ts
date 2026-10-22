@@ -2,7 +2,7 @@ import type { Point, TrackDefinition } from './types';
 import { clamp, mix } from './geometry';
 import { sweepVehicle } from './barriers';
 
-export interface ContactBody { position: Point; velocity: Point; heading: number }
+export interface ContactBody { position: Point; velocity: Point; heading: number; elevation?: number }
 export const CONTACT_RULES = Object.freeze({ restitution: 0.1, friction: 0.2, passes: 4, ghostStartSeconds: 3 });
 const dot = (a: Point, b: Point) => a.x * b.x + a.z * b.z;
 const sub = (a: Point, b: Point) => ({ x: a.x - b.x, z: a.z - b.z });
@@ -12,6 +12,7 @@ function axis(body: ContactBody, track: TrackDefinition) {
 }
 function closest(a: Point, b: Point, p: Point) { const d = sub(b, a); return mix(a, b, clamp(dot(sub(p, a), d) / (dot(d, d) || 1), 0, 1)); }
 export function vehicleContact(a: ContactBody, b: ContactBody, track: TrackDefinition) {
+  if (Math.abs((a.elevation ?? 0) - (b.elevation ?? 0)) >= 1.05) return null;
   const [a0, a1] = axis(a, track), [b0, b1] = axis(b, track);
   const da = sub(a1, a0), db = sub(b1, b0), cross = da.x * db.z - da.z * db.x;
   const ab = sub(b0, a0);
@@ -28,7 +29,7 @@ export function vehicleContact(a: ContactBody, b: ContactBody, track: TrackDefin
 export function sweptContact(a0: ContactBody, a: ContactBody, b0: ContactBody, b: ContactBody, track: TrackDefinition) {
   const steps = Math.max(1, Math.ceil((Math.hypot(a.position.x - a0.position.x, a.position.z - a0.position.z) + Math.hypot(b.position.x - b0.position.x, b.position.z - b0.position.z) + (Math.abs(a.heading - a0.heading) + Math.abs(b.heading - b0.heading)) * track.carLength) / 0.2));
   for (let i = 0; i <= steps; i++) {
-    const t = i / steps, aa = { ...a, position: mix(a0.position, a.position, t), heading: a0.heading + (a.heading - a0.heading) * t }, bb = { ...b, position: mix(b0.position, b.position, t), heading: b0.heading + (b.heading - b0.heading) * t };
+    const t = i / steps, aa = { ...a, elevation: (a0.elevation ?? 0) + ((a.elevation ?? 0) - (a0.elevation ?? 0)) * t, position: mix(a0.position, a.position, t), heading: a0.heading + (a.heading - a0.heading) * t }, bb = { ...b, elevation: (b0.elevation ?? 0) + ((b.elevation ?? 0) - (b0.elevation ?? 0)) * t, position: mix(b0.position, b.position, t), heading: b0.heading + (b.heading - b0.heading) * t };
     const contact = vehicleContact(aa, bb, track); if (contact) return { ...contact, t, a: aa.position, b: bb.position };
   }
   return null;
@@ -43,6 +44,6 @@ export function contactImpulse(a: ContactBody, b: ContactBody, normal: Point) {
   return -incoming;
 }
 export function separateBody(body: ContactBody, delta: Point, track: TrackDefinition) {
-  const result = sweepVehicle(body.position, { x: body.position.x + delta.x, z: body.position.z + delta.z }, body.heading, body.heading, body.velocity, track);
+  const result = sweepVehicle(body.position, { x: body.position.x + delta.x, z: body.position.z + delta.z }, body.heading, body.heading, body.velocity, track, body.elevation ?? 0);
   body.position = result.position; body.velocity = result.velocity;
 }

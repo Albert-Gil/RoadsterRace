@@ -31,6 +31,9 @@ import { surfaceTexture } from './textures';
 import { createReflectionSky } from './environment';
 import { PaceLine } from './pace-line';
 import { VehicleShowcase } from './showcase';
+import { jumpCoordinates } from '../core/support';
+import { planningHeight } from './planning-height';
+import { JumpFeedback } from './jump-feedback';
 
 export class GameScene {
   readonly engine: Engine;
@@ -53,6 +56,8 @@ export class GameScene {
   private terrainMaterial: StandardMaterial;
   private light: DirectionalLight;
   private sceneryRuntime: SceneryRuntime;
+  private jumpFeedback: JumpFeedback;
+  feedback(point: Point, splash: boolean) { this.jumpFeedback.emit(point, splash); }
   private shadows: ShadowGenerator;
   private reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   private layoutMode = 'welcome';
@@ -85,9 +90,14 @@ export class GameScene {
     this.sceneryRuntime = buildScenery(scenery, this.scene, track, theme, this.materials);
     this.terrainMaterial = this.materials.get('terrain')!;
     const shoulder = mat('shoulder', theme.scene.shoulder);
-    if (!track.bridges?.length) this.ribbon('road-shoulder', track.centerline, track.roadWidth + 2.5, 0.04).material = shoulder;
+    if (track.supports) { /* Authored pier surfaces replace unsupported sand shoulders. */ }
+    else if (!track.bridges?.length) this.ribbon('road-shoulder', track.centerline, track.roadWidth + 2.5, 0.04).material = shoulder;
     else { let run: Point[] = []; for (const p of track.centerline) { if (bridgeAt(p, track)) { if (run.length > 1) this.openRibbon('road-shoulder', run, track.roadWidth + 2.5, 0.04).material = shoulder; run = []; } else run.push(p); } if (run.length > 1) this.openRibbon('road-shoulder', run, track.roadWidth + 2.5, 0.04).material = shoulder; }
     this.ribbon('asphalt', track.centerline, track.roadWidth, 0.10).material = this.roadMaterial = mat('asphalt', theme.scene.asphalt);
+    for (const jump of track.jumps ?? []) {
+      this.openRibbon('jump-approach-asphalt', [jump.branch[0], jump.from], jump.width, 0.1).material = this.roadMaterial;
+      this.openRibbon('jump-landing-asphalt', [{ x: jump.from.x + jump.forward.x * (jump.rampLength + jump.gap), z: jump.from.z + jump.forward.z * (jump.rampLength + jump.gap) }, jump.branch.at(-1)!], jump.width, 0.1).material = this.roadMaterial;
+    }
     this.roadMaterial.diffuseTexture = surfaceTexture(this.scene, 'asphalt');
     const rubber = mat('rubbered-racing-surface', '#161b20'); rubber.disableLighting = true; rubber.emissiveColor = Color3.FromHexString('#161b20'); rubber.diffuseTexture = surfaceTexture(this.scene, 'rubber'); rubber.useAlphaFromDiffuseTexture = true; rubber.alpha = 0.28;
     this.ribbon('established-tire-wear', track.centerline, track.roadWidth * 0.48, 0.121).material = rubber;
@@ -131,7 +141,7 @@ export class GameScene {
     // Bake static scenery by material: curbs and foliage should not each cost a draw call.
     const staticGroups = new Map<number, Mesh[]>();
     for (const m of [...this.scene.meshes]) {
-      if (!(m instanceof Mesh) || m.getClassName() === 'LinesMesh' || m === this.marker || m === this.approach || m === this.errorMarker || !m.material) continue;
+      if (!(m instanceof Mesh) || m.metadata?.dynamicScenery || m.getClassName() === 'LinesMesh' || m === this.marker || m === this.approach || m === this.errorMarker || !m.material) continue;
       const group = staticGroups.get(m.material.uniqueId) ?? []; group.push(m); staticGroups.set(m.material.uniqueId, group);
     }
     for (const group of staticGroups.values()) {
@@ -142,10 +152,12 @@ export class GameScene {
       }
       const merged = group.length > 1 ? Mesh.MergeMeshes(group, true, true, undefined, false, false) : group[0];
       if (merged) {
+        if (material === this.roadMaterial) merged.name = 'asphalt';
         merged.isPickable = false; merged.hasVertexAlpha = vertexAlpha; merged.receiveShadows = !material.disableLighting; merged.freezeWorldMatrix();
         if (this.sceneryRuntime.shadowCasterMaterials.has(material) || material === white || material === accent) this.shadows.addShadowCaster(merged, false);
       }
     }
+    this.jumpFeedback = new JumpFeedback(this.scene);
     this.vehicle = new VehicleView(this.scene, theme); this.vehicles.push(this.vehicle); this.vehicle.update({ ...track.start, heading: startHeading });
     this.registerVehicleShadows(this.vehicle); void this.vehicle.loadAsset(visualAssets.vehicle).then(() => this.registerVehicleShadows(this.vehicle));
     for (const [url, material] of [[visualAssets.roadTexture, this.roadMaterial], [visualAssets.terrainTexture, this.terrainMaterial]] as const) {
@@ -199,19 +211,21 @@ export class GameScene {
     const away = new Vector3(Math.sin(yaw) * Math.cos(elevation), Math.sin(elevation), -Math.cos(yaw) * Math.cos(elevation));
     const right = new Vector3(Math.cos(yaw), 0, Math.sin(yaw)), up = Vector3.Cross(away, right);
     const tangent = Math.tan(this.camera.fov / 2);
+    const courseCenter = this.track.supports ? new Vector3((Math.min(...this.track.centerline.map(p => p.x)) + Math.max(...this.track.centerline.map(p => p.x))) / 2, 0, (Math.min(...this.track.centerline.map(p => p.z)) + Math.max(...this.track.centerline.map(p => p.z))) / 2) : Vector3.Zero();
     const cx = (left - rightInset) / w, cy = (bottom - top) / h;
     const rx = Math.max(0.2, (w - left - rightInset) / w) * sceneTuning.camera.fittingMargin;
     const ry = Math.max(0.2, (h - top - bottom) / h) * sceneTuning.camera.fittingMargin;
     let cameraDistance = 0;
     // Fit the actual course and its sand apron, rather than unused bounding-box corners.
     const apron = interactive ? (this.track.roadWidth - this.track.carWidth) / 2 + this.track.roadWidth + 2 : this.track.roadWidth / 2 + 4;
-    for (const p of this.track.centerline) for (let i = 0; i < 12; i++) {
-      const a = i / 12 * Math.PI * 2, point = new Vector3(p.x + Math.cos(a) * apron, 0, p.z + Math.sin(a) * apron);
+    for (const p of [...this.track.centerline, ...(this.track.jumps ?? []).flatMap(j => j.branch)]) for (let i = 0; i < 12; i++) {
+      const margin = this.track.supports ? p.x > 32 ? 7.5 : 12 : apron;
+      const a = i / 12 * Math.PI * 2, point = new Vector3(p.x + Math.cos(a) * margin, 0, p.z + Math.sin(a) * margin).subtract(courseCenter);
       const depth = Vector3.Dot(point, away);
       // Account for perspective depth when centering the course beside the toolbar.
       cameraDistance = Math.max(cameraDistance, depth + Math.max(Math.abs(Vector3.Dot(point, right) + cx * tangent * aspect * depth) / (tangent * aspect * rx), Math.abs(Vector3.Dot(point, up) + cy * tangent * depth) / (tangent * ry)));
     }
-    const offset = right.scale(-cx * tangent * aspect * cameraDistance).add(up.scale(-cy * tangent * cameraDistance));
+    const offset = right.scale(-cx * tangent * aspect * cameraDistance).add(up.scale(-cy * tangent * cameraDistance)).add(courseCenter);
     // Narrow portrait fits may place the camera beyond the old 1000 m far plane.
     // Keep the whole venue visible and retain depth precision at the road surface.
     this.camera.minZ = Math.max(1, cameraDistance / 100);
@@ -271,15 +285,24 @@ export class GameScene {
     const y = (clientY - rect.top) * this.engine.getRenderHeight() / rect.height * scale;
     const ray = this.scene.createPickingRay(x, y, Matrix.Identity(), this.camera);
     if (Math.abs(ray.direction.y) < 1e-8) return null;
-    const t = (0.15 - ray.origin.y) / ray.direction.y;
-    return { x: ray.origin.x + ray.direction.x * t, z: ray.origin.z + ray.direction.z * t };
+    let t = (0.15 - ray.origin.y) / ray.direction.y;
+    const flat = { x: ray.origin.x + ray.direction.x * t, z: ray.origin.z + ray.direction.z * t };
+    // Intersect the authored ramp plane analytically, using the same height as simulation.
+    for (const j of this.track.jumps ?? []) for (const [start, end, base, slope] of [[0, j.rampLength, 0, j.lipHeight / j.rampLength], [j.rampLength, j.rampLength + j.gap, j.lipHeight, -j.lipHeight / j.gap]]) {
+      const numerator = 0.15 + base + slope * ((ray.origin.x - j.from.x) * j.forward.x + (ray.origin.z - j.from.z) * j.forward.z - start) - ray.origin.y;
+      const denominator = ray.direction.y - slope * (ray.direction.x * j.forward.x + ray.direction.z * j.forward.z);
+      const hit = numerator / denominator, p = { x: ray.origin.x + ray.direction.x * hit, z: ray.origin.z + ray.direction.z * hit };
+      const c = jumpCoordinates(p, j);
+      if (hit > 0 && c.along >= start && c.along <= end && Math.abs(c.across) <= j.width / 2) return p;
+    }
+    return flat;
   }
   project(point: Point & { y?: number }) {
     const rect = this.canvas.getBoundingClientRect();
     const viewport = this.camera.viewport.toGlobal(this.engine.getRenderWidth(), this.engine.getRenderHeight());
     // Camera viewports count Y from the bottom; screen projection counts from the top.
     viewport.y = this.engine.getRenderHeight() - viewport.y - viewport.height;
-    const v = Vector3.Project(new Vector3(point.x, point.y ?? 0.15, point.z), Matrix.Identity(), this.scene.getTransformMatrix(), viewport);
+    const v = Vector3.Project(new Vector3(point.x, point.y ?? planningHeight(point, this.track) + 0.15, point.z), Matrix.Identity(), this.scene.getTransformMatrix(), viewport);
     return { x: rect.left + v.x / this.engine.getRenderWidth() * rect.width, y: rect.top + v.y / this.engine.getRenderHeight() * rect.height };
   }
   drawLine(samples: DrawSample[] | CompiledRoute | null, drawing?: DrawingTrim) {
@@ -288,7 +311,7 @@ export class GameScene {
     if (!samples) return;
     let points = Array.isArray(samples) ? samples : samples.points;
     let speeds: number[];
-    const muted = (stroke: DrawSample[]) => { if (stroke.length > 1) this.ignoredLines.push(new PaceLine(this.scene, stroke, stroke.map(() => 9), this.theme, 0, false, false, true)); };
+    const muted = (stroke: DrawSample[]) => { if (stroke.length > 1) this.ignoredLines.push(new PaceLine(this.scene, stroke, stroke.map(() => 9), this.theme, 0, false, false, true, this.track)); };
     if (Array.isArray(samples)) {
       const start = drawingStart(samples, this.track);
       if (!start) { muted(samples); return; }
@@ -297,21 +320,22 @@ export class GameScene {
       const counted = (trimmed.ok ? trimmed.samples : [start.sample, ...samples.slice(start.next)]).filter((p, i, all) => !i || distance(p, all[i - 1]) > 0.001);
       points = counted; speeds = gestureSpeeds(counted, this.track.length);
     } else { speeds = samples.points.map(p => p.desiredSpeed); if (drawing) { muted(drawing.leadIn); muted(drawing.tail); } }
-    if (points.length > 1) this.lines.push(new PaceLine(this.scene, points, speeds, this.theme));
+    if (points.length > 1) this.lines.push(new PaceLine(this.scene, points, speeds, this.theme, 0, false, false, false, this.track));
   }
   drawRaceLines(routes: CompiledRoute[]) {
     this.drawLine(null);
     routes.forEach((route, player) => {
-      this.lines.push(new PaceLine(this.scene, route.points, route.points.map(p => p.desiredSpeed), this.theme, player, true));
+      this.lines.push(new PaceLine(this.scene, route.points, route.points.map(p => p.desiredSpeed), this.theme, player, true, false, false, this.track));
     });
   }
-  showError(point?: Point, section?: Point[]) { this.errorLine?.dispose(); this.errorLine = undefined; this.errorMarker.isVisible = !!point; if (point) this.errorMarker.position.set(point.x, 0.3, point.z); if (section) this.errorLine = new PaceLine(this.scene, section, section.map(() => 9), this.theme, 0, false, true); }
+  showError(point?: Point, section?: Point[]) { this.errorLine?.dispose(); this.errorLine = undefined; this.errorMarker.isVisible = !!point; if (point) this.errorMarker.position.set(point.x, 0.3, point.z); if (section) this.errorLine = new PaceLine(this.scene, section, section.map(() => 9), this.theme, 0, false, true, false, this.track); }
   showStart(show: boolean) { this.marker.isVisible = show; this.approach.isVisible = show; }
-  get depthFeatures() { return { perspective: this.camera.mode === Camera.PERSPECTIVE_CAMERA, shadowMapSize: this.shadows.getShadowMap()?.getSize().width ?? 0, shadowCasters: this.shadows.getShadowMap()?.renderList?.length ?? 0, renderReady: this.scene.isReady() && this.showcase.scene.isReady(), worldReady: this.scene.isReady(), showcaseReady: this.showcase.scene.isReady(), pending: [...this.scene.meshes, ...this.showcase.scene.meshes].filter(m => !m.isReady(true)).map(m => m.name), carTriangles: this.vehicle.triangleCount, showcaseTriangles: this.showcase.car.triangleCount, pace: this.theme.pace, lineWidths: this.lines.map(line => line.cssWidths), ignoredStrokeCount: this.ignoredLines.length }; }
+  get depthFeatures() { return { decorativeMotion: this.scene.meshes.filter(m => m.metadata?.dynamicScenery).map(m => ({name: m.name, rotation: m.rotation.asArray(), position: m.position.asArray()})), perspective: this.camera.mode === Camera.PERSPECTIVE_CAMERA, shadowMapSize: this.shadows.getShadowMap()?.getSize().width ?? 0, shadowCasters: this.shadows.getShadowMap()?.renderList?.length ?? 0, renderReady: this.scene.isReady() && this.showcase.scene.isReady(), worldReady: this.scene.isReady(), showcaseReady: this.showcase.scene.isReady(), pending: [...this.scene.meshes, ...this.showcase.scene.meshes].filter(m => !m.isReady(true)).map(m => m.name), carTriangles: this.vehicle.triangleCount, showcaseTriangles: this.showcase.car.triangleCount, pace: this.theme.pace, lineWidths: this.lines.map(line => line.cssWidths), ignoredStrokeCount: this.ignoredLines.length }; }
   render(time: number) {
     const reduced = this.reducedMotion.matches;
     (this.marker.material as StandardMaterial).alpha = reduced ? 0.32 : 0.29 + Math.sin(time * 3) * 0.05;
     this.sceneryRuntime.update(time, reduced);
+    this.jumpFeedback.update(time, reduced);
     const callsBefore = this.engine._drawCalls.current;
     this.scene.render();
     if (['welcome', 'setup', 'results'].includes(this.layoutMode)) this.showcase.render(time);

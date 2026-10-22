@@ -2,6 +2,8 @@
 
 A browser racing prototype for solo play or two to four people on one device: draw a line and its pace, race one to six laps, and time your rechargeable thrust. Visuals are replaceable through shared settings and assets. No account, backend, or external service is required to play.
 
+Four venues are available: Coastal Launch, Launchsite, Golden Gate and **Santa Monica**. Santa Monica adds a sunset amusement pier, an optional automatic ramp over water and a flat bypass. Draw through the ramp to take the shortcut; use the existing thrust pad to help clear it. Newly created Full Tours end at Santa Monica. See [course and jump tuning](docs/SANTA_MONICA.md).
+
 ## Online testing
 
 Testing site: **https://albert-gil.github.io/RoadsterRace/**. GitHub Actions verifies main builds before deploying. See [online testing and iPhone installation](docs/ONLINE_TESTING.md) for release, rollback, build labels and physical-device checks. Hosted physical iPhone/iPad verification remains pending until performed on hardware.

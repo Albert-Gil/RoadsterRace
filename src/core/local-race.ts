@@ -1,5 +1,6 @@
 import { clamp, lerp, modulo, projectToPolyline } from './geometry';
 import { barrierContact } from './barriers';
+import { projectCourse } from './route-cleanup';
 import { contactImpulse, vehicleContact, sweptContact, separateBody, CONTACT_RULES, type ContactBody } from './vehicle-contact';
 import { RaceSimulation, RULES } from './simulation';
 import { DEFAULT_LAPS, validateLapCount } from './race-options';
@@ -40,7 +41,7 @@ export class LocalRace {
     });
     // Rank by progress around the common circuit, not by metres along differently sized lines.
     this.courseMaps = routes.map(route => {
-      const projected = route.points.map(point => projectToPolyline(point, track.centerline, track.distances).progress);
+      const projected = route.points.map(point => track.jumps?.length ? projectCourse(point, track).progress : projectToPolyline(point, track.centerline, track.distances).progress);
       let unwrapped = 0;
       const values = [0];
       for (let i = 1; i < projected.length; i++) {
@@ -69,14 +70,20 @@ export class LocalRace {
       const enabled = this.racers.map(r => !r.state.finished && now >= r.state.recoveringUntil);
       // A recovering car remains absent until its last safe position is unoccupied.
       this.racers.forEach((r, i) => {
-        if (contactsEnabled && r.state.recoveringUntil >= 0 && now >= r.state.recoveringUntil && now < r.state.recoveringUntil + dt * 1.1 && this.racers.some((other, j) => j !== i && enabled[j] && vehicleContact(r.state, other.state, this.track))) { r.state.recoveringUntil = now + dt; enabled[i] = false; }
+        if (contactsEnabled && r.state.recoveringUntil >= 0 && now >= r.state.recoveringUntil && (r.state.recoveryWaiting || now < r.state.recoveringUntil + dt * 1.1)) {
+          r.state.recoveryWaiting = this.racers.some((other, j) => j !== i && enabled[j] && vehicleContact(r.state, other.state, this.track));
+          if (r.state.recoveryWaiting) { r.state.recoveringUntil = now + dt; enabled[i] = false; }
+        }
       });
-      const before = this.racers.map(r => ({ position: { ...r.state.position }, velocity: { ...r.state.velocity }, heading: r.state.heading }));
+      const before = this.racers.map(r => ({ position: { ...r.state.position }, velocity: { ...r.state.velocity }, heading: r.state.heading, elevation: r.state.elevation }));
       const old = this.racers.map(r => r.integrate(dt, now));
+      // A water failure can enter recovery during integration. Remove that car
+      // from this very contact pass, not only from the following substep.
+      this.racers.forEach((r, i) => { if (now < r.state.recoveringUntil || r.state.recoveryWaiting) enabled[i] = false; });
       const budgets = this.racers.map((r, i) => Math.hypot(r.state.position.x - before[i].position.x, r.state.position.z - before[i].position.z));
       for (let pass = 0; contactsEnabled && pass < CONTACT_RULES.passes; pass++) {
         // Jacobi corrections: all pair impulses read the same snapshot, then apply together.
-        const bodies: ContactBody[] = this.racers.map(r => ({ position: { ...r.state.position }, velocity: { ...r.state.velocity }, heading: r.state.heading }));
+        const bodies: ContactBody[] = this.racers.map(r => ({ position: { ...r.state.position }, velocity: { ...r.state.velocity }, heading: r.state.heading, elevation: r.state.elevation }));
         const deltas = bodies.map(() => ({ position: { x: 0, z: 0 }, velocity: { x: 0, z: 0 } }));
         for (let i = 0; i < bodies.length; i++) for (let j = i + 1; j < bodies.length; j++) {
           if (!enabled[i] || !enabled[j]) continue;

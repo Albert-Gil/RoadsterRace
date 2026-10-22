@@ -26,13 +26,15 @@ export function buildCircuitDetails(scene: Scene, track: TrackDefinition, theme:
   };
   for (const barrier of track.barriers) {
     if (barrier.id === 'gantry-support' || barrier.id === 'grandstand') continue; // These authored structures are rendered separately.
-    if (barrier.kind === 'bridge-rail' || barrier.kind === 'bridge-support') {
+    if (barrier.kind === 'bridge-rail' || barrier.kind === 'bridge-support' || barrier.kind === 'pier-rail') {
       const p = barrier.footprint, positions: number[] = [], indices: number[] = [];
       const quad = (a: number[], b: number[], c: number[], d: number[]) => { const base = positions.length / 3; positions.push(...a, ...b, ...c, ...d); indices.push(base, base + 1, base + 2, base, base + 2, base + 3); };
-      const bottom = 0.05, top = bottom + barrier.height;
+      const bottom = barrier.baseHeight ?? (barrier.kind === 'pier-rail' ? 0 : 0.05), top = bottom + barrier.height;
       for (let i = 0; i < p.length; i++) { const a = p[i], b = p[(i + 1) % p.length]; quad([a.x, bottom, a.z], [b.x, bottom, b.z], [b.x, top, b.z], [a.x, top, a.z]); }
       quad([p[0].x, top, p[0].z], [p[1].x, top, p[1].z], [p[2].x, top, p[2].z], [p[3].x, top, p[3].z]);
       const data = new VertexData(), normals: number[] = []; data.positions = positions; data.indices = indices; VertexData.ComputeNormals(positions, indices, normals); data.normals = normals; data.uvs = positions.flatMap((_, i) => i % 3 ? [] : [positions[i] / 8, positions[i + 2] / 8]);
+      // Polygon winding may be reflected by a venue. Its horizontal cap always faces up.
+      for (let i = normals.length - 12; i < normals.length; i += 3) { normals[i] = 0; normals[i + 1] = 1; normals[i + 2] = 0; }
       const wall = new Mesh(`solid-${barrier.id}`, scene); data.applyToMesh(wall); concrete.backFaceCulling = false; wall.material = concrete;
       continue;
     }

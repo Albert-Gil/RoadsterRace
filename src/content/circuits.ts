@@ -1,9 +1,10 @@
 import { goldenGateTrack } from '../core/tracks/golden-gate';
 import { coastalTrack } from '../core/track';
 import { orbitalTrack } from '../core/tracks/orbital';
+import { santaMonicaTrack } from '../core/tracks/santa-monica';
 import type { TrackDefinition } from '../core/types';
 
-export type SceneryId = 'coastal' | 'spaceport' | 'bay';
+export type SceneryId = 'coastal' | 'spaceport' | 'bay' | 'sunset';
 export interface CircuitDefinition {
   id: string;
   number: string;
@@ -24,6 +25,9 @@ export const circuits: readonly CircuitDefinition[] = [
   { id: goldenGateTrack.id, number: '03', scenery: 'bay', track: goldenGateTrack, difficulty: 'EXPERT / 4',
     tagline: 'City precision. Bridge speed.', description: 'Technical city streets, waterfront turns and a narrow suspension bridge across the bay.',
     features: ['City streets', 'Narrow bridge', `${Math.round(goldenGateTrack.length)} m`] },
+  { id: santaMonicaTrack.id, number: '04', scenery: 'sunset', track: santaMonicaTrack, difficulty: 'SPORT / 3',
+    tagline: 'Chase the sun. Clear the Pacific.', description: 'Beachfront sweepers, a sunset amusement pier and an optional ramp over water.',
+    features: ['Sunset pier', 'Optional water jump', `${Math.round(santaMonicaTrack.length)} m`] },
 ];
 export const defaultCircuit = circuits[0];
 export const findCircuit = (id: unknown) => circuits.find(circuit => circuit.id === (id === 'launchsite' ? 'orbital-launchyard' : id)) ?? defaultCircuit;

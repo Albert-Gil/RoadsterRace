@@ -38,8 +38,8 @@ async function server(args, url) {
 const phone = { viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true };
 const fixtureCache = new Map();
 
-async function fixture(circuit, count = 1, options = phone) {
-  const key = JSON.stringify({ circuit, count, options });
+async function fixture(circuit, count = 1, options = phone, jump = false) {
+  const key = JSON.stringify({ circuit, count, options, jump });
   if (fixtureCache.has(key)) return fixtureCache.get(key);
   const context = await browser.newContext(options), page = await context.newPage();
   try {
@@ -49,13 +49,23 @@ async function fixture(circuit, count = 1, options = phone) {
     await page.getByRole('button', { name: count === 1 ? 'Draw racing line' : 'Plan your lines' }).click();
     await page.waitForFunction(() => window.__roadster.getGraphics().renderReady && window.__roadster.getGraphics().roadVisible);
     await page.evaluate(() => document.fonts.ready);
-    const points = await page.evaluate(() => {
+    const variants = await page.evaluate(() => {
       const g = window.__roadster, t = g.getTrack();
-      return t.centerline.map((p, i) => ({ ...g.project(p), time: t.distances[i] / t.length * 7 }))
-        .filter((_, i) => i % 2 === 0 || i === t.centerline.length - 1);
+      const project = path => {
+        const ds = [0]; for (let i = 1; i < path.length; i++) ds.push(ds[i - 1] + Math.hypot(path[i].x - path[i - 1].x, path[i].z - path[i - 1].z));
+        return path.map((p, i) => ({ ...g.project(p), time: ds[i] / ds.at(-1) * 7 })).filter((_, i) => i % 2 === 0 || i === path.length - 1);
+      };
+      const normal = project(t.centerline), j = t.jumps?.[0]; if (!j) return { normal };
+      const a = t.distances.findIndex(d => d >= j.entryProgress), b = t.distances.findIndex(d => d >= j.exitProgress), branch = [];
+      for (let i = 1; i < j.branch.length; i++) {
+        const a = j.branch[i - 1], b = j.branch[i], n = Math.ceil(Math.hypot(b.x - a.x, b.z - a.z) / 0.6);
+        for (let k = 0; k < n; k++) branch.push({ x: a.x + (b.x - a.x) * k / n, z: a.z + (b.z - a.z) * k / n });
+      }
+      return { normal, jump: project([...t.centerline.slice(0, a), ...branch, ...t.centerline.slice(b)]) };
     });
-    fixtureCache.set(key, points);
-    return points;
+    fixtureCache.set(JSON.stringify({ circuit, count, options, jump: false }), variants.normal);
+    if (variants.jump) fixtureCache.set(JSON.stringify({ circuit, count, options, jump: true }), variants.jump);
+    return fixtureCache.get(key);
   } finally { await context.close(); }
 }
 
@@ -130,7 +140,7 @@ try {
     await server(['preview', '--port', '4177'], productionURL);
   }
   browser = await chromium.launch(browserOptions());
-  for (const circuit of tournamentOnly ? [] : ['coastal-launch', 'launchsite', 'golden-gate']) {
+  for (const circuit of tournamentOnly ? [] : ['coastal-launch', 'launchsite', 'golden-gate', 'santa-monica']) {
     console.log(`Checking ${circuit}: production touch drawing and racing`);
     const points = await fixture(circuit);
     const { context, page } = await productionPage();
@@ -157,6 +167,17 @@ try {
       if (fullRaces) { await finish(page); assert.ok((await page.locator('#panel').textContent()).includes('Pages Tester')); }
       else await page.keyboard.press('Escape');
       report.checks.push({ circuit, build, realTouchPreview: true, startedRace: true, completedRace: fullRaces, soundEnabled: await page.locator('#sound-button').getAttribute('aria-pressed') === 'true' });
+      if (circuit === 'santa-monica') {
+        // Reuse the same compiled/rendered scene; exercise the shortcut in the
+        // shipped build using actual input, without any production inspector.
+        await page.getByRole('button', { name: fullRaces ? 'Race setup' : 'Change mode', exact: true }).click();
+        if (!fullRaces) await page.getByRole('button', { name: "Let's race" }).click();
+        await page.getByRole('button', { name: 'Draw racing line' }).click();
+        await draw(page, context, await fixture(circuit, 1, phone, true));
+        await page.getByRole('button', { name: 'Race this line' }).click(); await racing(page);
+        if (fullRaces) await finish(page); else await page.keyboard.press('Escape');
+        report.checks.push({ circuit, jumpRealTouchPreview: true, jumpRaceStarted: true, jumpCompleted: fullRaces });
+      }
       await page.reload(); await page.getByRole('button', { name: "Let's race" }).click();
       assert.equal(await page.getByLabel('Driver 1 name', { exact: true }).inputValue(), 'Pages Tester');
       assert.equal(await page.getByRole('button', { name: 'Cobalt blue', exact: true }).getAttribute('aria-pressed'), 'true');
@@ -223,7 +244,7 @@ try {
     } finally { await context.close(); }
   }
   // Saved tournament creation/resumption is checked in every production smoke;
-  // full mode additionally completes all three rounds using real drawn input.
+  // full mode additionally completes all four rounds using real drawn input.
   {
     console.log('Checking saved tournament and resumption');
     const { context, page } = await productionPage();
@@ -234,7 +255,7 @@ try {
       await page.getByRole('button', { name: '1 lap', exact: true }).click();
       await page.getByRole('button', { name: 'Start tournament' }).click();
       await page.reload(); await page.getByRole('button', { name: 'Resume tournament' }).click();
-      if (fullRaces) for (const [round, circuit] of ['coastal-launch', 'launchsite', 'golden-gate'].entries()) {
+      if (fullRaces) for (const [round, circuit] of ['coastal-launch', 'launchsite', 'golden-gate', 'santa-monica'].entries()) {
         console.log(`Tournament round ${round + 1}: ${circuit}`);
         const points = await fixture(circuit, 2);
         await page.getByRole('button', { name: 'Draw your lines' }).click(); await ready(page);
@@ -243,13 +264,13 @@ try {
           await draw(page, context, points); await page.getByRole('button', { name: 'Lock in my line', exact: true }).click();
         }
         await page.keyboard.press('KeyA'); await page.keyboard.press('KeyL'); await racing(page); await finish(page);
-        if (round < 2) await page.getByRole('button', { name: 'Next race' }).click();
+        if (round < 3) await page.getByRole('button', { name: 'Next race' }).click();
       }
       if (fullRaces) {
         assert.equal(await page.locator('#panel .eyebrow').textContent(), 'TOURNAMENT COMPLETE');
         assert.equal(await page.locator('.championship-table tbody tr').count(), 2);
       }
-      report.checks.push({ tournamentSavedAndResumed: true, completedThreeRounds: fullRaces });
+      report.checks.push({ tournamentSavedAndResumed: true, completedFourRounds: fullRaces });
     } finally { await context.close(); }
   }
   assert.deepEqual(report.errors, []); assert.deepEqual(report.failedRequests, []);

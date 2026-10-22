@@ -6,6 +6,8 @@ import { Vector2 } from '@babylonjs/core/Maths/math.vector';
 import type { Scene } from '@babylonjs/core/scene';
 import type { Point } from '../core/types';
 import type { PresentationTheme } from './themes';
+import { planningHeight } from './planning-height';
+import type { TrackDefinition } from '../core/types';
 import { PACE_RANGE } from '../core/route';
 
 export function paceColor(speed: number, theme: PresentationTheme) {
@@ -14,9 +16,9 @@ export function paceColor(speed: number, theme: PresentationTheme) {
 }
 export class PaceLine {
   readonly meshes: GreasedLineMesh[];
-  constructor(private scene: Scene, points: Point[], speeds: number[], private theme: PresentationTheme, player = 0, private racing = false, error = false, ignored = false) {
+  constructor(private scene: Scene, points: Point[], speeds: number[], private theme: PresentationTheme, player = 0, private racing = false, error = false, ignored = false, track?: TrackDefinition) {
     this.meshes = [true, false].map(outline => {
-      const mesh = CreateGreasedLine('pace-route', { points: points.flatMap(p => [p.x, 0.32 + player * 0.012 + (outline ? 0 : 0.005), p.z]) }, {
+      const mesh = CreateGreasedLine('pace-route', { points: points.flatMap(p => [p.x, (track ? planningHeight(p, track) : 0) + 0.32 + player * 0.012 + (outline ? 0 : 0.005), p.z]) }, {
         materialType: GreasedLineMeshMaterialType.MATERIAL_TYPE_SIMPLE,
         sizeAttenuation: true, width: outline ? theme.pace.outlineWidth : theme.pace.width,
         color: outline ? Color3.FromHexString('#111820') : ignored ? Color3.FromHexString('#aebdc5') : error ? Color3.FromHexString('#ff6ce1') : undefined,

@@ -20,3 +20,7 @@ Golden Gate's factory hall, solar canopies, red suspension portals/cables, shore
 DrawRace 2 screenshots were viewed only as visual references. Inspection copies named `artifacts/reference-drawrace2*` are ignored and are not shipped in the runtime build.
 
 Golden Gate v2 replaces the historical foundry/canopies with original code-authored city buildings, shopfronts, foundations, land areas, quays and a narrow suspension span. The new layout, gates, muted drawing guides and facade palette are original project work. No third-party building, bridge model, skyline image, logo or audio was downloaded. Prior foundry descriptions above record the retired version.
+
+## Santa Monica additions
+
+The sunset beach/pier, amusement wheel, coaster, train, buildings, palms, deck supports and signs are original procedural meshes authored for this project. They depict a fictional Santa Monica-inspired venue. No Pacific Park logos, real attraction branding or downloaded amusement-park artwork are bundled. Takeoff/landing/splash fallbacks are original Web Audio synthesis. Existing RoadsterLAB/MIT and font attributions remain in force.

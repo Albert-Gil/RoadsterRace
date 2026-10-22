@@ -36,7 +36,7 @@ export class ThrustVapor {
   }
   clear() { this.particles.forEach(p => p.age = 99); this.emission = 0; this.mesh.isVisible = false; }
   setEnabled(value: boolean) { this.enabled = value; if (!value) this.clear(); }
-  update(pose: { x: number; z: number; heading: number }, speed: number, firing: boolean, dt: number, reduced: boolean) {
+  update(pose: { x: number; z: number; heading: number; y?: number }, speed: number, firing: boolean, dt: number, reduced: boolean) {
     if (!this.enabled) return;
     const lifetime = thrustEffects.lifetime, dx = Math.sin(pose.heading), dz = Math.cos(pose.heading);
     for (const p of this.particles) if (p.age < lifetime) { p.age += dt; p.x += p.vx * dt; p.z += p.vz * dt; p.y += 0.45 * dt; }
@@ -44,7 +44,7 @@ export class ThrustVapor {
     while (this.emission >= 1) {
       this.emission--; const slot = this.cursor++ % this.particles.length, p = this.particles[slot], outlet = [-0.51, -0.185, 0.185, 0.51][this.cursor % 4];
       this.seed = (Math.imul(this.seed, 1664525) + 1013904223) >>> 0; const jitter = this.seed / 4294967296 - 0.5;
-      Object.assign(p, { age: reduced ? 0.35 : 0, x: pose.x - dx * 2.5 + dz * outlet, y: 0.73, z: pose.z - dz * 2.5 - dx * outlet, vx: dx * (speed * 0.8 - thrustEffects.exhaustSpeed) + dz * jitter * 1.7, vz: dz * (speed * 0.8 - thrustEffects.exhaustSpeed) - dx * jitter * 1.7, size: 0.85 + jitter * 0.3 });
+      Object.assign(p, { age: reduced ? 0.35 : 0, x: pose.x - dx * 2.5 + dz * outlet, y: 0.73 + (pose.y ?? 0), z: pose.z - dz * 2.5 - dx * outlet, vx: dx * (speed * 0.8 - thrustEffects.exhaustSpeed) + dz * jitter * 1.7, vz: dz * (speed * 0.8 - thrustEffects.exhaustSpeed) - dx * jitter * 1.7, size: 0.85 + jitter * 0.3 });
     }
     const camera = this.scene.activeCamera; if (!camera) return;
     const right = camera.getDirection(Vector3.Right()), up = camera.getDirection(Vector3.Up());

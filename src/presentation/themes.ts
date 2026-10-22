@@ -52,6 +52,7 @@ export const sceneTuning = {
 /** Biome colors stay independent of interface branding and the driver's selected paint. */
 export const sceneryPalettes = {
   coastal: {},
+  sunset: { terrain: '#d8bc92', embankment: '#c8a47e', asphalt: '#9ca4ad', shoulder: '#ba9c7c', structure: '#765d60', foliage: '#526e58', foliageLight: '#8d9e68', rock: '#c5ac92', trunk: '#9c735a', water: '#32798d', shallows: '#6bb5b9', foam: '#f1dbc3', sky: '#e5a3a0', sunlight: 1.08 },
   bay: { terrain: '#aab79b', embankment: '#bdbea8', asphalt: '#a7b2b8', shoulder: '#b5aa8f', structure: '#34434d', foliage: '#4c6857', foliageLight: '#879873', rock: '#b4b8ae', trunk: '#7e7769', water: '#366f80', shallows: '#689b9c', foam: '#d7e8df', sky: '#b1ccd1', sunlight: 1.05 },
   spaceport: { terrain: '#c4ae91', embankment: '#a69a85', asphalt: '#aeb1ad', shoulder: '#a99c85',
     structure: '#33404b', curb: '#e8e8dd', glass: '#243746', foliage: '#68674b', foliageLight: '#8d8863',
@@ -59,6 +60,7 @@ export const sceneryPalettes = {
 } satisfies Record<string, Partial<PresentationTheme['scene']>>;
 export const sceneryLighting = {
   coastal: { ambient: '#d6e5ed', ground: '#6e6957', sun: '#fff0cf' },
+  sunset: { ambient: '#f7c9cb', ground: '#816c77', sun: '#ffd29b' },
   bay: { ambient: '#dcebf1', ground: '#717b6b', sun: '#fff1d5' },
   spaceport: { ambient: '#ddd6cf', ground: '#756755', sun: '#ffddb2' },
 };
@@ -95,3 +97,4 @@ export const thrustEffects = { capacity: 96, emission: 120, lifetime: 0.8, exhau
 
 /** Shared city materials; architecture placement is authored in content/golden-city.ts. */
 export const cityAppearance = { bridge: '#b94132', facades: ['#caba91', '#8aa49a', '#bb8068', '#9daabb', '#d8be8d', '#9b8173'], paving: '#bbb7a6', roof: '#52616a', shop: '#354953', window: '#456575', warmWindow: '#b9bd9d' };
+export const sunsetAppearance = { deck: '#a9866b', steel: '#465360', ivory: '#f6e4cc', glass: '#4a7e91', coral: '#e67b77', gold: '#eec575' };
