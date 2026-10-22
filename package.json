@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:browser": "playwright test",
+    "test:pages": "node tools/check-pages.mjs",
     "report:size": "node tools/size-report.mjs"
   },
   "dependencies": {

@@ -1,4 +1,5 @@
 import { audioAssets, audioMix, type AudioAssets, type SoundAsset, type SoundCue, type SoundLoop } from './audio-assets';
+import { assetUrl } from './urls';
 
 export interface AudioFrame { active: boolean; speed: number; slip: number; sand: number }
 const limit = (value: number, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, value));
@@ -112,7 +113,7 @@ export class GameAudio {
       if (!asset) return;
       const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 8000);
       try {
-        const response = await fetch(asset.url, { signal: controller.signal }); if (!response.ok) throw new Error('Optional sound unavailable');
+        const response = await fetch(assetUrl(asset.url), { signal: controller.signal }); if (!response.ok) throw new Error('Optional sound unavailable');
         const bytes = await response.arrayBuffer(); if (bytes.byteLength > 8_000_000) throw new Error('Optional sound too large');
         const buffer = await c.decodeAudioData(bytes); if (buffer.duration > 30) throw new Error('Use a short sound or loop'); this.buffers.set(key, buffer);
         if (key.startsWith('loop:')) this.installLoop(key.slice(5) as SoundLoop, asset, buffer);

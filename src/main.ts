@@ -7,6 +7,7 @@ import { loadTournament, storeTournament, discardTournament, type SavedTournamen
 import { tournamentResultsMarkup, type TourSetup } from './presentation/tournament-ui';
 import { FixedStepClock, RULES } from './core/simulation';
 import { CONTACT_RULES } from './core/vehicle-contact';
+import { assetUrl } from './presentation/urls';
 import { circuits, findCircuit } from './content/circuits';
 import { canStartDrawing } from './core/start-finish';
 import type { CompiledRoute, DrawSample, DrawingTrim } from './core/types';
@@ -28,7 +29,7 @@ app.innerHTML = `
     <div class="scene-vignette" aria-hidden="true"></div>
     <div id="vehicle-labels" aria-hidden="true">${[0, 1, 2, 3].map(i => `<span class="vehicle-label" data-car="${i}" hidden>${i + 1}</span>`).join('')}</div>
     <header class="topbar">
-      <a class="brand" href="/" aria-label="Roadster Race home"><img class="brand-mark" alt="" width="38" height="38"><span class="brand-name"></span></a>
+      <a class="brand" href="${assetUrl('')}" aria-label="Roadster Race home"><img class="brand-mark" alt="" width="38" height="38"><span class="brand-name"></span></a>
       <div class="topbar-center"><span class="live-dot"></span><span id="mode-label">SOLO PLAYGROUND</span></div>
       <div class="header-actions"><button class="icon-button sound-control" id="sound-button" aria-label="Turn sound on" aria-pressed="false" title="Sound"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4V9Z" fill="currentColor"/><path class="sound-waves" d="M16 8c2 2 2 6 0 8m3-11c4 4 4 10 0 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path class="sound-slash" d="m4 3 17 18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span class="sound-label">Sound off</span></button><button class="quiet-button touch-test-link" data-action="diagnostics">Touch test <span aria-hidden="true">↗</span></button></div>
     </header>
@@ -137,7 +138,7 @@ function resumeTournament() {
   else beginTourRound();
 }
 const playerChip = (i: number) => `<span class="player-chip" style="--identity:var(--player-${i + 1});--identity-ink:var(--player-${i + 1}-ink)">${i + 1}</span>`;
-function brand() { document.querySelector<HTMLImageElement>('.brand-mark')!.src = theme.branding.logo; document.querySelector('.brand-name')!.textContent = theme.branding.title; }
+function brand() { document.querySelector<HTMLImageElement>('.brand-mark')!.src = assetUrl(theme.branding.logo); document.querySelector('.brand-name')!.textContent = theme.branding.title; }
 brand();
 document.querySelector<HTMLImageElement>('.brand-mark')!.addEventListener('error', e => { (e.currentTarget as HTMLImageElement).hidden = true; });
 

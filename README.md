@@ -1,6 +1,10 @@
 # Roadster Race
 
-A local browser prototype for solo play or two to four people on one device: draw a line and its pace, race one to six laps, and time your rechargeable thrust. Visuals are replaceable through shared settings and assets. No account, backend, or external service is required to play.
+A browser racing prototype for solo play or two to four people on one device: draw a line and its pace, race one to six laps, and time your rechargeable thrust. Visuals are replaceable through shared settings and assets. No account, backend, or external service is required to play.
+
+## Online testing
+
+Testing site: **https://albert-gil.github.io/RoadsterRace/**. GitHub Actions verifies main builds before deploying. See [online testing and iPhone installation](docs/ONLINE_TESTING.md) for release, rollback, build labels and physical-device checks. Hosted physical iPhone/iPad verification remains pending until performed on hardware.
 
 ## Play locally
 
@@ -24,8 +28,8 @@ The supplied desktop runtime also provides pnpm at `C:\Users\alber\.cache\codex-
 ## Controls
 
 1. Select **Let's race**, choose 1–6 laps, enter your driver name and select a paint finish. Choose **Draw racing line** to continue.
-2. Start anywhere across the highlighted start/finish strip, or up to 12 metres behind it, and draw one complete lap following the arrows. Draw slowly for deliberate corners and faster for straights. Finish anywhere across the strip and lift to submit; a short overshoot up to four metres is trimmed.
-3. Inspect the route and choose **Race this line**. **Try a practice line** is an optional, clearly labeled example.
+2. Start anywhere across the highlighted start/finish strip, or up to 12 metres behind it, and draw one complete lap following the arrows. Draw slowly for deliberate corners and faster for straights. Once you cross the finish, lift anywhere; all later drawing is ignored.
+3. Inspect the route and choose **Race this line**. Explanations and a practice example are reserved for a future tutorial.
 4. Tap the **THRUST** pad, or press **Space** on desktop. Each activation lasts 0.7 seconds and recharges in five seconds. Holding does not repeat.
 5. Use **Escape** or Pause to pause. App/tab interruption also pauses the race. Resume includes a countdown.
 6. Retry the same line or draw a new one. Personal bests last for this page session only.
@@ -35,7 +39,7 @@ The supplied desktop runtime also provides pnpm at `C:\Users\alber\.cache\codex-
 1. Choose **Race with friends**, select two, three, or four players, choose 1–6 laps, customize each name/paint, then **Plan your lines**.
 2. Each player draws, previews and locks in a line. Pass the device at the handoff screen; earlier lines stay hidden until all plans are locked in.
 3. Place the device flat in landscape. Everyone taps their numbered corner pad to get ready. The shared countdown starts when all players are ready.
-4. Tap your pad for thrust during the race. Cars start on a separated grid and physically collide: rear impacts transfer momentum, side contacts push and slide, and crashes can send you into sand or barriers. Finished cars leave active racing while everyone else completes the distance.
+4. Tap your pad for thrust during the race. Cars start on a separated grid with three seconds of ghosting, then physically collide: rear impacts transfer momentum, side contacts push and slide, and crashes can send you into sand or barriers. Finished cars leave active racing while everyone else completes the distance.
 5. See finishing order and individual times. Times equal to the displayed hundredth share a place. **Rematch** preserves all lines and requests readiness again; **Draw new lines** starts at Player 1.
 
 | Player | Corner | Desktop key |
@@ -73,12 +77,13 @@ When the physical car reaches sand, lower traction makes it slide more and surfa
 pnpm typecheck
 pnpm test
 pnpm test:browser
+pnpm test:pages
 pnpm build
 pnpm report:size
 pnpm preview
 ```
 
-Browser checks use locally installed Google Chrome on Windows. Set `CHROME_PATH` for another installed Chrome/Chromium executable. By default they use software WebGL and touch emulation, so they do not certify physical Safari performance. If the preview server is not already running, the browser suite starts a local test server.
+Browser checks use locally installed Google Chrome on Windows and Playwright Chromium on Linux (`pnpm exec playwright install --with-deps chromium`). Set `CHROME_PATH` for another installed Chrome/Chromium executable. By default they use software WebGL and touch emulation, so they do not certify physical Safari performance. If the preview server is not already running, the browser suite starts a local test server. `test:pages` needs a production build made with `VITE_BASE_PATH=/RoadsterRace/`; see the online-testing guide.
 
 On this Windows machine, Intel Direct3D 11 rendering avoids software-renderer stalls. To use that verified backend for browser checks:
 
@@ -112,7 +117,7 @@ Recordings can replace individual roles through `src/presentation/audio-assets.t
 
 `src/core` contains track data, route compilation, and the engine-independent 60 Hz simulation. `LocalRace` advances all cars through shared forces/contact substeps, commits physical progress afterward and ranks positions against the common circuit. The core tournament module scores complete rounds independently of presentation and local storage. `src/input` contains independent pointer ownership. `src/presentation` contains themes, assets, procedural scenery/cars, optional GLB loading, and audio cues. `src/main.ts` coordinates drawing turns, readiness, races and DOM controls. Theme changes cannot alter route or simulation data.
 
-Current scope: one to four local players, three playable circuits, physical car contact, saved local tournaments, one to six laps, six paint choices, saved driver profiles, thrust, solo session bests per lap count, rematch, two presentation presets, and four-touch diagnostics. Hop, challenge mode, persistent/global records, native iOS, and public deployment remain later milestones.
+Current scope: one to four local players, three playable circuits, physical car contact, saved local tournaments, one to six laps, six paint choices, saved driver profiles, thrust, solo session bests per lap count, rematch, two presentation presets, four-touch diagnostics and public GitHub Pages hosting for testing. Hop, challenge mode, persistent/global records, native iOS and promotion remain later milestones.
 
 See [multiplayer decisions and next steps](docs/MULTIPLAYER.md), [verification and device checklist](docs/VERIFICATION.md), [original asset ledger](docs/ASSET_RIGHTS.md), and the existing detailed planning documents. Physical iPhone/iPad verification remains pending until tested on actual hardware.
 

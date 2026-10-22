@@ -1,6 +1,6 @@
 # Roadster Race
 
-Build on the approved browser prototype with the now-authorized local multiplayer milestone: two to four sequential drawing turns, a shared race, independent corner thrust controls, and finishing order. Preserve solo play. Hop, leaderboards, accounts, hosting, and promotion remain later work.
+Build on the approved browser prototype and local multiplayer: two to four sequential drawing turns, a shared race, independent corner thrust controls, and finishing order. Preserve solo play. Public GitHub Pages hosting for testing is authorized; hop, leaderboards, accounts and promotion remain later work.
 
 - Stack: TypeScript, Babylon.js, WebGL 2, Vite; DOM/CSS controls.
 - Keep `src/core` independent of rendering, DOM, assets, and theme settings.
@@ -11,7 +11,7 @@ Build on the approved browser prototype with the now-authorized local multiplaye
 - Use the pinned pnpm toolchain and lockfile. Run `pnpm typecheck`, `pnpm test`, and `pnpm build` after meaningful changes. Run relevant browser tests for input/session/presentation changes.
 - Document physical Safari verification as pending until a real device has been tested. Automated mobile emulation is supplemental evidence.
 - Preserve existing planning documents. Never put secrets or generated dependencies in version control.
-- Local preview is authorized. Public hosting and external posts are outside the current milestone.
+- Local preview and the public Albert-Gil/RoadsterRace GitHub Pages testing site are authorized. External posts/promotion and additional hosting services remain outside the milestone. Deploy only verified main builds of dist/; keep assets/Home beneath the configured base path. No service worker/offline caching during testing. Physical hosted Safari checks remain pending until performed on hardware.
 - Circuits must include authored inner barriers or solid obstacle areas that prevent excessive corner cutting while preserving deliberate runoff. Visible obstacles and collision footprints must agree. Route compilation must reject solid crossings with vehicle clearance. Future hop mechanics must respect protected infield areas and ordered course progression; shortcuts require explicit track design and validation.
 
 - Race distance is selectable from one to six laps. Reuse one compiled line/pace across laps; scope session bests by circuit ID/version and lap count.

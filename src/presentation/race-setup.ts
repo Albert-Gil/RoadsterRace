@@ -28,5 +28,5 @@ export function raceSetupMarkup(preferences: RacePreferences, count: number, tou
         <div class="paint-caption"><span>${escapeHtml(finish.name)}</span><span>ROADSTER</span></div>
       </section>`;
     }).join('')}</div></div>
-    <div class="setup-footer"><span>${count === 1 ? 'SOLO' : `${count} DRIVERS`} <b> / </b> ${preferences.laps} ${preferences.laps === 1 ? 'LAP' : 'LAPS'}</span><div class="panel-actions"><button class="text-button" data-action="home">Back</button><button class="primary-button" data-action="start-session">${count > 1 && tour?.enabled ? 'Start tournament' : count === 1 ? 'Draw racing line' : 'Plan your lines'} <span aria-hidden="true">↗</span></button></div></div>`;
+    <div class="setup-footer"><span>${count === 1 ? 'SOLO' : `${count} DRIVERS`} <b> / </b> ${preferences.laps} ${preferences.laps === 1 ? 'LAP' : 'LAPS'}<small class="build-id">TEST BUILD ${escapeHtml(__BUILD_ID__)}</small></span><div class="panel-actions"><button class="text-button" data-action="home">Back</button><button class="primary-button" data-action="start-session">${count > 1 && tour?.enabled ? 'Start tournament' : count === 1 ? 'Draw racing line' : 'Plan your lines'} <span aria-hidden="true">↗</span></button></div></div>`;
 }

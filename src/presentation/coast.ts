@@ -12,6 +12,7 @@ import { softShadowTexture, surfaceTexture } from './textures';
 import { projectToPolyline } from '../core/geometry';
 import type { TrackDefinition } from '../core/types';
 import { visualAssets } from './assets';
+import { assetUrl } from './urls';
 
 /** Decorative geometry only. The broad sand apron stays clear around the circuit. */
 export function buildCoast(scene: Scene, track: TrackDefinition, theme: PresentationTheme, materials: Map<string, StandardMaterial>) {
@@ -43,7 +44,7 @@ export function buildCoast(scene: Scene, track: TrackDefinition, theme: Presenta
   const embankment = material('embankment', theme.scene.embankment);
   const rockMaterial = material('rock', theme.scene.rock);
   if (visualAssets.embankmentTexture) {
-    const texture = new Texture(visualAssets.embankmentTexture, scene, false, true, Texture.TRILINEAR_SAMPLINGMODE, undefined, () => { texture.dispose(); embankment.diffuseTexture = null; rockMaterial.diffuseTexture = null; }); texture.anisotropicFilteringLevel = 4;
+    const texture = new Texture(assetUrl(visualAssets.embankmentTexture), scene, false, true, Texture.TRILINEAR_SAMPLINGMODE, undefined, () => { texture.dispose(); embankment.diffuseTexture = null; rockMaterial.diffuseTexture = null; }); texture.anisotropicFilteringLevel = 4;
     embankment.diffuseTexture = rockMaterial.diffuseTexture = texture;
   }
   const mounds = [{ x: -16, z: 0, width: 36, depth: 20, height: 0.28 }, { x: -31, z: 0, width: 12, depth: 17, height: 3.2 }, { x: 5, z: -6, width: 9, depth: 9, height: 2.1 }];

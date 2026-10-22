@@ -15,6 +15,7 @@ import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
 import { softShadowTexture } from './textures';
 import { TireMarks } from './tire-marks';
 import { buildRoadsterGeometry, type RoadsterPart } from './roadster-geometry.js';
+import { assetUrl } from './urls';
 
 const geometries = new Map<string, ReturnType<typeof buildRoadsterGeometry>>();
 const sharedMeshes = new WeakMap<Scene, Map<string, Mesh>>();
@@ -147,7 +148,7 @@ export class VehicleView {
   async loadAsset(asset: VisualAssets['vehicle']) {
     if (asset.kind === 'procedural') return;
     try {
-      await import('@babylonjs/loaders/glTF'); const { ImportMeshAsync } = await import('@babylonjs/core/Loading/sceneLoader'); const imported = await ImportMeshAsync(asset.url, this.scene);
+      await import('@babylonjs/loaders/glTF'); const { ImportMeshAsync } = await import('@babylonjs/core/Loading/sceneLoader'); const imported = await ImportMeshAsync(assetUrl(asset.url), this.scene);
       this.chassis.setEnabled(false); this.wheels.forEach(w => w.pivot.setEnabled(false));
       const model = new TransformNode('imported-vehicle-adapter', this.scene); model.parent = this.root; model.scaling.setAll(asset.scale); model.rotation.y = asset.rotationY;
       for (const mesh of imported.meshes) if (!mesh.parent) mesh.parent = model;

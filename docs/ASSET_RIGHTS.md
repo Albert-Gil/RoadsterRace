@@ -13,7 +13,7 @@
 | Barlow Regular/Semibold and Barlow Condensed Bold Italic | Jeremy Tribby / Barlow project, SIL OFL 1.1 | `public/assets/fonts/`; `public/licenses/Barlow.txt` | Unmodified files from the official Google Fonts repository, `ofl/barlow` and `ofl/barlowcondensed`. Retain OFL. System fallbacks remain |
 | Babylon.js and tools | Package dependencies | Locked package manifests | Retain upstream package license files; review notices if redistributing publicly |
 
-The project is a local private prototype. A future custom model, font, texture, logo, music track, or public branding treatment needs its own origin/license record before inclusion in a public build.
+The project is a public testing prototype. A future custom model, font, texture, logo, music track, or public branding treatment needs its own origin/license record before inclusion in a public build. The shipped Babylon runtime license and upstream notices are retained in `public/licenses/Babylon-Apache-2.0.txt` and `public/licenses/Babylon-NOTICE.txt`, alongside the Barlow and RoadsterLAB notices. Home Screen PNG icons are raster exports of the project's original R mark, created with `tools/generate-app-icons.mjs`.
 
 Golden Gate's factory hall, solar canopies, red suspension portals/cables, shoreline, skyline and course layout are original procedural geometry. Its foundry sign uses original wording and bundled/fallback typography; no Tesla logo or copied factory/bridge model is included. The spaceport's player-facing name is now Launchsite, with its original geometry unchanged. Thrust vapor uses an original radial canvas texture and a bounded billboard mesh; car-impact and scrape cues use original oscillator/noise synthesis. No ElevenLabs audio or network service was added.
 

@@ -23,6 +23,7 @@ import type { CompiledRoute, DrawSample, DrawingTrim, Point, TrackDefinition } f
 import type { PresentationTheme } from './themes';
 import { sceneTuning, sceneryTheme, sceneryLighting } from './themes';
 import { visualAssets } from './assets';
+import { assetUrl } from './urls';
 import { VehicleView } from './vehicle';
 import { buildScenery, type SceneryRuntime } from './scenery';
 import type { SceneryId } from '../content/circuits';
@@ -146,7 +147,7 @@ export class GameScene {
     this.vehicle = new VehicleView(this.scene, theme); this.vehicles.push(this.vehicle); this.vehicle.update({ ...track.start, heading: startHeading });
     this.registerVehicleShadows(this.vehicle); void this.vehicle.loadAsset(visualAssets.vehicle).then(() => this.registerVehicleShadows(this.vehicle));
     for (const [url, material] of [[visualAssets.roadTexture, this.roadMaterial], [visualAssets.terrainTexture, this.terrainMaterial]] as const) {
-      if (url) material.diffuseTexture = new Texture(url, this.scene, false, true, Texture.TRILINEAR_SAMPLINGMODE, undefined, () => { material.diffuseTexture?.dispose(); material.diffuseTexture = null; });
+      if (url) material.diffuseTexture = new Texture(assetUrl(url), this.scene, false, true, Texture.TRILINEAR_SAMPLINGMODE, undefined, () => { material.diffuseTexture?.dispose(); material.diffuseTexture = null; });
     }
     this.showcase = new VehicleShowcase(this.engine, theme);
     this.setTheme(theme); this.resize(); this.ready = true;

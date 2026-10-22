@@ -394,6 +394,7 @@ p { font-size: 14px; line-height: 1.5; }
 .setup-footer { flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; gap: 16px; border-top: 1px solid var(--border); background: #111a23; padding: 15px 26px; }
 .setup-footer > span { color: var(--muted); font-size: 10px; font-weight: 600; letter-spacing: .08em; white-space: nowrap; }
 .setup-footer b { color: var(--accent); margin: 0 5px; }
+.build-id { display: block; margin-top: 5px; font-size: 8px; font-weight: 400; letter-spacing: .06em; opacity: .8; }
 .setup-footer .panel-actions { margin: 0; gap: 14px; }
 .setup-footer .primary-button { padding: 12px 18px; }
 .pod-name { display: block; max-width: 82px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; margin: 2px auto; }

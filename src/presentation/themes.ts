@@ -1,3 +1,5 @@
+import { assetUrl } from './urls';
+
 export const paintFinishes = [
   { id: 'crimson', name: 'Crimson', color: '#d51f35' },
   { id: 'glacier', name: 'Glacier silver', color: '#dfe7eb' },
@@ -21,7 +23,7 @@ export interface PresentationTheme {
 export const themes: Record<string, PresentationTheme> = {
   coastal: {
     id: 'coastal',
-    branding: { title: 'ROADSTER RACE', tagline: 'Your line. Your race.', logo: '/assets/mark.svg' },
+    branding: { title: 'ROADSTER RACE', tagline: 'Your line. Your race.', logo: assetUrl('assets/mark.svg') },
     typography: { body: 'Barlow, system-ui, -apple-system, sans-serif', display: '"Barlow Condensed", Impact, sans-serif' },
     ui: { surface: '#111820', text: '#f4f5f6', muted: '#b6c0c9', accent: '#f0444b', accentText: '#ffffff', border: '#39434d', radius: '3px' },
     scene: { water: '#216574', shallows: '#5a9e9c', foam: '#d1e5da', terrain: '#c7b78d', embankment: '#a7ae8a', asphalt: '#b0b6ba', structure: '#26313b', shoulder: '#9a9586', curb: '#ede9de', paint: '#d51f35', glass: '#13212c', foliage: '#344d36', foliageLight: '#687349', rock: '#b7b5a5', trunk: '#786b53', route: '#ff4c48', paceFast: '#4ce879', sky: '#a4b8c1', sunlight: 1.0 },
@@ -31,7 +33,7 @@ export const themes: Record<string, PresentationTheme> = {
   },
   graphite: {
     id: 'graphite',
-    branding: { title: 'ROADSTER / RACE', tagline: 'Find your flow.', logo: '/assets/mark-graphite.svg' },
+    branding: { title: 'ROADSTER / RACE', tagline: 'Find your flow.', logo: assetUrl('assets/mark-graphite.svg') },
     typography: { body: 'Barlow, system-ui, -apple-system, sans-serif', display: 'Barlow, system-ui, sans-serif' },
     ui: { surface: '#172022', text: '#f1f5e8', muted: '#b8c6bd', accent: '#d7f877', accentText: '#18291e', border: '#47554e', radius: '3px' },
     scene: { water: '#234d60', shallows: '#4a8e91', foam: '#b1dace', terrain: '#b8b69b', embankment: '#b7c5b1', asphalt: '#b3c0c7', structure: '#263b40', shoulder: '#919b86', curb: '#e4dfcb', paint: '#d7f877', glass: '#182e35', foliage: '#3a6357', foliageLight: '#839b73', rock: '#b1bdb4', trunk: '#81765f', route: '#dcf896', paceFast: '#f3aa6c', sky: '#739597', sunlight: 0.85 },
