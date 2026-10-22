@@ -1,0 +1,32 @@
+import { chromium } from '@playwright/test';
+import { mkdirSync, writeFileSync } from 'node:fs';
+mkdirSync('artifacts/orbital', { recursive: true });
+const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH ?? 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true, args: ['--use-angle=d3d11', '--ignore-gpu-blocklist'] });
+const errors = [];
+try {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  page.on('pageerror', e => { errors.push(e.message); console.log('PAGE', e.message); });
+  page.on('console', m => { if (m.type() === 'error') console.log('CONSOLE', m.text()); });
+  await page.goto('http://127.0.0.1:5173/?circuit=orbital-launchyard');
+  await page.waitForFunction(() => window.__roadster?.getGraphics().renderReady, undefined, { timeout: 30000 });
+  await page.screenshot({ path: 'artifacts/orbital/welcome.png' });
+  await page.getByRole('button', { name: "Let's race" }).click();
+  await page.screenshot({ path: 'artifacts/orbital/setup.png' });
+  await page.getByRole('button', { name: '2 players', exact: true }).click(); await page.screenshot({ path: 'artifacts/orbital/setup-local.png' });
+  await page.getByRole('button', { name: 'Solo', exact: true }).click();
+  await page.setViewportSize({ width: 390, height: 844 }); await page.locator('.setup-scroll').evaluate(el => el.scrollTop = 0); await page.waitForTimeout(250);
+  await page.screenshot({ path: 'artifacts/orbital/portrait-setup.png' });
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.getByRole('button', { name: 'Draw racing line' }).click();
+  await page.evaluate(() => window.__roadster.usePracticeLine());
+  await page.waitForFunction(() => window.__roadster.getGraphics().renderReady); await page.waitForTimeout(500);
+  await page.screenshot({ path: 'artifacts/orbital/preview.png' });
+  const report = { graphics: await page.evaluate(() => window.__roadster.getGraphics()), track: await page.evaluate(() => ({ id: window.__roadster.getTrack().id, length: window.__roadster.getTrack().length })), errors };
+  await page.setViewportSize({ width: 844, height: 390 }); await page.waitForTimeout(300);
+  await page.screenshot({ path: 'artifacts/orbital/phone-preview.png' });
+  report.projectionError = await page.evaluate(() => window.__roadster.getProjectionError());
+  await page.getByRole('button', { name: 'Race this line' }).click();
+  await page.waitForFunction(() => window.__roadster.getState().phase === 'racing');
+  await page.waitForTimeout(700); await page.screenshot({ path: 'artifacts/orbital/phone-race.png' });
+  writeFileSync('artifacts/orbital/visual-report.json', JSON.stringify(report, null, 2)); console.log(JSON.stringify(report));
+} finally { await browser.close(); }

@@ -1,0 +1,39 @@
+import { chromium } from '@playwright/test';
+import { mkdirSync, writeFileSync } from 'node:fs';
+mkdirSync('artifacts/overhaul', { recursive: true });
+const browser = await chromium.launch({ executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true, args: ['--use-angle=d3d11', '--ignore-gpu-blocklist'] });
+const errors = [];
+try {
+  const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+  page.on('pageerror', e => { errors.push(e.message); console.log('PAGE ERROR', e.message); });
+  page.on('console', m => { if (m.type() === 'error') console.log('CONSOLE', m.text()); });
+  await page.goto('http://127.0.0.1:5173/');
+  await page.waitForFunction(() => Boolean(window.__roadster), null, { timeout: 30000 });
+  await page.waitForFunction(() => window.__roadster.getGraphics().renderReady);
+  await page.evaluate(() => document.fonts.ready); await page.waitForTimeout(600);
+  await page.screenshot({ path: 'artifacts/overhaul/welcome.png' });
+  for (const view of ['front', 'side', 'rear']) {
+    await page.evaluate(view => window.__roadster.inspectVehicle(view), view); await page.waitForTimeout(250);
+    await page.screenshot({ path: `artifacts/overhaul/car-${view}.png` });
+  }
+  await page.getByRole('button', { name: "Let's race" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
+  await page.evaluate(() => window.__roadster.usePracticeLine());
+  await page.waitForTimeout(800); await page.screenshot({ path: 'artifacts/overhaul/circuit.png' });
+  console.log('GRAPHICS', await page.evaluate(() => window.__roadster.getGraphics()));
+  const report = { desktop: await page.evaluate(() => window.__roadster.getGraphics()), errors };
+  await page.setViewportSize({ width: 844, height: 390 }); await page.waitForTimeout(500);
+  await page.screenshot({ path: 'artifacts/overhaul/phone-preview.png' });
+  await page.setViewportSize({ width: 390, height: 844 }); await page.reload(); await page.waitForFunction(() => window.__roadster?.getGraphics().renderReady); await page.waitForTimeout(500);
+  await page.screenshot({ path: 'artifacts/overhaul/portrait-welcome.png' });
+  await page.getByRole('button', { name: "Let's race" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click(); await page.waitForTimeout(300);
+  await page.screenshot({ path: 'artifacts/overhaul/portrait-drawing.png' });
+  await page.route(/\.(ttf|webp)(\?.*)?$/, route => route.fulfill({ status: 404, body: '' }));
+  await page.goto('http://127.0.0.1:5173/?theme=graphite');
+  await page.waitForFunction(() => window.__roadster?.getGraphics().renderReady);
+  await page.getByRole('button', { name: "Let's race" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
+  await page.evaluate(() => window.__roadster.usePracticeLine());
+  await page.getByRole('button', { name: 'Race this line' }).waitFor();
+  report.missingFontsAndTextures = { playable: true, phase: await page.evaluate(() => window.__roadster.getState().phase) };
+  await page.screenshot({ path: 'artifacts/overhaul/art-fallback.png' });
+  writeFileSync('artifacts/overhaul/visual-report.json', JSON.stringify(report, null, 2));
+} finally { await browser.close(); }

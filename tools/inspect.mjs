@@ -1,0 +1,17 @@
+import { chromium } from '@playwright/test';
+import { mkdir } from 'node:fs/promises';
+await mkdir('artifacts', { recursive: true });
+const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH ?? 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+const errors = [];
+page.on('pageerror', error => errors.push(error.message));
+page.on('console', msg => { if (msg.type() === 'error') errors.push(msg.text()); });
+await page.goto('http://127.0.0.1:5173');
+await page.waitForTimeout(2500);
+console.log(JSON.stringify({ errors, state: await page.evaluate(() => window.__roadster?.getState()), projectionError: await page.evaluate(() => window.__roadster?.getProjectionError()) }));
+await page.screenshot({ path: 'artifacts/coastal-day.png' });
+await page.goto('http://127.0.0.1:5173/?theme=graphite');
+await page.waitForTimeout(1500);
+await page.screenshot({ path: 'artifacts/graphite.png' });
+console.log(JSON.stringify({ errors, graphite: await page.evaluate(() => window.__roadster?.getState()) }));
+await browser.close();

@@ -1,0 +1,6 @@
+packages:
+  - .
+storeDir: .pnpm-store
+nodeLinker: hoisted
+saveExact: true
+verifyDepsBeforeRun: false
