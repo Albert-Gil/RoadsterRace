@@ -56,7 +56,9 @@ export class GameScene {
   private shadows: ShadowGenerator;
   private reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   private layoutMode = 'welcome';
+  private canvasResizeObserver: ResizeObserver;
   inspectVehicle(view: 'front' | 'side' | 'rear') { this.showcase.inspectView(view); }
+  get showcaseProjection() { return this.showcase.projectionMetrics; }
   ready = false;
   drawCalls = 0;
   constructor(readonly canvas: HTMLCanvasElement, readonly track: TrackDefinition, theme: PresentationTheme, readonly scenery: SceneryId = 'coastal', engine?: Engine) {
@@ -151,6 +153,13 @@ export class GameScene {
     }
     this.showcase = new VehicleShowcase(this.engine, theme);
     this.setTheme(theme); this.resize(); this.ready = true;
+    // Mobile layout / dynamic viewport units may settle after window.resize.
+    // Follow the canvas itself so its drawing buffer never stays portrait-sized
+    // while CSS stretches it into landscape (or after a toolbar height change).
+    this.canvasResizeObserver = new ResizeObserver(entries => {
+      if (this.ready && entries.some(entry => entry.contentRect.width > 0 && entry.contentRect.height > 0)) this.resize();
+    });
+    this.canvasResizeObserver.observe(canvas);
   }
   private ribbon(name: string, points: Point[], width: number, y: number) {
     const sides = [-1, 1].map(side => points.map((p, i) => {
@@ -308,5 +317,5 @@ export class GameScene {
     if (['welcome', 'setup', 'results'].includes(this.layoutMode)) this.showcase.render(time);
     this.drawCalls = this.engine._drawCalls.current - callsBefore;
   }
-  dispose(disposeEngine = true) { this.showcase.dispose(); this.scene.dispose(); if (disposeEngine) this.engine.dispose(); }
+  dispose(disposeEngine = true) { this.ready = false; this.canvasResizeObserver.disconnect(); this.showcase.dispose(); this.scene.dispose(); if (disposeEngine) this.engine.dispose(); }
 }

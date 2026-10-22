@@ -445,6 +445,7 @@ try {
       raceInputs: { activations: [...raceTouches.activations], cancellations: [...raceTouches.cancellations], active: [0, 1, 2, 3].map(i => raceTouches.active(i)) },
       inputs: { activations: [...ownership.activations], cancellations: [...ownership.cancellations], active: [0, 1, 2, 3].map(i => ownership.active(i)) } }),
     getAudio: () => audio.getStatus(),
+    getShowcaseProjection: () => world.showcaseProjection,
     inspectVehicle: (view: 'front' | 'side' | 'rear') => world.inspectVehicle(view),
     getGraphics: () => ({ circuitId: activeCircuit.id, engineScenes: world.engine.scenes.length, ...world.depthFeatures, roadVisible: !!world.scene.getMeshByName('asphalt') && world.scene.getActiveMeshes().contains(world.scene.getMeshByName('asphalt')!), vaporParticles: world.vehicles.map(v => v.vapor.liveCount), meshes: world.scene.meshes.length, activeMeshes: world.scene.getActiveMeshes().length, drawCalls: world.drawCalls, fps: world.engine.getFps(), textures: world.scene.textures.length, hardwareScaling: world.engine.getHardwareScalingLevel() }),
     project: (point: { x: number; z: number }) => world.project(point), getTrack: () => ({ ...activeTrack, centerline: activeTrack.centerline.map(p => ({ ...p })) }),

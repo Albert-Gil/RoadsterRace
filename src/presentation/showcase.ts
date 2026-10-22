@@ -28,13 +28,20 @@ export class VehicleShowcase {
     const material = new PBRMaterial('satin-podium', this.scene); material.albedoColor = Color3.FromHexString('#202c36').toLinearSpace(); material.metallic = 0.5; material.roughness = 0.36; stage.material = material;
   }
   resize() {
-    const portrait = window.innerHeight > window.innerWidth, compact = window.innerHeight < 650;
+    const { width, height } = this.scene.getEngine().getRenderingCanvas()!.getBoundingClientRect();
+    if (!width || !height) return;
+    const portrait = height > width, compact = height < 650;
     this.camera.viewport = portrait ? new Viewport(0, 0.45, 1, 0.43) : new Viewport(0.36, compact ? 0.13 : 0.18, 0.64, 0.74);
-    const aspect = window.innerWidth * this.camera.viewport.width / (window.innerHeight * this.camera.viewport.height);
+    const aspect = width * this.camera.viewport.width / (height * this.camera.viewport.height);
     const distance = 11.5 * Math.max(1, 1.6 / aspect);
     this.camera.position.set(distance * 0.58, distance * 0.30, distance * 0.76); this.camera.setTarget(new Vector3(0, 0.5, 0));
   }
   setTheme(theme: PresentationTheme) { this.car.setTheme(theme); }
+  get projectionMetrics() {
+    const engine = this.scene.getEngine(), canvas = engine.getRenderingCanvas()!, rect = canvas.getBoundingClientRect(), viewport = this.camera.viewport;
+    const projection = this.scene.getProjectionMatrix().m;
+    return { cssWidth: rect.width, cssHeight: rect.height, renderWidth: engine.getRenderWidth(true), renderHeight: engine.getRenderHeight(true), viewport: { x: viewport.x, y: viewport.y, width: viewport.width, height: viewport.height }, aspect: projection[5] / projection[0], expectedAspect: rect.width * viewport.width / (rect.height * viewport.height) };
+  }
   inspectView(view: 'front' | 'side' | 'rear') {
     const views = { front: [1, 2.4, 13], side: [13, 2.4, 0], rear: [-1, 2.4, -13] };
     this.camera.position.copyFromFloats(...views[view] as [number, number, number]); this.camera.setTarget(new Vector3(0, 0.6, 0));

@@ -87,6 +87,12 @@ async function ready(page) {
   }), true);
   await page.evaluate(() => new Promise(resolve => { let n = 0; function frame() { if (++n === 8) resolve(); else requestAnimationFrame(frame); } requestAnimationFrame(frame); }));
 }
+async function canvasProportions(page) {
+  await page.waitForFunction(() => {
+    const canvas = document.querySelector('#race-canvas'), rect = canvas.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0 && Math.abs((canvas.width / canvas.height) / (rect.width / rect.height) - 1) < 0.002;
+  });
+}
 async function draw(page, context, points) {
   await page.bringToFront();
   const cdp = await context.newCDPSession(page), epoch = Date.now() / 1000;
@@ -176,12 +182,25 @@ try {
       const appleIcon = await page.locator('link[rel=apple-touch-icon]').evaluate(link => link.href);
       assert.equal((await context.request.get(appleIcon)).status(), 200);
       assert.equal(await page.locator('meta[name=apple-mobile-web-app-capable]').getAttribute('content'), 'yes');
+      // Reproduce mobile layout settling after the orientation resize event,
+      // while the showcase car is visible. No development inspector is used.
+      await page.locator('main').evaluate(main => { main.style.height = '844px'; });
+      await page.setViewportSize({ width: 844, height: 390 });
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      await page.locator('main').evaluate(main => { main.style.height = '390px'; });
+      await canvasProportions(page);
+      await page.screenshot({ path: fileURLToPath(new URL('phone-car-landscape.png', output)) });
+      await page.locator('main').evaluate(main => { main.style.height = '320px'; });
+      await canvasProportions(page);
+      await page.locator('main').evaluate(main => { main.style.removeProperty('height'); });
+      await page.setViewportSize({ width: 390, height: 844 });
+      await canvasProportions(page);
       await page.getByRole('button', { name: 'Draw racing line' }).click();
       await ready(page);
       const points = await fixture('golden-gate', 1, { ...phone, viewport: { width: 390, height: 844 } });
       await draw(page, context, points); await page.getByRole('button', { name: 'Race this line' }).waitFor();
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth || document.documentElement.scrollHeight > innerHeight + 1), false);
-      report.checks.push({ portrait: true, graphite: true, manifestAndIcons: true, realTouchPreview: true });
+      report.checks.push({ portrait: true, graphite: true, manifestAndIcons: true, realTouchPreview: true, canvasRotation: true });
     } finally { await context.close(); }
   }
   // Four private drawing turns and shared start; optional complete race locally.
