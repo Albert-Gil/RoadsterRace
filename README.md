@@ -75,7 +75,7 @@ Small finger wiggles and pace fluctuations are smoothed. Acceleration and brakin
 
 When you lift your finger, accidental backward sections, hooks and small loops are removed. The preview shows the cleaned line; deleted detours do not become long braking pauses. You can also draw substantially beyond the asphalt, through roughly one additional road width of sand on either side. Start and finish can use different positions across the full-width gate. The compiler blends the last/first 20 metres into a safe forward connection. Muted dashed lead-ins stay visible but do not count toward pace or duration.
 
-When the physical car reaches sand, lower traction makes it slide more and surface drag slows it down. The effect ends as the tires return to asphalt. Dust and the SAND/DRIFT labels show what is happening. This applies equally to solo and multiplayer. See [handling and tuning](docs/HANDLING.md).
+When the physical car reaches sand, lower traction makes it slide more and surface drag slows it down. The effect ends as the tires return to asphalt. Dust, tire marks and body movement show what is happening. This applies equally to solo and multiplayer. See [handling and tuning](docs/HANDLING.md).
 
 ## Commands
 
@@ -123,7 +123,7 @@ Recordings can replace individual roles through `src/presentation/audio-assets.t
 
 `src/core` contains track data, route compilation, and the engine-independent 60 Hz simulation. `LocalRace` advances all cars through shared forces/contact substeps, commits physical progress afterward and ranks positions against the common circuit. The core tournament module scores complete rounds independently of presentation and local storage. `src/input` contains independent pointer ownership. `src/presentation` contains themes, assets, procedural scenery/cars, optional GLB loading, and audio cues. `src/main.ts` coordinates drawing turns, readiness, races and DOM controls. Theme changes cannot alter route or simulation data.
 
-Current scope: one to four local players, three playable circuits, physical car contact, saved local tournaments, one to six laps, six paint choices, saved driver profiles, thrust, solo session bests per lap count, rematch, two presentation presets, four-touch diagnostics and public GitHub Pages hosting for testing. Hop, challenge mode, persistent/global records, native iOS and promotion remain later milestones.
+Current scope: four playable circuits; Solo Race against three computer drivers; two-to-four-human local Multiplayer; single races and saved tournaments; Time Trial with browser-local fastest-lap records and replay ghosts; one to six laps; saved names/paint; thrust, physical contacts and the authored Santa Monica ramp; rematches, two presentation presets, touch diagnostics and public GitHub Pages testing. Manual hop, challenge mode, global records, native iOS and promotion remain later milestones.
 
 See [multiplayer decisions and next steps](docs/MULTIPLAYER.md), [verification and device checklist](docs/VERIFICATION.md), [original asset ledger](docs/ASSET_RIGHTS.md), and the existing detailed planning documents. Physical iPhone/iPad verification remains pending until tested on actual hardware.
 
@@ -131,15 +131,15 @@ See [multiplayer decisions and next steps](docs/MULTIPLAYER.md), [verification a
 
 Race setup now serves solo and local play. Choose 1–6 laps and enter each driver's name (up to 18 characters) and one of six paints: Crimson, Glacier silver, Cobalt blue, Solar yellow, Verdant green or Ultraviolet. A live showcase previews paint. Names are carried through handoff, controls and results; driver numbers remain visible when names or paints repeat.
 
-These choices are saved locally in this browser, with a safe session-only fallback if storage is unavailable. The pace line is 10 CSS pixels wide while planning (14 px outline), and 8 pixels during racing (11 px outline). Coaching pop-ups during drift and advice after the race have been removed. Results show the selected distance, split times and session best, scoped separately by circuit/version/lap count.
+These choices are saved locally in this browser, with a safe session-only fallback if storage is unavailable. The pace line is 10 CSS pixels wide while planning (14 px outline), and 8 pixels during racing (11 px outline). Coaching pop-ups during drift and advice after the race have been removed. Racing results show the selected distance, finishing order and split times, with session bests scoped by circuit/version/lap count. Time Trial ranks fastest laps and stores records by circuit/track/physics/compiler version, independently of session length.
 
-Coastal Launch, Launchsite and Golden Gate are playable. Alpine Relay and Neon Harbour remain future concepts in [the expansion plan](docs/CIRCUIT_EXPANSION_PLAN.md).
+Coastal Launch, Launchsite, Golden Gate and Santa Monica are playable. Alpine Relay and Neon Harbour remain future concepts in [the expansion plan](docs/CIRCUIT_EXPANSION_PLAN.md).
 
 ## Select a circuit
 
-In race setup, choose **Coastal Launch**, **Launchsite** or **Golden Gate** before drawing. The cards show actual layouts, approximate centerline lengths and course character. Launchsite combines a long straight and technical return with original spaceport scenery. Golden Gate combines a city boulevard, technical waterfront streets and an 88 m red suspension bridge with a 12 m deck and solid edge rails. Both newer environments remain original procedural art passes ready for further refinement.
+In race setup, choose **Coastal Launch**, **Launchsite**, **Golden Gate** or **Santa Monica** before drawing. The cards show actual layouts, approximate centerline lengths and course character. Launchsite combines a long straight and technical return with original spaceport scenery. Golden Gate combines a city boulevard, technical waterfront streets and an 88 m red suspension bridge with a 16 m deck and solid edge rails. Santa Monica adds a beachfront boulevard, supported amusement pier and optional jump with a flat bypass. Both newer environments remain original procedural art passes ready for further refinement.
 
-The selected circuit is remembered with names, paint and lap count. A deliberate circuit change discards every previous plan, ready state and race; names, paint and distance remain. Session bests remain separate by circuit/version/lap count. Old one-circuit saved preferences migrate to Coastal Launch. A direct local link is `http://localhost:5173/?circuit=orbital-launchyard`.
+The selected circuit is remembered with names, paint and lap count. A deliberate circuit change discards every previous plan, ready state and race; names, paint and distance remain. Race session bests remain separate by circuit/version/lap count; Time Trial lap records are independent of lap count. Old one-circuit saved preferences migrate to Coastal Launch. A direct local link is `http://localhost:5173/?circuit=orbital-launchyard`.
 
 Circuit metadata lives in `src/content/circuits.ts`, physical Orbital geometry in `src/core/tracks/orbital.ts`, and biome dispatch in `src/presentation/scenery.ts`. Spaceport materials/lighting are centralized alongside the other presentation settings in `themes.ts`. The scene changes reuse one WebGL engine and dispose previous scenes. Physical Safari and sustained mobile performance remain pending.
 

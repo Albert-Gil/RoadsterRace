@@ -48,6 +48,10 @@ Continuous tracing is disabled for ordinary long race tests (`on-first-retry` re
 
 The `/RoadsterRace/` production smoke replays real touch input on every venue and Santa Monica's jump, tests Solo Race's four cars/one human control, four private local drawing turns/readiness, and saved championship reload. It checks fonts, icons, manifest, Home navigation, production inspector removal and canvas proportions after rotation. Full completion is covered by unit/development browser runs; the production smoke verifies startup/input/race start. Production report records zero page errors and failed required requests.
 
+## Hosted release checks
+
+The first hosted run exhausted its 30-minute verification budget while executing production smoke sequentially with software WebGL. It had reached Solo Race after checking every course, rotation and local drawing. The workflow now runs the same checks in five independent groups and requires all groups before deployment. Local production smoke remains available as one complete sequential run. This is a release-test scheduling change; game rendering and simulation are unchanged.
+
 ## Pending physical testing
 
 Physical iPhone/iPad Safari frame rate, heat, finger comfort, simultaneous touch, jump readability, rotation/browser chrome and hosted Home Screen/cellular use remain pending until tested on hardware. Automated touch/viewport emulation is supplemental evidence.

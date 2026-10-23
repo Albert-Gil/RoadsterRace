@@ -13,9 +13,14 @@ const devURL = `http://127.0.0.1:5177${base}`;
 const productionURL = process.env.PAGES_URL || `http://127.0.0.1:4177${base}`;
 const fullRaces = process.env.PAGES_FULL_RACES === '1';
 const tournamentOnly = process.env.PAGES_ONLY === 'tournament';
+const circuits = ['coastal-launch', 'launchsite', 'golden-gate', 'santa-monica'];
+const selection = process.env.PAGES_ONLY;
+assert.ok(!selection || selection === 'tournament' || selection === 'sessions' || circuits.includes(selection), 'Unknown PAGES_ONLY group');
+const selectedCircuits = selection ? circuits.filter(id => id === selection) : circuits;
+const sessionChecks = !selection || selection === 'sessions';
 const output = new URL('../artifacts/pages/', import.meta.url);
 await mkdir(output, { recursive: true });
-const report = { date: new Date().toISOString(), url: productionURL, fullRaces, checks: [], errors: [], failedRequests: [] };
+const report = { date: new Date().toISOString(), url: productionURL, group: selection || 'all', fullRaces, checks: [], errors: [], failedRequests: [] };
 const servers = [];
 let browser;
 
@@ -140,7 +145,7 @@ try {
     await server(['preview', '--port', '4177'], productionURL);
   }
   browser = await chromium.launch(browserOptions());
-  for (const circuit of tournamentOnly ? [] : ['coastal-launch', 'launchsite', 'golden-gate', 'santa-monica']) {
+  for (const circuit of selectedCircuits) {
     console.log(`Checking ${circuit}: production touch drawing and racing`);
     const points = await fixture(circuit);
     const { context, page } = await productionPage();
@@ -186,8 +191,11 @@ try {
     } finally { await context.close(); }
   }
   // Alternate presentation and portrait layout, including standalone metadata.
-  if (!tournamentOnly) {
+  if (sessionChecks) {
     console.log('Checking portrait, Graphite, manifest and Home Screen icons');
+    // Compile the coordinate fixture before opening production WebGL. Two
+    // simultaneous scenes compete for shader compilation on slower machines.
+    const points = await fixture('golden-gate', 1, { ...phone, viewport: { width: 390, height: 844 } });
     const { context, page } = await productionPage({ ...phone, viewport: { width: 390, height: 844 } });
     try {
       await page.goto(`${productionURL}?circuit=golden-gate&theme=graphite`);
@@ -218,14 +226,13 @@ try {
       await canvasProportions(page);
       await page.getByRole('button', { name: 'Draw racing line' }).click();
       await ready(page);
-      const points = await fixture('golden-gate', 1, { ...phone, viewport: { width: 390, height: 844 } });
       await draw(page, context, points); await page.getByRole('button', { name: 'Race this line' }).waitFor();
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth || document.documentElement.scrollHeight > innerHeight + 1), false);
       report.checks.push({ portrait: true, graphite: true, manifestAndIcons: true, realTouchPreview: true, canvasRotation: true });
     } finally { await context.close(); }
   }
   // Four private drawing turns and shared start; optional complete race locally.
-  if (!tournamentOnly) {
+  if (sessionChecks) {
     console.log('Checking four-player drawing, readiness and racing');
     const points = await fixture('coastal-launch', 4);
     const { context, page } = await productionPage();
@@ -243,7 +250,7 @@ try {
       report.checks.push({ fourPlayers: true, privateDrawingAndReadiness: true, sharedRaceStarted: true, completedRace: fullRaces });
     } finally { await context.close(); }
   }
-  if (!tournamentOnly) {
+  if (sessionChecks) {
     console.log('Checking Solo Race: three CPU cars and one human input');
     const points = await fixture('coastal-launch');
     const { context, page } = await productionPage();
@@ -264,7 +271,7 @@ try {
   }
   // Saved tournament creation/resumption is checked in every production smoke;
   // full mode additionally completes all four rounds using real drawn input.
-  {
+  if (sessionChecks || tournamentOnly) {
     console.log('Checking saved tournament and resumption');
     const { context, page } = await productionPage();
     try {
