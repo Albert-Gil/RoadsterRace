@@ -1,6 +1,6 @@
 export interface Point { x: number; z: number }
 export interface DrawSample extends Point { time: number }
-export interface TrackBarrier { id: string; footprint: Point[]; height: number; baseHeight?: number; kind?: 'infield' | 'bridge-rail' | 'bridge-support' | 'pier-rail'; bridgeId?: string }
+export interface TrackBarrier { id: string; footprint: Point[]; height: number; baseHeight?: number; kind?: 'infield' | 'bridge-rail' | 'bridge-support' | 'pier-rail' | 'service-barrier'; bridgeId?: string }
 export interface SupportSurface { id: string; footprint: Point[] }
 export interface TrackJump {
   id: string; from: Point; forward: Point; width: number; rampLength: number; lipHeight: number;
@@ -8,6 +8,12 @@ export interface TrackJump {
   /** Alternate road coordinates, mapped onto the bypass's ordered course distance. */
   branch: Point[]; entryProgress: number; exitProgress: number;
 }
+/** A manual-hop branch, independent of automatic ramps and water support. */
+export interface HopShortcut {
+  id: string; branch: Point[]; width: number; obstacleId: string;
+  entryProgress: number; exitProgress: number;
+}
+export interface HopTraversal { id: string; entryDistance: number; exitDistance: number }
 export interface StartFinishGate { center: Point; forward: Point; width: number; leadIn: number }
 export interface TrackBridge { id: string; from: Point; to: Point; width: number }
 export interface TrackDefinition {
@@ -28,6 +34,7 @@ export interface TrackDefinition {
   supports?: SupportSurface[];
   waterOpenings?: SupportSurface[];
   jumps?: TrackJump[];
+  hopShortcuts?: HopShortcut[];
 }
 export interface RoutePoint extends Point {
   distance: number;
@@ -43,6 +50,7 @@ export interface CompiledRoute {
   drawingDuration: number;
   cleanup?: { removedPoints: number; removedSeconds: number };
   jumps?: string[];
+  hopShortcuts?: HopTraversal[];
 }
 export interface DrawingTrim { leadIn: DrawSample[]; tail: DrawSample[]; joined: boolean }
 export type RouteResult = { ok: true; route: CompiledRoute; drawing?: DrawingTrim } | { ok: false; message: string; point?: Point; section?: Point[] };

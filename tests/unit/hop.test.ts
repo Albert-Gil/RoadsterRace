@@ -24,8 +24,8 @@ test.each(circuits)('$id supports an independent manual hop without new support 
   const sim = new RaceSimulation(r.route, track), events: string[] = []; sim.pressHop();
   let peak = 0, airtime = 0;
   for (let tick = 0; tick < 80; tick++) { sim.step(); peak = Math.max(peak, sim.state.elevation); events.push(...sim.drainEvents().map(e => e.type)); if (events.includes('landing')) { airtime = sim.state.time; break; } }
-  expect(events).toContain('hop'); expect(events).toContain('landing'); expect(airtime).toBeCloseTo(1, 1);
-  expect(peak).toBeCloseTo(1.224, 2); expect(sim.state.hopReadyAt).toBe(7); expect(sim.state.hopCount).toBe(1); expect(sim.state.thrustCount).toBe(0);
+  expect(events).toContain('hop'); expect(events).toContain('landing'); expect(airtime).toBeCloseTo(0.95, 1);
+  expect(peak).toBeCloseTo(4.014, 2); expect(sim.state.hopReadyAt).toBe(7); expect(sim.state.hopCount).toBe(1); expect(sim.state.thrustCount).toBe(0);
 });
 test('moving hops preserve speed in flight, suppress tire forces and keep thrust independent', () => {
   const sim = new RaceSimulation(line, flat); moving(sim, 20); sim.pressHop();
@@ -66,7 +66,7 @@ test('an unauthorized water hop recovers without awarding course progress or que
   const sim = new RaceSimulation(line, track); moving(sim, 20); sim.pressHop(); sim.pressThrust();
   for (let i = 0; i < 110 && sim.state.recoveryCount === 0; i++) sim.step();
   expect(sim.state.recoveryCount).toBe(1); expect(sim.state.distance).toBe(0); expect(sim.state.checkpoint).toBe(1);
-  expect(sim.state.hopReadyAt).toBe(7); expect(sim.state.thrustReadyAt).toBe(5); expect(sim.state.time).toBeGreaterThanOrEqual(1); expect(sim.state.speed).toBe(0);
+  expect(sim.state.hopReadyAt).toBe(7); expect(sim.state.thrustReadyAt).toBe(5); expect(sim.state.time).toBeGreaterThanOrEqual(0.9); expect(sim.state.speed).toBe(0);
 });
 test.each([20, 30, 42].flatMap(speed => [-20, 0, 20].map(yaw => ({ speed, yaw }))))('ramp guidance lands at $speed m/s with body yaw $yaw degrees and sideways drift', ({ speed, yaw }) => {
   const track = circuits[3].track, jump = track.jumps![0], r = compileRoute(createPracticeSamples(track, 7, true), track); if (!r.ok) throw Error(r.message);
@@ -80,7 +80,7 @@ test.each([20, 30, 42].flatMap(speed => [-20, 0, 20].map(yaw => ({ speed, yaw })
 test('hop on a ramp uses local height and cannot stack a second lip impulse', () => {
   const track = circuits[3].track, jump = track.jumps![0], r = compileRoute(createPracticeSamples(track, 7, true), track); if (!r.ok) throw Error(r.message);
   const sim = new RaceSimulation(r.route, track); sim.state.position = jumpPoint(jump, 7); moving(sim, 30, Math.PI / 2); sim.pressHop();
-  sim.step(); expect(sim.state.elevation).toBeGreaterThan(1.05); expect(sim.state.verticalVelocity).toBeLessThan(4.9);
+  sim.step(); expect(sim.state.elevation).toBeGreaterThan(1.05); expect(sim.state.verticalVelocity).toBeLessThan(17);
   const events = sim.drainEvents().map(e => e.type);
   for (let i = 0; i < 100 && !events.includes('landing'); i++) { sim.step(); events.push(...sim.drainEvents().map(e => e.type)); }
   expect(events).toContain('landing'); expect(events).not.toContain('takeoff'); expect(sim.state.recoveryCount).toBe(0);

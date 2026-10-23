@@ -98,6 +98,7 @@ test('actual hop and ramp gameplay capture retains the one-car rendering budget'
   // Headless video capture may trigger the intentional render-delay pause.
   if ((await state(page)).phase === 'paused') { await page.getByRole('button', { name: 'Resume', exact: true }).click(); }
   await page.waitForFunction(() => (window as any).__roadster.getState().race.flightOrigin === 'ramp', undefined, { timeout: 60000 });
+  expect(await page.evaluate(() => (window as any).__roadster.getGraphics().hopCores)).toBe(0);
   await page.screenshot({ path: 'artifacts/hop/ramp-jump-landscape.png' });
   if ((await state(page)).phase === 'paused') await page.getByRole('button', { name: 'Resume', exact: true }).click();
   await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'results', undefined, { timeout: 120000 });

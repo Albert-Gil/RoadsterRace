@@ -1,4 +1,4 @@
-import { rampAt, supported, FLIGHT_RULES } from './core/support';
+import { rampAt, supported, groundHeight, FLIGHT_RULES } from './core/support';
 import { CPU_DRIVERS, humanCount, racerCount, controllerFor, type SessionOptions } from './core/session';
 import { computerRoute, stepComputers } from './core/computer';
 import { LapRecorder, lapRecordKey, replayPose, type LapRecord } from './core/lap-replay';
@@ -192,7 +192,7 @@ function renderPanel(message?: string) {
     const resetIcon = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 10a8 8 0 1 1 1.4 7M4 4v6h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     const setupIcon = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16M8 3v6m8 0v6m-6 0v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
     const flagIcon = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 21V4m0 0c5-4 9 4 14 0v10c-5 4-9-4-14 0" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m8 4 3 1v4L8 8zm6 2 3-1v4l-3 1zM8 8l3 1v4l-3-1zm6 2 3-1v4l-3 1z" fill="currentColor"/></svg>';
-    panel.innerHTML = `<h2 class="sr-only">${preview ? 'Your line is ready.' : 'Draw your line.'}</h2>${playerCount > 1 ? `<span class="planning-driver" aria-label="${playerName(turn)}, player ${turn + 1} of ${playerCount}" title="${playerName(turn)}">${playerChip(turn)}</span>` : ''}<div class="panel-actions">${preview ? `<button class="planning-button primary-button" data-action="confirm" aria-label="${humans() > 1 ? 'Lock in my line' : 'Race this line'}">${flagIcon}<span>${humans() > 1 ? 'Lock in' : 'Race'}</span></button>` : ''}<button class="planning-button secondary-button" data-action="redraw" aria-label="${preview ? 'Redraw' : 'Start again'}">${resetIcon}<span>Redraw</span></button><button class="planning-button secondary-button" data-action="${activeTour ? 'home' : 'configure-race'}" aria-label="${activeTour ? 'Leave tournament' : 'Race setup'}">${setupIcon}<span>${activeTour ? 'Exit' : 'Setup'}</span></button></div>${message ? `<div class="planning-error instruction" role="alert">${escapeHtml(message)}</div>` : ''}`;
+    panel.innerHTML = `<h2 class="sr-only">${preview ? 'Your line is ready.' : 'Draw your line.'}</h2>${playerCount > 1 ? `<span class="planning-driver" aria-label="${playerName(turn)}, player ${turn + 1} of ${playerCount}" title="${playerName(turn)}">${playerChip(turn)}</span>` : ''}<div class="panel-actions">${preview ? `<button class="planning-button primary-button" data-action="confirm" aria-label="${humans() > 1 ? 'Lock in my line' : 'Race this line'}">${flagIcon}<span>${humans() > 1 ? 'Lock in' : 'Race'}</span></button>` : ''}<button class="planning-button secondary-button" data-action="redraw" aria-label="${preview ? 'Redraw' : 'Start again'}">${resetIcon}<span>Redraw</span></button><button class="planning-button secondary-button" data-action="${activeTour ? 'home' : 'configure-race'}" aria-label="${activeTour ? 'Leave tournament' : 'Race setup'}">${setupIcon}<span>${activeTour ? 'Exit' : 'Setup'}</span></button></div>${preview && route?.hopShortcuts?.length ? `<span class="hop-required">Hop required</span>` : ''}${message ? `<div class="planning-error instruction" role="alert">${escapeHtml(message)}</div>` : ''}`;
   }
   if (phase === 'ready') panel.innerHTML = `<span class="eyebrow">${playerCount} PLAYERS · ${lapCount} ${lapCount === 1 ? 'LAP' : 'LAPS'}</span><h2>Take your corner.</h2><p>Everyone tap their numbered pad to get ready.<br>Cars pass through each other for the first ${CONTACT_RULES.ghostStartSeconds} seconds.<br>Thrust recharges every five seconds. One tap, one burst.</p><div class="ready-summary" aria-live="polite">${readyPlayers.filter(Boolean).length} / ${playerCount} ready</div><div class="ready-actions"><button class="text-button" data-action="redraw-all">Draw new lines</button><button class="text-button" data-action="configure-race">Race setup</button></div>`;
   if (phase === 'paused') panel.innerHTML = `<span class="eyebrow">RACE PAUSED</span><h2>Back in a moment.</h2><div class="panel-actions"><button class="primary-button" data-action="resume">Resume ${arrow}</button><button class="secondary-button" data-action="home" aria-label="Home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m3 11 9-8 9 8M5 9v12h5v-7h4v7h5V9"/></svg>Home</button><button class="text-button" data-action="retry">Restart race</button></div>`;
@@ -220,7 +220,7 @@ function beginDrawing() {
   world.vehicles.forEach(vehicle => vehicle.clearEffects());
   world.drawLine(null); world.showError(); world.vehicles[turn].update(startPose()); notice.textContent = ''; setPhase('drawing');
 }
-function usePractice(jumpBranch = false) {
+function usePractice(jumpBranch: boolean | string = false) {
   if (phase !== 'drawing') return;
   const result = compileRoute(createPracticeSamples(activeTrack, 7, jumpBranch), activeTrack);
   if (result.ok) { route = result.route; drawingTrim = result.drawing; world.drawLine(route, drawingTrim); world.showError(); setPhase('preview'); }
@@ -301,6 +301,9 @@ function updateVehicles(alpha: number) {
       z: previous && !s.finished ? lerp(previous.z, s.position.z, alpha) : s.position.z,
       y: previous && !s.finished ? lerp(previous.y, s.elevation, alpha) : s.elevation,
       airborne: s.movement === 'airborne',
+      hopAge: s.flightOrigin === 'hop' ? s.time - s.flightStartedAt : undefined,
+      supportY: supported(s.position, activeTrack) ? groundHeight(s.position, activeTrack) : undefined,
+      surfaceAt: (x: number, z: number) => supported({x,z}, activeTrack) ? groundHeight({x,z}, activeTrack) : undefined,
       shadowY: supported(s.position, activeTrack) ? 0 : FLIGHT_RULES.waterHeight,
       pitch: s.movement === 'airborne' ? clamp(Math.atan2(s.verticalVelocity, Math.max(12, s.speed)), -(s.flightOrigin === 'hop' ? hopEffects.maxBodyPitch : 0.25), s.flightOrigin === 'hop' ? hopEffects.maxBodyPitch : 0.25) : (() => { const j = rampAt(s.position, activeTrack); return j ? Math.atan(j.lipHeight / j.rampLength) * (Math.sin(s.heading) * j.forward.x + Math.cos(s.heading) * j.forward.z) : 0; })(),
       heading: previous && !s.finished ? previous.heading + angleDelta(previous.heading, s.heading) * alpha : s.heading,
@@ -472,9 +475,8 @@ try {
  });
       for (const event of session.drainEvents()) {
         audio.cue(event.type, event.intensity); if (event.type === 'thrust') rechargeAnnounced[event.player] = false; const prefix = playerCount > 1 ? `${driverName(event.player)} · ` : '';
-        if (event.type === 'hop') world.vehicles[event.player].hop(event.time);
         if ((event.type === 'landing' || event.type === 'splash') && event.point) world.feedback(event.point, event.type === 'splash');
-        if (event.type === 'landing') world.vehicles[event.player].impact(event.time);
+        if (event.type === 'landing') world.vehicles[event.player].impact(event.time, true);
         if (event.type === 'car-impact') { world.vehicles[event.player].impact(event.time); world.vehicles[event.otherPlayer!].impact(event.time); }
         if (event.type === 'collision') { world.vehicles[event.player].impact(event.time); showNotice(`${prefix}Barrier contact`); }
         if (event.type === 'recovery') { previousPoses[event.player] = { ...session.racers[event.player].state.position, heading: session.racers[event.player].state.heading, y: session.racers[event.player].state.elevation }; showNotice(`${prefix}Recovering`); }

@@ -96,7 +96,7 @@ export function applyPlayerColors(colors: readonly string[]) {
 }
 
 export const thrustEffects = { capacity: 96, emission: 120, lifetime: 0.8, exhaustSpeed: 5, startSize: 0.45, expansion: 2.1, opacity: 0.66, color: "#e1eff3", coreColor: "#e6fbff", coreOpacity: 0.72 };
-export const hopEffects = { puffs: 16, lifetime: 0.45, downwardSpeed: 4, size: 0.7, maxBodyPitch: 0.12 };
+export const hopEffects = { pulse: 0.22, nozzleHeight: 0.20, puffs: 16, lifetime: 0.6, downwardSpeed: 18, size: 0.65, mounts: [{ x: -0.52, z: -1.8 }, { x: 0.52, z: -1.8 }, { x: -0.52, z: 1.8 }, { x: 0.52, z: 1.8 }], coreColor: '#eef8ff', maxBodyPitch: 0.12 };
 
 /** Shared city materials; architecture placement is authored in content/golden-city.ts. */
 export const cityAppearance = { bridge: '#cb4b36', facades: ['#caba91', '#8aa49a', '#bb8068', '#9daabb', '#d8be8d', '#9b8173'], paving: '#bbb7a6', roof: '#52616a', shop: '#354953', window: '#456575', warmWindow: '#b9bd9d' };

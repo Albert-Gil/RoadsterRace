@@ -28,3 +28,6 @@ The sunset beach/pier, amusement wheel, coaster, train, buildings, palms, deck s
 The 2026-10-23 venue finishing pass (rooftops, planting, spectator shapes, concrete/timber/water grain and corrected jump paint) is original procedural geometry and canvas artwork in this repository. It adds no third-party asset downloads. RoadsterLAB and font attributions above continue to apply.
 
 Manual-hop additions use an original inline arrow icon, downward puffs in the existing procedural vapor pool and an original Web Audio pressure/lift cue. No Tesla sound, ElevenLabs recording, model or third-party artwork was added. Gameplay captures show this prototype's actual simulation.
+
+
+The heavier-flight milestone adapts RoadsterLAB’s MIT-licensed four-mount, crossed pale-core/widening white-vapor treatment from its local scene source, without a runtime dependency or modifications to that project. The batched underbody nozzle geometry, pooled gas implementation, service lane, barrier stripes and Hop signage are authored in this repository. Existing `public/licenses/RoadsterLAB.txt` attribution is retained. Hop height/gravity and vehicle dimensions are game tuning, not manufacturer specifications.

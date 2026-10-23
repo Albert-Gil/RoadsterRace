@@ -2,7 +2,7 @@ import { clamp, cumulative, distance, lerp, mix, projectToPolyline } from './geo
 import { insideBarrier } from './barriers';
 import type { Point, TrackDefinition, TrackJump } from './types';
 
-export const FLIGHT_RULES = Object.freeze({ gravity: 9.81, carHeight: 1.05, waterHeight: -2.4 });
+export const FLIGHT_RULES = Object.freeze({ gravity: 36, rampLaunchBoost: 8, carHeight: 1.05, waterHeight: -2.4 });
 const footprintBounds = new WeakMap<Point[], { x0: number; x1: number; z0: number; z1: number }>();
 export const inFootprint = (p: Point, footprint: Point[]) => {
   let bounds = footprintBounds.get(footprint);
@@ -76,11 +76,11 @@ export function validateSupports(points: Point[], track: TrackDefinition): { ok:
 
 /** Both branches share the same entry/exit distance for checkpoints and standings. */
 export function branchProjection(p: Point, track: TrackDefinition) {
-  let best: ReturnType<typeof projectToPolyline> | undefined;
-  for (const j of track.jumps ?? []) {
+  let best: (ReturnType<typeof projectToPolyline> & { manualHop: boolean }) | undefined;
+  for (const j of [...(track.jumps ?? []), ...(track.hopShortcuts ?? [])]) {
     const ds = cumulative(j.branch), projection = projectToPolyline(p, j.branch, ds);
     const along = projection.progress / ds.at(-1)!;
-    const candidate = { ...projection, progress: lerp(j.entryProgress, j.exitProgress, along) };
+    const candidate = { ...projection, progress: lerp(j.entryProgress, j.exitProgress, along), manualHop: 'obstacleId' in j };
     if (!best || candidate.distance < best.distance) best = candidate;
   }
   return best;

@@ -12,12 +12,13 @@ describe('playable circuit registry', () => {
     expect(findCircuit('orbital-launchyard').track).toBe(orbitalTrack);
     expect(findCircuit('constructor').id).toBe('coastal-launch');
     expect(circuitMapPath(circuits[0].track)).not.toBe(circuitMapPath(orbitalTrack));
-    expect(orbitalTrack.length).toBeGreaterThan(360); expect(orbitalTrack.length).toBeLessThan(460);
+    expect(orbitalTrack.length).toBeGreaterThan(360); expect(orbitalTrack.length).toBeLessThan(470);
   });
   for (const circuit of circuits) describe(circuit.id, () => {
     test('solid footprints preserve at least five metres of deliberate runoff', () => {
       const track = circuit.track;
       for (const barrier of track.barriers) {
+        if (barrier.kind === 'service-barrier') { expect(track.hopShortcuts?.length).toBeGreaterThan(0); continue; }
         if (barrier.kind === 'pier-rail') { expect(track.supports?.length).toBeGreaterThan(0); continue; }
         if (barrier.kind === 'bridge-rail' || barrier.kind === 'bridge-support') {
           expect(track.bridges?.some(b => b.id === barrier.bridgeId)).toBe(true); continue;

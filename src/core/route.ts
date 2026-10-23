@@ -4,8 +4,9 @@ import { cleanDrawnRoute, DRAWING_RULES, projectCourse } from './route-cleanup';
 import { canStartDrawing, trimDrawing, joinLap, gateCoordinates, gatePoint } from './start-finish';
 import { blockedRouteSection } from './barriers';
 import { validateSupports, branchProjection } from './support';
+import { validateHopShortcuts } from './hop-shortcuts';
 
-export const COMPILER_VERSION = 9;
+export const COMPILER_VERSION = 10;
 export const PACE_RANGE = Object.freeze({ min: 9, max: 30 });
 export const PACE_FILTER = Object.freeze({ gestureRadius: 5, compiledRadius: 8 });
 
@@ -16,7 +17,8 @@ export function paceToSpeed(worldUnitsPerSecond: number, trackLength: number): n
 
 function validateGeometry(points: Point[], track: TrackDefinition): RouteResult | null {
   const support = validateSupports(points, track); if (!support.ok) return support;
-  const blocked = blockedRouteSection(points, track);
+  const shortcuts = validateHopShortcuts(points, track); if (!shortcuts.ok) return shortcuts;
+  const blocked = blockedRouteSection(points, track, shortcuts.obstacles);
   if (blocked) return { ok: false, message: 'Your line crosses an inner barrier. Leave room for the car and redraw this section.', ...blocked };
   let unwrapped = 0, backwards = 0, previous = projectCourse(points[0], track), nextCheckpoint = 1;
   const roadLimit = (track.roadWidth - track.carWidth) / 2 + track.roadWidth * DRAWING_RULES.runoffRoadWidths;
@@ -69,7 +71,8 @@ export function compileRoute(input: DrawSample[], track: TrackDefinition): Route
   }
   if (samples.length < 12) return { ok: false, message: 'Draw all the way around the circuit.' };
   const rawDuration = trimmed.samples.at(-1)!.time / 1000;
-  const retainedCrossing = blockedRouteSection(samples, track);
+  const retainedShortcuts = validateHopShortcuts(samples, track); if (!retainedShortcuts.ok) return retainedShortcuts;
+  const retainedCrossing = blockedRouteSection(samples, track, retainedShortcuts.obstacles);
   const retainedSupport = validateSupports(samples, track); if (!retainedSupport.ok) return retainedSupport;
   if (retainedCrossing) return { ok: false, message: 'Your line crosses an inner barrier. Leave room for the car and redraw this section.', ...retainedCrossing };
   const cleaned = cleanDrawnRoute(samples, track, true);
@@ -141,7 +144,8 @@ export function compileRoute(input: DrawSample[], track: TrackDefinition): Route
   const seamSpeed = (points[0].desiredSpeed + points[count].desiredSpeed) / 2;
   points[0].desiredSpeed = points[count].desiredSpeed = seamSpeed;
   const support = validateSupports(points, track); if (!support.ok) return support;
-  return { ok: true, drawing: { leadIn: trimmed.leadIn, tail: trimmed.tail, joined: connection.joined }, route: { version: COMPILER_VERSION, trackId: track.id, trackVersion: track.version, points, length: smoothLength, drawingDuration: rawDuration, ...(support.jumps.length ? { jumps: support.jumps } : {}), ...(cleaned.removedPoints ? { cleanup: { removedPoints: cleaned.removedPoints, removedSeconds: cleaned.removedSeconds } } : {}) } };
+  const shortcuts = validateHopShortcuts(points, track); if (!shortcuts.ok) return shortcuts;
+  return { ok: true, drawing: { leadIn: trimmed.leadIn, tail: trimmed.tail, joined: connection.joined }, route: { version: COMPILER_VERSION, trackId: track.id, trackVersion: track.version, points, length: smoothLength, drawingDuration: rawDuration, ...(support.jumps.length ? { jumps: support.jumps } : {}), ...(shortcuts.traversals.length ? { hopShortcuts: shortcuts.traversals } : {}), ...(cleaned.removedPoints ? { cleanup: { removedPoints: cleaned.removedPoints, removedSeconds: cleaned.removedSeconds } } : {}) } };
 }
 
 export function sampleRoute(route: CompiledRoute, value: number) {
@@ -151,9 +155,10 @@ export function sampleRoute(route: CompiledRoute, value: number) {
 }
 
 /** Used for route fixtures and a clearly labelled optional practice line. */
-export function createPracticeSamples(track: TrackDefinition, durationSeconds = 7, jumpBranch = false): DrawSample[] {
-  if (jumpBranch && track.jumps?.length) {
-    const j = track.jumps[0], a = track.distances.findIndex(d => d >= j.entryProgress), b = track.distances.findIndex(d => d >= j.exitProgress), branchDistances = cumulative(j.branch);
+export function createPracticeSamples(track: TrackDefinition, durationSeconds = 7, jumpBranch: boolean | string = false): DrawSample[] {
+  const selected = typeof jumpBranch === 'string' ? track.hopShortcuts?.find(s => s.id === jumpBranch) : jumpBranch ? track.jumps?.[0] : undefined;
+  if (selected) {
+    const j = selected, a = track.distances.findIndex(d => d >= j.entryProgress), b = track.distances.findIndex(d => d >= j.exitProgress), branchDistances = cumulative(j.branch);
     const branch = Array.from({ length: 78 }, (_, i) => samplePolyline(j.branch, branchDistances, i / 77 * branchDistances.at(-1)!));
     const points = [...track.centerline.slice(0, a), ...branch, ...track.centerline.slice(b)], ds = cumulative(points);
     return points.map((p, i) => ({ ...p, time: ds[i] / ds.at(-1)! * durationSeconds * 1000 }));

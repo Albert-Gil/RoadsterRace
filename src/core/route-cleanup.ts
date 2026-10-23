@@ -19,7 +19,8 @@ export function projectCourse(point: Point, track: TrackDefinition, previous?: {
     if (score < best.score) best = { distance: gap, progress, score };
   }
   const branch = branchProjection(point, track);
-  if (branch) {
+  // Near a fork, a normal inside line belongs to the safe road, not the manual branch.
+  if (branch && (!branch.manualHop || best.distance > (track.roadWidth - track.carWidth) / 2)) {
     let progress = branch.progress;
     if (previous) progress += Math.round((previous.progress - progress) / track.length) * track.length;
     const jump = previous ? Math.max(0, Math.abs(progress - previous.progress) - movement * 1.75 - 2) : 0;

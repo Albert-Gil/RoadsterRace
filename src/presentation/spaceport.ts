@@ -47,11 +47,11 @@ export function buildSpaceport(scene: Scene, track: TrackDefinition, theme: Pres
     box('roof-skylight', x, 7.66, -14, 4.4, 0.12, 5.4, glass);
   }
   sign('assembly-sign', 'ORBITAL / ASSEMBLY', -11, 6.4, -19.3, 28);
-  box('mission-control', 28, 3, -17, 12, 5.7, 9, white);
-  box('mission-control-glass', 28, 3.8, -21.55, 11, 2.3, 0.12, glass);
-  box('mission-roof', 28, 6, -17, 13, 0.3, 10, metal);
-  cylinder('dish-pedestal', 28, 7.3, -17, 2.3, 0.35, 0.3, steel);
-  const dish = MeshBuilder.CreateSphere('communications-dish', { diameter: 3, segments: 8, slice: 0.5 }, scene); dish.position.set(28, 8.8, -17); dish.scaling.y = 0.35; dish.rotation.z = 0.5; dish.material = white;
+  box('mission-control', 23, 3, -17, 12, 5.7, 9, white);
+  box('mission-control-glass', 23, 3.8, -21.55, 11, 2.3, 0.12, glass);
+  box('mission-roof', 23, 6, -17, 13, 0.3, 10, metal);
+  cylinder('dish-pedestal', 23, 7.3, -17, 2.3, 0.35, 0.3, steel);
+  const dish = MeshBuilder.CreateSphere('communications-dish', { diameter: 3, segments: 8, slice: 0.5 }, scene); dish.position.set(23, 8.8, -17); dish.scaling.y = 0.35; dish.rotation.z = 0.5; dish.material = white;
   // Cantilever start lights: no unmarked outer support in usable runoff.
   box('start-cantilever-column', -43, 3.9, -20, 0.8, 7.8, 0.8, steel);
   box('start-cantilever-arm', -43, 7.5, -31, 0.8, 0.7, 23, steel);

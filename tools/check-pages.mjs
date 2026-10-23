@@ -66,7 +66,7 @@ async function fixture(circuit, count = 1, options = phone, jump = false) {
         const ds = [0]; for (let i = 1; i < path.length; i++) ds.push(ds[i - 1] + Math.hypot(path[i].x - path[i - 1].x, path[i].z - path[i - 1].z));
         return path.map((p, i) => ({ ...g.project(p), time: ds[i] / ds.at(-1) * 7 })).filter((_, i) => i % 2 === 0 || i === path.length - 1);
       };
-      const normal = project(t.centerline), j = t.jumps?.[0]; if (!j) return { normal };
+      const normal = project(t.centerline), j = t.jumps?.[0] ?? t.hopShortcuts?.[0]; if (!j) return { normal };
       const a = t.distances.findIndex(d => d >= j.entryProgress), b = t.distances.findIndex(d => d >= j.exitProgress), branch = [];
       for (let i = 1; i < j.branch.length; i++) {
         const a = j.branch[i - 1], b = j.branch[i], n = Math.ceil(Math.hypot(b.x - a.x, b.z - a.z) / 0.6);
@@ -199,7 +199,7 @@ try {
       if (fullRaces) { await finish(page); assert.ok((await page.locator('#panel').textContent()).includes('Pages Tester')); }
       else await page.keyboard.press('Escape');
       report.checks.push({ circuit, build, realTouchPreview: true, startedRace: true, completedRace: fullRaces, soundEnabled: await page.locator('#sound-button').getAttribute('aria-pressed') === 'true' });
-      if (circuit === 'santa-monica') {
+      if (circuit === 'santa-monica' || circuit === 'launchsite') {
         // Reuse the same compiled/rendered scene; exercise the shortcut in the
         // shipped build using actual input, without any production inspector.
         await page.getByRole('button', { name: fullRaces ? 'Race setup' : 'Home', exact: true }).click();
@@ -207,8 +207,9 @@ try {
         await page.getByRole('button', { name: 'Draw racing line' }).click();
         await draw(page, context, await fixture(circuit, 1, phone, true));
         await page.getByRole('button', { name: 'Race this line' }).click(); await racing(page);
-        if (fullRaces) await finish(page); else await page.keyboard.press('Escape');
-        report.checks.push({ circuit, jumpRealTouchPreview: true, jumpRaceStarted: true, jumpCompleted: fullRaces });
+        if (circuit === 'launchsite') { await checkHops(page, ['KeyH']); await page.keyboard.press('Escape'); }
+        else if (fullRaces) await finish(page); else await page.keyboard.press('Escape');
+        report.checks.push({ circuit, manualHopLane: circuit === 'launchsite', jumpRealTouchPreview: true, jumpRaceStarted: true, jumpCompleted: fullRaces && circuit !== 'launchsite' });
       }
       await page.reload(); await page.getByRole('button', { name: "Time Trial" }).click();
       assert.equal(await page.getByLabel('Driver 1 name', { exact: true }).inputValue(), 'Pages Tester');

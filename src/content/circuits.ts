@@ -21,7 +21,7 @@ export const circuits: readonly CircuitDefinition[] = [
     features: ['Coastal sweepers', 'Sand runoff', `${Math.round(coastalTrack.length)} m`] },
   { id: orbitalTrack.id, number: '02', scenery: 'spaceport', track: orbitalTrack, difficulty: 'SPORT / 3',
     tagline: 'Launch straight. Precision return.', description: 'A long thrust straight and a linked technical return through a spaceport.',
-    features: ['Launch straight', 'Linked S complex', `${Math.round(orbitalTrack.length)} m`] },
+    features: ['Launch straight', 'Hop shortcut', `${Math.round(orbitalTrack.length)} m`] },
   { id: goldenGateTrack.id, number: '03', scenery: 'bay', track: goldenGateTrack, difficulty: 'EXPERT / 4',
     tagline: 'City precision. Bridge speed.', description: 'Technical city streets, waterfront turns and a suspension bridge across the bay.',
     features: ['City streets', 'Suspension bridge', `${Math.round(goldenGateTrack.length)} m`] },

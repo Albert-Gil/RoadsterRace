@@ -37,7 +37,7 @@ function segmentPair(a: Point, b: Point, c: Point, d: Point) {
 }
 
 /** Full longitudinal capsule, independent of artwork. Positive depth means overlap. */
-export function barrierContact(position: Point, heading: number, track: TrackDefinition, clearance = 0, elevation = 0, protectFlight = false) {
+export function barrierContact(position: Point, heading: number, track: TrackDefinition, clearance = 0, elevation = 0, protectFlight = false, permitted: readonly string[] = []) {
   const radius = track.carWidth / 2 + clearance, half = (track.carLength - track.carWidth) / 2;
   const axis = { x: Math.sin(heading) * half, z: Math.cos(heading) * half };
   const a = sub(position, axis), b = { x: position.x + axis.x, z: position.z + axis.z };
@@ -45,8 +45,9 @@ export function barrierContact(position: Point, heading: number, track: TrackDef
   for (const barrier of track.barriers) {
     // Above-road obstacles protect the infield/rails in this milestone. Submerged
     // landing faces retain their real height so an approved jump can pass above.
-    const protectedColumn = protectFlight && (barrier.baseHeight ?? 0) + barrier.height > 1e-6;
-    if (!protectedColumn && (elevation >= (barrier.baseHeight ?? 0) + barrier.height - 1e-6 || elevation + 1.05 <= (barrier.baseHeight ?? 0))) continue;
+    const jumpable = permitted.includes(barrier.id);
+    const protectedColumn = protectFlight && !jumpable && (barrier.baseHeight ?? 0) + barrier.height > 1e-6;
+    if (!protectedColumn && (elevation >= (barrier.baseHeight ?? 0) + barrier.height + (jumpable ? 0.15 : 0) - 1e-6 || elevation + 1.05 <= (barrier.baseHeight ?? 0))) continue;
     const box = bounds(barrier);
     if (Math.max(a.x, b.x) + radius < box.minX || Math.min(a.x, b.x) - radius > box.maxX || Math.max(a.z, b.z) + radius < box.minZ || Math.min(a.z, b.z) - radius > box.maxZ) continue;
     const inside = insideBarrier(position, barrier), v = barrier.footprint;
@@ -69,7 +70,7 @@ export function barrierContact(position: Point, heading: number, track: TrackDef
 }
 
 /** Bounded swept capsule: samples are closer than 1/5 of its radius, including rotational motion. */
-export function sweepVehicle(from: Point, to: Point, oldHeading: number, heading: number, velocity: Point, track: TrackDefinition, fromHeight = 0, toHeight = fromHeight, protectFlight = false) {
+export function sweepVehicle(from: Point, to: Point, oldHeading: number, heading: number, velocity: Point, track: TrackDefinition, fromHeight = 0, toHeight = fromHeight, protectFlight = false, permitted: readonly string[] = []) {
   const angle = angleDelta(oldHeading, heading), travel = distance(from, to) + Math.abs(angle) * track.carLength / 2;
   const steps = Math.max(1, Math.ceil(travel / 0.18));
   let position = { ...from }, motion = { x: (to.x - from.x) / steps, z: (to.z - from.z) / steps }, v = { ...velocity };
@@ -77,7 +78,7 @@ export function sweepVehicle(from: Point, to: Point, oldHeading: number, heading
   for (let i = 1; i <= steps; i++) {
     position = { x: position.x + motion.x, z: position.z + motion.z };
     for (let pass = 0; pass < 4; pass++) {
-      const contact = barrierContact(position, oldHeading + angle * i / steps, track, 0, fromHeight + (toHeight - fromHeight) * i / steps, protectFlight);
+      const contact = barrierContact(position, oldHeading + angle * i / steps, track, 0, fromHeight + (toHeight - fromHeight) * i / steps, protectFlight, permitted);
       if (!contact) break;
       collided = true; const n = contact.normal, incoming = Math.min(0, dot(v, n));
       impact = Math.max(impact, -incoming); point = contact.point;
@@ -90,12 +91,13 @@ export function sweepVehicle(from: Point, to: Point, oldHeading: number, heading
   return { position, velocity: v, impact, point, collided };
 }
 
-export function blockedRouteSection(points: Point[], track: TrackDefinition) {
+export function blockedRouteSection(points: Point[], track: TrackDefinition, permitted: readonly string[] = []) {
+  const physical = permitted.length ? { ...track, barriers: track.barriers.filter(b => !permitted.includes(b.id)) } : track;
   for (let i = 1; i < points.length; i++) {
     const a = points[i - 1], b = points[i], heading = Math.atan2(b.x - a.x, b.z - a.z), count = Math.max(1, Math.ceil(distance(a, b) / 0.4));
     for (let j = 0; j <= count; j++) {
       const p = mix(a, b, j / count);
-      if (barrierContact(p, heading, track, 0.12)) return { point: p, section: [a, b] };
+      if (barrierContact(p, heading, physical, 0.12)) return { point: p, section: [a, b] };
     }
   }
   return null;

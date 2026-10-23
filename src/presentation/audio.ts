@@ -30,7 +30,7 @@ export function synthCue(context: BaseAudioContext, destination: AudioNode, type
   }
   else if (type === 'hop') { tone(105, 0.24, 0, 0.2, 490, 'triangle'); tone(740, 0.13, 0.035, 0.06, 230); }
   else if (type === 'takeoff') { tone(140, 0.22, 0, 0.12, 430, 'triangle'); }
-  else if (type === 'landing') { tone(85, 0.2, 0, 0.32, 28, 'triangle'); tone(190, 0.09, 0, 0.07, 65); }
+  else if (type === 'landing') { tone(80, 0.14, 0, 0.36, 26, 'triangle'); tone(190, 0.07, 0, 0.07, 65); }
   else if (type === 'splash') {
     const source = context.createBufferSource(), filter = context.createBiquadFilter(), envelope = context.createGain();
     source.buffer = noise; filter.type = 'lowpass'; filter.frequency.setValueAtTime(2400, when); filter.frequency.exponentialRampToValueAtTime(180, when + 0.65);

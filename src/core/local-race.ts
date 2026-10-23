@@ -64,7 +64,7 @@ export class LocalRace {
     });
     // Rank by progress around the common circuit, not by metres along differently sized lines.
     this.courseMaps = routes.map(route => {
-      const projected = route.points.map(point => track.jumps?.length ? projectCourse(point, track).progress : projectToPolyline(point, track.centerline, track.distances).progress);
+      const projected = route.points.map(point => track.jumps?.length || track.hopShortcuts?.length ? projectCourse(point, track).progress : projectToPolyline(point, track.centerline, track.distances).progress);
       let unwrapped = 0;
       const values = [0];
       for (let i = 1; i < projected.length; i++) {
@@ -135,7 +135,7 @@ export class LocalRace {
         this.racers.forEach((r, i) => {
           if (!enabled[i]) return;
           r.state.velocity.x += deltas[i].velocity.x; r.state.velocity.z += deltas[i].velocity.z;
-          separateBody(r.state, deltas[i].position, this.track);
+          separateBody(r.state, deltas[i].position, this.track, r.allowedHopBarriers({ x: r.state.position.x + deltas[i].position.x, z: r.state.position.z + deltas[i].position.z }));
           const speed = Math.hypot(r.state.velocity.x, r.state.velocity.z);
           if (speed > RULES.maxSpeed) { r.state.velocity.x *= RULES.maxSpeed / speed; r.state.velocity.z *= RULES.maxSpeed / speed; }
           r.state.speed = Math.hypot(r.state.velocity.x, r.state.velocity.z);

@@ -34,7 +34,8 @@ import { surfaceTexture } from './textures';
 import { createReflectionSky } from './environment';
 import { PaceLine } from './pace-line';
 import { VehicleShowcase } from './showcase';
-import { jumpCoordinates } from '../core/support';
+import { jumpCoordinates, FLIGHT_RULES } from '../core/support';
+import { RULES } from '../core/simulation';
 import { planningHeight } from './planning-height';
 import { JumpFeedback } from './jump-feedback';
 
@@ -99,6 +100,10 @@ export class GameScene {
     else if (!track.bridges?.length) this.ribbon('road-shoulder', track.centerline, track.roadWidth + 2.5, 0.04).material = shoulder;
     else { let run: Point[] = []; for (const p of track.centerline) { if (bridgeAt(p, track)) { if (run.length > 1) this.openRibbon('road-shoulder', run, track.roadWidth + 2.5, 0.04).material = shoulder; run = []; } else run.push(p); } if (run.length > 1) this.openRibbon('road-shoulder', run, track.roadWidth + 2.5, 0.04).material = shoulder; }
     this.ribbon('asphalt', track.centerline, track.roadWidth, 0.10).material = this.roadMaterial = mat('asphalt', theme.scene.asphalt);
+    for (const shortcut of track.hopShortcuts ?? []) {
+      this.openRibbon('service-lane-shoulder', shortcut.branch, shortcut.width + 2.5, 0.04).material = shoulder;
+      this.openRibbon('service-lane-asphalt', shortcut.branch, shortcut.width, 0.1).material = this.roadMaterial;
+    }
     for (const jump of track.jumps ?? []) {
       this.openRibbon('jump-approach-asphalt', [...jump.branch.filter(p=>jumpCoordinates(p,jump).along<0), jump.from], jump.width, 0.1).material = this.roadMaterial;
       this.openRibbon('jump-landing-asphalt', [{ x: jump.from.x + jump.forward.x * (jump.rampLength + jump.gap), z: jump.from.z + jump.forward.z * (jump.rampLength + jump.gap) }, jump.branch.at(-1)!], jump.width, 0.1).material = this.roadMaterial;
@@ -208,10 +213,13 @@ export class GameScene {
     const aspect = this.engine.getRenderWidth() / this.engine.getRenderHeight();
     const elevation = (Math.min(w,h)<=500?sceneTuning.camera.compactElevationDegrees:sceneTuning.camera.elevationDegrees) * Math.PI / 180;
     const tangent = Math.tan(this.camera.fov / 2);
-    const paths = [this.track.centerline,...(this.track.jumps??[]).map(j=>j.branch)];
+    const paths = [this.track.centerline,...(this.track.jumps??[]).map(j=>j.branch),...(this.track.hopShortcuts??[]).map(j=>j.branch)];
     const fitted = paths.flatMap((p,i)=>roadEdges(p,this.track.roadWidth,i===0).flat()).map(p=>new Vector3(p.x,0,p.z));
     for(const across of [-this.track.roadWidth/2,this.track.roadWidth/2]) fitted.push(new Vector3(...(()=>{const p=gatePoint(this.track,across,-12);return [p.x,0,p.z] as [number,number,number];})()));
-    for(const j of this.track.jumps??[]) for(const along of [8,25,45]) fitted.push(new Vector3(j.from.x+j.forward.x*along,5,j.from.z+j.forward.z*along));
+    // Reserve the complete manual-hop height envelope, including a ramp launch.
+    const hopEnvelope = RULES.hopLaunchSpeed ** 2 / (2 * FLIGHT_RULES.gravity) + FLIGHT_RULES.carHeight + 0.3;
+    for (const p of [...fitted]) fitted.push(new Vector3(p.x, hopEnvelope, p.z));
+    for(const j of this.track.jumps??[]) for(const along of [8,25,45]) fitted.push(new Vector3(j.from.x+j.forward.x*along,hopEnvelope+j.lipHeight,j.from.z+j.forward.z*along));
     const courseCenter = new Vector3((Math.min(...fitted.map(p=>p.x))+Math.max(...fitted.map(p=>p.x)))/2,0,(Math.min(...fitted.map(p=>p.z))+Math.max(...fitted.map(p=>p.z)))/2);
     const cx = (left-rightInset)/w, cy=(bottom-top)/h;
     const rx=Math.max(0.2,(w-left-rightInset-2*sceneTuning.camera.clearancePixels)/w),ry=Math.max(0.2,(h-top-bottom-2*sceneTuning.camera.clearancePixels)/h);
@@ -331,7 +339,7 @@ export class GameScene {
   }
   showError(point?: Point, section?: Point[]) { this.errorLine?.dispose(); this.errorLine = undefined; this.errorMarker.isVisible = !!point; if (point) this.errorMarker.position.set(point.x, 0.3, point.z); if (section) this.errorLine = new PaceLine(this.scene, section, section.map(() => 9), this.theme, 0, false, true, false, this.track); }
   showStart(show: boolean) { this.marker.isVisible = show; this.approach.isVisible = show; }
-  get depthFeatures() { return { vehicleScale: sceneTuning.vehicle.racingScale, ghostVisible:this.lapGhost.visible, decorativeMotion: this.scene.meshes.filter(m => m.metadata?.dynamicScenery).map(m => ({name: m.name, rotation: m.rotation.asArray(), position: m.position.asArray()})), perspective: this.camera.mode === Camera.PERSPECTIVE_CAMERA, shadowMapSize: this.shadows.getShadowMap()?.getSize().width ?? 0, shadowCasters: this.shadows.getShadowMap()?.renderList?.length ?? 0, renderReady: this.scene.isReady() && this.showcase.scene.isReady(), worldReady: this.scene.isReady(), showcaseReady: this.showcase.scene.isReady(), pending: [...this.scene.meshes, ...this.showcase.scene.meshes].filter(m => !m.isReady(true)).map(m => m.name), carTriangles: this.vehicle.triangleCount, showcaseTriangles: this.showcase.car.triangleCount, pace: this.theme.pace, lineWidths: this.lines.map(line => line.cssWidths), ignoredStrokeCount: this.ignoredLines.length }; }
+  get depthFeatures() { return { hopCores: this.scene.meshes.filter(m=>m.name === 'four-downward-cold-gas-cores' && m.isEnabled() && m.isVisible).length, vehicleScale: sceneTuning.vehicle.racingScale, ghostVisible:this.lapGhost.visible, decorativeMotion: this.scene.meshes.filter(m => m.metadata?.dynamicScenery).map(m => ({name: m.name, rotation: m.rotation.asArray(), position: m.position.asArray()})), perspective: this.camera.mode === Camera.PERSPECTIVE_CAMERA, shadowMapSize: this.shadows.getShadowMap()?.getSize().width ?? 0, shadowCasters: this.shadows.getShadowMap()?.renderList?.length ?? 0, renderReady: this.scene.isReady() && this.showcase.scene.isReady(), worldReady: this.scene.isReady(), showcaseReady: this.showcase.scene.isReady(), pending: [...this.scene.meshes, ...this.showcase.scene.meshes].filter(m => !m.isReady(true)).map(m => m.name), carTriangles: this.vehicle.triangleCount, showcaseTriangles: this.showcase.car.triangleCount, pace: this.theme.pace, lineWidths: this.lines.map(line => line.cssWidths), ignoredStrokeCount: this.ignoredLines.length }; }
   render(time: number) {
     const reduced = this.reducedMotion.matches;
     (this.marker.material as StandardMaterial).alpha = reduced ? 0.32 : 0.29 + Math.sin(time * 3) * 0.05;

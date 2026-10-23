@@ -246,6 +246,12 @@ function build(){
   for(const [z0,z1] of [[0,.006],[.244,.256],[.494,.506]])prism([[-1.96,.205],[-2.165,.32],[-2.165,.412],[-1.96,.222]],z0,z1,'black',H);
   boxAA([-2.157,.640,0],[-2.146,.770,.162],'black',H);boxAA([-2.161,.650,0],[-2.148,.760,.15],'plate',H);
   for(const z of [.17,.47])nozzle(.548,z,H);
+  // Two mounts on this half; mirroring produces four downward cold-gas nozzles.
+  for(const x of [-1.65,1.65]) {
+    const ring=(r,y)=>Array.from({length:7},(_,i)=>[x+r*Math.cos(i*Math.PI/3),y,.48+r*Math.sin(i*Math.PI/3)]);
+    grid([ring(.10,.14),ring(.13,.06)],'chrome','hop-mount',p=>[p[0]-x,0,p[2]-.48],H);
+    grid([ring(.13,.06),ring(.065,.06)],'black','hop-outlet',()=>[0,-1,0],H);
+  }
   const all=[];for(const t of H){all.push(t);all.push({p:[mz(t.p[0]),mz(t.p[2]),mz(t.p[1])],n:[mz(t.n[0]),mz(t.n[2]),mz(t.n[1])],m:t.m});}
   return {body:bucket(all),wheels:WHEELS.map(wheelParts)};
 }

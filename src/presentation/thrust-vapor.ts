@@ -7,6 +7,7 @@ import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import type { Scene } from '@babylonjs/core/scene';
 import { thrustEffects, hopEffects, sceneTuning } from './themes';
+import { hopOutlet, type ExhaustPose } from './exhaust-pose';
 
 const shared = new WeakMap<Scene, StandardMaterial>();
 interface Puff { age: number; x: number; y: number; z: number; vx: number; vz: number; vy: number; floor: number; lifetime: number; size: number }
@@ -35,25 +36,21 @@ export class ThrustVapor {
     this.mesh = new Mesh('pooled-thrust-vapor', scene); data.applyToMesh(this.mesh, true); this.mesh.material = material; this.mesh.hasVertexAlpha = true; this.mesh.isPickable = false; this.mesh.alwaysSelectAsActiveMesh = true; this.mesh.isVisible = false;
   }
   clear() { this.particles.forEach(p => p.age = 99); this.emission = 0; this.mesh.isVisible = false; }
-  hop(pose: { x: number; z: number; y: number; heading: number }, reduced: boolean) {
-    if (!this.enabled) return;
-    const count = reduced ? 6 : hopEffects.puffs;
-    for (let i = 0; i < count; i++) {
-      const angle = i / count * Math.PI * 2, side = Math.cos(angle) * 0.7, along = Math.sin(angle) * 1.5;
-      Object.assign(this.particles[this.cursor++ % this.particles.length], {
-        age: 0, lifetime: hopEffects.lifetime, floor: pose.y + 0.04,
-        x: pose.x + Math.cos(pose.heading) * side + Math.sin(pose.heading) * along,
-        z: pose.z - Math.sin(pose.heading) * side + Math.cos(pose.heading) * along,
-        y: pose.y + 0.45, vx: Math.cos(angle) * 2.5, vz: Math.sin(angle) * 2.5,
-        vy: -hopEffects.downwardSpeed, size: hopEffects.size,
-      });
-    }
-  }
   setEnabled(value: boolean) { this.enabled = value; if (!value) this.clear(); }
-  update(pose: { x: number; z: number; heading: number; y?: number }, speed: number, firing: boolean, dt: number, reduced: boolean) {
+  update(pose: ExhaustPose, speed: number, firing: boolean, dt: number, reduced: boolean) {
     if (!this.enabled) return;
     const dx = Math.sin(pose.heading), dz = Math.cos(pose.heading);
-    for (const p of this.particles) if (p.age < p.lifetime) { p.age += dt; p.x += p.vx * dt; p.z += p.vz * dt; p.y = Math.max(p.floor, p.y + p.vy * dt); }
+    for (const p of this.particles) if (p.age < p.lifetime) { p.age += dt; p.x += p.vx * dt; p.z += p.vz * dt; if (p.floor > -9 && pose.surfaceAt) p.floor = (pose.surfaceAt(p.x,p.z) ?? -8) + 0.04; p.y = Math.max(p.floor, p.y + p.vy * dt); }
+    if (pose.hopAge !== undefined && pose.hopAge < hopEffects.pulse && dt > 0) {
+      for (const mount of hopEffects.mounts) {
+        const {x,z,y,supportY}=hopOutlet(pose,mount);
+        const floor=supportY===undefined?-8:supportY+0.04;
+        Object.assign(this.particles[this.cursor++ % this.particles.length], { age:0, lifetime:hopEffects.lifetime,
+          x,y:Math.max(floor+0.03,y),z,vx:dx*speed*0.35,vz:dz*speed*0.35,vy:-hopEffects.downwardSpeed,floor,size:hopEffects.size });
+        if (supportY!==undefined && (!reduced || this.cursor%4===0)) Object.assign(this.particles[this.cursor++ % this.particles.length], {
+          age:0,lifetime:0.55,x,y:floor+0.08,z,vx:mount.x*4,vz:mount.z*2,vy:0.18,floor,size:1.1 });
+      }
+    }
     if (firing) this.emission += dt * thrustEffects.emission * (reduced ? 0.35 : 1); else this.emission = 0;
     while (this.emission >= 1) {
       this.emission--; const slot = this.cursor++ % this.particles.length, p = this.particles[slot], outlet = [-0.51, -0.185, 0.185, 0.51][this.cursor % 4];
@@ -68,7 +65,7 @@ export class ThrustVapor {
       if (active) live++;
       for (let v = 0; v < 4; v++) {
         const x = (v === 0 || v === 3 ? -1 : 1) * size / 2, y = (v < 2 ? -1 : 1) * size / 2, at = i * 12 + v * 3, color = i * 16 + v * 4;
-        this.positions[at] = p.x + right.x * x + up.x * y; this.positions[at + 1] = p.y + right.y * x + up.y * y; this.positions[at + 2] = p.z + right.z * x + up.z * y;
+        this.positions[at] = p.x + right.x * x + up.x * y; this.positions[at + 1] = Math.max(p.floor, p.y + right.y * x + up.y * y); this.positions[at + 2] = p.z + right.z * x + up.z * y;
         this.colors[color] = this.colors[color + 1] = this.colors[color + 2] = 1; this.colors[color + 3] = active ? thrustEffects.opacity * (1 - t) ** 1.2 : 0;
       }
     });

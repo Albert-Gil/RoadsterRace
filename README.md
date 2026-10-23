@@ -148,3 +148,5 @@ The selected circuit is remembered with names, paint and lap count. A deliberate
 Circuit metadata lives in `src/content/circuits.ts`, physical Orbital geometry in `src/core/tracks/orbital.ts`, and biome dispatch in `src/presentation/scenery.ts`. Spaceport materials/lighting are centralized alongside the other presentation settings in `themes.ts`. The scene changes reuse one WebGL engine and dispose previous scenes. Physical Safari and sustained mobile performance remain pending.
 
 See [Golden Gate city and drawing guide](docs/GOLDEN_CITY_DRAWING.md) for gate tolerances, lap blending, supported city placement and bridge exceptions.
+
+Launchsite now includes an optional manually activated Hop service lane. See [heavier flight and shortcut tuning](docs/HEAVY_HOP.md).

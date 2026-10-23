@@ -6,6 +6,7 @@ import { PBRMaterial } from '@babylonjs/core/Materials/PBR/pbrMaterial';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import type { Scene } from '@babylonjs/core/scene';
 import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh';
+import { ColdGas } from './cold-gas';
 import { ThrustVapor } from './thrust-vapor';
 import { thrustEffects, sceneTuning } from './themes';
 import type { PresentationTheme } from './themes';
@@ -40,6 +41,8 @@ export class VehicleView {
   private selectedPaint: string | null = null;
   private tireMarks: TireMarks;
   readonly vapor: ThrustVapor;
+  private coldGas: ColdGas;
+  private landingImpact = false;
   private reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   private previousTime = 0;
   private wheelDistance = 0;
@@ -47,7 +50,7 @@ export class VehicleView {
   readonly triangleCount: number;
   constructor(private scene: Scene, theme: PresentationTheme, readonly detail: 'race' | 'showcase' = 'race') {
     this.root = new TransformNode(`roadster-${detail}`, scene); this.root.scaling.setAll(detail === 'race' ? sceneTuning.vehicle.racingScale : 1); this.chassis = new TransformNode('sprung-body', scene); this.chassis.parent = this.root;
-    this.tireMarks = new TireMarks(scene); this.vapor = new ThrustVapor(scene);
+    this.tireMarks = new TireMarks(scene); this.vapor = new ThrustVapor(scene); this.coldGas = new ColdGas(scene);
     let materialCache = sharedMaterials.get(scene); if (!materialCache) { materialCache = new Map(); sharedMaterials.set(scene, materialCache); }
     const pbr = (name: string, color: string, metal: number, roughness: number) => {
       const shared = name !== 'roadster-paint' && name !== 'roadster-tail', previous = shared && materialCache!.get(name); if (previous) return previous;
@@ -108,28 +111,27 @@ export class VehicleView {
     this.dust.isPickable = false; this.dust.isVisible = false; this.dust.alwaysSelectAsActiveMesh = true;
     this.setTheme(theme);
   }
-  impact(time: number) { this.impactUntil = time + 0.22; }
-  hop(_time: number) { this.vapor.hop({ x: this.root.position.x, z: this.root.position.z, y: Math.max(0, this.root.position.y - 0.13), heading: this.root.rotation.y }, this.reducedMotion.matches); }
+  impact(time: number, landing = false) { this.impactUntil = time + 0.22; this.landingImpact = landing; }
   setIdentity(player: number | null, theme: PresentationTheme) { this.identity = player; this.setTheme(theme); }
-  setEnabled(enabled: boolean) { this.root.setEnabled(enabled); this.shadow.setEnabled(enabled); this.vapor.setEnabled(enabled && this.detail === 'race'); this.tireMarks.setEnabled(enabled && this.detail === 'race'); this.dust.setEnabled(enabled); }
-  clearEffects() { this.vapor.clear(); this.tireMarks.clear(); this.previousTime = 0; this.wheelDistance = 0; this.impactUntil = -1; }
+  setEnabled(enabled: boolean) { this.root.setEnabled(enabled); this.shadow.setEnabled(enabled); this.coldGas.mesh.setEnabled(enabled && this.detail === 'race'); this.vapor.setEnabled(enabled && this.detail === 'race'); this.tireMarks.setEnabled(enabled && this.detail === 'race'); this.dust.setEnabled(enabled); }
+  clearEffects() { this.vapor.clear(); this.coldGas.mesh.isVisible = false; this.tireMarks.clear(); this.previousTime = 0; this.wheelDistance = 0; this.impactUntil = -1; }
   setPaint(color: string) { this.selectedPaint = color; this.paint.albedoColor = Color3.FromHexString(color).toLinearSpace(); }
   setTheme(theme: PresentationTheme) { this.paint.albedoColor = Color3.FromHexString(this.selectedPaint ?? (this.identity === null ? theme.scene.paint : theme.players[this.identity])).toLinearSpace(); this.glass.albedoColor = Color3.FromHexString(theme.scene.glass).toLinearSpace(); this.dustMaterial.emissiveColor = Color3.FromHexString(theme.scene.terrain); }
-  update(position: { x: number; z: number; heading: number; y?: number; pitch?: number; airborne?: boolean; shadowY?: number }, speed = 0, thrust = false, time = 0, sandAmount = 0, drifting = false, steeringRate = 0, acceleration = 0) {
+  update(position: { x: number; z: number; heading: number; y?: number; pitch?: number; airborne?: boolean; shadowY?: number; hopAge?: number; supportY?: number; surfaceAt?: (x: number, z: number) => number | undefined }, speed = 0, thrust = false, time = 0, sandAmount = 0, drifting = false, steeringRate = 0, acceleration = 0) {
     const reduced = this.reducedMotion.matches, dt = Math.max(0, Math.min(0.1, time - this.previousTime)); this.previousTime = time;
     this.root.position.set(position.x, 0.13 + (position.y ?? 0), position.z); this.root.rotation.y = position.heading; this.root.rotation.x = -(position.pitch ?? 0);
     const blend = 1 - Math.exp(-12 * dt);
     this.chassis.rotation.z += ((reduced ? 0 : Math.max(-0.045, Math.min(0.045, -steeringRate * speed * 0.0016))) - this.chassis.rotation.z) * blend;
     this.chassis.rotation.x += ((reduced ? 0 : Math.max(-0.035, Math.min(0.035, acceleration * 0.004))) - this.chassis.rotation.x) * blend;
     this.tail.emissiveColor.set(acceleration < -0.8 ? 2.5 : 0.5, 0.015, 0.005);
-    this.chassis.position.y = !reduced && time < this.impactUntil ? -0.05 * Math.sin((this.impactUntil - time) / 0.22 * Math.PI) : 0;
+    this.chassis.position.y = !reduced && time < this.impactUntil ? -(this.landingImpact ? 0.10 : 0.05) * Math.sin((this.impactUntil - time) / 0.22 * Math.PI) : 0;
     const shadowY = position.airborne ? position.shadowY ?? 0 : position.y ?? 0, clearance = Math.max(0, (position.y ?? 0) - shadowY);
     this.shadow.position.set(position.x + 0.15, (this.detail === 'showcase' ? 0.135 : 0.125) + shadowY, position.z); this.shadow.rotation.y = position.heading;
     this.shadow.scaling.setAll((this.detail === 'race' ? sceneTuning.vehicle.racingScale : 1) * (1 + clearance * 0.08)); (this.shadow.material as StandardMaterial).alpha = 0.5 / (1 + clearance * 0.2);
     this.tireMarks.update(position, time, this.detail === 'race' && !position.airborne && !reduced && drifting && sandAmount < 0.2 && speed > 4);
     this.wheelDistance += speed * dt;
     for (const w of this.wheels) { w.mesh.rotation.x = this.wheelDistance / w.radius; w.pivot.rotation.y = w.front ? Math.max(-0.43, Math.min(0.43, steeringRate * 2.8 / Math.max(5, speed))) : 0; }
-    if (this.detail === 'race') this.vapor.update(position, speed, thrust, dt, reduced);
+    if (this.detail === 'race') { this.vapor.update(position, speed, thrust, dt, reduced); this.coldGas.update(position, reduced); }
     this.jets.forEach((j, i) => { j.isVisible = thrust; j.scaling.y = 1 + (reduced ? 0 : Math.sin(time * 55 + i) * 0.14); });
     const impact = time < this.impactUntil;
     this.dustMaterial.alpha = impact ? 0.6 : sandAmount * 0.28;

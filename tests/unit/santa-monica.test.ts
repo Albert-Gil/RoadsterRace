@@ -45,7 +45,7 @@ test('every building and amusement foundation has authored support', () => {
 test('sideways departures and simultaneous missed jumps recover without appearing inside another car', () => {
   const r = compileRoute(jumpSamples(), track); if (!r.ok) throw new Error(r.message);
   const sideways = new RaceSimulation(r.route, track);
-  Object.assign(sideways.state, { position: jumpPoint(track.jumps![0], 7.9), elevation: 1.185, heading: Math.PI / 2, speed: 30, velocity: { x: 24, z: 18 } });
+  Object.assign(sideways.state, { position: jumpPoint(track.jumps![0], 7.9), elevation: 1.185, heading: Math.PI / 2, speed: 30, velocity: { x: 9, z: 28.62 } });
   for (let i = 0; i < 240 && !sideways.state.recoveryCount; i++) sideways.step();
   expect(sideways.state.recoveryCount).toBe(1); expect(sideways.state.activeJump).toBeNull();
   const race = new LocalRace([r.route, r.route], track); race.tick = 400;

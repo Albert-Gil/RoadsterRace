@@ -4,12 +4,13 @@ import { barrierContact, blockedRouteSection, sweepVehicle } from './barriers';
 import { DEFAULT_LAPS, validateLapCount } from './race-options';
 import type { CompiledRoute, Point, RaceEvent, RaceState, TrackDefinition } from './types';
 import { branchProjection, FLIGHT_RULES, groundHeight, jumpCoordinates, rampAt, supported, takeoffCrossing, vehicleSupported } from './support';
+import { permittedHopBarriers } from './hop-shortcuts';
 
 export const RULES = Object.freeze({
-  version: 10, dt: 1 / 60, laps: DEFAULT_LAPS,
+  version: 11, dt: 1 / 60, laps: DEFAULT_LAPS,
   acceleration: 6, braking: 8.5, accelerationJerk: 14, paceResponse: 1.6, paceDeadband: 0.4,
   maxSpeed: 42, thrustAcceleration: 25, thrustDuration: 0.7, thrustRecharge: 5,
-  hopRecharge: 7, hopLaunchSpeed: 4.9,
+  hopRecharge: 7, hopLaunchSpeed: 17,
   flightLaunchCorrection: 20 * Math.PI / 180, flightTurnRate: 30 * Math.PI / 180,
   asphaltGrip: 48, sandGrip: 6.5, asphaltResponse: 7.5, sandResponse: 1.8, sandDrag: 0.95,
   steeringResponse: 4.8, steeringRate: 2.8, steeringSmoothing: 7,
@@ -51,6 +52,7 @@ export class RaceSimulation {
   }
   pressThrust() { if (!this.state.finished) this.queuedThrust = true; }
   pressHop() { if (!this.state.finished) this.queuedHop = true; }
+  allowedHopBarriers(to = this.state.position) { return permittedHopBarriers(this.state, this.route, this.track, to); }
   clearCommands() { this.queuedThrust = false; this.queuedHop = false; }
   drainEvents() { return this.events.splice(0); }
   private recover(now: number) {
@@ -171,7 +173,7 @@ export class RaceSimulation {
         s.activeJump = takeoff.jump.id; this.invalidFlight = !this.route.jumps?.includes(takeoff.jump.id);
         s.flightOrigin = 'ramp'; s.flightStartedAt = now + dt * takeoff.t;
         this.assistFlight(RULES.flightLaunchCorrection);
-        s.movement = 'airborne'; s.verticalVelocity = Math.max(0, s.velocity.x * takeoff.jump.forward.x + s.velocity.z * takeoff.jump.forward.z) * takeoff.jump.lipHeight / takeoff.jump.rampLength;
+        s.movement = 'airborne'; s.verticalVelocity = FLIGHT_RULES.rampLaunchBoost + Math.max(0, s.velocity.x * takeoff.jump.forward.x + s.velocity.z * takeoff.jump.forward.z) * takeoff.jump.lipHeight / takeoff.jump.rampLength;
         const remaining = dt * (1 - takeoff.t);
         s.elevation = takeoff.jump.lipHeight + s.verticalVelocity * remaining - FLIGHT_RULES.gravity * remaining * remaining / 2;
         s.verticalVelocity -= FLIGHT_RULES.gravity * remaining;
@@ -230,8 +232,8 @@ export class RaceSimulation {
     const at = { x: lerp(old.x, proposed.x, fraction), z: lerp(old.z, proposed.z, fraction) };
     const lands = !this.invalidFlight && crossing && vehicleSupported(at, s.heading, this.track);
     if (lands) height = landingHeight;
-    // No existing obstacle is authored as jumpable. Height still governs car-to-car contacts.
-    const collision = sweepVehicle(old, proposed, oldHeading, s.heading, { x: vx, z: vz }, this.track, oldHeight, height, true);
+    // Only a compiled manual-hop corridor can grant actual-height clearance of its authored obstacle.
+    const collision = sweepVehicle(old, proposed, oldHeading, s.heading, { x: vx, z: vz }, this.track, oldHeight, height, true, this.allowedHopBarriers(proposed));
     s.position = collision.position; s.velocity = collision.velocity; s.elevation = height; s.verticalVelocity -= FLIGHT_RULES.gravity * dt;
     s.speed = Math.hypot(s.velocity.x, s.velocity.z); s.drifting = false; s.sandAmount = 0; s.acceleration = 0; s.steeringRate = 0;
     if (collision.collided && collision.impact > 1.5 && s.tick - this.lastCollisionTick > 24) {
@@ -282,7 +284,8 @@ export class RaceSimulation {
       else s.distance = Math.max(previous, gateDistance - 0.001);
     }
     const movement = s.distance - previous;
-    const inBranch = this.track.jumps?.some(j => { const c = jumpCoordinates(s.position, j); return this.route.jumps?.includes(j.id) && c.along > jumpCoordinates(j.branch[0],j).along-this.track.carLength/2 && c.along < j.corridorLength && Math.abs(c.across) < j.width; });
+    const inHopBranch = this.route.hopShortcuts?.some(h => s.distance % this.route.length >= h.entryDistance - this.track.carLength && s.distance % this.route.length <= h.exitDistance + this.track.carLength);
+    const inBranch = inHopBranch || this.track.jumps?.some(j => { const c = jumpCoordinates(s.position, j); return this.route.jumps?.includes(j.id) && c.along > jumpCoordinates(j.branch[0],j).along-this.track.carLength/2 && c.along < j.corridorLength && Math.abs(c.across) < j.width; });
     if (s.movement === 'grounded' && !inBranch && vehicleSupported(s.position, s.heading, this.track) && s.lineError < 1 && !barrierContact(s.position, s.heading, this.track, 0.4)) this.lastSafeDistance = s.distance;
     if (s.distance - this.progressAnchor > 0.5) { this.progressAnchor = s.distance; this.stuckTicks = 0; }
     else if (now < this.collisionNearbyUntil) this.stuckTicks += dt / RULES.dt;

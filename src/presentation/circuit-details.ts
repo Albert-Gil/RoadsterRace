@@ -20,17 +20,18 @@ export function buildCircuitDetails(scene: Scene, track: TrackDefinition, theme:
   const marking = mat('track-ivory', theme.venue.marking, false), worn = mat('asphalt-repair', theme.venue.repair, false); worn.alpha = 0.4;
   const box = (name: string, p: Point, y: number, w: number, h: number, d: number, material: StandardMaterial, angle = 0) => { const m = MeshBuilder.CreateBox(name, { width: w, height: h, depth: d }, scene); m.position.set(p.x, y, p.z); m.rotation.y = angle; m.material = material; return m; };
   const label = (name: string, text: string, width: number, height: number, p: Point, y: number, angle = 0) => {
-    const texture = new DynamicTexture(name, { width: 1024, height: 128 }, scene, false); const ctx = texture.getContext() as CanvasRenderingContext2D;
-    ctx.fillStyle = '#19242c'; ctx.fillRect(0, 0, 1024, 128); ctx.fillStyle = '#ed3949'; ctx.fillRect(0, 0, 18, 128); ctx.font = 'italic bold 62px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#f3f1e8'; ctx.fillText(text, 520, 86); texture.update();
+    const textureWidth = text === 'HOP' ? 256 : 1024;
+    const texture = new DynamicTexture(name, { width: textureWidth, height: 128 }, scene, false); const ctx = texture.getContext() as CanvasRenderingContext2D;
+    ctx.fillStyle = '#19242c'; ctx.fillRect(0, 0, textureWidth, 128); ctx.fillStyle = '#ed3949'; ctx.fillRect(0, 0, 18, 128); ctx.font = text === 'HOP' ? 'italic bold 96px sans-serif' : 'italic bold 62px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#f3f1e8'; ctx.fillText(text, textureWidth / 2, text === 'HOP' ? 100 : 86); texture.update();
     const m = mat(name, '#ffffff'); m.diffuseTexture = texture; m.emissiveColor.setAll(0.12); m.backFaceCulling = false;
     const sign = MeshBuilder.CreatePlane(name, { width, height }, scene); sign.position.set(p.x, y, p.z); sign.rotation.y = angle; sign.material = m; return sign;
   };
   for (const barrier of track.barriers) {
     if (barrier.id === 'gantry-support' || barrier.id === 'grandstand') continue; // These authored structures are rendered separately.
-    if (barrier.kind === 'bridge-rail' || barrier.kind === 'bridge-support' || barrier.kind === 'pier-rail') {
+    if (barrier.kind === 'bridge-rail' || barrier.kind === 'bridge-support' || barrier.kind === 'pier-rail' || barrier.kind === 'service-barrier') {
       const p = barrier.footprint, positions: number[] = [], indices: number[] = [];
       const quad = (a: number[], b: number[], c: number[], d: number[]) => { const base = positions.length / 3; positions.push(...a, ...b, ...c, ...d); indices.push(base, base + 1, base + 2, base, base + 2, base + 3); };
-      const bottom = barrier.baseHeight ?? (barrier.kind === 'pier-rail' ? 0 : 0.05), top = bottom + barrier.height;
+      const bottom = barrier.baseHeight ?? (['pier-rail', 'service-barrier'].includes(barrier.kind ?? '') ? 0 : 0.05), top = bottom + barrier.height;
       for (let i = 0; i < p.length; i++) { const a = p[i], b = p[(i + 1) % p.length]; quad([a.x, bottom, a.z], [b.x, bottom, b.z], [b.x, top, b.z], [a.x, top, a.z]); }
       quad([p[0].x, top, p[0].z], [p[1].x, top, p[1].z], [p[2].x, top, p[2].z], [p[3].x, top, p[3].z]);
       const data = new VertexData(), normals: number[] = []; data.positions = positions; data.indices = indices; VertexData.ComputeNormals(positions, indices, normals); data.normals = normals; data.uvs = positions.flatMap((_, i) => i % 3 ? [] : [positions[i] / 8, positions[i + 2] / 8]);
@@ -64,6 +65,28 @@ export function buildCircuitDetails(scene: Scene, track: TrackDefinition, theme:
       if (projectToPolyline(p, [...vertices, vertices[0]], cumulative([...vertices, vertices[0]])).distance < 1.7) continue;
       const bush = MeshBuilder.CreateSphere('coastal-scrub', { diameter: 1.3 + (i % 4) * 0.35, segments: 4 }, scene); bush.position.set(p.x, 0.7, p.z); bush.scaling.set(1.3, 0.75, 1); bush.material = i % 3 ? leaf : leafLight;
       if (i % 7 === 0) { const stone = MeshBuilder.CreateSphere('landscaped-limestone', { diameter: 2.3, segments: 4 }, scene); stone.position.set(p.x + 0.4, 0.7, p.z); stone.scaling.set(1.3, 0.7, 1); stone.material = rock; }
+    }
+  }
+  for (const shortcut of track.hopShortcuts ?? []) {
+    const obstacle = track.barriers.find(b => b.id === shortcut.obstacleId)!;
+    const z = obstacle.footprint[0].z, left = obstacle.footprint[0].x;
+    // The striped face is flush with the authoritative one-metre barrier.
+    for (let i = 0; i < 16; i++) {
+      box('hop-hazard-face', {x:left+i+0.5,z:z-0.015},0.5,0.96,0.86,0.02,i%2?dark:marking);
+      box('hop-hazard-cap', {x:left+i+0.5,z:z+0.5},1.01,0.96,0.02,0.94,i%2?dark:marking);
+    }
+    const center = left + shortcut.width / 2;
+    const paint = label('service-hop-sign', 'HOP', 6, 2.6, {x:center,z:z-10},0.16);
+    paint.rotation.x = Math.PI / 2;
+    // A broad, painted activation band: ten metres before the service barrier.
+    for (const offset of [-5, 5]) {
+      box('hop-activation-zone', {x:center+offset,z:z-10},0.15,0.15,0.015,4,marking);
+      for (const side of [-1,1]) box('hop-lane-arrow',{x:center+offset+side*0.38,z:z-9},0.15,0.14,0.015,1.1,marking,side*0.7);
+    }
+    for (const side of [-1,1]) {
+      const edge=roadEdges(shortcut.branch,shortcut.width-0.5,false)[side===-1?0:1];
+      const line=MeshBuilder.CreateRibbon('service-lane-edge',{pathArray:[edge.map(p=>new Vector3(p.x-0.05,0.145,p.z)),edge.map(p=>new Vector3(p.x+0.05,0.145,p.z))],sideOrientation:Mesh.DOUBLESIDE},scene);
+      line.material=marking;
     }
   }
   // Narrow continuous edge lines replace the highway-like center dashes.
