@@ -40,7 +40,10 @@ async function server(args, url) {
   }
   throw new Error(`Test server did not start: ${logs}`);
 }
-const phone = { viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true };
+// CI uses CPU-only WebGL: keep the same CSS layout/touch behavior at 1x so
+// rendering four cars does not repeatedly trigger the real frame-gap pause.
+// Local touch/layout suites additionally verify 2x/3x density.
+const phone = { viewport: { width: 844, height: 390 }, deviceScaleFactor: process.env.CI ? 1 : 2, hasTouch: true, isMobile: true };
 const fixtureCache = new Map();
 
 async function fixture(circuit, count = 1, options = phone, jump = false) {
@@ -123,6 +126,27 @@ async function draw(page, context, points) {
 }
 async function racing(page) {
   await page.waitForFunction(() => document.querySelector('main').dataset.phase === 'racing' && document.querySelector('#race-time').textContent !== '00:00.00', undefined, { timeout: 60000 });
+}
+async function checkHops(page, keys, withThrust = false) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (await page.locator('main').getAttribute('data-phase') === 'paused') {
+      console.log('Resuming the software-renderer interruption before ability verification');
+      await page.getByRole('button', { name: 'Resume', exact: true }).click(); await racing(page);
+    }
+    for (const key of keys) await page.keyboard.press(key);
+    if (withThrust) await page.keyboard.press('Space');
+    // An expensive software-rendered frame can invoke the real pause safeguard
+    // between the key event and the next simulation tick. Resume through the UI;
+    // never disable that safeguard or advance production simulation artificially.
+    await page.waitForFunction(() => document.querySelector('main').dataset.phase === 'paused'
+      || [...document.querySelectorAll('.hop-control')].every(b => /s$/.test(b.querySelector('.hop-status').textContent)));
+    const observation = await page.evaluate(() => ({ phase: document.querySelector('main').dataset.phase,
+      hop: [...document.querySelectorAll('.hop-status')].map(e => e.textContent), time: document.querySelector('#race-time').textContent }));
+    (report.abilityObservations ??= []).push(observation);
+    if (observation.hop.every(text => /s$/.test(text))) return;
+    console.log('Ability verification interrupted:', JSON.stringify(observation));
+  }
+  throw new Error('Hop did not activate after bounded UI resume attempts');
 }
 async function finish(page) {
   const deadline = Date.now() + 180000;
@@ -251,8 +275,7 @@ try {
       for (const key of ['KeyA', 'KeyL', 'KeyQ', 'KeyP']) await page.keyboard.press(key);
       await racing(page);
       assert.equal(await page.locator('.hop-control').count(), 4);
-      for (const key of ['KeyZ', 'KeyK', 'KeyW', 'KeyO']) await page.keyboard.press(key);
-      await page.waitForFunction(() => [...document.querySelectorAll('.hop-control')].every(b => /s$/.test(b.querySelector('.hop-status').textContent)));
+      await checkHops(page, ['KeyZ', 'KeyK', 'KeyW', 'KeyO']);
       if (fullRaces) await finish(page); else await page.keyboard.press('Escape');
       report.checks.push({ fourPlayers: true, privateDrawingAndReadiness: true, sharedRaceStarted: true, independentHops: true, completedRace: fullRaces });
     } finally { await context.close(); }
@@ -272,8 +295,7 @@ try {
       await racing(page);
       assert.equal(await page.locator('.racer-pad').count(), 1);
       assert.equal(await page.locator('.hop-control').count(), 1);
-      await page.keyboard.press('KeyH'); await page.keyboard.press('Space');
-      await page.waitForFunction(() => /s$/.test(document.querySelector('#hop-button .hop-status').textContent));
+      await checkHops(page, ['KeyH'], true);
       assert.equal(await page.locator('#hop-button').getAttribute('data-ready'), 'false');
       assert.equal(await page.locator('.vehicle-label:not([hidden])').count(), 0);
       if (fullRaces) { await finish(page); assert.ok((await page.locator('.standings').textContent()).includes('Apex')); }

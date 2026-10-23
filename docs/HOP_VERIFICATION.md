@@ -27,6 +27,8 @@ The final integrated browser run passes **17 scenarios**: all four control layou
 
 Production smoke passes under `/RoadsterRace/`, covering all four circuits, Santa Monica's jump branch, portrait/Graphite/rotation/Home Screen metadata, four-player drawing and independent hops, Solo CPU racing with hop/thrust, and tournament save/resume. No required asset requests fail and no browser exceptions are reported; production has no development inspector. One initial parallel cold-development-server navigation timed out before game verification; the setup now waits explicitly for DOM readiness with a bounded cold-start allowance, and the complete production suite passes on rerun. This changes test setup only.
 
+The first hosted Solo job timed out waiting for hop feedback after race entry. The production harness now observes both ability feedback and the existing pause UI, resuming through the normal Resume action for at most three interrupted attempts. It records those observations rather than bypassing the pause safeguard or advancing the game. CPU-only hosted WebGL uses 1× pixel density with unchanged CSS layout/touch coordinates; local browser tests separately cover 2×/3× density. These verification changes do not alter the shipped game's resolution or handling.
+
 ## Captures and delivery
 
 Ignored local evidence is in `artifacts/hop/`:
