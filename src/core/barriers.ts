@@ -37,13 +37,16 @@ function segmentPair(a: Point, b: Point, c: Point, d: Point) {
 }
 
 /** Full longitudinal capsule, independent of artwork. Positive depth means overlap. */
-export function barrierContact(position: Point, heading: number, track: TrackDefinition, clearance = 0, elevation = 0) {
+export function barrierContact(position: Point, heading: number, track: TrackDefinition, clearance = 0, elevation = 0, protectFlight = false) {
   const radius = track.carWidth / 2 + clearance, half = (track.carLength - track.carWidth) / 2;
   const axis = { x: Math.sin(heading) * half, z: Math.cos(heading) * half };
   const a = sub(position, axis), b = { x: position.x + axis.x, z: position.z + axis.z };
   let result: { depth: number; normal: Point; point: Point; barrier: TrackBarrier } | null = null;
   for (const barrier of track.barriers) {
-    if (elevation >= (barrier.baseHeight ?? 0) + barrier.height - 1e-6 || elevation + 1.05 <= (barrier.baseHeight ?? 0)) continue;
+    // Above-road obstacles protect the infield/rails in this milestone. Submerged
+    // landing faces retain their real height so an approved jump can pass above.
+    const protectedColumn = protectFlight && (barrier.baseHeight ?? 0) + barrier.height > 1e-6;
+    if (!protectedColumn && (elevation >= (barrier.baseHeight ?? 0) + barrier.height - 1e-6 || elevation + 1.05 <= (barrier.baseHeight ?? 0))) continue;
     const box = bounds(barrier);
     if (Math.max(a.x, b.x) + radius < box.minX || Math.min(a.x, b.x) - radius > box.maxX || Math.max(a.z, b.z) + radius < box.minZ || Math.min(a.z, b.z) - radius > box.maxZ) continue;
     const inside = insideBarrier(position, barrier), v = barrier.footprint;
@@ -66,7 +69,7 @@ export function barrierContact(position: Point, heading: number, track: TrackDef
 }
 
 /** Bounded swept capsule: samples are closer than 1/5 of its radius, including rotational motion. */
-export function sweepVehicle(from: Point, to: Point, oldHeading: number, heading: number, velocity: Point, track: TrackDefinition, fromHeight = 0, toHeight = fromHeight) {
+export function sweepVehicle(from: Point, to: Point, oldHeading: number, heading: number, velocity: Point, track: TrackDefinition, fromHeight = 0, toHeight = fromHeight, protectFlight = false) {
   const angle = angleDelta(oldHeading, heading), travel = distance(from, to) + Math.abs(angle) * track.carLength / 2;
   const steps = Math.max(1, Math.ceil(travel / 0.18));
   let position = { ...from }, motion = { x: (to.x - from.x) / steps, z: (to.z - from.z) / steps }, v = { ...velocity };
@@ -74,7 +77,7 @@ export function sweepVehicle(from: Point, to: Point, oldHeading: number, heading
   for (let i = 1; i <= steps; i++) {
     position = { x: position.x + motion.x, z: position.z + motion.z };
     for (let pass = 0; pass < 4; pass++) {
-      const contact = barrierContact(position, oldHeading + angle * i / steps, track, 0, fromHeight + (toHeight - fromHeight) * i / steps);
+      const contact = barrierContact(position, oldHeading + angle * i / steps, track, 0, fromHeight + (toHeight - fromHeight) * i / steps, protectFlight);
       if (!contact) break;
       collided = true; const n = contact.normal, incoming = Math.min(0, dot(v, n));
       impact = Math.max(impact, -incoming); point = contact.point;

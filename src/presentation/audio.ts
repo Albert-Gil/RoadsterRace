@@ -28,6 +28,7 @@ export function synthCue(context: BaseAudioContext, destination: AudioNode, type
     source.connect(filter).connect(envelope).connect(destination); source.start(when); source.stop(when + duration); source.onended = () => { source.disconnect(); filter.disconnect(); envelope.disconnect(); }; nodes.push(source);
     if (!scrape) { tone(90, 0.22, 0, 0.36, 32, 'triangle'); tone(430, 0.1, 0.005, 0.1, 140); }
   }
+  else if (type === 'hop') { tone(105, 0.24, 0, 0.2, 490, 'triangle'); tone(740, 0.13, 0.035, 0.06, 230); }
   else if (type === 'takeoff') { tone(140, 0.22, 0, 0.12, 430, 'triangle'); }
   else if (type === 'landing') { tone(85, 0.2, 0, 0.32, 28, 'triangle'); tone(190, 0.09, 0, 0.07, 65); }
   else if (type === 'splash') {

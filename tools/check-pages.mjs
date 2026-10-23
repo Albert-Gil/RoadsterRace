@@ -47,8 +47,11 @@ async function fixture(circuit, count = 1, options = phone, jump = false) {
   const key = JSON.stringify({ circuit, count, options, jump });
   if (fixtureCache.has(key)) return fixtureCache.get(key);
   const context = await browser.newContext(options), page = await context.newPage();
+  page.setDefaultTimeout(45000);
   try {
-    await page.goto(`${devURL}?circuit=${circuit}`);
+    // A cold Vite module graph can compile while another verification job is
+    // running. Wait for the application DOM, then assert rendering separately.
+    await page.goto(`${devURL}?circuit=${circuit}`, { waitUntil: 'domcontentloaded', timeout: 90000 });
     await page.getByRole('button', { name: count === 1 ? "Time Trial" : 'Multiplayer' }).click();
     if (count > 1) await page.getByRole('button', { name: `${count} players`, exact: true }).click();
     await page.getByRole('button', { name: count === 1 ? 'Draw racing line' : 'Plan your lines' }).click();
@@ -246,8 +249,12 @@ try {
         await draw(page, context, points); await page.getByRole('button', { name: 'Lock in my line', exact: true }).click();
       }
       for (const key of ['KeyA', 'KeyL', 'KeyQ', 'KeyP']) await page.keyboard.press(key);
-      await racing(page); if (fullRaces) await finish(page); else await page.keyboard.press('Escape');
-      report.checks.push({ fourPlayers: true, privateDrawingAndReadiness: true, sharedRaceStarted: true, completedRace: fullRaces });
+      await racing(page);
+      assert.equal(await page.locator('.hop-control').count(), 4);
+      for (const key of ['KeyZ', 'KeyK', 'KeyW', 'KeyO']) await page.keyboard.press(key);
+      await page.waitForFunction(() => [...document.querySelectorAll('.hop-control')].every(b => /s$/.test(b.querySelector('.hop-status').textContent)));
+      if (fullRaces) await finish(page); else await page.keyboard.press('Escape');
+      report.checks.push({ fourPlayers: true, privateDrawingAndReadiness: true, sharedRaceStarted: true, independentHops: true, completedRace: fullRaces });
     } finally { await context.close(); }
   }
   if (sessionChecks || selection === 'solo') {
@@ -264,9 +271,13 @@ try {
       await page.getByRole('button', { name: 'Race this line', exact: true }).click();
       await racing(page);
       assert.equal(await page.locator('.racer-pad').count(), 1);
+      assert.equal(await page.locator('.hop-control').count(), 1);
+      await page.keyboard.press('KeyH'); await page.keyboard.press('Space');
+      await page.waitForFunction(() => /s$/.test(document.querySelector('#hop-button .hop-status').textContent));
+      assert.equal(await page.locator('#hop-button').getAttribute('data-ready'), 'false');
       assert.equal(await page.locator('.vehicle-label:not([hidden])').count(), 0);
       if (fullRaces) { await finish(page); assert.ok((await page.locator('.standings').textContent()).includes('Apex')); }
-      report.checks.push({ soloComputerRace: true, oneHumanControl: true, fourCars: true, hardDifficulty: true, completedRace: fullRaces });
+      report.checks.push({ soloComputerRace: true, oneHumanAbilityPair: true, hopAndThrust: true, fourCars: true, hardDifficulty: true, completedRace: fullRaces });
     } finally { await context.close(); }
   }
   // Saved tournament creation/resumption is checked in every complete release;

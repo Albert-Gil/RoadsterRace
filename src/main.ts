@@ -15,11 +15,11 @@ import { CONTACT_RULES } from './core/vehicle-contact';
 import { assetUrl } from './presentation/urls';
 import { circuits, findCircuit } from './content/circuits';
 import { canStartDrawing } from './core/start-finish';
-import type { CompiledRoute, DrawSample, DrawingTrim } from './core/types';
+import type { Ability, CompiledRoute, DrawSample, DrawingTrim } from './core/types';
 import { PointerOwnership } from './input/ownership';
 import { GameAudio } from './presentation/audio';
 import { GameScene } from './presentation/scene';
-import { applyPlayerColors, applyTheme, themes } from './presentation/themes';
+import { applyPlayerColors, applyTheme, themes, hopEffects } from './presentation/themes';
 import { cleanDriverName, escapeHtml, finishFor, loadPreferences, savePreferences } from './presentation/race-settings';
 import { raceSetupMarkup } from './presentation/race-setup';
 
@@ -90,6 +90,7 @@ let countdownBeat = 3, rechargeAnnounced: boolean[] = [];
 let world: GameScene;
 let previewGrid: { routes: CompiledRoute[]; track: typeof activeTrack; rotation: number; poses: ReturnType<typeof startingGrid> } | null = null;
 const clock = new FixedStepClock(), keys = ['KeyA', 'KeyL', 'KeyQ', 'KeyP'];
+const hopKeys = ['KeyZ', 'KeyK', 'KeyW', 'KeyO'];
 const corners = ['bottom left', 'bottom right', 'top left', 'top right'];
 const formatTime = (seconds: number) => { const cs = Math.max(0, Math.round(seconds * 100)), minutes = Math.floor(cs / 6000); return `${String(minutes).padStart(2, '0')}:${((cs % 6000) / 100).toFixed(2).padStart(5, '0')}`; };
 const arrow = '<span aria-hidden="true">↗</span>';
@@ -158,7 +159,7 @@ brand();
 document.querySelector<HTMLImageElement>('.brand-mark')!.addEventListener('error', e => { (e.currentTarget as HTMLImageElement).hidden = true; });
 
 function renderControls() {
-  controls.innerHTML = Array.from({ length: humans() }, (_, i) => `<button ${i === 0 ? 'id="thrust-button"' : ''} class="thrust-control racer-pad racer-${i}" data-racer="${i}" aria-label="${playerCount === 1 ? 'Activate thrust' : `${playerName(i)} thrust`}" hidden style="--identity:var(--player-${i + 1})"><span class="thrust-inner">${playerCount > 1 ? `<span class="pod-identity">P${i + 1} <span class="pod-rank"></span></span><span class="pod-name">${playerName(i)}</span>` : '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m13.5 2-8 12h6L10.5 22l8-12h-6z" fill="currentColor"/></svg>'}<strong class="pod-title">THRUST</strong><small ${i === 0 ? 'id="thrust-status"' : ''} class="pod-status">READY</small><span class="pod-lap">${playerCount > 1 ? `LAP 1/${lapCount} · ${keys[i].slice(3)}` : ''}</span></span></button>`).join('');
+  controls.innerHTML = Array.from({ length: humans() }, (_, i) => `<div class="ability-cluster racer-${i}" style="--identity:var(--player-${i + 1})"><button ${i === 0 ? 'id="thrust-button"' : ''} class="thrust-control racer-pad ability-control" data-racer="${i}" data-ability="thrust" aria-label="${playerCount === 1 ? 'Activate thrust' : `${playerName(i)} thrust`}" hidden><span class="thrust-inner">${playerCount > 1 ? `<span class="pod-identity">P${i + 1} <span class="pod-rank"></span></span><span class="pod-name">${playerName(i)}</span>` : '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m13.5 2-8 12h6L10.5 22l8-12h-6z" fill="currentColor"/></svg>'}<strong class="pod-title">THRUST</strong><small ${i === 0 ? 'id="thrust-status"' : ''} class="pod-status">READY</small><span class="pod-lap">${playerCount > 1 ? `LAP 1/${lapCount} · ${keys[i].slice(3)}` : ''}</span></span></button><button ${i === 0 ? 'id="hop-button"' : ''} class="hop-control ability-control" data-racer="${i}" data-ability="hop" aria-label="${playerCount === 1 ? 'Activate hop' : `${playerName(i)} hop`}" hidden><span class="hop-inner"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 11 6-7 6 7M12 4v13M5 21h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><strong>HOP</strong><small class="hop-status">READY</small></span></button></div>`).join('');
 }
 function clearRaceInput() { race?.clearCommands(); raceTouches.clear(); heldKeys.clear(); clock.reset(); }
 function setPhase(next: Phase) {
@@ -167,7 +168,7 @@ function setPhase(next: Phase) {
   if (phase !== 'racing') audio.mix({ active: false, speed: 0, slip: 0, sand: 0 });
   if (['paused', 'welcome', 'drawing', 'diagnostics', 'error'].includes(phase)) audio.silence();
   hud.hidden = !['racing', 'countdown', 'paused'].includes(phase);
-  controls.querySelectorAll<HTMLButtonElement>('.racer-pad').forEach(pad => { pad.hidden = !['ready', 'racing', 'countdown'].includes(phase); pad.disabled = phase === 'countdown'; });
+  controls.querySelectorAll<HTMLButtonElement>('.ability-control').forEach(pad => { pad.hidden = !['ready', 'racing', 'countdown'].includes(phase) || phase === 'ready' && pad.dataset.ability === 'hop'; pad.disabled = phase === 'countdown'; });
   pauseButton.hidden = phase !== 'racing'; countdownElement.hidden = phase !== 'countdown'; diagnosticSection.hidden = phase !== 'diagnostics';
   raceProgress.hidden = !['racing', 'paused'].includes(phase); panel.hidden = ['racing', 'countdown', 'diagnostics'].includes(phase);
   labels.forEach(label => { label.hidden = playerCount === 1 || Number(label.dataset.car) >= playerCount || !['ready', 'countdown'].includes(phase); });
@@ -251,10 +252,10 @@ function goHome(force = false) {
   cancelStroke(); clearRaceInput(); playerCount = 1; turn = 0; route = null; race = null; confirmedRoutes = []; readyPlayers = [];
   renderControls(); world.setPlayers(1); applyDriverPresentation(); world.setPlanningPlayer(null); world.drawLine(null); world.showError(); world.vehicle.update(startPose()); notice.textContent = ''; setPhase('welcome');
 }
-function activate(player: number) {
+function activate(player: number, ability: Ability = 'thrust') {
   if(player<0||player>=humans())return;
-  if (phase === 'ready') { readyPlayers[player] = true; renderPanel(); updateHud(); if (readyPlayers.every(Boolean)) { if (!audio.muted) audio.unlock(); startRace(); } }
-  else if (phase === 'racing') race?.pressThrust(player);
+  if (phase === 'ready' && ability === 'thrust') { readyPlayers[player] = true; renderPanel(); updateHud(); if (readyPlayers.every(Boolean)) { if (!audio.muted) audio.unlock(); startRace(); } }
+  else if (phase === 'racing') { if (ability === 'hop') race?.pressHop(player); else race?.pressThrust(player); }
 }
 function showNotice(message: string, seconds = 1.7) { notice.textContent = message; noticeUntil = performance.now() + seconds * 1000; }
 function updateHud() {
@@ -269,11 +270,18 @@ function updateHud() {
     document.querySelector('#race-speed')!.innerHTML = sessionOptions.mode==='time-trial'?(personalLap?formatTime(personalLap.duration):'—'):sessionOptions.mode==='solo-race'&&!ghost?`${standings.find(s=>s.player===0)!.rank} <i>/ 4</i>`:ghost ? `${Math.ceil(race.ghostStartRemaining)} <i>s</i>` : playerCount === 1 ? `${Math.round(first.speed * 3.6)} <i>km/h</i>` : `${standings.filter(s => s.finished).length} <i>/ ${playerCount}</i>`;
     raceProgress.querySelector<HTMLElement>('span')!.style.width = `${standings[0].progress / (activeTrack.length * lapCount) * 100}%`;
   }
-  controls.querySelectorAll<HTMLButtonElement>('.racer-pad').forEach((pad, i) => {
-    const s = race?.racers[i].state, remaining = s ? Math.max(0, s.thrustReadyAt - s.time) : 0;
+  controls.querySelectorAll<HTMLButtonElement>('.ability-control').forEach(pad => {
+    const i = Number(pad.dataset.racer), hop = pad.dataset.ability === 'hop';
+    const s = race?.racers[i].state, remaining = s ? Math.max(0, (hop ? s.hopReadyAt : s.thrustReadyAt) - s.time) : 0;
     const recovering = !!s && (s.time < s.recoveringUntil || s.recoveryWaiting);
-    pad.disabled = phase === 'countdown' || (phase === 'racing' && (!!s?.finished || recovering));
-    pad.style.setProperty('--charge', `${clamp(1 - remaining / RULES.thrustRecharge, 0, 1) * 360}deg`);
+    pad.disabled = phase === 'countdown' || (phase === 'racing' && (!!s?.finished || recovering || hop && s?.movement === 'airborne'));
+    pad.style.setProperty('--charge', `${clamp(1 - remaining / (hop ? RULES.hopRecharge : RULES.thrustRecharge), 0, 1) * 360}deg`);
+    if (hop) {
+      pad.dataset.ready = String(remaining < 0.001 && s?.movement !== 'airborne');
+      pad.dataset.firing = String(!!s && s.flightOrigin === 'hop' && s.time - s.flightStartedAt < 0.25);
+      pad.querySelector('.hop-status')!.textContent = s?.finished ? 'DONE' : recovering ? 'WAIT' : remaining > 0.001 ? `${remaining.toFixed(1)}s` : s?.movement === 'airborne' ? 'AIR' : 'READY';
+      return;
+    }
     pad.dataset.ready = String(phase === 'ready' ? readyPlayers[i] : remaining < 0.001); pad.dataset.firing = String(phase === 'racing' && !!s && s.time < s.thrustUntil);
     pad.querySelector('.pod-title')!.textContent = phase === 'ready' ? readyPlayers[i] ? 'READY ✓' : 'TAP READY' : recovering ? 'RECOVERING' : s?.finished ? 'FINISHED' : 'THRUST';
     pad.querySelector('.pod-status')!.textContent = phase === 'ready' ? readyPlayers[i] ? 'WAIT FOR FRIENDS' : driverName(i) : s?.finished ? formatTime(s.finishTime!) : remaining < 0.001 ? 'READY' : `${remaining.toFixed(1)}s`;
@@ -294,7 +302,7 @@ function updateVehicles(alpha: number) {
       y: previous && !s.finished ? lerp(previous.y, s.elevation, alpha) : s.elevation,
       airborne: s.movement === 'airborne',
       shadowY: supported(s.position, activeTrack) ? 0 : FLIGHT_RULES.waterHeight,
-      pitch: s.movement === 'airborne' ? Math.atan2(s.verticalVelocity, Math.max(1, s.speed)) : (() => { const j = rampAt(s.position, activeTrack); return j ? Math.atan(j.lipHeight / j.rampLength) * (Math.sin(s.heading) * j.forward.x + Math.cos(s.heading) * j.forward.z) : 0; })(),
+      pitch: s.movement === 'airborne' ? clamp(Math.atan2(s.verticalVelocity, Math.max(12, s.speed)), -(s.flightOrigin === 'hop' ? hopEffects.maxBodyPitch : 0.25), s.flightOrigin === 'hop' ? hopEffects.maxBodyPitch : 0.25) : (() => { const j = rampAt(s.position, activeTrack); return j ? Math.atan(j.lipHeight / j.rampLength) * (Math.sin(s.heading) * j.forward.x + Math.cos(s.heading) * j.forward.z) : 0; })(),
       heading: previous && !s.finished ? previous.heading + angleDelta(previous.heading, s.heading) * alpha : s.heading,
     } : grid ? grid[i] : sampleRoute(line, 0);
     const absent = !!s && (playerCount > 1 && s.finished || s.time < s.recoveringUntil || s.recoveryWaiting);
@@ -394,21 +402,28 @@ canvas.addEventListener('pointerup', e => {
 function cancelStroke() { if (drawingPointer === null) return; drawingPointer = null; stroke = []; world.drawLine(null); if (phase === 'drawing') renderPanel('That drawing was interrupted. Start a fresh lap at the start line.'); }
 canvas.addEventListener('pointercancel', cancelStroke); canvas.addEventListener('lostpointercapture', cancelStroke);
 controls.addEventListener('pointerdown', e => {
-  const pad = (e.target as HTMLElement).closest<HTMLButtonElement>('.racer-pad');
-  if (!pad || !['ready', 'racing'].includes(phase) || (e.pointerType === 'mouse' && e.button !== 0)) return;
-  e.preventDefault(); if (raceTouches.down(e.pointerId, Number(pad.dataset.racer))) { pad.setPointerCapture(e.pointerId); activate(Number(pad.dataset.racer)); }
+  const pad = (e.target as HTMLElement).closest<HTMLButtonElement>('.ability-control');
+  if (!pad || pad.disabled || !['ready', 'racing'].includes(phase) || (e.pointerType === 'mouse' && e.button !== 0)) return;
+  const ability = pad.dataset.ability as Ability;
+  e.preventDefault(); if (raceTouches.down(e.pointerId, Number(pad.dataset.racer), ability)) { pad.setPointerCapture(e.pointerId); activate(Number(pad.dataset.racer), ability); }
 });
 for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) controls.addEventListener(name, e => { raceTouches.up((e as PointerEvent).pointerId, name !== 'pointerup'); });
 // Assistive technologies may activate a button without pointer events.
-controls.addEventListener('click', e => { const pad = (e.target as HTMLElement).closest<HTMLElement>('.racer-pad'); if (pad && e.detail === 0) activate(Number(pad.dataset.racer)); });
+controls.addEventListener('click', e => { const pad = (e.target as HTMLElement).closest<HTMLButtonElement>('.ability-control'); if (pad && !pad.disabled && e.detail === 0) activate(Number(pad.dataset.racer), pad.dataset.ability as Ability); });
 window.addEventListener('keydown', e => {
   if ((e.target as HTMLElement).closest('input, textarea, select, [contenteditable="true"]')) {
     if (e.code === 'Enter') (e.target as HTMLElement).blur();
     return;
   }
   let player = humans() === 1 && e.code === 'Space' ? 0 : humans() > 1 ? keys.indexOf(e.code) : -1;
-  if ((e.code === 'Space' || e.code === 'Enter') && document.activeElement?.matches('.racer-pad')) player = Number((document.activeElement as HTMLElement).dataset.racer);
-  if (player >= 0 && player < humans() && ['ready', 'racing', 'countdown'].includes(phase)) { e.preventDefault(); if (!heldKeys.has(e.code) && !e.repeat) activate(player); heldKeys.add(e.code); }
+  let ability: Ability = 'thrust';
+  const hopPlayer = humans() === 1 && e.code === 'KeyH' ? 0 : humans() > 1 ? hopKeys.indexOf(e.code) : -1;
+  if (hopPlayer >= 0) { player = hopPlayer; ability = 'hop'; }
+  if ((e.code === 'Space' || e.code === 'Enter') && document.activeElement?.matches('.ability-control')) {
+    const focused = document.activeElement as HTMLButtonElement;
+    player = focused.disabled ? -1 : Number(focused.dataset.racer); ability = focused.dataset.ability as Ability;
+  }
+  if (player >= 0 && player < humans() && ['ready', 'racing', 'countdown'].includes(phase)) { e.preventDefault(); if (!heldKeys.has(e.code) && !e.repeat) activate(player, ability); heldKeys.add(e.code); }
   if (e.code === 'Escape') pauseRace();
   if (import.meta.env.DEV && e.code === 'KeyT' && !e.repeat) {
     theme = theme.id === 'coastal' ? themes.graphite : themes.coastal; applyTheme(theme); brand(); world.setTheme(theme); applyDriverPresentation();
@@ -457,6 +472,7 @@ try {
  });
       for (const event of session.drainEvents()) {
         audio.cue(event.type, event.intensity); if (event.type === 'thrust') rechargeAnnounced[event.player] = false; const prefix = playerCount > 1 ? `${driverName(event.player)} · ` : '';
+        if (event.type === 'hop') world.vehicles[event.player].hop(event.time);
         if ((event.type === 'landing' || event.type === 'splash') && event.point) world.feedback(event.point, event.type === 'splash');
         if (event.type === 'landing') world.vehicles[event.player].impact(event.time);
         if (event.type === 'car-impact') { world.vehicles[event.player].impact(event.time); world.vehicles[event.otherPlayer!].impact(event.time); }
@@ -481,6 +497,7 @@ try {
       players: race?.racers.map(racer => ({ ...racer.state })) ?? [], standings: race?.standings() ?? [], ghostStartRemaining: race?.ghostStartRemaining ?? 0,
       renderedPlayers: world.vehicles.slice(0, playerCount).map(vehicle => ({ x: vehicle.root.position.x, y: vehicle.root.position.y, z: vehicle.root.position.z, heading: vehicle.root.rotation.y })),
       raceInputs: { activations: [...raceTouches.activations], cancellations: [...raceTouches.cancellations], active: [0, 1, 2, 3].map(i => raceTouches.active(i)) },
+      abilityInputs: { thrust: [0,1,2,3].map(i => raceTouches.active(i, 'thrust')), hop: [0,1,2,3].map(i => raceTouches.active(i, 'hop')) },
       inputs: { activations: [...ownership.activations], cancellations: [...ownership.cancellations], active: [0, 1, 2, 3].map(i => ownership.active(i)) } }),
     getAudio: () => audio.getStatus(),
     getShowcaseProjection: () => world.showcaseProjection,

@@ -1,4 +1,6 @@
-import { clamp, distance } from './geometry';
+import { angleDelta, clamp, distance } from './geometry';
+import { blockedRouteSection } from './barriers';
+import { FLIGHT_RULES, groundHeight, vehicleSupported } from './support';
 import { compileRoute, createPracticeSamples, sampleRoute, PACE_RANGE } from './route';
 import { RULES } from './simulation';
 import type { CompiledRoute, TrackDefinition } from './types';
@@ -27,12 +29,41 @@ export function computerRoute(track: TrackDefinition, difficulty: Difficulty, op
   return route;
 }
 
-/** Decisions use only the shared fixed clock and legal thrust commands. */
+/** Conservative straight-line prediction, using the same hop impulse and supported surfaces. */
+export function shouldComputerHop(race: LocalRace, player: number) {
+  const s = race.racers[player].state, track = race.track;
+  if (race.ghostStartRemaining > 0 || s.finished || s.recoveryWaiting || s.time < s.recoveringUntil || s.time < s.hopReadyAt
+    || s.movement !== 'grounded' || s.speed < 6 || s.sandAmount > 0.2 || Math.abs(s.slipAngle) > 0.18) return false;
+  const forward = { x: s.velocity.x / s.speed, z: s.velocity.z / s.speed };
+  const blocked = race.racers.some((other, i) => {
+    const o = other.state, x = o.position.x - s.position.x, z = o.position.z - s.position.z;
+    const along = x * forward.x + z * forward.z, across = x * forward.z - z * forward.x;
+    return i !== player && !o.finished && !o.recoveryWaiting && o.time >= o.recoveringUntil && o.movement === 'grounded'
+      && along > 0 && along <= 10 && Math.abs(across) < track.carWidth * 1.5 && s.speed - o.speed >= 2;
+  });
+  if (!blocked) return false;
+  const duration = 2 * RULES.hopLaunchSpeed / FLIGHT_RULES.gravity;
+  const samples = Array.from({ length: 25 }, (_, n) => ({ x: s.position.x + s.velocity.x * duration * n / 24, z: s.position.z + s.velocity.z * duration * n / 24 }));
+  const line = Array.from({ length: 9 }, (_, n) => sampleRoute(race.routes[player], s.distance + s.speed * duration * n / 8));
+  if (line.some(p => Math.abs(p.curvature) > 0.012 || Math.abs(angleDelta(Math.atan2(forward.x, forward.z), p.heading)) > Math.PI / 18)
+    || samples.some(p => !vehicleSupported(p, s.heading, track) || groundHeight(p, track) > 0)
+    || blockedRouteSection(samples, track)) return false;
+  const landing = samples.at(-1)!;
+  return !race.racers.some((other, i) => {
+    const o = other.state;
+    return i !== player && !o.finished && !o.recoveryWaiting && o.time >= o.recoveringUntil
+      && distance(landing, { x: o.position.x + o.velocity.x * duration, z: o.position.z + o.velocity.z * duration }) < track.carLength + 0.5;
+  });
+}
+
+/** Decisions use only the shared fixed clock and legal ability commands. */
 export function stepComputers(race: LocalRace, difficulty: Difficulty) {
   if(race.tick%12!==0)return;
   for(let i=1;i<race.racers.length;i++){
     const s=race.racers[i].state,route=race.routes[i];
-    if(s.finished||s.recoveryWaiting||s.time<s.recoveringUntil||s.time<s.thrustReadyAt||s.sandAmount>0.2||Math.abs(s.slipAngle)>0.18)continue;
+    if(s.finished||s.recoveryWaiting||s.time<s.recoveringUntil)continue;
+    if(shouldComputerHop(race,i))race.pressHop(i);
+    if(s.time<s.thrustReadyAt||s.sandAmount>0.2||Math.abs(s.slipAngle)>0.18)continue;
     const traffic=race.racers.some((r,j)=>j!==i&&!r.state.finished&&distance(s.position,r.state.position)<7&&r.state.speed<s.speed+1);
     if(traffic)continue;
     const horizon= s.speed*1.4+8;

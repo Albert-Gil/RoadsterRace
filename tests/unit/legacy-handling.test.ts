@@ -2,11 +2,12 @@ import { expect, test } from 'vitest';
 import fixtures from '../fixtures/handling-v8.json';
 import { COMPILER_VERSION } from '../../src/core/route';
 import type { TrackDefinition, CompiledRoute } from '../../src/core/types';
-import { compileRoute, createPracticeSamples } from '../../src/core/route';
 import { LocalRace } from '../../src/core/local-race';
+import { RULES } from '../../src/core/simulation';
 
-// Frozen pre-widening geometry isolates unchanged vehicle physics from authored course changes.
-test.each(fixtures)('$track.id retains the v8 physics on frozen geometry', ({ track: data, route: line }) => {
+// Keep the historic geometry. Rules v10 intentionally reduce sand drag, which
+// changes off-road trajectories and contacts, so record a separate v10 baseline.
+test.each(fixtures)('$track.id has a repeatable v10 baseline on frozen geometry', ({ track: data, route: line }) => {
   const track=data as TrackDefinition, route={...line,version:COMPILER_VERSION} as CompiledRoute;
   const race = new LocalRace([route], track, 2);
   for (let tick = 0; tick < 18000 && !race.finished; tick++) {
@@ -14,12 +15,15 @@ test.each(fixtures)('$track.id retains the v8 physics on frozen geometry', ({ tr
     race.step();
   }
   const s = race.racers[0].state;
-  const expected = {
-    'coastal-launch': { finish: 41.57099934730101, laps: [21.21315257423602, 20.357846773064992], drifts: 6, collisions: 2, recoveries: 0 },
-    'orbital-launchyard': { finish: 50.70356243354509, laps: [24.813470651367318, 25.89009178217777], drifts: 11, collisions: 0, recoveries: 0 },
-    'golden-gate': { finish: 73.45151031687591, laps: [38.49902327848429, 34.952487038391624], drifts: 17, collisions: 3, recoveries: 3 },
-  }[track.id]!;
-  expect(s.finishTime).toBeCloseTo(expected.finish, 8);
-  s.lapTimes.forEach((time, i) => expect(time).toBeCloseTo(expected.laps[i], 8));
-  expect({ drifts: s.driftCount, collisions: s.collisionCount, recoveries: s.recoveryCount }).toEqual({ drifts: expected.drifts, collisions: expected.collisions, recoveries: expected.recoveries });
+  expect(s.finished).toBe(true); expect(s.hopCount).toBe(0);
+  const microseconds = (n: number) => Number(n.toFixed(6));
+  expect({ finish: microseconds(s.finishTime!), laps: s.lapTimes.map(microseconds), drifts: s.driftCount, collisions: s.collisionCount, recoveries: s.recoveryCount }).toMatchSnapshot();
+});
+
+test('ground force tuning retains established grip, response, acceleration and thrust', () => {
+  expect({ grip: RULES.asphaltGrip, sandGrip: RULES.sandGrip, response: RULES.asphaltResponse, sandResponse: RULES.sandResponse,
+    acceleration: RULES.acceleration, braking: RULES.braking, thrust: RULES.thrustAcceleration, max: RULES.maxSpeed }).toEqual({
+    grip: 48, sandGrip: 6.5, response: 7.5, sandResponse: 1.8, acceleration: 6, braking: 8.5, thrust: 25, max: 42,
+  });
+  expect(RULES.sandDrag).toBe(0.95);
 });

@@ -109,6 +109,7 @@ export class VehicleView {
     this.setTheme(theme);
   }
   impact(time: number) { this.impactUntil = time + 0.22; }
+  hop(_time: number) { this.vapor.hop({ x: this.root.position.x, z: this.root.position.z, y: Math.max(0, this.root.position.y - 0.13), heading: this.root.rotation.y }, this.reducedMotion.matches); }
   setIdentity(player: number | null, theme: PresentationTheme) { this.identity = player; this.setTheme(theme); }
   setEnabled(enabled: boolean) { this.root.setEnabled(enabled); this.shadow.setEnabled(enabled); this.vapor.setEnabled(enabled && this.detail === 'race'); this.tireMarks.setEnabled(enabled && this.detail === 'race'); this.dust.setEnabled(enabled); }
   clearEffects() { this.vapor.clear(); this.tireMarks.clear(); this.previousTime = 0; this.wheelDistance = 0; this.impactUntil = -1; }

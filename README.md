@@ -1,6 +1,6 @@
 # Roadster Race
 
-A browser racing game with Solo Race against three computer drivers, local Multiplayer for two to four people, and Time Trial with a personal-best ghost: draw a line and its pace, race one to six laps, and time your rechargeable thrust. Visuals are replaceable through shared settings and assets. No account, backend, or external service is required to play.
+A browser racing game with Solo Race against three computer drivers, local Multiplayer for two to four people, and Time Trial with a personal-best ghost: draw a line and its pace, race one to six laps, and time your rechargeable thrust and hop. Visuals are replaceable through shared settings and assets. No account, backend, or external service is required to play.
 
 Four venues are available: Coastal Launch, Launchsite, Golden Gate and **Santa Monica**. Santa Monica adds a sunset amusement pier, an optional automatic ramp over water and a flat bypass. Draw through the ramp to take the shortcut; use the existing thrust pad to help clear it. Newly created Full Tours end at Santa Monica. See [course and jump tuning](docs/SANTA_MONICA.md).
 
@@ -9,6 +9,8 @@ All roads are now **16 metres wide**, including Golden Gate's bridge and Santa M
 Solo Race provides Easy/Normal/Hard opponents, with three slightly different CPU drivers using the same physics and thrust rules as you. Only you draw a line. Time Trial measures your **fastest lap**, with an optional translucent best-lap replay; its records save on this browser. Older championships cannot resume after the road-layout changes, while names, paints and lap preferences remain.
 
 The latest playability pass enlarges thrust pads and racing cars, hides floating race tags, adds explicit pause Home navigation, and joins grid starts to each driver's line without chasing the stripe. All four venues receive lighting, surface and architectural detail improvements. See [playability and venue polish](docs/PLAYABILITY_POLISH.md).
+
+**Hop** now gives an immediate one-second lift with a separate seven-second recharge. Both manual hops and automatic ramps gently guide momentum instead of launching according to momentary body yaw. Sand drag is slightly lower; its reduced grip remains. No new obstacle shortcuts are enabled. See [hop controls, flight assistance and tuning](docs/HOP.md).
 
 ## Online testing
 
@@ -38,7 +40,7 @@ The supplied desktop runtime also provides pnpm at `C:\Users\alber\.cache\codex-
 1. Select **Solo Race** or **Time Trial**, choose 1–6 laps, enter your driver name and select a paint finish. Choose **Draw racing line** to continue.
 2. Start anywhere across the highlighted start/finish strip, or up to 12 metres behind it, and draw one complete lap following the arrows. Draw slowly for deliberate corners and faster for straights. Once you cross the finish, lift anywhere; all later drawing is ignored.
 3. Inspect the route and choose **Race this line**. Explanations and a practice example are reserved for a future tutorial.
-4. Tap the **THRUST** pad, or press **Space** on desktop. Each activation lasts 0.7 seconds and recharges in five seconds. Holding does not repeat.
+4. Tap **THRUST** (desktop **Space**) for a 0.7-second burst, recharging in five seconds. Tap **HOP** (**H**) for about one second of lift, recharging independently in seven seconds. Both can activate together. Holding does not repeat.
 5. Use **Escape** or Pause to pause. App/tab interruption also pauses the race. Resume includes a countdown.
 6. Retry the same line or draw a new one. Time Trial saves your fastest lap and replay locally, with an in-memory fallback when storage is unavailable.
 

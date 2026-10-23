@@ -46,7 +46,8 @@ export interface CompiledRoute {
 }
 export interface DrawingTrim { leadIn: DrawSample[]; tail: DrawSample[]; joined: boolean }
 export type RouteResult = { ok: true; route: CompiledRoute; drawing?: DrawingTrim } | { ok: false; message: string; point?: Point; section?: Point[] };
-export type RaceEvent = { type: 'thrust' | 'drift' | 'lap' | 'finish' | 'collision' | 'car-impact' | 'scrape' | 'recovery' | 'takeoff' | 'landing' | 'splash'; time: number; point?: Point; intensity?: number; otherPlayer?: number };
+export type Ability = 'thrust' | 'hop';
+export type RaceEvent = { type: 'thrust' | 'hop' | 'drift' | 'lap' | 'finish' | 'collision' | 'car-impact' | 'scrape' | 'recovery' | 'takeoff' | 'landing' | 'splash'; time: number; point?: Point; intensity?: number; otherPlayer?: number };
 export interface RaceState {
   tick: number;
   time: number;
@@ -57,6 +58,10 @@ export interface RaceState {
   lapStartedAt: number;
   thrustUntil: number;
   thrustReadyAt: number;
+  hopReadyAt: number;
+  hopCount: number;
+  flightOrigin: 'hop' | 'ramp' | 'fall' | null;
+  flightStartedAt: number;
   position: Point;
   elevation: number;
   verticalVelocity: number;

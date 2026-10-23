@@ -8,6 +8,7 @@ Sound is optional. Tap the speaker button to enable it. It begins muted and unlo
 - Tire friction follows physical slip; sandy scrub follows actual sand contact. Four cars share one bounded mix so more players do not multiply the volume.
 - Countdown beats occur once per number. Start, lap, finish, thrust and recharge-ready cues follow the game events/state.
 - A thrust sound lasts about 0.7 seconds. Holding a control does not repeat it.
+- Hop has its own short upward pressure cue and reuses the landing sound. Map the `hop` cue role to replace it with a local recording; holding Hop does not repeat it.
 - Pause, app interruption and leaving play silence the driving layers. Pause/interruption also cancel unfinished cues. Mute fades the master output and cancels cues; the race continues normally.
 - Audio only reads game state. Loading, muting or changing sounds cannot change grip, speed, timing or results.
 
@@ -39,6 +40,7 @@ These are starting briefs, not final generator settings. All sounds should be dr
 | Role | Target | Direction / starting prompt |
 |---|---|---|
 | `thrust` cue | 0.7 s, immediate onset | A compact compressed-air thruster release: sharp pressure attack, airy rush, a subtle low punch, clean short decay; close perspective, no flame roar, no engine, no voice, no long reverb. |
+| `hop` cue | 0.2–0.3 s, immediate onset | A short downward compressed-air release with an upward electronic lift accent, compact low punch and dry airy decay; distinct from forward thrust, no explosion or speech. |
 | `drive` loop | 3–6 s, steady seamless loop | A refined fictional electric sports car motor at a constant medium speed: smooth low hum with a restrained higher electric whine, dry and clean; no acceleration sweep, gear shifts, tires or wind. |
 | `tire` loop | 2–4 s | Continuous rubber scrubbing across dry asphalt during a controlled drift, textured friction with a soft squeal; no engine, impacts or harsh piercing tone. |
 | `sand` loop | 2–4 s | Tires sliding through fine dry coastal sand, soft granular hiss and scattered grit, even and continuous; no engine or heavy gravel impacts. |

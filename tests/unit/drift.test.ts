@@ -64,8 +64,9 @@ describe('momentum, steering recovery and real surfaces', () => {
   test('steering direction and momentum diverge during a drift; the car does not snap to the line', () => {
     const sim = new RaceSimulation(route(2), coastalTrack); let observed = false;
     for (let i = 0; i < 12000 && !sim.state.finished; i++) {
-      const previous = { ...sim.state.position }; sim.step(); const s = sim.state;
-      expect(distance(previous, s.position)).toBeLessThanOrEqual(RULES.maxSpeed * RULES.dt + 1e-8);
+      const previous = { ...sim.state.position }, recoveries = sim.state.recoveryCount; sim.step(); const s = sim.state;
+      // Explicit barrier recovery is the only permitted relocation; drifting never snaps to the line.
+      if (s.recoveryCount === recoveries) expect(distance(previous, s.position)).toBeLessThanOrEqual(RULES.maxSpeed * RULES.dt + 1e-8);
       if (s.drifting && s.lineError > 3) {
         expect(Math.abs(angleDelta(Math.atan2(s.velocity.x, s.velocity.z), s.heading))).toBeGreaterThan(RULES.driftEndAngle);
         observed = true;

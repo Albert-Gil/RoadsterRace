@@ -6,21 +6,21 @@ import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import type { Scene } from '@babylonjs/core/scene';
-import { thrustEffects, sceneTuning } from './themes';
+import { thrustEffects, hopEffects, sceneTuning } from './themes';
 
 const shared = new WeakMap<Scene, StandardMaterial>();
-interface Puff { age: number; x: number; y: number; z: number; vx: number; vz: number; size: number }
+interface Puff { age: number; x: number; y: number; z: number; vx: number; vz: number; vy: number; floor: number; lifetime: number; size: number }
 /** One preallocated billboard mesh per car. Cosmetic time/randomness never enter the race state. */
 export class ThrustVapor {
   readonly mesh: Mesh;
-  private particles: Puff[] = Array.from({ length: thrustEffects.capacity }, () => ({ age: 99, x: 0, y: 0, z: 0, vx: 0, vz: 0, size: 1 }));
+  private particles: Puff[] = Array.from({ length: thrustEffects.capacity }, () => ({ age: 99, x: 0, y: 0, z: 0, vx: 0, vz: 0, vy: 0.45, floor: -10, lifetime: thrustEffects.lifetime, size: 1 }));
   private positions = new Float32Array(thrustEffects.capacity * 12);
   private colors = new Float32Array(thrustEffects.capacity * 16);
   private cursor = 0;
   private emission = 0;
   private enabled = true;
   private seed = 12345;
-  get liveCount() { return this.particles.filter(p => p.age < thrustEffects.lifetime).length; }
+  get liveCount() { return this.particles.filter(p => p.age < p.lifetime).length; }
   constructor(private scene: Scene) {
     let material = shared.get(scene);
     if (!material) {
@@ -35,22 +35,36 @@ export class ThrustVapor {
     this.mesh = new Mesh('pooled-thrust-vapor', scene); data.applyToMesh(this.mesh, true); this.mesh.material = material; this.mesh.hasVertexAlpha = true; this.mesh.isPickable = false; this.mesh.alwaysSelectAsActiveMesh = true; this.mesh.isVisible = false;
   }
   clear() { this.particles.forEach(p => p.age = 99); this.emission = 0; this.mesh.isVisible = false; }
+  hop(pose: { x: number; z: number; y: number; heading: number }, reduced: boolean) {
+    if (!this.enabled) return;
+    const count = reduced ? 6 : hopEffects.puffs;
+    for (let i = 0; i < count; i++) {
+      const angle = i / count * Math.PI * 2, side = Math.cos(angle) * 0.7, along = Math.sin(angle) * 1.5;
+      Object.assign(this.particles[this.cursor++ % this.particles.length], {
+        age: 0, lifetime: hopEffects.lifetime, floor: pose.y + 0.04,
+        x: pose.x + Math.cos(pose.heading) * side + Math.sin(pose.heading) * along,
+        z: pose.z - Math.sin(pose.heading) * side + Math.cos(pose.heading) * along,
+        y: pose.y + 0.45, vx: Math.cos(angle) * 2.5, vz: Math.sin(angle) * 2.5,
+        vy: -hopEffects.downwardSpeed, size: hopEffects.size,
+      });
+    }
+  }
   setEnabled(value: boolean) { this.enabled = value; if (!value) this.clear(); }
   update(pose: { x: number; z: number; heading: number; y?: number }, speed: number, firing: boolean, dt: number, reduced: boolean) {
     if (!this.enabled) return;
-    const lifetime = thrustEffects.lifetime, dx = Math.sin(pose.heading), dz = Math.cos(pose.heading);
-    for (const p of this.particles) if (p.age < lifetime) { p.age += dt; p.x += p.vx * dt; p.z += p.vz * dt; p.y += 0.45 * dt; }
+    const dx = Math.sin(pose.heading), dz = Math.cos(pose.heading);
+    for (const p of this.particles) if (p.age < p.lifetime) { p.age += dt; p.x += p.vx * dt; p.z += p.vz * dt; p.y = Math.max(p.floor, p.y + p.vy * dt); }
     if (firing) this.emission += dt * thrustEffects.emission * (reduced ? 0.35 : 1); else this.emission = 0;
     while (this.emission >= 1) {
       this.emission--; const slot = this.cursor++ % this.particles.length, p = this.particles[slot], outlet = [-0.51, -0.185, 0.185, 0.51][this.cursor % 4];
       this.seed = (Math.imul(this.seed, 1664525) + 1013904223) >>> 0; const jitter = this.seed / 4294967296 - 0.5;
-      Object.assign(p, { age: reduced ? 0.35 : 0, x: pose.x - dx * 2.5 * sceneTuning.vehicle.racingScale + dz * outlet * sceneTuning.vehicle.racingScale, y: 0.13 + 0.6 * sceneTuning.vehicle.racingScale + (pose.y ?? 0), z: pose.z - dz * 2.5 * sceneTuning.vehicle.racingScale - dx * outlet * sceneTuning.vehicle.racingScale, vx: dx * (speed * 0.8 - thrustEffects.exhaustSpeed) + dz * jitter * 1.7, vz: dz * (speed * 0.8 - thrustEffects.exhaustSpeed) - dx * jitter * 1.7, size: 0.85 + jitter * 0.3 });
+      Object.assign(p, { age: reduced ? 0.35 : 0, lifetime: thrustEffects.lifetime, vy: 0.45, floor: -10, x: pose.x - dx * 2.5 * sceneTuning.vehicle.racingScale + dz * outlet * sceneTuning.vehicle.racingScale, y: 0.13 + 0.6 * sceneTuning.vehicle.racingScale + (pose.y ?? 0), z: pose.z - dz * 2.5 * sceneTuning.vehicle.racingScale - dx * outlet * sceneTuning.vehicle.racingScale, vx: dx * (speed * 0.8 - thrustEffects.exhaustSpeed) + dz * jitter * 1.7, vz: dz * (speed * 0.8 - thrustEffects.exhaustSpeed) - dx * jitter * 1.7, size: 0.85 + jitter * 0.3 });
     }
     const camera = this.scene.activeCamera; if (!camera) return;
     const right = camera.getDirection(Vector3.Right()), up = camera.getDirection(Vector3.Up());
     let live = 0;
     this.particles.forEach((p, i) => {
-      const t = Math.min(1, p.age / lifetime), active = p.age < lifetime, size = (thrustEffects.startSize + t * thrustEffects.expansion) * p.size;
+      const t = Math.min(1, p.age / p.lifetime), active = p.age < p.lifetime, size = (thrustEffects.startSize + t * thrustEffects.expansion) * p.size;
       if (active) live++;
       for (let v = 0; v < 4; v++) {
         const x = (v === 0 || v === 3 ? -1 : 1) * size / 2, y = (v < 2 ? -1 : 1) * size / 2, at = i * 12 + v * 3, color = i * 16 + v * 4;

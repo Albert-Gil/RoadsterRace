@@ -3,13 +3,15 @@ import { sampleRoute, COMPILER_VERSION } from './route';
 import { barrierContact, blockedRouteSection, sweepVehicle } from './barriers';
 import { DEFAULT_LAPS, validateLapCount } from './race-options';
 import type { CompiledRoute, Point, RaceEvent, RaceState, TrackDefinition } from './types';
-import { branchProjection, FLIGHT_RULES, groundHeight, jumpCoordinates, supported, takeoffCrossing, vehicleSupported } from './support';
+import { branchProjection, FLIGHT_RULES, groundHeight, jumpCoordinates, rampAt, supported, takeoffCrossing, vehicleSupported } from './support';
 
 export const RULES = Object.freeze({
-  version: 9, dt: 1 / 60, laps: DEFAULT_LAPS,
+  version: 10, dt: 1 / 60, laps: DEFAULT_LAPS,
   acceleration: 6, braking: 8.5, accelerationJerk: 14, paceResponse: 1.6, paceDeadband: 0.4,
   maxSpeed: 42, thrustAcceleration: 25, thrustDuration: 0.7, thrustRecharge: 5,
-  asphaltGrip: 48, sandGrip: 6.5, asphaltResponse: 7.5, sandResponse: 1.8, sandDrag: 1.10,
+  hopRecharge: 7, hopLaunchSpeed: 4.9,
+  flightLaunchCorrection: 20 * Math.PI / 180, flightTurnRate: 30 * Math.PI / 180,
+  asphaltGrip: 48, sandGrip: 6.5, asphaltResponse: 7.5, sandResponse: 1.8, sandDrag: 0.95,
   steeringResponse: 4.8, steeringRate: 2.8, steeringSmoothing: 7,
   lookAhead: 4, lookAheadSeconds: 0.25, surfaceTransition: 1.2,
   driftStartAngle: 0.17, driftEndAngle: 0.09,
@@ -28,6 +30,7 @@ export class RaceSimulation {
   readonly state: RaceState;
   readonly events: RaceEvent[] = [];
   private queuedThrust = false;
+  private queuedHop = false;
   private lastSafeDistance = 0;
   private stuckTicks = 0;
   private lastCollisionTick = -1000;
@@ -41,19 +44,21 @@ export class RaceSimulation {
     if (route.trackId !== track.id || route.trackVersion !== track.version || route.version !== COMPILER_VERSION) throw new Error('This route belongs to an older circuit or ruleset. Draw a new line.');
     const start = sampleRoute(route, 0);
     this.state = { tick: 0, time: 0, distance: 0, speed: 0, lap: 1, lapTimes: [], lapStartedAt: 0, thrustUntil: -1, thrustReadyAt: 0,
+      hopReadyAt: 0, hopCount: 0, flightOrigin: null, flightStartedAt: -1,
       position: { x: start.x, z: start.z }, elevation: 0, verticalVelocity: 0, movement: 'grounded', activeJump: null, velocity: { x: 0, z: 0 }, heading: start.heading, steeringRate: 0, acceleration: 0, desiredSpeed: start.desiredSpeed,
       slipAngle: 0, lineError: 0, drifting: false, driftCount: 0, sandAmount: 0, surface: 'asphalt', checkpoint: 1,
       thrustCount: 0, finished: false, finishTime: null, collisionCount: 0, recoveryCount: 0, recoveringUntil: -1, recoveryWaiting: false };
   }
   pressThrust() { if (!this.state.finished) this.queuedThrust = true; }
-  clearCommands() { this.queuedThrust = false; }
+  pressHop() { if (!this.state.finished) this.queuedHop = true; }
+  clearCommands() { this.queuedThrust = false; this.queuedHop = false; }
   drainEvents() { return this.events.splice(0); }
   private recover(now: number) {
     const s = this.state;
       const back = Math.min(s.distance, this.lastSafeDistance), safe = sampleRoute(this.route, back);
       s.position = { x: safe.x, z: safe.z }; s.heading = safe.heading; s.distance = back;
       s.velocity = { x: 0, z: 0 }; s.speed = 0; s.acceleration = 0; s.steeringRate = 0;
-      s.elevation = groundHeight(s.position, this.track); s.verticalVelocity = 0; s.movement = 'grounded'; s.activeJump = null; this.invalidFlight = false; this.clearCommands();
+      s.elevation = groundHeight(s.position, this.track); s.verticalVelocity = 0; s.movement = 'grounded'; s.activeJump = null; s.flightOrigin = null; s.flightStartedAt = -1; this.invalidFlight = false; this.clearCommands();
       s.thrustUntil = now; s.recoveringUntil = now + 1; s.recoveryCount++; s.drifting = false;
       s.recoveryWaiting = false;
       s.checkpoint = Math.min(s.checkpoint, Math.floor(back / (this.route.length / 8)) + 1);
@@ -89,7 +94,7 @@ export class RaceSimulation {
   integrate(dt: number, now: number): Point | null {
     const s = this.state;
     if (s.finished) return null;
-    if (now < s.recoveringUntil) { this.queuedThrust = false; return null; }
+    if (now < s.recoveringUntil || s.recoveryWaiting) { this.clearCommands(); return null; }
     if (this.queuedThrust && now + 1e-8 >= s.thrustReadyAt) {
       s.thrustUntil = now + RULES.thrustDuration;
       s.thrustReadyAt = now + RULES.thrustRecharge;
@@ -97,7 +102,20 @@ export class RaceSimulation {
       this.events.push({ type: 'thrust', time: now });
     }
     this.queuedThrust = false;
-    if (this.track.supports && s.movement === 'airborne') return this.integrateFlight(dt, now);
+    const hopRamp = this.queuedHop ? rampAt(s.position, this.track) : undefined;
+    const groundedSupport = this.queuedHop && (vehicleSupported(s.position, s.heading, this.track) || !!hopRamp && supported(s.position, this.track)
+      && Math.abs(jumpCoordinates(s.position, hopRamp).across) <= (hopRamp.width - this.track.carWidth) / 2);
+    if (this.queuedHop && now + 1e-8 >= s.hopReadyAt && s.movement === 'grounded' && groundedSupport) {
+      s.hopReadyAt = now + RULES.hopRecharge; s.hopCount++;
+      s.movement = 'airborne'; s.flightOrigin = 'hop'; s.flightStartedAt = now;
+      const ramp = hopRamp;
+      s.activeJump = ramp && this.route.jumps?.includes(ramp.id) ? ramp.id : null;
+      this.invalidFlight = false; s.elevation = groundHeight(s.position, this.track); s.verticalVelocity = RULES.hopLaunchSpeed;
+      s.acceleration = 0; s.drifting = false; this.assistFlight(RULES.flightLaunchCorrection);
+      this.events.push({ type: 'hop', time: now, point: { ...s.position } });
+    }
+    this.queuedHop = false;
+    if (s.movement === 'airborne') return this.integrateFlight(dt, now);
     const surface = sampleSurface(s.position, this.track);
     s.sandAmount = surface.sandAmount; s.surface = surface.sandAmount > 0.25 ? 'sand' : 'asphalt';
     const guide = sampleRoute(this.route, s.distance);
@@ -150,7 +168,9 @@ export class RaceSimulation {
     if (this.track.supports) {
       const takeoff = takeoffCrossing(oldPosition, s.position, this.track);
       if (takeoff) {
-        s.activeJump = takeoff.jump.id; this.invalidFlight = false;
+        s.activeJump = takeoff.jump.id; this.invalidFlight = !this.route.jumps?.includes(takeoff.jump.id);
+        s.flightOrigin = 'ramp'; s.flightStartedAt = now + dt * takeoff.t;
+        this.assistFlight(RULES.flightLaunchCorrection);
         s.movement = 'airborne'; s.verticalVelocity = Math.max(0, s.velocity.x * takeoff.jump.forward.x + s.velocity.z * takeoff.jump.forward.z) * takeoff.jump.lipHeight / takeoff.jump.rampLength;
         const remaining = dt * (1 - takeoff.t);
         s.elevation = takeoff.jump.lipHeight + s.verticalVelocity * remaining - FLIGHT_RULES.gravity * remaining * remaining / 2;
@@ -158,29 +178,60 @@ export class RaceSimulation {
         s.acceleration = 0; s.drifting = false;
         this.events.push({ type: 'takeoff', time: now + dt * takeoff.t, point: { ...s.position } });
       } else if (!supported(s.position, this.track)) {
-        s.movement = 'airborne'; s.activeJump = null; this.invalidFlight = true; s.verticalVelocity = 0; s.acceleration = 0;
+        s.movement = 'airborne'; s.flightOrigin = 'fall'; s.flightStartedAt = now; s.activeJump = null; this.invalidFlight = true; s.verticalVelocity = 0; s.acceleration = 0;
       } else s.elevation = nextHeight;
     }
     return oldPosition;
   }
+  /** Arcade flight guidance rotates momentum, never adding speed or rescuing reverse travel. */
+  private flightHeading() {
+    const s = this.state;
+    const jump = this.track.jumps?.find(j => j.id === s.activeJump);
+    const progress = this.projectNear(s.position).progress;
+    const target = sampleRoute(this.route, progress + Math.max(8, s.speed * 0.45));
+    return jump ? Math.atan2(jump.forward.x, jump.forward.z) : Math.atan2(target.x - s.position.x, target.z - s.position.z);
+  }
+  private assistFlight(maxTurn: number) {
+    const s = this.state;
+    if (s.flightOrigin === 'fall' || this.invalidFlight || s.speed < 0.05) return;
+    const desired = this.flightHeading();
+    const travel = Math.atan2(s.velocity.x, s.velocity.z), delta = angleDelta(travel, desired);
+    if (Math.cos(delta) <= 0) return;
+    const heading = travel + clamp(delta, -maxTurn, maxTurn), speed = Math.hypot(s.velocity.x, s.velocity.z);
+    s.velocity = { x: Math.sin(heading) * speed, z: Math.cos(heading) * speed };
+  }
   private integrateFlight(dt: number, now: number): Point | null {
     const s = this.state, old = { ...s.position }, oldHeight = s.elevation;
+    this.assistFlight(RULES.flightTurnRate * dt);
+    const oldHeading = s.heading, travelHeading = s.speed > 0.05 ? Math.atan2(s.velocity.x, s.velocity.z) : s.flightOrigin === 'hop' ? this.flightHeading() : s.heading;
+    s.heading += clamp(angleDelta(s.heading, travelHeading), -RULES.steeringRate * dt, RULES.steeringRate * dt);
     let vx = s.velocity.x, vz = s.velocity.z;
-    if (now < s.thrustUntil) { vx += Math.sin(s.heading) * RULES.thrustAcceleration * dt; vz += Math.cos(s.heading) * RULES.thrustAcceleration * dt; }
+    if (now < s.thrustUntil) { vx += Math.sin(travelHeading) * RULES.thrustAcceleration * dt; vz += Math.cos(travelHeading) * RULES.thrustAcceleration * dt; }
     const speed = Math.hypot(vx, vz); if (speed > RULES.maxSpeed) { vx *= RULES.maxSpeed / speed; vz *= RULES.maxSpeed / speed; }
     const proposed = { x: old.x + (s.velocity.x + vx) * dt / 2, z: old.z + (s.velocity.z + vz) * dt / 2 };
+    // A manual hop may enter the existing authored ramp in flight, but never create a new water shortcut.
+    if (!s.activeJump && s.flightOrigin === 'hop') {
+      const entry = this.track.jumps?.find(j => this.route.jumps?.includes(j.id)
+        && jumpCoordinates(old, j).along <= 0 && jumpCoordinates(proposed, j).along > 0
+        && Math.abs(jumpCoordinates(proposed, j).across) <= (j.width - this.track.carWidth) / 2);
+      if (entry) s.activeJump = entry.id;
+    }
     const jump = this.track.jumps?.find(j => j.id === s.activeJump), corridor = jump ? jumpCoordinates(proposed, jump) : null;
-    if (!jump || !corridor || corridor.along < jump.rampLength - 0.1 || corridor.along > jump.corridorLength || Math.abs(corridor.across) > (jump.width - this.track.carWidth) / 2) this.invalidFlight = true;
+    const approved = !!jump && !!corridor && !!this.route.jumps?.includes(jump.id)
+      && corridor.along >= (s.flightOrigin === 'hop' ? -this.track.carLength : jump.rampLength - 0.1)
+      && corridor.along <= jump.corridorLength && Math.abs(corridor.across) <= (jump.width - this.track.carWidth) / 2;
+    if (s.flightOrigin === 'fall' || jump && !approved || !vehicleSupported(proposed, s.heading, this.track) && !approved) this.invalidFlight = true;
     let height = oldHeight + s.verticalVelocity * dt - FLIGHT_RULES.gravity * dt * dt / 2;
-    const descending = s.verticalVelocity - FLIGHT_RULES.gravity * dt < 0;
     const landingHeight = groundHeight(proposed, this.track);
     // Check the support at the actual crossing, not merely at the end of the step.
-    const crossing = descending && oldHeight >= landingHeight && height <= landingHeight;
-    const fraction = crossing ? clamp((oldHeight - landingHeight) / Math.max(1e-9, oldHeight - height), 0, 1) : 1;
+    const oldGround = groundHeight(old, this.track);
+    const crossing = oldHeight >= oldGround && height <= landingHeight && (s.verticalVelocity - FLIGHT_RULES.gravity * dt < 0 || landingHeight > oldGround);
+    const fraction = crossing ? clamp((oldHeight - oldGround) / Math.max(1e-9, oldHeight - oldGround - height + landingHeight), 0, 1) : 1;
     const at = { x: lerp(old.x, proposed.x, fraction), z: lerp(old.z, proposed.z, fraction) };
     const lands = !this.invalidFlight && crossing && vehicleSupported(at, s.heading, this.track);
     if (lands) height = landingHeight;
-    const collision = sweepVehicle(old, proposed, s.heading, s.heading, { x: vx, z: vz }, this.track, oldHeight, height);
+    // No existing obstacle is authored as jumpable. Height still governs car-to-car contacts.
+    const collision = sweepVehicle(old, proposed, oldHeading, s.heading, { x: vx, z: vz }, this.track, oldHeight, height, true);
     s.position = collision.position; s.velocity = collision.velocity; s.elevation = height; s.verticalVelocity -= FLIGHT_RULES.gravity * dt;
     s.speed = Math.hypot(s.velocity.x, s.velocity.z); s.drifting = false; s.sandAmount = 0; s.acceleration = 0; s.steeringRate = 0;
     if (collision.collided && collision.impact > 1.5 && s.tick - this.lastCollisionTick > 24) {
@@ -189,7 +240,7 @@ export class RaceSimulation {
     }
     if (lands && vehicleSupported(s.position, s.heading, this.track)) {
       this.events.push({ type: 'landing', time: now + fraction * dt, point: { ...at }, intensity: Math.abs(s.verticalVelocity) });
-      s.movement = 'grounded'; s.activeJump = null; s.verticalVelocity = 0; s.elevation = landingHeight;
+      s.movement = 'grounded'; s.activeJump = null; s.flightOrigin = null; s.verticalVelocity = 0; s.elevation = groundHeight(s.position, this.track); this.invalidFlight = false;
     }
     if (this.invalidFlight && height <= 0 && vehicleSupported(s.position, s.heading, this.track)) {
       this.events.push({ type: 'collision', time: now + dt, point: { ...s.position }, intensity: Math.abs(s.verticalVelocity) }); this.recover(now + dt); return null;
@@ -208,6 +259,9 @@ export class RaceSimulation {
     const tiresSaturated = Math.abs(s.slipAngle) * surface.response * s.speed > surface.grip * 0.95;
     s.drifting = s.movement === 'grounded' && s.speed > 6 && Math.abs(s.slipAngle) > (wasDrifting ? RULES.driftEndAngle : RULES.driftStartAngle) && (wasDrifting || tiresSaturated || s.lineError > 1.5);
     if (s.drifting && !wasDrifting) { s.driftCount++; this.events.push({ type: 'drift', time: now }); }
+
+    // Illegal water/corridor travel cannot finish or collect checkpoints before recovery.
+    if (s.movement === 'airborne' && this.invalidFlight) { s.time = now + dt; return; }
 
     if (this.gridPending) {
       const a = this.track.start, b = this.track.centerline[1], dx = b.x - a.x, dz = b.z - a.z;
