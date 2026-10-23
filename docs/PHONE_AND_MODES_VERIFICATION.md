@@ -50,7 +50,7 @@ The `/RoadsterRace/` production smoke replays real touch input on every venue an
 
 ## Hosted release checks
 
-The first hosted run exhausted its 30-minute verification budget while executing production smoke sequentially with software WebGL. It had reached Solo Race after checking every course, rotation and local drawing. The workflow now runs the same checks in five independent groups and requires all groups before deployment. Local production smoke remains available as one complete sequential run. This is a release-test scheduling change; game rendering and simulation are unchanged.
+The first hosted run exhausted its 30-minute verification budget while executing production smoke sequentially with software WebGL. It had reached Solo Race after checking every course, rotation and local drawing. The workflow now runs the same checks in eight independent groups (four venues plus phone, multiplayer, Solo Race and tournament checks) and requires all groups before deployment. Local production smoke remains available as one complete sequential run. This is a release-test scheduling change; game rendering and simulation are unchanged.
 
 ## Pending physical testing
 

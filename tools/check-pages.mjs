@@ -15,7 +15,7 @@ const fullRaces = process.env.PAGES_FULL_RACES === '1';
 const tournamentOnly = process.env.PAGES_ONLY === 'tournament';
 const circuits = ['coastal-launch', 'launchsite', 'golden-gate', 'santa-monica'];
 const selection = process.env.PAGES_ONLY;
-assert.ok(!selection || selection === 'tournament' || selection === 'sessions' || circuits.includes(selection), 'Unknown PAGES_ONLY group');
+assert.ok(!selection || ['tournament', 'sessions', 'phone', 'multiplayer', 'solo'].includes(selection) || circuits.includes(selection), 'Unknown PAGES_ONLY group');
 const selectedCircuits = selection ? circuits.filter(id => id === selection) : circuits;
 const sessionChecks = !selection || selection === 'sessions';
 const output = new URL('../artifacts/pages/', import.meta.url);
@@ -191,7 +191,7 @@ try {
     } finally { await context.close(); }
   }
   // Alternate presentation and portrait layout, including standalone metadata.
-  if (sessionChecks) {
+  if (sessionChecks || selection === 'phone') {
     console.log('Checking portrait, Graphite, manifest and Home Screen icons');
     // Compile the coordinate fixture before opening production WebGL. Two
     // simultaneous scenes compete for shader compilation on slower machines.
@@ -232,7 +232,7 @@ try {
     } finally { await context.close(); }
   }
   // Four private drawing turns and shared start; optional complete race locally.
-  if (sessionChecks) {
+  if (sessionChecks || selection === 'multiplayer') {
     console.log('Checking four-player drawing, readiness and racing');
     const points = await fixture('coastal-launch', 4);
     const { context, page } = await productionPage();
@@ -250,7 +250,7 @@ try {
       report.checks.push({ fourPlayers: true, privateDrawingAndReadiness: true, sharedRaceStarted: true, completedRace: fullRaces });
     } finally { await context.close(); }
   }
-  if (sessionChecks) {
+  if (sessionChecks || selection === 'solo') {
     console.log('Checking Solo Race: three CPU cars and one human input');
     const points = await fixture('coastal-launch');
     const { context, page } = await productionPage();
@@ -269,7 +269,7 @@ try {
       report.checks.push({ soloComputerRace: true, oneHumanControl: true, fourCars: true, hardDifficulty: true, completedRace: fullRaces });
     } finally { await context.close(); }
   }
-  // Saved tournament creation/resumption is checked in every production smoke;
+  // Saved tournament creation/resumption is checked in every complete release;
   // full mode additionally completes all four rounds using real drawn input.
   if (sessionChecks || tournamentOnly) {
     console.log('Checking saved tournament and resumption');
