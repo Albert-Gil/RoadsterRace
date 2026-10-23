@@ -5,6 +5,8 @@ import { contactImpulse, vehicleContact, sweptContact, separateBody, CONTACT_RUL
 import { RaceSimulation, RULES } from './simulation';
 import { DEFAULT_LAPS, validateLapCount } from './race-options';
 import type { CompiledRoute, RaceEvent, TrackDefinition } from './types';
+import { startGate } from './start-finish';
+import { vehicleSupported } from './support';
 
 export interface Standing {
   player: number;
@@ -14,10 +16,30 @@ export interface Standing {
   finishTime: number | null;
 }
 
-export function gridPose(track: TrackDefinition, slot: number) {
-  const a = track.start, b = track.centerline[1], heading = Math.atan2(b.x - a.x, b.z - a.z);
-  const back = 3.2 + Math.floor(slot / 2) * 6, side = slot % 2 ? 1.6 : -1.6;
+export function gridPose(track: TrackDefinition, slot: number, across?: number) {
+  const gate = startGate(track), a = gate.center, heading = Math.atan2(gate.forward.x, gate.forward.z);
+  const back = 3.2 + Math.floor(slot / 2) * 6, side = across ?? (slot % 2 ? 1.6 : -1.6);
   return { x: a.x - Math.sin(heading) * back + Math.cos(heading) * side, z: a.z - Math.cos(heading) * back - Math.sin(heading) * side, heading };
+}
+/** Keep each driver near their own crossing anchor, without overlapping a neighbour. */
+export function startingGrid(track: TrackDefinition, routes: CompiledRoute[], rotation = 0) {
+  const gate = startGate(track), right = { x: gate.forward.z, z: -gate.forward.x };
+  const limit = (gate.width - track.carWidth) / 2 - 0.2;
+  const occupied: ReturnType<typeof gridPose>[] = [], poses = new Array<ReturnType<typeof gridPose>>(routes.length);
+  for (let slot = 0; slot < routes.length; slot++) {
+    const player = modulo(slot - rotation, routes.length), anchor = routes[player].points[0];
+    const preferred = clamp((anchor.x - gate.center.x) * right.x + (anchor.z - gate.center.z) * right.z, -limit, limit);
+    const candidates = [preferred, ...Array.from({ length: Math.ceil(limit * 8) + 1 }, (_, i) => clamp(-limit + i * 0.25, -limit, limit))];
+    candidates.sort((a, b) => Math.abs(a - preferred) - Math.abs(b - preferred));
+    const pose = candidates.map(across => gridPose(track, slot, across)).find(p => {
+      const body = { position: p, velocity: { x: 0, z: 0 }, heading: p.heading };
+      return !barrierContact(p, p.heading, track, 0.15) && vehicleSupported(p, p.heading, track)
+        && !occupied.some(other => vehicleContact(body, { position: other, velocity: { x: 0, z: 0 }, heading: other.heading }, { ...track, carWidth: track.carWidth + 0.25 }));
+    });
+    if (!pose) throw new Error('The starting grid has no safe space for this driver.');
+    poses[player] = pose; occupied.push(pose);
+  }
+  return poses;
 }
 /** Owns one shared clock; each car retains independent physics and ability state. */
 export class LocalRace {
@@ -34,8 +56,9 @@ export class LocalRace {
     if (routes.length < 1 || routes.length > 4) throw new Error('A local race needs one to four players.');
     if (routes.some(route => route.trackId !== track.id)) throw new Error('All players must race on the same circuit.');
     this.racers = routes.map(route => new RaceSimulation(route, track, lapCount));
+    const grid = routes.length > 1 ? startingGrid(track, routes, gridRotation) : [];
     if (routes.length > 1) this.racers.forEach((racer, i) => {
-      const pose = gridPose(track, (i + gridRotation) % routes.length);
+      const pose = grid[i];
       if (barrierContact(pose, pose.heading, track)) throw new Error('The starting grid is blocked.');
       racer.state.position = { x: pose.x, z: pose.z }; racer.state.heading = pose.heading; racer.gridPending = true;
     });

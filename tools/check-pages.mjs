@@ -175,7 +175,7 @@ try {
       if (circuit === 'santa-monica') {
         // Reuse the same compiled/rendered scene; exercise the shortcut in the
         // shipped build using actual input, without any production inspector.
-        await page.getByRole('button', { name: fullRaces ? 'Race setup' : 'Change mode', exact: true }).click();
+        await page.getByRole('button', { name: fullRaces ? 'Race setup' : 'Home', exact: true }).click();
         if (!fullRaces) await page.getByRole('button', { name: "Time Trial" }).click();
         await page.getByRole('button', { name: 'Draw racing line' }).click();
         await draw(page, context, await fixture(circuit, 1, phone, true));
@@ -264,7 +264,7 @@ try {
       await page.getByRole('button', { name: 'Race this line', exact: true }).click();
       await racing(page);
       assert.equal(await page.locator('.racer-pad').count(), 1);
-      assert.equal(await page.locator('.vehicle-label:not([hidden])').count(), 4);
+      assert.equal(await page.locator('.vehicle-label:not([hidden])').count(), 0);
       if (fullRaces) { await finish(page); assert.ok((await page.locator('.standings').textContent()).includes('Apex')); }
       report.checks.push({ soloComputerRace: true, oneHumanControl: true, fourCars: true, hardDifficulty: true, completedRace: fullRaces });
     } finally { await context.close(); }

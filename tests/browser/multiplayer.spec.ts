@@ -79,7 +79,7 @@ test('two-player handoff, ready check, independent thrust, finish order and fres
   expect((await state(page)).phase).toBe('ready'); expect((await state(page)).readyPlayers).toEqual([false, false]);
   await page.keyboard.press('KeyA'); await page.keyboard.press('KeyL');
   const fresh = await state(page); expect(fresh.players.map((p: any) => p.time)).toEqual([0, 0]); expect(fresh.players.map((p: any) => p.thrustCount)).toEqual([0, 0]);
-  await page.keyboard.press('Escape'); await page.getByRole('button', { name: 'Change mode' }).click();
+  await page.keyboard.press('Escape'); await page.getByRole('button', { name: 'Home', exact:true }).click();
   await expect(page.getByRole('button', { name: "Time Trial" })).toBeVisible();
   expect((await state(page)).playerCount).toBe(1); expect((await state(page)).confirmedCount).toBe(0);
   expect(errors).toEqual([]);

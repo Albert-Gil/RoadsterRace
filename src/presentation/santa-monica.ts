@@ -140,15 +140,24 @@ export function buildSantaMonica(scene: Scene, track: TrackDefinition, theme: Pr
 
   // Physical ramp geometry and bright directional chevrons make the optional shortcut legible.
   const jump = track.jumps![0];
-  const rampPaths = [-1, 1].map(side => [new Vector3(jump.from.x, 0.11, jump.from.z + side * 6), new Vector3(jump.from.x + 8, 1.31, jump.from.z + side * 6)]);
+  const rampPaths = [-1, 1].map(side => [0, jump.rampLength].map(along => {
+    const p = jumpPoint(jump, along, side * jump.width / 2);
+    return new Vector3(p.x, 0.11 + jump.lipHeight * along / jump.rampLength, p.z);
+  }));
   const ramp = MeshBuilder.CreateRibbon('physical-jump-ramp', { pathArray: rampPaths, sideOrientation: Mesh.DOUBLESIDE }, scene); ramp.material = dark;
-  for (const x of [43, 45.5, 48]) {
-    const y = groundHeight({ x, z: 12 }, track) + 0.16;
-    tube('jump-gold-chevron', [new Vector3(x - 0.8, y, 8.5), new Vector3(x + 0.3, y, 12), new Vector3(x - 0.8, y, 15.5)], 0.11, gold);
+  for (const along of [1.2, 3.7, 6.2]) {
+    const points = [[along - 0.8, -jump.width * 0.3], [along + 0.3, 0], [along - 0.8, jump.width * 0.3]].map(([a, side]) => {
+      const p = jumpPoint(jump, a, side); return new Vector3(p.x, groundHeight(p, track) + 0.17, p.z);
+    });
+    tube('jump-gold-chevron', points, 0.13, gold);
   }
-  box('landing-edge-band', 60.1, 0.05, 12, 0.35, 0.1, 12, gold);
-  // Slim deck seams add scale without turning the pier into an oversized platform.
-  for (let x = 64; x <= 116; x += 3) box('landing-deck-seam', x, 0.115, 12, 0.04, 0.01, 11, white);
+  const landingAlong = jump.rampLength + jump.gap;
+  const lip = jumpPoint(jump, jump.rampLength), landing = jumpPoint(jump, landingAlong + 0.2);
+  box('takeoff-lip-band', lip.x, jump.lipHeight + 0.13, lip.z, 0.28, 0.04, jump.width, gold);
+  box('landing-edge-band', landing.x, 0.13, landing.z, 0.35, 0.035, jump.width, gold);
+  for (let along = landingAlong + 2; along < jump.corridorLength; along += 3) {
+    const p = jumpPoint(jump, along); box('landing-deck-seam', p.x, 0.115, p.z, 0.04, 0.01, jump.width - 0.7, white);
+  }
 
   for (const mesh of scene.meshes) if (!before.has(mesh) && !mesh.parent) mesh.parent = venueRoot;
   return { shadowCasterMaterials: casters, update(time: number, reduced: boolean) {

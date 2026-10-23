@@ -7,7 +7,7 @@ import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import type { Scene } from '@babylonjs/core/scene';
 import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh';
 import { ThrustVapor } from './thrust-vapor';
-import { thrustEffects } from './themes';
+import { thrustEffects, sceneTuning } from './themes';
 import type { PresentationTheme } from './themes';
 import type { VisualAssets } from './assets';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
@@ -46,7 +46,7 @@ export class VehicleView {
   private impactUntil = -1;
   readonly triangleCount: number;
   constructor(private scene: Scene, theme: PresentationTheme, readonly detail: 'race' | 'showcase' = 'race') {
-    this.root = new TransformNode(`roadster-${detail}`, scene); this.chassis = new TransformNode('sprung-body', scene); this.chassis.parent = this.root;
+    this.root = new TransformNode(`roadster-${detail}`, scene); this.root.scaling.setAll(detail === 'race' ? sceneTuning.vehicle.racingScale : 1); this.chassis = new TransformNode('sprung-body', scene); this.chassis.parent = this.root;
     this.tireMarks = new TireMarks(scene); this.vapor = new ThrustVapor(scene);
     let materialCache = sharedMaterials.get(scene); if (!materialCache) { materialCache = new Map(); sharedMaterials.set(scene, materialCache); }
     const pbr = (name: string, color: string, metal: number, roughness: number) => {
@@ -124,7 +124,7 @@ export class VehicleView {
     this.chassis.position.y = !reduced && time < this.impactUntil ? -0.05 * Math.sin((this.impactUntil - time) / 0.22 * Math.PI) : 0;
     const shadowY = position.airborne ? position.shadowY ?? 0 : position.y ?? 0, clearance = Math.max(0, (position.y ?? 0) - shadowY);
     this.shadow.position.set(position.x + 0.15, (this.detail === 'showcase' ? 0.135 : 0.125) + shadowY, position.z); this.shadow.rotation.y = position.heading;
-    this.shadow.scaling.setAll(1 + clearance * 0.08); (this.shadow.material as StandardMaterial).alpha = 0.5 / (1 + clearance * 0.2);
+    this.shadow.scaling.setAll((this.detail === 'race' ? sceneTuning.vehicle.racingScale : 1) * (1 + clearance * 0.08)); (this.shadow.material as StandardMaterial).alpha = 0.5 / (1 + clearance * 0.2);
     this.tireMarks.update(position, time, this.detail === 'race' && !position.airborne && !reduced && drifting && sandAmount < 0.2 && speed > 4);
     this.wheelDistance += speed * dt;
     for (const w of this.wheels) { w.mesh.rotation.x = this.wheelDistance / w.radius; w.pivot.rotation.y = w.front ? Math.max(-0.43, Math.min(0.43, steeringRate * 2.8 / Math.max(5, speed))) : 0; }

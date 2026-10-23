@@ -41,7 +41,7 @@ test('Time Trial stores lap replay, reloads it and keeps the ghost outside the c
   const metrics=await page.evaluate(()=>{const g=(window as any).__roadster;return {state:g.getState(),graphics:g.getGraphics()};});
   expect(metrics.state.players.length).toBe(1);expect(metrics.graphics.ghostVisible).toBe(true);expect(metrics.graphics.drawCalls).toBeLessThanOrEqual(90);
   await page.keyboard.press('Escape');const before=await state(page);await page.waitForTimeout(300);expect((await state(page)).race.time).toBe(before.race.time);
-  await page.getByRole('button',{name:'Change mode',exact:true}).click();await page.getByRole('button',{name:'Time Trial',exact:true}).click();
+  await page.getByRole('button',{name:'Home',exact:true}).click();await page.getByRole('button',{name:'Time Trial',exact:true}).click();
   await page.getByRole('button',{name:'Best-lap ghost on',exact:true}).click();await expect(page.getByRole('button',{name:'Best-lap ghost off',exact:true})).toHaveAttribute('aria-pressed','false');
 });
 

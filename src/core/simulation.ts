@@ -6,7 +6,7 @@ import type { CompiledRoute, Point, RaceEvent, RaceState, TrackDefinition } from
 import { branchProjection, FLIGHT_RULES, groundHeight, jumpCoordinates, supported, takeoffCrossing, vehicleSupported } from './support';
 
 export const RULES = Object.freeze({
-  version: 8, dt: 1 / 60, laps: DEFAULT_LAPS,
+  version: 9, dt: 1 / 60, laps: DEFAULT_LAPS,
   acceleration: 6, braking: 8.5, accelerationJerk: 14, paceResponse: 1.6, paceDeadband: 0.4,
   maxSpeed: 42, thrustAcceleration: 25, thrustDuration: 0.7, thrustRecharge: 5,
   asphaltGrip: 48, sandGrip: 6.5, asphaltResponse: 7.5, sandResponse: 1.8, sandDrag: 1.10,
@@ -108,7 +108,9 @@ export class RaceSimulation {
 
     const gateDistance = s.checkpoint * this.route.length / 8;
     const blockedAtGate = s.distance >= gateDistance - 0.02 && distance(s.position, sampleRoute(this.route, gateDistance)) > this.track.roadWidth * 0.8;
-    let target = sampleRoute(this.route, this.gridPending ? 0 : blockedAtGate ? gateDistance : s.distance + RULES.lookAhead + s.speed * RULES.lookAheadSeconds);
+    // Aim forward of the stripe from the grid; chasing the exact first point
+    // makes an offset car turn sideways or circle as it reaches the gate.
+    let target = sampleRoute(this.route, blockedAtGate && !this.gridPending ? gateDistance : s.distance + RULES.lookAhead + s.speed * RULES.lookAheadSeconds);
     if (now < this.collisionNearbyUntil && blockedRouteSection([s.position, target], this.track)) {
       // Seek the nearest reachable route point, never a target across an island.
       for (let ahead = 0; ahead <= 10; ahead += 2) {

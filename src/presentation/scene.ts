@@ -81,8 +81,8 @@ export class GameScene {
     this.scene.skipPointerMovePicking = true; this.scene.skipPointerDownPicking = true; this.scene.skipPointerUpPicking = true;
     this.scene.imageProcessingConfiguration.toneMappingEnabled = true;
     this.scene.imageProcessingConfiguration.toneMappingType = ImageProcessingConfiguration.TONEMAPPING_ACES;
-    this.scene.imageProcessingConfiguration.exposure = 1.12;
-    this.scene.imageProcessingConfiguration.contrast = 1.08;
+    this.scene.imageProcessingConfiguration.exposure = sceneTuning.grading.exposure;
+    this.scene.imageProcessingConfiguration.contrast = sceneTuning.grading.contrast;
     this.camera = new FreeCamera('fixed-race-camera', new Vector3(0, 140, -140), this.scene);
     this.camera.mode = Camera.PERSPECTIVE_CAMERA; this.camera.fov = sceneTuning.camera.verticalFov; this.camera.setTarget(Vector3.Zero()); this.camera.minZ = 1; this.camera.maxZ = 1000;
     this.scene.environmentTexture = createReflectionSky(this.scene); this.scene.environmentIntensity = 0.85;
@@ -331,7 +331,7 @@ export class GameScene {
   }
   showError(point?: Point, section?: Point[]) { this.errorLine?.dispose(); this.errorLine = undefined; this.errorMarker.isVisible = !!point; if (point) this.errorMarker.position.set(point.x, 0.3, point.z); if (section) this.errorLine = new PaceLine(this.scene, section, section.map(() => 9), this.theme, 0, false, true, false, this.track); }
   showStart(show: boolean) { this.marker.isVisible = show; this.approach.isVisible = show; }
-  get depthFeatures() { return { ghostVisible:this.lapGhost.visible, decorativeMotion: this.scene.meshes.filter(m => m.metadata?.dynamicScenery).map(m => ({name: m.name, rotation: m.rotation.asArray(), position: m.position.asArray()})), perspective: this.camera.mode === Camera.PERSPECTIVE_CAMERA, shadowMapSize: this.shadows.getShadowMap()?.getSize().width ?? 0, shadowCasters: this.shadows.getShadowMap()?.renderList?.length ?? 0, renderReady: this.scene.isReady() && this.showcase.scene.isReady(), worldReady: this.scene.isReady(), showcaseReady: this.showcase.scene.isReady(), pending: [...this.scene.meshes, ...this.showcase.scene.meshes].filter(m => !m.isReady(true)).map(m => m.name), carTriangles: this.vehicle.triangleCount, showcaseTriangles: this.showcase.car.triangleCount, pace: this.theme.pace, lineWidths: this.lines.map(line => line.cssWidths), ignoredStrokeCount: this.ignoredLines.length }; }
+  get depthFeatures() { return { vehicleScale: sceneTuning.vehicle.racingScale, ghostVisible:this.lapGhost.visible, decorativeMotion: this.scene.meshes.filter(m => m.metadata?.dynamicScenery).map(m => ({name: m.name, rotation: m.rotation.asArray(), position: m.position.asArray()})), perspective: this.camera.mode === Camera.PERSPECTIVE_CAMERA, shadowMapSize: this.shadows.getShadowMap()?.getSize().width ?? 0, shadowCasters: this.shadows.getShadowMap()?.renderList?.length ?? 0, renderReady: this.scene.isReady() && this.showcase.scene.isReady(), worldReady: this.scene.isReady(), showcaseReady: this.showcase.scene.isReady(), pending: [...this.scene.meshes, ...this.showcase.scene.meshes].filter(m => !m.isReady(true)).map(m => m.name), carTriangles: this.vehicle.triangleCount, showcaseTriangles: this.showcase.car.triangleCount, pace: this.theme.pace, lineWidths: this.lines.map(line => line.cssWidths), ignoredStrokeCount: this.ignoredLines.length }; }
   render(time: number) {
     const reduced = this.reducedMotion.matches;
     (this.marker.material as StandardMaterial).alpha = reduced ? 0.32 : 0.29 + Math.sin(time * 3) * 0.05;

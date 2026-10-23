@@ -627,3 +627,21 @@ p { font-size: 14px; line-height: 1.5; }
  .playground[data-phase]:not([data-players="1"]) .pause-button{right:calc(50% - 24px);}
  .playground[data-phase]:not([data-players="1"]):is([data-phase="racing"],[data-phase="countdown"],[data-phase="ready"],[data-phase="paused"]) .topbar{left:calc(env(safe-area-inset-left,0px) + 60px);right:auto;top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 6px);}
 }
+
+/* Larger live ability target without reclaiming the phone's drawing surface. */
+.playground .thrust-control { width:56px; height:56px; }
+.playground .pod-title, .playground .pod-status { font-size:9px; }
+.playground .thrust-inner svg { width:18px; height:18px; }
+[data-phase="paused"] [data-action="home"] svg { width:20px; height:20px; }
+[data-phase="racing"] .vehicle-label { display:none; }
+
+.playground[data-phase="paused"] [data-action="home"] { min-height:48px; }
+
+/* Keep the enlarged corner pad separate from sound, and the portrait HUD off-road. */
+.playground[data-phase="paused"] .panel-actions { flex-wrap:wrap; gap:12px; }
+@media (orientation:portrait) and (max-width:650px) {
+ .playground[data-phase]:is([data-phase="racing"],[data-phase="countdown"],[data-phase="ready"],[data-phase="paused"]) .race-hud { left:50%; top:calc(env(safe-area-inset-top,0px) + 4px); transform:translateX(-50%); width:auto; flex-direction:row; padding:5px 10px; gap:14px; }
+ .playground[data-phase]:is([data-phase="racing"],[data-phase="countdown"],[data-phase="ready"],[data-phase="paused"]) .topbar,
+ .playground[data-phase]:not([data-players="1"]):is([data-phase="racing"],[data-phase="countdown"],[data-phase="ready"],[data-phase="paused"]) .topbar { left:calc(env(safe-area-inset-left,0px) + 68px); }
+ .playground[data-phase="paused"] [data-action="retry"] { flex-basis:100%; text-align:left; min-height:44px; }
+}

@@ -6,7 +6,7 @@ import { Color3 } from '@babylonjs/core/Maths/math.color';
 import type { Scene } from '@babylonjs/core/scene';
 import type { ReplayFrame } from '../core/lap-replay';
 import { buildRoadsterGeometry } from './roadster-geometry.js';
-import { ghostAppearance } from './themes';
+import { ghostAppearance, sceneTuning } from './themes';
 
 /** One cosmetic mesh, outside vehicle arrays, contacts and sound/effect systems. */
 export class LapGhost {
@@ -20,7 +20,7 @@ export class LapGhost {
     const body=new Mesh('best-lap-body',scene);data.applyToMesh(body);
     const parts=[body];
     for(const x of [-1,1])for(const z of [-1.65,1.65]){const wheel=MeshBuilder.CreateCylinder('ghost-wheel',{diameter:0.72,height:0.23,tessellation:10},scene);wheel.rotation.z=Math.PI/2;wheel.position.set(x,0.36,z);parts.push(wheel);}
-    this.mesh=Mesh.MergeMeshes(parts,true,true)!;
+    this.mesh=Mesh.MergeMeshes(parts,true,true)!;this.mesh.scaling.setAll(sceneTuning.vehicle.racingScale);
     const material=new StandardMaterial('best-lap-ghost',scene);material.diffuseColor=Color3.FromHexString(ghostAppearance.color);material.emissiveColor=material.diffuseColor.scale(0.3);material.alpha=ghostAppearance.opacity;material.backFaceCulling=false;material.disableDepthWrite=true;
     this.mesh.material=material;this.mesh.isPickable=false;this.mesh.receiveShadows=false;this.mesh.setEnabled(false);
   }

@@ -8,6 +8,8 @@ All roads are now **16 metres wide**, including Golden Gate's bridge and Santa M
 
 Solo Race provides Easy/Normal/Hard opponents, with three slightly different CPU drivers using the same physics and thrust rules as you. Only you draw a line. Time Trial measures your **fastest lap**, with an optional translucent best-lap replay; its records save on this browser. Older championships cannot resume after the road-layout changes, while names, paints and lap preferences remain.
 
+The latest playability pass enlarges thrust pads and racing cars, hides floating race tags, adds explicit pause Home navigation, and joins grid starts to each driver's line without chasing the stripe. All four venues receive lighting, surface and architectural detail improvements. See [playability and venue polish](docs/PLAYABILITY_POLISH.md).
+
 ## Online testing
 
 Testing site: **https://albert-gil.github.io/RoadsterRace/**. GitHub Actions verifies main builds before deploying. See [online testing and iPhone installation](docs/ONLINE_TESTING.md) for release, rollback, build labels and physical-device checks. Hosted physical iPhone/iPad verification remains pending until performed on hardware.

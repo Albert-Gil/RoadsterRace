@@ -6,7 +6,7 @@ import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import type { Scene } from '@babylonjs/core/scene';
-import { thrustEffects } from './themes';
+import { thrustEffects, sceneTuning } from './themes';
 
 const shared = new WeakMap<Scene, StandardMaterial>();
 interface Puff { age: number; x: number; y: number; z: number; vx: number; vz: number; size: number }
@@ -44,7 +44,7 @@ export class ThrustVapor {
     while (this.emission >= 1) {
       this.emission--; const slot = this.cursor++ % this.particles.length, p = this.particles[slot], outlet = [-0.51, -0.185, 0.185, 0.51][this.cursor % 4];
       this.seed = (Math.imul(this.seed, 1664525) + 1013904223) >>> 0; const jitter = this.seed / 4294967296 - 0.5;
-      Object.assign(p, { age: reduced ? 0.35 : 0, x: pose.x - dx * 2.5 + dz * outlet, y: 0.73 + (pose.y ?? 0), z: pose.z - dz * 2.5 - dx * outlet, vx: dx * (speed * 0.8 - thrustEffects.exhaustSpeed) + dz * jitter * 1.7, vz: dz * (speed * 0.8 - thrustEffects.exhaustSpeed) - dx * jitter * 1.7, size: 0.85 + jitter * 0.3 });
+      Object.assign(p, { age: reduced ? 0.35 : 0, x: pose.x - dx * 2.5 * sceneTuning.vehicle.racingScale + dz * outlet * sceneTuning.vehicle.racingScale, y: 0.13 + 0.6 * sceneTuning.vehicle.racingScale + (pose.y ?? 0), z: pose.z - dz * 2.5 * sceneTuning.vehicle.racingScale - dx * outlet * sceneTuning.vehicle.racingScale, vx: dx * (speed * 0.8 - thrustEffects.exhaustSpeed) + dz * jitter * 1.7, vz: dz * (speed * 0.8 - thrustEffects.exhaustSpeed) - dx * jitter * 1.7, size: 0.85 + jitter * 0.3 });
     }
     const camera = this.scene.activeCamera; if (!camera) return;
     const right = camera.getDirection(Vector3.Right()), up = camera.getDirection(Vector3.Up());

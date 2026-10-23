@@ -8,22 +8,25 @@ import { buildCoast } from './coast';
 import { buildSpaceport } from './spaceport';
 import { buildCircuitDetails } from './circuit-details';
 import { buildSantaMonica } from './santa-monica';
+import { finishVenue } from './venue-polish';
 
 export interface SceneryRuntime {
   shadowCasterMaterials: Set<StandardMaterial>;
   update(time: number, reducedMotion: boolean): void;
 }
 export function buildScenery(id: SceneryId, scene: Scene, track: TrackDefinition, theme: PresentationTheme, materials: Map<string, StandardMaterial>): SceneryRuntime {
-  if (id === 'sunset') { const result = buildSantaMonica(scene, track, theme, materials); buildCircuitDetails(scene, track, theme, materials, result.shadowCasterMaterials, false); return result; }
-  if (id === 'bay') { const result = buildBay(scene, track, theme, materials); buildCircuitDetails(scene, track, theme, materials, result.shadowCasterMaterials, false); return result; }
-  if (id === 'spaceport') {
-    const result = buildSpaceport(scene, track, theme, materials);
-    buildCircuitDetails(scene, track, theme, materials, result.shadowCasterMaterials, false); return result;
+  let runtime: SceneryRuntime;
+  if (id === 'sunset') runtime = buildSantaMonica(scene, track, theme, materials);
+  else if (id === 'bay') runtime = buildBay(scene, track, theme, materials);
+  else if (id === 'spaceport') runtime = buildSpaceport(scene, track, theme, materials);
+  else {
+    const result = buildCoast(scene, track, theme, materials);
+    runtime = { shadowCasterMaterials: result.shadowCasterMaterials, update(time, reduced) {
+      result.waterTexture.uOffset = reduced ? 0 : time * 0.003;
+      result.foamMaterial.alpha = reduced ? 0.65 : 0.62 + Math.sin(time * 0.8) * 0.12;
+    } };
   }
-  const result = buildCoast(scene, track, theme, materials);
-  buildCircuitDetails(scene, track, theme, materials, result.shadowCasterMaterials);
-  return { shadowCasterMaterials: result.shadowCasterMaterials, update(time, reduced) {
-    result.waterTexture.uOffset = reduced ? 0 : time * 0.003;
-    result.foamMaterial.alpha = reduced ? 0.65 : 0.62 + Math.sin(time * 0.8) * 0.12;
-  } };
+  buildCircuitDetails(scene, track, theme, materials, runtime.shadowCasterMaterials, id === 'coastal');
+  finishVenue(id, scene, track, theme, materials);
+  return runtime;
 }

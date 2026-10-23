@@ -5,7 +5,7 @@ import { LapRecorder, lapRecordKey, replayPose, type LapRecord } from './core/la
 import { loadLap, saveLap } from './presentation/lap-storage';
 import './style.css';
 import { angleDelta, clamp, distance, lerp } from './core/geometry';
-import { LocalRace, gridPose } from './core/local-race';
+import { LocalRace, startingGrid } from './core/local-race';
 import { compileRoute, createPracticeSamples, sampleRoute, COMPILER_VERSION } from './core/route';
 import { createTournament, finalizeRound, championshipStandings } from './core/tournament';
 import { incompatibleTournament, loadTournament, storeTournament, discardTournament, type SavedTournament } from './presentation/tournament-storage';
@@ -88,6 +88,7 @@ let countdownRemaining = 0, resuming = false, best: number | null = null, previo
 let pauseReason='';
 let countdownBeat = 3, rechargeAnnounced: boolean[] = [];
 let world: GameScene;
+let previewGrid: { routes: CompiledRoute[]; track: typeof activeTrack; rotation: number; poses: ReturnType<typeof startingGrid> } | null = null;
 const clock = new FixedStepClock(), keys = ['KeyA', 'KeyL', 'KeyQ', 'KeyP'];
 const corners = ['bottom left', 'bottom right', 'top left', 'top right'];
 const formatTime = (seconds: number) => { const cs = Math.max(0, Math.round(seconds * 100)), minutes = Math.floor(cs / 6000); return `${String(minutes).padStart(2, '0')}:${((cs % 6000) / 100).toFixed(2).padStart(5, '0')}`; };
@@ -100,7 +101,7 @@ function applyDriverPresentation() {
   const colors = preferences.drivers.map((_,i) => finishFor(driverPaint(i)).color);
   applyPlayerColors(colors); world?.setDriverPaints(colors);
   if (phase === 'results' && race) world?.setShowcasePaint(colors[race.standings()[0].player]);
-  labels.forEach((label,i)=>{label.title=driverName(i);label.innerHTML=`${i+1}${cpuTag(i)}`;});
+  labels.forEach((label,i)=>{label.removeAttribute('title');label.textContent=String(i+1);});
 }
 function saveSettings() { preferences.laps = lapCount; savePreferences(preferences); }
 function refreshSetup(focus?: string) {
@@ -169,7 +170,7 @@ function setPhase(next: Phase) {
   controls.querySelectorAll<HTMLButtonElement>('.racer-pad').forEach(pad => { pad.hidden = !['ready', 'racing', 'countdown'].includes(phase); pad.disabled = phase === 'countdown'; });
   pauseButton.hidden = phase !== 'racing'; countdownElement.hidden = phase !== 'countdown'; diagnosticSection.hidden = phase !== 'diagnostics';
   raceProgress.hidden = !['racing', 'paused'].includes(phase); panel.hidden = ['racing', 'countdown', 'diagnostics'].includes(phase);
-  labels.forEach(label => { label.hidden = playerCount === 1 || Number(label.dataset.car) >= playerCount || !['ready', 'countdown', 'racing', 'paused'].includes(phase); });
+  labels.forEach(label => { label.hidden = playerCount === 1 || Number(label.dataset.car) >= playerCount || !['ready', 'countdown'].includes(phase); });
   world?.showStart(['welcome', 'drawing', 'preview'].includes(phase)); world?.setLayout(phase.startsWith('tour-') ? 'results' : phase);
   updateCircuitCaption(); renderPanel(); updateHud();
 }
@@ -193,7 +194,7 @@ function renderPanel(message?: string) {
     panel.innerHTML = `<h2 class="sr-only">${preview ? 'Your line is ready.' : 'Draw your line.'}</h2>${playerCount > 1 ? `<span class="planning-driver" aria-label="${playerName(turn)}, player ${turn + 1} of ${playerCount}" title="${playerName(turn)}">${playerChip(turn)}</span>` : ''}<div class="panel-actions">${preview ? `<button class="planning-button primary-button" data-action="confirm" aria-label="${humans() > 1 ? 'Lock in my line' : 'Race this line'}">${flagIcon}<span>${humans() > 1 ? 'Lock in' : 'Race'}</span></button>` : ''}<button class="planning-button secondary-button" data-action="redraw" aria-label="${preview ? 'Redraw' : 'Start again'}">${resetIcon}<span>Redraw</span></button><button class="planning-button secondary-button" data-action="${activeTour ? 'home' : 'configure-race'}" aria-label="${activeTour ? 'Leave tournament' : 'Race setup'}">${setupIcon}<span>${activeTour ? 'Exit' : 'Setup'}</span></button></div>${message ? `<div class="planning-error instruction" role="alert">${escapeHtml(message)}</div>` : ''}`;
   }
   if (phase === 'ready') panel.innerHTML = `<span class="eyebrow">${playerCount} PLAYERS · ${lapCount} ${lapCount === 1 ? 'LAP' : 'LAPS'}</span><h2>Take your corner.</h2><p>Everyone tap their numbered pad to get ready.<br>Cars pass through each other for the first ${CONTACT_RULES.ghostStartSeconds} seconds.<br>Thrust recharges every five seconds. One tap, one burst.</p><div class="ready-summary" aria-live="polite">${readyPlayers.filter(Boolean).length} / ${playerCount} ready</div><div class="ready-actions"><button class="text-button" data-action="redraw-all">Draw new lines</button><button class="text-button" data-action="configure-race">Race setup</button></div>`;
-  if (phase === 'paused') panel.innerHTML = `<span class="eyebrow">TAKE A BREATHER</span><h2>Ready when you are.</h2><p>${playerCount > 1 ? 'Everyone is paused together.' : 'Your race is paused.'} Pick up right where you left off.</p><div class="panel-actions"><button class="primary-button" data-action="resume">Resume ${arrow}</button><button class="text-button" data-action="retry">Restart race</button><button class="text-button" data-action="home">Change mode</button></div>`;
+  if (phase === 'paused') panel.innerHTML = `<span class="eyebrow">RACE PAUSED</span><h2>Back in a moment.</h2><div class="panel-actions"><button class="primary-button" data-action="resume">Resume ${arrow}</button><button class="secondary-button" data-action="home" aria-label="Home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m3 11 9-8 9 8M5 9v12h5v-7h4v7h5V9"/></svg>Home</button><button class="text-button" data-action="retry">Restart race</button></div>`;
   if (phase === 'results' && activeTour) { world.setShowcasePaint(finishFor(activeTour.drivers[championshipStandings(activeTour.state)[0].player].paint).color); panel.innerHTML = tournamentResultsMarkup(activeTour, roundIndex) + (tourSaveFailed ? '<p class="save-status">Progress could not be saved. Keep this page open.</p>' : ''); return; }
   if (phase === 'results' && race) {
     if (playerCount === 1) {
@@ -280,6 +281,11 @@ function updateHud() {
   });
 }
 function updateVehicles(alpha: number) {
+  const rotation = activeTour ? roundIndex % playerCount : 0;
+  if (playerCount > 1 && !race && (!previewGrid || previewGrid.routes !== confirmedRoutes || previewGrid.poses.length !== confirmedRoutes.length || previewGrid.track !== activeTrack || previewGrid.rotation !== rotation)) {
+    previewGrid = { routes: confirmedRoutes, track: activeTrack, rotation, poses: startingGrid(activeTrack, confirmedRoutes, rotation) };
+  }
+  const grid = playerCount > 1 && !race ? previewGrid!.poses : null;
   confirmedRoutes.forEach((line, i) => {
     const s = race?.racers[i].state, previous = previousPoses[i];
     const pose = s ? {
@@ -290,9 +296,9 @@ function updateVehicles(alpha: number) {
       shadowY: supported(s.position, activeTrack) ? 0 : FLIGHT_RULES.waterHeight,
       pitch: s.movement === 'airborne' ? Math.atan2(s.verticalVelocity, Math.max(1, s.speed)) : (() => { const j = rampAt(s.position, activeTrack); return j ? Math.atan(j.lipHeight / j.rampLength) * (Math.sin(s.heading) * j.forward.x + Math.cos(s.heading) * j.forward.z) : 0; })(),
       heading: previous && !s.finished ? previous.heading + angleDelta(previous.heading, s.heading) * alpha : s.heading,
-    } : playerCount > 1 ? gridPose(activeTrack, (i + (activeTour ? roundIndex % playerCount : 0)) % playerCount) : sampleRoute(line, 0);
+    } : grid ? grid[i] : sampleRoute(line, 0);
     const absent = !!s && (playerCount > 1 && s.finished || s.time < s.recoveringUntil || s.recoveryWaiting);
-    world.vehicles[i].setEnabled(!absent); if (playerCount > 1) labels[i].hidden = absent;
+    world.vehicles[i].setEnabled(!absent); if (playerCount > 1) labels[i].hidden = absent || !['ready', 'countdown'].includes(phase);
     world.vehicles[i].update(pose, s?.finished ? 0 : s?.speed, !!s && !s.finished && s.time < s.thrustUntil, s?.time, s?.sandAmount, s?.drifting, s?.steeringRate, s?.acceleration);
     if (playerCount > 1) { const point=world.project(pose),safe=document.querySelector('#course-space')!.getBoundingClientRect();labels[i].style.left=`${clamp(point.x+(i-(playerCount-1)/2)*13,safe.left+8,safe.right-8)}px`;labels[i].style.top=`${clamp(point.y-17-i%2*13,safe.top+8,safe.bottom-8)}px`; }
 

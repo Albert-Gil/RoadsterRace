@@ -45,16 +45,18 @@ export const themes: Record<string, PresentationTheme> = {
 
 /** Presentation only: camera, lighting and quality never enter route compilation or physics. */
 export const sceneTuning = {
+  vehicle: { racingScale: 1.12 },
   camera: { elevationDegrees: 42, compactElevationDegrees: 65, azimuthDegrees: 5, verticalFov: 0.5, fittingMargin: 1, clearancePixels: 6, azimuthStep: 5 },
-  lighting: { ambient: 0.48, sunlight: 1.25, shadowDarkness: 0.38, shadowMapSize: 1024 },
+  grading: { exposure: 1.16, contrast: 1.1 },
+  lighting: { ambient: 0.55, sunlight: 1.25, shadowDarkness: 0.32, shadowMapSize: 1024 },
 };
 
 /** Biome colors stay independent of interface branding and the driver's selected paint. */
 export const sceneryPalettes = {
-  coastal: {},
-  sunset: { terrain: '#d8bc92', embankment: '#c8a47e', asphalt: '#9ca4ad', shoulder: '#ba9c7c', structure: '#765d60', foliage: '#526e58', foliageLight: '#8d9e68', rock: '#c5ac92', trunk: '#9c735a', water: '#32798d', shallows: '#6bb5b9', foam: '#f1dbc3', sky: '#e5a3a0', sunlight: 1.08 },
-  bay: { terrain: '#aab79b', embankment: '#bdbea8', asphalt: '#a7b2b8', shoulder: '#b5aa8f', structure: '#34434d', foliage: '#4c6857', foliageLight: '#879873', rock: '#b4b8ae', trunk: '#7e7769', water: '#366f80', shallows: '#689b9c', foam: '#d7e8df', sky: '#b1ccd1', sunlight: 1.05 },
-  spaceport: { terrain: '#c4ae91', embankment: '#a69a85', asphalt: '#aeb1ad', shoulder: '#a99c85',
+  coastal: { terrain: '#dec697', embankment: '#a2ae7c', water: '#277e8d', shallows: '#76b8af', foliage: '#3e644a', foliageLight: '#839757' },
+  sunset: { terrain: '#e4c59d', embankment: '#c8a47e', asphalt: '#9ca4ad', shoulder: '#ba9c7c', structure: '#765d60', foliage: '#526e58', foliageLight: '#8d9e68', rock: '#c5ac92', trunk: '#9c735a', water: '#388ca2', shallows: '#6bb5b9', foam: '#f1dbc3', sky: '#e5a3a0', sunlight: 1.08 },
+  bay: { terrain: '#b9c2a6', embankment: '#bdbea8', asphalt: '#a7b2b8', shoulder: '#b5aa8f', structure: '#34434d', foliage: '#4c6857', foliageLight: '#879873', rock: '#b4b8ae', trunk: '#7e7769', water: '#3b8196', shallows: '#689b9c', foam: '#d7e8df', sky: '#b1ccd1', sunlight: 1.05 },
+  spaceport: { terrain: '#d1bc9b', embankment: '#a69a85', asphalt: '#aeb1ad', shoulder: '#a99c85',
     structure: '#33404b', curb: '#e8e8dd', glass: '#243746', foliage: '#68674b', foliageLight: '#8d8863',
     rock: '#a69883', trunk: '#7d715d', sky: '#cfae94', sunlight: 1.05 },
 } satisfies Record<string, Partial<PresentationTheme['scene']>>;
@@ -96,7 +98,7 @@ export function applyPlayerColors(colors: readonly string[]) {
 export const thrustEffects = { capacity: 96, emission: 120, lifetime: 0.8, exhaustSpeed: 5, startSize: 0.45, expansion: 2.1, opacity: 0.66, color: "#e1eff3", coreColor: "#e6fbff", coreOpacity: 0.72 };
 
 /** Shared city materials; architecture placement is authored in content/golden-city.ts. */
-export const cityAppearance = { bridge: '#b94132', facades: ['#caba91', '#8aa49a', '#bb8068', '#9daabb', '#d8be8d', '#9b8173'], paving: '#bbb7a6', roof: '#52616a', shop: '#354953', window: '#456575', warmWindow: '#b9bd9d' };
+export const cityAppearance = { bridge: '#cb4b36', facades: ['#caba91', '#8aa49a', '#bb8068', '#9daabb', '#d8be8d', '#9b8173'], paving: '#bbb7a6', roof: '#52616a', shop: '#354953', window: '#456575', warmWindow: '#b9bd9d' };
 export const sunsetAppearance = { deck: '#a9866b', steel: '#465360', ivory: '#f6e4cc', glass: '#4a7e91', coral: '#e67b77', gold: '#eec575' };
 
 export const ghostAppearance = { color: '#a6e5ed', opacity: 0.32 };

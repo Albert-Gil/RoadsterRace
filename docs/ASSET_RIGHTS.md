@@ -24,3 +24,5 @@ Golden Gate v2 replaces the historical foundry/canopies with original code-autho
 ## Santa Monica additions
 
 The sunset beach/pier, amusement wheel, coaster, train, buildings, palms, deck supports and signs are original procedural meshes authored for this project. They depict a fictional Santa Monica-inspired venue. No Pacific Park logos, real attraction branding or downloaded amusement-park artwork are bundled. Takeoff/landing/splash fallbacks are original Web Audio synthesis. Existing RoadsterLAB/MIT and font attributions remain in force.
+
+The 2026-10-23 venue finishing pass (rooftops, planting, spectator shapes, concrete/timber/water grain and corrected jump paint) is original procedural geometry and canvas artwork in this repository. It adds no third-party asset downloads. RoadsterLAB and font attributions above continue to apply.

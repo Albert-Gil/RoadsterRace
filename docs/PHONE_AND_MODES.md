@@ -30,7 +30,7 @@ The ghost is one translucent cosmetic mesh. It does not join the simulation, con
 
 ## Compatibility and verification
 
-The compiler is v9; vehicle force/contact rules remain v8. Every physical course changed, so older routes and championships are incompatible. A concise menu notice explains why an old tournament cannot resume; driver names, paints and lap preferences remain. Older total-time results are not imported as fastest-lap records.
+The compiler is v9; vehicle rules are now v9: the start-grid allocation and forward joining behavior have changed; ordinary grip, acceleration and contact forces retain their previous tuning. Every physical course changed, so older routes and championships are incompatible. A concise menu notice explains why an old tournament cannot resume; driver names, paints and lap preferences remain. Older total-time results are not imported as fastest-lap records.
 
 Frozen v8 geometry/compiled-route fixtures isolate handling regression checks from intentionally changed road layouts. `tools/check-legacy-handling.mjs` also compares the current simulation against the previous Git revision on identical frozen courses. New geometry checks cover full-width gates, corner radii, non-folded/self-crossing edges, lateral route clearance, runoff and supported surfaces.
 

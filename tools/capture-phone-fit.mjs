@@ -1,7 +1,7 @@
 import { chromium } from '@playwright/test';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { browserOptions } from './browser-options.mjs';
-const label = process.env.CAPTURE_LABEL || 'after', root = `artifacts/phone-upgrade/${label}`;
+const label = process.env.CAPTURE_LABEL || 'after', root = process.env.CAPTURE_ROOT || `artifacts/phone-upgrade/${label}`;
 await mkdir(root, { recursive: true });
 const browser = await chromium.launch(browserOptions()), report = [];
 try {
