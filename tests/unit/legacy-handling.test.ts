@@ -1,14 +1,14 @@
 import { expect, test } from 'vitest';
-import { circuits } from '../../src/content/circuits';
+import fixtures from '../fixtures/handling-v8.json';
+import { COMPILER_VERSION } from '../../src/core/route';
+import type { TrackDefinition, CompiledRoute } from '../../src/core/types';
 import { compileRoute, createPracticeSamples } from '../../src/core/route';
 import { LocalRace } from '../../src/core/local-race';
 
-// Recorded before the v8 supported-surface/flight extension. These unchanged
-// circuits are the evidence required for the narrow v7 tournament migration.
-test.each(circuits.slice(0, 3))('$id retains its recorded handling', ({ track }) => {
-  const result = compileRoute(createPracticeSamples(track, 7), track);
-  if (!result.ok) throw new Error(result.message);
-  const race = new LocalRace([result.route], track, 2);
+// Frozen pre-widening geometry isolates unchanged vehicle physics from authored course changes.
+test.each(fixtures)('$track.id retains the v8 physics on frozen geometry', ({ track: data, route: line }) => {
+  const track=data as TrackDefinition, route={...line,version:COMPILER_VERSION} as CompiledRoute;
+  const race = new LocalRace([route], track, 2);
   for (let tick = 0; tick < 18000 && !race.finished; tick++) {
     if (tick % 300 === 0) race.pressThrust(0);
     race.step();

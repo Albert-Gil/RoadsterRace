@@ -27,7 +27,7 @@ try {
   const context = await browser.newContext();
   await context.addInitScript(() => { Storage.prototype.setItem = () => { throw new DOMException('Storage denied', 'QuotaExceededError'); }; });
   const page = await context.newPage(); page.on('pageerror', e => report.errors.push(e.message)); await page.goto(base);
-  await page.getByRole('button', { name: 'Race with friends', exact: false }).click(); await page.getByRole('button', { name: 'Tournament', exact: true }).click(); await page.getByRole('button', { name: 'Start tournament', exact: false }).click();
+  await page.getByRole('button', { name: 'Multiplayer', exact: false }).click(); await page.getByRole('button', { name: 'Tournament', exact: true }).click(); await page.getByRole('button', { name: 'Start tournament', exact: false }).click();
   await page.getByText('Progress could not be saved on this browser. Keep this page open.', { exact: true }).waitFor();
   await page.getByRole('button', { name: 'Draw your lines', exact: false }).click(); await page.getByRole('button', { name: 'Start again', exact: true }).waitFor();
   report.checks.push({ type: 'storage-unavailable', playable: true }); await context.close();

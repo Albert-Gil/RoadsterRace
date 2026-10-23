@@ -3,7 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 const state = (page: Page) => page.evaluate(() => (window as any).__roadster.getState());
 async function planFriends(page: Page, count: number) {
   await page.goto('/'); await page.waitForFunction(() => Boolean((window as any).__roadster));
-  await page.getByRole('button', { name: 'Race with friends' }).click();
+  await page.getByRole('button', { name: 'Multiplayer' }).click();
   await page.getByRole('button', { name: `${count} players`, exact: true }).click();
   await page.getByRole('button', { name: 'Plan your lines' }).click();
   for (let i = 0; i < count; i++) {
@@ -80,7 +80,7 @@ test('two-player handoff, ready check, independent thrust, finish order and fres
   await page.keyboard.press('KeyA'); await page.keyboard.press('KeyL');
   const fresh = await state(page); expect(fresh.players.map((p: any) => p.time)).toEqual([0, 0]); expect(fresh.players.map((p: any) => p.thrustCount)).toEqual([0, 0]);
   await page.keyboard.press('Escape'); await page.getByRole('button', { name: 'Change mode' }).click();
-  await expect(page.getByRole('button', { name: "Let's race" })).toBeVisible();
+  await expect(page.getByRole('button', { name: "Time Trial" })).toBeVisible();
   expect((await state(page)).playerCount).toBe(1); expect((await state(page)).confirmedCount).toBe(0);
   expect(errors).toEqual([]);
 });
@@ -110,6 +110,14 @@ test('four simultaneous corner touches on a phone retain ownership, never auto-r
   expect((await state(page)).raceInputs.active).toEqual([0, 0, 0, 0]);
   await page.waitForTimeout(200); // Allow canceled-touch button paint to settle before the still.
   await page.screenshot({ path: 'artifacts/multiplayer-four-phone.png' });
+  const photographed=await state(page);
+  if(photographed.phase==='paused'){
+    expect(photographed.pauseReason).toBe('render-delay');
+    console.log('High-density screenshot triggered the frame-gap pause safeguard');
+    await page.getByRole('button',{name:'Resume',exact:true}).click();
+    await page.waitForFunction(()=>(window as any).__roadster.getState().phase==='racing');
+  }
+
   // A fresh touch in just P3's corner must only activate that player.
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [points[2]] });
   await page.waitForFunction(() => (window as any).__roadster.getState().players[2].thrustCount === 2);

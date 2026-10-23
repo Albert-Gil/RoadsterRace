@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 test('a fast drawn lap visibly slides off its route, slows in sand and steers back', async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   await page.goto('/'); await page.waitForFunction(() => Boolean((window as any).__roadster));
-  await page.getByRole('button', { name: "Let's race" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
+  await page.getByRole('button', { name: "Time Trial" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
   const points = await page.evaluate(() => {
     const game = (window as any).__roadster, track = game.getTrack();
     return track.centerline.map((point: any, i: number) => ({ ...game.project(point), fraction: track.distances[i] / track.length }));

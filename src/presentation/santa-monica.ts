@@ -1,3 +1,5 @@
+import { roadEdges } from '../core/road-geometry';
+import { jumpPoint } from '../core/support';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import { Vector3, Matrix } from '@babylonjs/core/Maths/math.vector';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
@@ -58,10 +60,12 @@ export function buildSantaMonica(scene: Scene, track: TrackDefinition, theme: Pr
     const glint = box('sunset-water-glint', 43 + i % 6 * 22, -2.37, -45 + Math.floor(i / 6) * 32, 6 + i % 4 * 2, 0.01, 0.12, gold); glint.rotation.y = -0.15;
   }
   // Piles and diagonal braces remain beneath the supported deck, outside racing volumes.
-  for (let x = 42; x <= 136; x += 12) for (const z of [8, 16, 46, 54]) {
-    if (x > 48 && x < 62 && z < 20) continue;
-    box('pier-pile', x, -1.45, z, 0.65, 3.1, 0.65, dark);
-    tube('pier-crossbrace', [new Vector3(x, -2.3, z), new Vector3(x + 7, -0.5, z)], 0.14, wood);
+  const pierEdges=roadEdges(track.centerline,track.roadWidth-2);
+  for(let i=0;i<track.centerline.length-1;i+=12)if(track.centerline[i].x>34)for(const side of [0,1]){
+    const p=pierEdges[side][i];box('pier-pile',p.x,-1.5,p.z,0.65,2.8,0.65,dark);
+  }
+  for(const j of track.jumps??[])for(const along of [0,6,24,36,48,60,72])for(const side of [-1,1]){
+    const p=jumpPoint(j,along,side*(j.width/2-1));box('jump-deck-pile',p.x,-1.5,p.z,0.65,2.8,0.65,dark);
   }
   for (let x = 76; x <= 116; x += 8) for (const z of [24, 38]) box('amusement-pile', x, -1.45, z, 0.7, 3.1, 0.7, dark);
 
@@ -75,7 +79,7 @@ export function buildSantaMonica(scene: Scene, track: TrackDefinition, theme: Pr
   };
   sign('SANTA MONICA / SUNSET RUN', -14, -24, 22, 'sunset-title');
   sign('PACIFIC PIER', 94, 24.1, 12, 'pier-title');
-  sign('JUMP  ↗', 42, 19.1, 7, 'ramp-title');
+  sign('JUMP  ↗', track.jumps![0].from.x, track.jumps![0].from.z+11, 7, 'ramp-title');
 
   // Beachfront facades sit inside the protected garden footprint; furniture is protected too.
   const facade = [coral, white, gold];

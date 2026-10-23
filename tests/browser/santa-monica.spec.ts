@@ -32,7 +32,7 @@ async function touchLap(page: Page, jump: boolean) {
 test('real touch draws bypass and jump in landscape, portrait and tablet; rides respect reduced motion', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true, deviceScaleFactor: 3 });
   const page = await context.newPage(), errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
-  await page.goto('/?circuit=santa-monica'); await page.getByRole('button', { name: "Let's race" }).click();
+  await page.goto('/?circuit=santa-monica'); await page.getByRole('button', { name: "Time Trial" }).click();
   await expect(page.getByRole('button', { name: 'Santa Monica circuit', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await page.getByRole('button', { name: 'Draw racing line' }).click(); await page.waitForFunction(() => (window as any).__roadster.getGraphics().renderReady);
   for (const viewport of [{ width: 844, height: 390 }, { width: 390, height: 844 }, { width: 1024, height: 768 }]) {
@@ -58,7 +58,7 @@ test('real touch draws bypass and jump in landscape, portrait and tablet; rides 
 test('jump race renders elevation, pauses safely, completes, and retry resets flight', async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
   await page.goto('/?circuit=santa-monica'); await page.getByRole('button', { name: 'Turn sound on', exact: true }).click();
-  await page.getByRole('button', { name: "Let's race" }).click(); await page.getByRole('button', { name: '1 lap', exact: true }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
+  await page.getByRole('button', { name: "Time Trial" }).click(); await page.getByRole('button', { name: '1 lap', exact: true }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
   await touchLap(page, true); await page.getByRole('button', { name: 'Race this line' }).click();
   await page.waitForFunction(() => (window as any).__roadster.getState().race?.elevation > 1.4);
   const airborne = await state(page); expect(airborne.race.movement).toBe('airborne'); expect(airborne.renderedPlayers[0].y).toBeGreaterThan(1.3);
@@ -72,7 +72,7 @@ test('jump race renders elevation, pauses safely, completes, and retry resets fl
 });
 
 test('four players race mixed branches with bounded draw calls and a clean rematch', async ({ page }) => {
-  await page.goto('/?circuit=santa-monica'); await page.getByRole('button', { name: 'Race with friends' }).click(); await page.getByRole('button', { name: '4 players', exact: true }).click(); await page.getByRole('button', { name: '1 lap', exact: true }).click(); await page.getByRole('button', { name: 'Plan your lines' }).click();
+  await page.goto('/?circuit=santa-monica'); await page.getByRole('button', { name: 'Multiplayer' }).click(); await page.getByRole('button', { name: '4 players', exact: true }).click(); await page.getByRole('button', { name: '1 lap', exact: true }).click(); await page.getByRole('button', { name: 'Plan your lines' }).click();
   for (let i = 0; i < 4; i++) {
     if (i) await page.getByRole('button', { name: `I'm Player ${i + 1}` }).click();
     await page.evaluate(jump => (window as any).__roadster.usePracticeLine(jump), i % 2 === 0); await page.getByRole('button', { name: 'Lock in my line' }).click();

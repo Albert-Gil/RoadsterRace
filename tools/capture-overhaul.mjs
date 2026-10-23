@@ -16,7 +16,7 @@ try {
     await page.evaluate(view => window.__roadster.inspectVehicle(view), view); await page.waitForTimeout(250);
     await page.screenshot({ path: `artifacts/overhaul/car-${view}.png` });
   }
-  await page.getByRole('button', { name: "Let's race" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
+  await page.getByRole('button', { name: "Time Trial" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
   await page.evaluate(() => window.__roadster.usePracticeLine());
   await page.waitForTimeout(800); await page.screenshot({ path: 'artifacts/overhaul/circuit.png' });
   console.log('GRAPHICS', await page.evaluate(() => window.__roadster.getGraphics()));
@@ -25,12 +25,12 @@ try {
   await page.screenshot({ path: 'artifacts/overhaul/phone-preview.png' });
   await page.setViewportSize({ width: 390, height: 844 }); await page.reload(); await page.waitForFunction(() => window.__roadster?.getGraphics().renderReady); await page.waitForTimeout(500);
   await page.screenshot({ path: 'artifacts/overhaul/portrait-welcome.png' });
-  await page.getByRole('button', { name: "Let's race" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click(); await page.waitForTimeout(300);
+  await page.getByRole('button', { name: "Time Trial" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click(); await page.waitForTimeout(300);
   await page.screenshot({ path: 'artifacts/overhaul/portrait-drawing.png' });
   await page.route(/\.(ttf|webp)(\?.*)?$/, route => route.fulfill({ status: 404, body: '' }));
   await page.goto('http://127.0.0.1:5173/?theme=graphite');
   await page.waitForFunction(() => window.__roadster?.getGraphics().renderReady);
-  await page.getByRole('button', { name: "Let's race" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
+  await page.getByRole('button', { name: "Time Trial" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
   await page.evaluate(() => window.__roadster.usePracticeLine());
   await page.getByRole('button', { name: 'Race this line' }).waitFor();
   report.missingFontsAndTextures = { playable: true, phase: await page.evaluate(() => window.__roadster.getState().phase) };

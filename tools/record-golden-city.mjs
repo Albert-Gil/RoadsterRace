@@ -15,7 +15,7 @@ try {
   page.on('pageerror', e => errors.push(e.message));
   await page.goto('http://127.0.0.1:5173/?circuit=golden-gate');
   await page.waitForFunction(() => window.__roadster?.getGraphics().renderReady);
-  await page.getByRole('button', { name: 'Race with friends' }).click();
+  await page.getByRole('button', { name: 'Multiplayer' }).click();
   await page.getByRole('button', { name: '4 players', exact: true }).click();
   await page.getByRole('button', { name: '2 laps', exact: true }).click();
   await page.getByRole('button', { name: 'Plan your lines' }).click();

@@ -51,15 +51,16 @@ describe('physical multiplayer contact', () => {
     expect(new LocalRace([session.routes[0]], track, 1).ghostStartRemaining).toBe(0);
   });
   test('the opening ghost period still collides with physical barriers', () => {
+    const collisionTrack={...coastalTrack,barriers:[{id:'recovery-fixture',height:1,footprint:[{x:-25,z:-15.5},{x:-10,z:-15.5},{x:-10,z:-10},{x:-25,z:-10}]}]};
     const result = compileRoute(createPracticeSamples(coastalTrack), coastalTrack); if (!result.ok) throw new Error(result.message);
-    const session = new LocalRace([result.route, result.route], coastalTrack, 1);
+    const session = new LocalRace([result.route, result.route], collisionTrack, 1);
     const sim = session.racers[0]; sim.gridPending = false;
     sim.state.position = { x: -18, z: -18.11 }; sim.state.heading = 0;
     sim.state.velocity = { x: 0, z: 42 }; sim.state.speed = 42;
     session.step();
     expect(session.ghostStartRemaining).toBeGreaterThan(0);
     expect(session.drainEvents().some(e => e.type === 'collision')).toBe(true);
-    expect(barrierContact(sim.state.position, sim.state.heading, coastalTrack)?.depth ?? 0).toBeLessThan(0.01);
+    expect(barrierContact(sim.state.position, sim.state.heading, collisionTrack)?.depth ?? 0).toBeLessThan(0.01);
   });
   test('head-on and rear impacts exchange momentum; glancing contact preserves tangential travel', () => {
     const a = body(-2.5, 0, 30), b = body(2.5, 0, -30), contact = vehicleContact(a, b, track)!;

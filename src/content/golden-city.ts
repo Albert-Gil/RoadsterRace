@@ -11,8 +11,8 @@ export const cityBuildings: readonly CityBuilding[] = [
   ...[-30, -20].map((x, i) => ({ id: `civic-rear-${i}`, x, z: -2, width: 7, depth: 9, height: 7 + i * 2, style: 'brick' as const, color: i + 3 })),
   ...[6, 13, 20].map((x, i) => ({ id: `market-${i}`, x, z: -16.5, width: 5, depth: 8, height: 4.5 + i, style: 'painted' as const, color: i + 2 })),
   ...[1, 9, 18].map((x, i) => ({ id: `waterfront-${i}`, x, z: 14, width: 6, depth: 7, height: 4.2 + i * 0.6, style: 'painted' as const, color: i + 1 })),
-  ...[-22, -9, 5].flatMap((z, i) => [84.5, 94.5].map((x, j) => ({ id: `east-${i}-${j}`, x, z, width: 6, depth: 9, height: 6 + (i + j) % 3 * 2, style: 'brick' as const, color: i + j }))),
-  ...[-1, 9, 19].map((z, i) => ({ id: `west-${i}`, x: -94, z, width: 10, depth: 7, height: 6 + i * 1.5, style: 'painted' as const, color: i + 2 })),
+  ...[-22, -9, 5].flatMap((z, i) => [104.5, 114.5].map((x, j) => ({ id: `east-${i}-${j}`, x, z, width: 6, depth: 9, height: 6 + (i + j) % 3 * 2, style: 'brick' as const, color: i + j }))),
+  ...[-1, 9, 19].map((z, i) => ({ id: `west-${i}`, x: -110, z, width: 10, depth: 7, height: 6 + i * 1.5, style: 'painted' as const, color: i + 2 })),
   ...[76, 88, 102].flatMap((x, i) => [76, 94].map((z, j) => ({ id: `skyline-${i}-${j}`, x, z, width: 8, depth: 10, height: 8 + (i + j) % 3 * 4, style: 'office' as const, color: i }))),
 ].map(b => ({ ...b, x: -b.x }));
 export function buildingFootprint(b: CityBuilding): Point[] {

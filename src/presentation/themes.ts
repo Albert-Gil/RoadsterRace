@@ -45,7 +45,7 @@ export const themes: Record<string, PresentationTheme> = {
 
 /** Presentation only: camera, lighting and quality never enter route compilation or physics. */
 export const sceneTuning = {
-  camera: { elevationDegrees: 42, azimuthDegrees: 5, verticalFov: 0.5, fittingMargin: 0.94 },
+  camera: { elevationDegrees: 42, compactElevationDegrees: 65, azimuthDegrees: 5, verticalFov: 0.5, fittingMargin: 1, clearancePixels: 6, azimuthStep: 5 },
   lighting: { ambient: 0.48, sunlight: 1.25, shadowDarkness: 0.38, shadowMapSize: 1024 },
 };
 
@@ -98,3 +98,5 @@ export const thrustEffects = { capacity: 96, emission: 120, lifetime: 0.8, exhau
 /** Shared city materials; architecture placement is authored in content/golden-city.ts. */
 export const cityAppearance = { bridge: '#b94132', facades: ['#caba91', '#8aa49a', '#bb8068', '#9daabb', '#d8be8d', '#9b8173'], paving: '#bbb7a6', roof: '#52616a', shop: '#354953', window: '#456575', warmWindow: '#b9bd9d' };
 export const sunsetAppearance = { deck: '#a9866b', steel: '#465360', ivory: '#f6e4cc', glass: '#4a7e91', coral: '#e67b77', gold: '#eec575' };
+
+export const ghostAppearance = { color: '#a6e5ed', opacity: 0.32 };

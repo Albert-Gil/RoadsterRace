@@ -239,3 +239,8 @@ Added the fourth, clockwise venue with a flat bypass and automatic physical ramp
 Seventeen distinct browser scenarios pass, including mobile touch/rotation, both branches, a full jump race with pause/retry, mixed four-player races, a complete four-course championship, old-save migration and responsive setup. Affected Santa Monica and Full Tour checks were repeated after the clockwise correction. The production subfolder build and real-touch Pages smoke pass on all four circuits and on the jump branch, without missing assets, page errors or a production inspector.
 
 Final desktop captures record 67 solo / 133 four-car draw calls, including shadows/effects and all four thrusters in the multiplayer check. The solo recording averages about 60.0 renderer fps and completes its jump with no recovery. Matching desktop, phone and tablet images, airborne/results views, a silent authentic gameplay recording and a 30-second review clip are in `artifacts/santa-monica/`. See `SANTA_MONICA_VERIFICATION.md` for check boundaries and `SANTA_MONICA.md` for geometry, tuning and appearance changes. Physical iPhone/iPad Safari performance and jump readability remain pending.
+
+
+## Wider roads, phone framing and three modes
+
+See [the current release report](PHONE_AND_MODES_VERIFICATION.md) for 216 passing unit tests, 29 focused browser scenarios, production smoke, before/after phone measurements, AI/tournament/ghost coverage and hardware checks still pending. Historical reports above describe their original track versions.

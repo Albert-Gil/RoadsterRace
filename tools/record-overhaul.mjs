@@ -13,7 +13,7 @@ try {
   page.on('pageerror', e => errors.push(e.message));
   await page.goto('http://127.0.0.1:5173/');
   await page.waitForFunction(() => window.__roadster?.getGraphics().renderReady);
-  await page.getByRole('button', { name: "Let's race" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
+  await page.getByRole('button', { name: "Time Trial" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
   await page.evaluate(() => window.__roadster.usePracticeLine());
   const cdp = await page.context().newCDPSession(page);
   cdp.on('Page.screencastFrame', async frame => {

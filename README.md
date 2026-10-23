@@ -1,8 +1,12 @@
 # Roadster Race
 
-A browser racing prototype for solo play or two to four people on one device: draw a line and its pace, race one to six laps, and time your rechargeable thrust. Visuals are replaceable through shared settings and assets. No account, backend, or external service is required to play.
+A browser racing game with Solo Race against three computer drivers, local Multiplayer for two to four people, and Time Trial with a personal-best ghost: draw a line and its pace, race one to six laps, and time your rechargeable thrust. Visuals are replaceable through shared settings and assets. No account, backend, or external service is required to play.
 
 Four venues are available: Coastal Launch, Launchsite, Golden Gate and **Santa Monica**. Santa Monica adds a sunset amusement pier, an optional automatic ramp over water and a flat bypass. Draw through the ramp to take the shortcut; use the existing thrust pad to help clear it. Newly created Full Tours end at Santa Monica. See [course and jump tuning](docs/SANTA_MONICA.md).
+
+All roads are now **16 metres wide**, including Golden Gate's bridge and Santa Monica's pier/jump surfaces. The fixed camera fits the actual road tightly, with a phone-friendly orientation and compact controls. See [phone framing, computer drivers and lap ghosts](docs/PHONE_AND_MODES.md).
+
+Solo Race provides Easy/Normal/Hard opponents, with three slightly different CPU drivers using the same physics and thrust rules as you. Only you draw a line. Time Trial measures your **fastest lap**, with an optional translucent best-lap replay; its records save on this browser. Older championships cannot resume after the road-layout changes, while names, paints and lap preferences remain.
 
 ## Online testing
 
@@ -29,16 +33,16 @@ The supplied desktop runtime also provides pnpm at `C:\Users\alber\.cache\codex-
 
 ## Controls
 
-1. Select **Let's race**, choose 1–6 laps, enter your driver name and select a paint finish. Choose **Draw racing line** to continue.
+1. Select **Solo Race** or **Time Trial**, choose 1–6 laps, enter your driver name and select a paint finish. Choose **Draw racing line** to continue.
 2. Start anywhere across the highlighted start/finish strip, or up to 12 metres behind it, and draw one complete lap following the arrows. Draw slowly for deliberate corners and faster for straights. Once you cross the finish, lift anywhere; all later drawing is ignored.
 3. Inspect the route and choose **Race this line**. Explanations and a practice example are reserved for a future tutorial.
 4. Tap the **THRUST** pad, or press **Space** on desktop. Each activation lasts 0.7 seconds and recharges in five seconds. Holding does not repeat.
 5. Use **Escape** or Pause to pause. App/tab interruption also pauses the race. Resume includes a countdown.
-6. Retry the same line or draw a new one. Personal bests last for this page session only.
+6. Retry the same line or draw a new one. Time Trial saves your fastest lap and replay locally, with an in-memory fallback when storage is unavailable.
 
 ### Race with friends
 
-1. Choose **Race with friends**, select two, three, or four players, choose 1–6 laps, customize each name/paint, then **Plan your lines**.
+1. Choose **Multiplayer**, select two, three, or four players, choose 1–6 laps, customize each name/paint, then **Plan your lines**.
 2. Each player draws, previews and locks in a line. Pass the device at the handoff screen; earlier lines stay hidden until all plans are locked in.
 3. Place the device flat in landscape. Everyone taps their numbered corner pad to get ready. The shared countdown starts when all players are ready.
 4. Tap your pad for thrust during the race. Cars start on a separated grid with three seconds of ghosting, then physically collide: rear impacts transfer momentum, side contacts push and slide, and crashes can send you into sand or barriers. Finished cars leave active racing while everyone else completes the distance.
@@ -55,15 +59,15 @@ Solo keeps the bottom-right thrust pad and Space key. The top two multiplayer co
 
 The separate **Touch test** screen remains available for the 50-cycle input diagnostic.
 
-### Tournaments and three circuits
+### Tournaments and four circuits
 
-Choose **Tournament** in multiplayer setup. **Full Tour** races Coastal Launch, Launchsite and Golden Gate in that order. **Custom Tour** supports 2–12 races, repeated venues and up/down reordering. The selected 1–6 laps apply throughout; each round begins with fresh private drawing turns.
+Choose **Tournament** in Solo Race or Multiplayer setup. **Full Tour** races Coastal Launch, Launchsite, Golden Gate and Santa Monica in that order. **Custom Tour** supports 2–12 races, repeated venues and up/down reordering. The selected 1–6 laps apply throughout; each round begins with fresh private drawing turns.
 
 First/second/third/fourth receive **10/6/4/0 points**. Race ties share place points and skip following ranks; equal championship totals share the title. Completed points save locally. **Resume tournament** preserves earlier results and restarts the unfinished round with fresh lines. Drivers and schedule lock at tournament start.
 
-Golden Gate is a fictional San Francisco-inspired city circuit, approximately 442 m long, with flat road and protected infield areas. Launchsite is the new display name for Orbital Launchyard; the older URL/preferences still work. Open [Golden Gate](http://localhost:5173/?circuit=golden-gate) or [Launchsite](http://localhost:5173/?circuit=launchsite). See [the milestone guide](docs/GOLDEN_GATE_TOURNAMENT.md).
+Golden Gate is a fictional San Francisco-inspired city circuit, with wider technical streets, with flat road and protected infield areas. Launchsite is the new display name for Orbital Launchyard; the older URL/preferences still work. Open [Golden Gate](http://localhost:5173/?circuit=golden-gate) or [Launchsite](http://localhost:5173/?circuit=launchsite). See [the milestone guide](docs/GOLDEN_GATE_TOURNAMENT.md).
 
-The current handling raises the speed cap to 42 m/s, maximum drawn pace to 28 m/s and thrust acceleration to 25 m/s². Asphalt slides slightly more; off-road grip is substantially lower with a modest reduction in drag. White pooled vapor makes thrust visible. Turn **Sound on** in the header for motor, tire, thrust, impact and scrape sounds; local recordings can replace these roles later.
+The current handling raises the speed cap to 42 m/s, maximum drawn pace to 30 m/s and thrust acceleration to 25 m/s². Asphalt slides slightly more; off-road grip is substantially lower with a modest reduction in drag. White pooled vapor makes thrust visible. Turn **Sound on** in the header for motor, tire, thrust, impact and scrape sounds; local recordings can replace these roles later.
 
 ### Drawing and handling
 

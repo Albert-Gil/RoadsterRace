@@ -15,7 +15,7 @@ export function tournamentSetupMarkup(setup: TourSetup, count: number) {
 }
 export function tournamentResultsMarkup(saved: SavedTournament, roundIndex: number) {
   const state = saved.state, complete = state.results.length === state.rounds.length, result = state.results[roundIndex], rows = championshipStandings(state), winners = rows.filter(r => r.rank === 1);
-  const name = (p: number) => `<span class="player-chip" style="--identity:var(--player-${p + 1});--identity-ink:var(--player-${p + 1}-ink)">${p + 1}</span> ${escapeHtml(saved.drivers[p].name)}`;
+  const name = (p: number) => `<span class="player-chip" style="--identity:var(--player-${p + 1});--identity-ink:var(--player-${p + 1}-ink)">${p + 1}</span> ${escapeHtml(saved.drivers[p].name)}${saved.drivers[p].controller==='computer'?' <small class="cpu-tag">CPU</small>':''}`;
   return `<span class="eyebrow">${complete ? 'TOURNAMENT COMPLETE' : `ROUND ${roundIndex + 1} / ${state.rounds.length} · ${escapeHtml(findCircuit(state.rounds[roundIndex].circuitId).track.name.toUpperCase())}`}</span>
     <h2>${complete ? winners.length > 1 ? 'Shared champions.' : `${escapeHtml(saved.drivers[winners[0].player].name)} wins the tour.` : 'The title race continues.'}</h2>
     <div class="championship-results">${result ? `<table class="standings round-results"><caption>Race ${roundIndex + 1} results</caption><thead><tr><th>Place</th><th>Driver</th><th>Time</th><th>Pts</th></tr></thead><tbody>${[...result.finishes].sort((a, b) => a.rank - b.rank || a.player - b.player).map(f => `<tr><td>${f.rank}</td><th scope="row">${name(f.player)}</th><td>${f.finishTime.toFixed(2)}s</td><td>+${result.points[f.player]}</td></tr>`).join('')}</tbody></table>` : ''}

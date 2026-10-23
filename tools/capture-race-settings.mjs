@@ -7,7 +7,7 @@ try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } }), errors = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.goto(process.env.PREVIEW_URL ?? 'http://127.0.0.1:5173/');
-  await page.getByRole('button', { name: "Let's race" }).click();
+  await page.getByRole('button', { name: "Time Trial" }).click();
   await page.getByRole('button', { name: '6 laps', exact: true }).click();
   await page.getByRole('textbox', { name: 'Driver 1 name' }).fill('Alex');
   await page.getByRole('group', { name: 'Driver 1 paint' }).getByRole('button', { name: 'Cobalt blue', exact: true }).click();

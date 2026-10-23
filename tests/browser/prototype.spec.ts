@@ -5,10 +5,10 @@ async function ready(page: Page, query = '') {
   await page.goto(`/${query}`);
   await page.waitForFunction(() => Boolean((window as any).__roadster));
   await page.waitForFunction(() => (window as any).__roadster.getGraphics().renderReady);
-  await expect(page.getByRole('button', { name: "Let's race" })).toBeVisible();
+  await expect(page.getByRole('button', { name: "Time Trial" })).toBeVisible();
 }
 async function drawLap(page: Page, touch = false) {
-  await page.getByRole('button', { name: "Let's race" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
+  await page.getByRole('button', { name: "Time Trial" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
   // Projection and picking agree immediately, before a render loop refreshes the camera.
   expect(await page.evaluate(() => (window as any).__roadster.getProjectionError())).toBeLessThan(0.01);
   await expect(page.getByRole('button', { name: 'Start again', exact: true })).toBeVisible();
@@ -55,7 +55,7 @@ test('mouse drawing reaches a valid preview; theme, redraw and optional artwork 
 });
 
 test('early lift is rejected with useful recovery', async ({ page }) => {
-  await ready(page); await page.getByRole('button', { name: "Let's race" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click(); await page.waitForTimeout(100);
+  await ready(page); await page.getByRole('button', { name: "Time Trial" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click(); await page.waitForTimeout(100);
   const p = await page.evaluate(() => (window as any).__roadster.project((window as any).__roadster.getTrack().start));
   await page.mouse.move(p.x, p.y); await page.mouse.down(); await page.mouse.move(p.x + 20, p.y); await page.mouse.up();
   await expect(page.locator('.instruction')).toContainText(/one.*lap/);
@@ -63,7 +63,7 @@ test('early lift is rejected with useful recovery', async ({ page }) => {
 });
 
 test('two-lap race, held thrust, pause/resume, results and retry', async ({ page }) => {
-  await ready(page); await page.getByRole('button', { name: "Let's race" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
+  await ready(page); await page.getByRole('button', { name: "Time Trial" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
   await page.evaluate(() => (window as any).__roadster.usePracticeLine());
   await page.getByRole('button', { name: 'Race this line' }).click();
   await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'racing');

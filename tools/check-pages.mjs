@@ -44,7 +44,7 @@ async function fixture(circuit, count = 1, options = phone, jump = false) {
   const context = await browser.newContext(options), page = await context.newPage();
   try {
     await page.goto(`${devURL}?circuit=${circuit}`);
-    await page.getByRole('button', { name: count === 1 ? "Let's race" : 'Race with friends' }).click();
+    await page.getByRole('button', { name: count === 1 ? "Time Trial" : 'Multiplayer' }).click();
     if (count > 1) await page.getByRole('button', { name: `${count} players`, exact: true }).click();
     await page.getByRole('button', { name: count === 1 ? 'Draw racing line' : 'Plan your lines' }).click();
     await page.waitForFunction(() => window.__roadster.getGraphics().renderReady && window.__roadster.getGraphics().roadVisible);
@@ -150,7 +150,7 @@ try {
       assert.equal(await page.locator('.brand').getAttribute('href'), base);
       assert.equal(await page.locator('.brand img').evaluate(img => img.complete && img.naturalWidth > 0), true);
       await page.getByRole('button', { name: 'Turn sound on' }).click();
-      await page.getByRole('button', { name: "Let's race" }).click();
+      await page.getByRole('button', { name: "Time Trial" }).click();
       const build = await page.locator('.build-id').textContent();
       assert.ok(build.startsWith('TEST BUILD '));
       await page.getByLabel('Driver 1 name', { exact: true }).fill('Pages Tester');
@@ -171,14 +171,14 @@ try {
         // Reuse the same compiled/rendered scene; exercise the shortcut in the
         // shipped build using actual input, without any production inspector.
         await page.getByRole('button', { name: fullRaces ? 'Race setup' : 'Change mode', exact: true }).click();
-        if (!fullRaces) await page.getByRole('button', { name: "Let's race" }).click();
+        if (!fullRaces) await page.getByRole('button', { name: "Time Trial" }).click();
         await page.getByRole('button', { name: 'Draw racing line' }).click();
         await draw(page, context, await fixture(circuit, 1, phone, true));
         await page.getByRole('button', { name: 'Race this line' }).click(); await racing(page);
         if (fullRaces) await finish(page); else await page.keyboard.press('Escape');
         report.checks.push({ circuit, jumpRealTouchPreview: true, jumpRaceStarted: true, jumpCompleted: fullRaces });
       }
-      await page.reload(); await page.getByRole('button', { name: "Let's race" }).click();
+      await page.reload(); await page.getByRole('button', { name: "Time Trial" }).click();
       assert.equal(await page.getByLabel('Driver 1 name', { exact: true }).inputValue(), 'Pages Tester');
       assert.equal(await page.getByRole('button', { name: 'Cobalt blue', exact: true }).getAttribute('aria-pressed'), 'true');
       await page.locator('.brand').click();
@@ -191,7 +191,7 @@ try {
     const { context, page } = await productionPage({ ...phone, viewport: { width: 390, height: 844 } });
     try {
       await page.goto(`${productionURL}?circuit=golden-gate&theme=graphite`);
-      await page.getByRole('button', { name: "Let's race" }).click(); await ready(page);
+      await page.getByRole('button', { name: "Time Trial" }).click(); await ready(page);
       assert.equal(await page.locator('html').getAttribute('data-theme'), 'graphite');
       const manifestURL = await page.locator('link[rel=manifest]').evaluate(link => link.href);
       const manifest = await (await context.request.get(manifestURL)).json();
@@ -230,7 +230,7 @@ try {
     const points = await fixture('coastal-launch', 4);
     const { context, page } = await productionPage();
     try {
-      await page.goto(productionURL); await page.getByRole('button', { name: 'Race with friends' }).click();
+      await page.goto(productionURL); await page.getByRole('button', { name: 'Multiplayer' }).click();
       await page.getByRole('button', { name: '4 players', exact: true }).click();
       await page.getByRole('button', { name: '1 lap', exact: true }).click();
       await page.getByRole('button', { name: 'Plan your lines' }).click(); await ready(page);
@@ -243,13 +243,32 @@ try {
       report.checks.push({ fourPlayers: true, privateDrawingAndReadiness: true, sharedRaceStarted: true, completedRace: fullRaces });
     } finally { await context.close(); }
   }
+  if (!tournamentOnly) {
+    console.log('Checking Solo Race: three CPU cars and one human input');
+    const points = await fixture('coastal-launch');
+    const { context, page } = await productionPage();
+    try {
+      await page.goto(productionURL);
+      await page.getByRole('button', { name: 'Solo Race', exact: true }).click();
+      await page.getByRole('button', { name: 'Hard', exact: true }).click();
+      await page.getByRole('button', { name: '1 lap', exact: true }).click();
+      await page.getByRole('button', { name: 'Draw racing line', exact: true }).click();
+      await ready(page); await draw(page, context, points);
+      await page.getByRole('button', { name: 'Race this line', exact: true }).click();
+      await racing(page);
+      assert.equal(await page.locator('.racer-pad').count(), 1);
+      assert.equal(await page.locator('.vehicle-label:not([hidden])').count(), 4);
+      if (fullRaces) { await finish(page); assert.ok((await page.locator('.standings').textContent()).includes('Apex')); }
+      report.checks.push({ soloComputerRace: true, oneHumanControl: true, fourCars: true, hardDifficulty: true, completedRace: fullRaces });
+    } finally { await context.close(); }
+  }
   // Saved tournament creation/resumption is checked in every production smoke;
   // full mode additionally completes all four rounds using real drawn input.
   {
     console.log('Checking saved tournament and resumption');
     const { context, page } = await productionPage();
     try {
-      await page.goto(productionURL); await page.getByRole('button', { name: 'Race with friends' }).click();
+      await page.goto(productionURL); await page.getByRole('button', { name: 'Multiplayer' }).click();
       await page.getByRole('button', { name: '2 players', exact: true }).click();
       await page.getByRole('button', { name: 'Tournament', exact: true }).click();
       await page.getByRole('button', { name: '1 lap', exact: true }).click();

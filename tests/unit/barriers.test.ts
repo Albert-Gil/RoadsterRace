@@ -52,8 +52,9 @@ describe('solid track boundaries', () => {
     expect(() => new RaceSimulation({ ...r.route, trackVersion: 1 }, coastalTrack)).toThrow('older circuit');
   });
   test('blocked cars recover without gaining progress or refilling thrust', () => {
+    const recoveryTrack={...coastalTrack,barriers:[{id:'recovery-fixture',height:1,footprint:[{x:-25,z:-15.5},{x:-10,z:-15.5},{x:-10,z:-10},{x:-25,z:-10}]}]};
     const r = compileRoute(createPracticeSamples(coastalTrack), coastalTrack); if (!r.ok) throw new Error(r.message);
-    const sim = new RaceSimulation(r.route, coastalTrack);
+    const sim = new RaceSimulation(r.route, recoveryTrack);
     const state = sim.state; state.position = { x: -18, z: -18.11 }; state.heading = 0; state.speed = 0;
     state.thrustReadyAt = 50;
     // Hold the body into a wall to reproduce an otherwise unrecoverable impact.

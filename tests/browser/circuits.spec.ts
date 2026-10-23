@@ -5,7 +5,7 @@ const state = (page: Page) => page.evaluate(() => (window as any).__roadster.get
 
 test('course switching clears plans, retains drivers and distance, scopes bests and releases old scenes', async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
-  await page.goto('/'); await page.getByRole('button', { name: 'Race with friends' }).click();
+  await page.goto('/'); await page.getByRole('button', { name: 'Multiplayer' }).click();
   await page.getByRole('textbox', { name: 'Driver 1 name' }).fill('Avery');
   await page.getByRole('group', { name: 'Driver 1 paint' }).getByRole('button', { name: 'Cobalt blue', exact: true }).click();
   await page.getByRole('button', { name: '3 laps', exact: true }).click();
@@ -26,7 +26,7 @@ test('course switching clears plans, retains drivers and distance, scopes bests 
     await expect(page.locator('.setup-heading')).toContainText(name.toUpperCase());
     await expect(page.locator('#mode-label')).toHaveText('2 PLAYER LOCAL RACE');
   }
-  await page.reload(); await page.getByRole('button', { name: "Let's race" }).click();
+  await page.reload(); await page.getByRole('button', { name: "Time Trial" }).click();
   await expect(page.getByRole('button', { name: 'Launchsite circuit', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('textbox', { name: 'Driver 1 name' })).toHaveValue('Avery');
   // Establish a one-lap Coastal best, then make sure Orbital starts without inheriting it.
@@ -69,7 +69,7 @@ test('Orbital phone touch drawing rejects protected cuts and races a wide outer-
     addEventListener('blur', () => evidence.interruptions.push('blur'));
     document.addEventListener('visibilitychange', () => { if (document.hidden) evidence.interruptions.push('hidden'); });
   });
-  await page.goto('/?circuit=orbital-launchyard'); await page.getByRole('button', { name: "Let's race" }).click();
+  await page.goto('/?circuit=orbital-launchyard'); await page.getByRole('button', { name: "Time Trial" }).click();
   await page.getByRole('button', { name: '1 lap', exact: true }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
   await touchLine(page, 'blocked'); await expect(page.locator('.instruction')).toContainText('inner barrier');
   await expect(page.getByRole('button', { name: 'Race this line' })).toHaveCount(0);
@@ -95,7 +95,7 @@ test('Orbital phone touch drawing rejects protected cuts and races a wide outer-
 
 for (const count of [2, 3, 4]) test(`Orbital ${count}-player race finishes with independent thrust and a fresh rematch`, async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
-  await page.goto('/?circuit=orbital-launchyard'); await page.getByRole('button', { name: 'Race with friends' }).click();
+  await page.goto('/?circuit=orbital-launchyard'); await page.getByRole('button', { name: 'Multiplayer' }).click();
   await page.getByRole('button', { name: `${count} players`, exact: true }).click(); await page.getByRole('button', { name: '1 lap', exact: true }).click();
   await page.getByRole('button', { name: 'Plan your lines' }).click();
   for (let i = 0; i < count; i++) {

@@ -3,7 +3,8 @@ import { angleDelta, cumulative, distance } from '../../src/core/geometry';
 import type { CompiledRoute, TrackDefinition } from '../../src/core/types';
 import { compileRoute, createPracticeSamples, COMPILER_VERSION, gestureSpeeds, paceToSpeed, PACE_RANGE } from '../../src/core/route';
 import { RaceSimulation, RULES, sampleSurface } from '../../src/core/simulation';
-import { coastalTrack } from '../../src/core/track';
+import fixtures from '../fixtures/handling-v8.json';
+const coastalTrack=fixtures[0].track as TrackDefinition;
 
 function route(seconds: number) {
   const result = compileRoute(createPracticeSamples(coastalTrack, seconds), coastalTrack);

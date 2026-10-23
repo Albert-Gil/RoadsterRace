@@ -14,7 +14,7 @@ const cases = [
 for (const spec of cases) test(`edge-to-edge ${spec.circuit} ${spec.width}x${spec.height} supports touch and fixed race framing`, async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: spec.width, height: spec.height }, deviceScaleFactor: 2, hasTouch: true, isMobile: spec.width < 1000 });
   const page = await context.newPage(), errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
-  await page.goto(`/?circuit=${spec.circuit}`); await page.getByRole('button', { name: "Let's race" }).click();
+  await page.goto(`/?circuit=${spec.circuit}`); await page.getByRole('button', { name: "Time Trial" }).click();
   await page.getByRole('button', { name: 'Draw racing line' }).click();
   await page.waitForFunction(() => (window as any).__roadster.getGraphics().renderReady); await page.evaluate(() => document.fonts.ready);
   await page.waitForFunction(() => (window as any).__roadster.getGraphics().roadVisible);
@@ -57,7 +57,7 @@ for (const spec of cases) test(`edge-to-edge ${spec.circuit} ${spec.width}x${spe
 test('compact portrait multiplayer controls keep player identity and private handoffs', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 320, height: 568 }, isMobile: true, hasTouch: true });
   const page = await context.newPage(); await page.goto('/?circuit=golden-gate');
-  await page.getByRole('button', { name: 'Race with friends' }).click(); await page.getByRole('button', { name: '4 players', exact: true }).click();
+  await page.getByRole('button', { name: 'Multiplayer' }).click(); await page.getByRole('button', { name: '4 players', exact: true }).click();
   await page.getByRole('button', { name: 'Plan your lines' }).click();
   for (let i = 0; i < 4; i++) {
     if (i) await page.getByRole('button', { name: `I'm Player ${i + 1}` }).click();

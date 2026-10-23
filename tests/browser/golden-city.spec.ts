@@ -34,7 +34,7 @@ async function stroke(page: Page, touch: boolean, lead = true, overshoot = 2) {
 }
 for (const circuit of ['coastal-launch', 'orbital-launchyard', 'golden-gate']) test(`${circuit} accepts release far past finish without changing counted lap`, async ({ page }) => {
   if (circuit === 'golden-gate') await page.setViewportSize({ width: 844, height: 390 });
-  await page.goto(`/?circuit=${circuit}`); await page.getByRole('button', { name: "Let's race" }).click();
+  await page.goto(`/?circuit=${circuit}`); await page.getByRole('button', { name: "Time Trial" }).click();
   await page.getByRole('button', { name: 'Draw racing line' }).click();
   await stroke(page, false); await expect(page.getByRole('button', { name: 'Race this line' })).toBeVisible();
   const reference = (await state(page)).route;
@@ -49,7 +49,7 @@ for (const circuit of ['coastal-launch', 'orbital-launchyard', 'golden-gate']) t
 });
 for (const circuit of ['coastal-launch', 'orbital-launchyard', 'golden-gate']) test(`${circuit} mouse lead-in and full-width finish retain preview through theme changes`, async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
-  await page.goto(`/?circuit=${circuit}`); await page.getByRole('button', { name: "Let's race" }).click();
+  await page.goto(`/?circuit=${circuit}`); await page.getByRole('button', { name: "Time Trial" }).click();
   await page.getByRole('button', { name: '1 lap', exact: true }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
   await stroke(page, false); await expect(page.getByRole('button', { name: 'Race this line' })).toBeVisible();
   expect((await state(page)).route.joined).toBe(true);
@@ -65,7 +65,7 @@ for (const circuit of ['coastal-launch', 'orbital-launchyard', 'golden-gate']) t
 test('Golden Gate real browser touch works at high density in phone layouts; canceled lead-ins are cleared', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
   const page = await context.newPage(), errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
-  await page.goto('/?circuit=golden-gate'); await page.getByRole('button', { name: "Let's race" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
+  await page.goto('/?circuit=golden-gate'); await page.getByRole('button', { name: "Time Trial" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
   for (const viewport of [{ width: 844, height: 390 }, { width: 390, height: 844 }, { width: 1024, height: 768 }]) {
     await page.setViewportSize(viewport); await page.waitForTimeout(150);
     await stroke(page, true); await expect(page.getByRole('button', { name: 'Race this line' })).toBeVisible();
@@ -82,7 +82,7 @@ test('Golden Gate real browser touch works at high density in phone layouts; can
 for (const count of [2, 3, 4]) test(`Golden Gate ${count}-car bridge race completes with physical contact`, async ({ page }) => {
   test.setTimeout(300000);
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
-  await page.goto('/?circuit=golden-gate'); await page.getByRole('button', { name: 'Race with friends' }).click();
+  await page.goto('/?circuit=golden-gate'); await page.getByRole('button', { name: 'Multiplayer' }).click();
   await page.getByRole('button', { name: `${count} players`, exact: true }).click();
   await page.getByRole('button', { name: count === 4 ? '6 laps' : '1 lap', exact: true }).click(); await page.getByRole('button', { name: 'Plan your lines' }).click();
   for (let i = 0; i < count; i++) { if (i) await page.getByRole('button', { name: `I'm Player ${i + 1}` }).click(); await page.evaluate(() => (window as any).__roadster.usePracticeLine()); await page.getByRole('button', { name: 'Lock in my line' }).click(); }
@@ -101,7 +101,7 @@ for (const count of [2, 3, 4]) test(`Golden Gate ${count}-car bridge race comple
 });
 
 test('old Golden Gate and compiler tournament saves are rejected while ordinary preferences survive', async ({ page }) => {
-  await page.goto('/?circuit=golden-gate'); await page.getByRole('button', { name: "Let's race" }).click();
+  await page.goto('/?circuit=golden-gate'); await page.getByRole('button', { name: "Time Trial" }).click();
   await page.getByRole('textbox', { name: 'Driver 1 name' }).fill('City Driver');
   await page.getByRole('group', { name: 'Driver 1 paint' }).getByRole('button', { name: 'Cobalt blue', exact: true }).click();
   await page.getByRole('button', { name: '6 laps', exact: true }).click();
@@ -113,7 +113,7 @@ test('old Golden Gate and compiler tournament saves are rejected while ordinary 
       localStorage.setItem('roadster-race.tournament.v1', JSON.stringify({ state, drivers: [{ name: 'Old', paint: 'crimson' }, { name: 'Other', paint: 'solar' }] }));
     }, stale);
     await page.reload(); await expect(page.getByRole('button', { name: 'Resume tournament', exact: false })).toHaveCount(0);
-    await page.getByRole('button', { name: "Let's race" }).click();
+    await page.getByRole('button', { name: "Time Trial" }).click();
     await expect(page.getByRole('textbox', { name: 'Driver 1 name' })).toHaveValue('City Driver');
     expect((await state(page)).drivers[0].paint).toBe('cobalt'); expect((await state(page)).lapCount).toBe(6);
   }

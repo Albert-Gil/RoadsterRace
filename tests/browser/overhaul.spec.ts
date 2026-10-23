@@ -22,7 +22,7 @@ async function stroke(page: Page, blocked: boolean) {
 }
 
 test('solid crossing stays visible and cannot be confirmed; pace retains slow and fast sections', async ({ page }) => {
-  await open(page); await page.getByRole('button', { name: "Let's race" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
+  await open(page); await page.getByRole('button', { name: "Time Trial" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
   await stroke(page, true);
   await expect(page.locator('.instruction')).toContainText('inner barrier');
   await expect(page.getByRole('button', { name: 'Race this line' })).toHaveCount(0);
@@ -40,7 +40,7 @@ test('solid crossing stays visible and cannot be confirmed; pace retains slow an
 for (const count of [3, 4]) test(`${count} drivers finish both laps with the upgraded car and scenery`, async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
   if (count === 3) await page.setViewportSize({ width: 1024, height: 768 });
-  await open(page); await page.getByRole('button', { name: 'Race with friends' }).click();
+  await open(page); await page.getByRole('button', { name: 'Multiplayer' }).click();
   await page.getByRole('button', { name: `${count} players`, exact: true }).click();
   await page.getByRole('button', { name: 'Plan your lines' }).click();
   for (let i = 0; i < count; i++) {

@@ -1,3 +1,4 @@
+import { roadEdges } from '../core/road-geometry';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
@@ -67,11 +68,7 @@ export function buildCircuitDetails(scene: Scene, track: TrackDefinition, theme:
   }
   // Narrow continuous edge lines replace the highway-like center dashes.
   for (const side of [-1, 1]) {
-    const path = [-0.065, 0.065].map(offset => track.centerline.map((p, i, all) => {
-      const a = all[Math.max(0, i - 1)], b = all[Math.min(all.length - 1, i + 1)], len = distance(a, b) || 1;
-      const r = side * (track.roadWidth / 2 - 0.35) + offset;
-      return new Vector3(p.x - (b.z - a.z) / len * r, 0.143, p.z + (b.x - a.x) / len * r);
-    }));
+    const path = [-0.065,0.065].map(offset=>roadEdges(track.centerline,track.roadWidth-0.7+offset*2)[side===-1?0:1].map(p=>new Vector3(p.x,0.143,p.z)));
     const edge = MeshBuilder.CreateRibbon('painted-road-edge', { pathArray: path, sideOrientation: Mesh.DOUBLESIDE }, scene); edge.material = marking;
   }
   // Grid paint follows the authored start tangent on either course.

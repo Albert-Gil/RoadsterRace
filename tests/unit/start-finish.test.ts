@@ -111,18 +111,18 @@ describe('authored Golden Gate city and narrow bridge', () => {
       expect(golden.barriers.some(w => w.kind === 'infield' && insideBarrier(point, w)), b.id).toBe(true);
     }
   });
-  test('the versioned 442 m course has an 88 m by 12 m deck and 11.3 m between straight rails', () => {
-    expect(golden.version).toBe(2); expect(golden.length).toBeGreaterThan(430); expect(golden.length).toBeLessThan(470);
-    const b = golden.bridges![0]; expect(distance(b.from, b.to)).toBe(88); expect(b.width).toBe(12);
+  test('the widened city course has an 88 m by 16 m deck and 15.3 m between straight rails', () => {
+    expect(golden.version).toBe(3); expect(golden.length).toBeGreaterThan(430); expect(golden.length).toBeLessThan(520);
+    const b = golden.bridges![0]; expect(distance(b.from, b.to)).toBe(88); expect(b.width).toBe(16);
     const straightRails = golden.barriers.filter(b => b.id.endsWith('-3') && b.kind === 'bridge-rail');
     expect(straightRails).toHaveLength(2);
     const edges = straightRails.map(r => r.footprint.map(p => p.z)).sort((a, b) => Math.min(...a) - Math.min(...b));
-    expect(Math.min(...edges[1]) - Math.max(...edges[0])).toBeCloseTo(11.3, 5);
+    expect(Math.min(...edges[1]) - Math.max(...edges[0])).toBeCloseTo(15.3, 5);
     const area = golden.centerline.slice(1).reduce((sum, p, i) => sum + golden.centerline[i].x * p.z - p.x * golden.centerline[i].z, 0);
     expect(area).toBeLessThan(0);
   });
   test('bridge excursions fail vehicle-clearance validation before and after smoothing', () => {
-    const route = planned(golden).map(p => ({ ...p, z: p.x > -30 && p.x < 30 && p.z > 40 ? p.z + 6 : p.z }));
+    const route = planned(golden).map(p => ({ ...p, z: p.x > -30 && p.x < 30 && p.z > 40 ? p.z + 8 : p.z }));
     const result = compileRoute(route, golden); expect(result.ok).toBe(false);
     if (!result.ok) { expect(result.message).toContain('barrier'); expect(result.section).toBeDefined(); }
     expect(blockedRouteSection([{ x: 0, z: 42 }, { x: 0, z: 60 }], golden)).not.toBeNull();
@@ -130,7 +130,7 @@ describe('authored Golden Gate city and narrow bridge', () => {
   test.each([0, 0.2, 1.4])('high speed rail contact with angle %i cannot tunnel, and glancing motion survives', angle => {
     const heading = -Math.PI / 2 + angle;
     const r = sweepVehicle({ x: 0, z: 42 }, { x: -8, z: 51 }, heading, heading, { x: -42, z: 30 }, golden);
-    expect(r.collided).toBe(true); expect(r.position.z).toBeLessThan(47.65);
+    expect(r.collided).toBe(true); expect(r.position.z).toBeLessThan(49.65);
     expect(barrierContact(r.position, heading, golden)?.depth ?? 0).toBeLessThan(0.01);
     expect(r.velocity.x).toBeLessThan(-20);
   });

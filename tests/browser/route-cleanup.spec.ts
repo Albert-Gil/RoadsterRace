@@ -30,7 +30,7 @@ async function drawRecorded(page: Page, shape: 'backtrack' | 'wide', touch = fal
 
 test('backtracking is cleaned from an actual mouse stroke with an uncluttered preview', async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
-  await page.goto('/'); await page.getByRole('button', { name: "Let's race" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
+  await page.goto('/'); await page.getByRole('button', { name: "Time Trial" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
   await page.evaluate(() => (window as any).__roadster.usePracticeLine());
   const reference = await page.evaluate(() => (window as any).__roadster.getRoute());
   await page.getByRole('button', { name: 'Redraw', exact: true }).click();
@@ -48,7 +48,7 @@ test('backtracking is cleaned from an actual mouse stroke with an uncluttered pr
 test('a phone touch stroke can plan a substantially wider line through sand', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
   const page = await context.newPage(), errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
-  await page.goto('/'); await page.getByRole('button', { name: "Let's race" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
+  await page.goto('/'); await page.getByRole('button', { name: "Time Trial" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
   await drawRecorded(page, 'wide', true);
   const maximum = await page.evaluate(() => {
     const game = (window as any).__roadster, route = game.getRoute(), track = game.getTrack();

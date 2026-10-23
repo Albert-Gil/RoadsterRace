@@ -36,9 +36,9 @@ describe('timed route compilation', () => {
     expect(compileRoute(samples.slice(0, 90), coastalTrack).ok).toBe(false);
     const reverse = [...samples].reverse().map((p, i) => ({ ...p, time: i * 25 }));
     expect(compileRoute(reverse, coastalTrack).ok).toBe(false);
-    const bad = samples.map(p => ({ ...p })); bad[80].x += 20;
+    const bad = samples.map(p => ({ ...p })); bad[80].x += 100;
     expect(compileRoute(bad, coastalTrack).ok).toBe(false);
-    expect(compileRoute([...samples.slice(0, 30), ...samples.slice(100)], coastalTrack).ok).toBe(false);
+    expect(compileRoute([...samples.slice(0, Math.floor(samples.length*0.1)), ...samples.slice(Math.floor(samples.length*0.45))], coastalTrack).ok).toBe(false);
     const gap = samples.map((p, i) => ({ ...p, time: p.time + (i > 60 ? 4000 : 0) }));
     expect(compileRoute(gap, coastalTrack).ok).toBe(false);
   });

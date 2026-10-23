@@ -1,5 +1,7 @@
 # Santa Monica — sunset pier circuit
 
+> The phone/modes upgrade supersedes the original 12 m dimensions below: Santa Monica v2 uses 16 m roads, an opened bypass and repositioned 16 m ramp/landing corridor. See [current contracts](PHONE_AND_MODES.md).
+
 Santa Monica is the fourth original venue (`santa-monica`, track version 1). The clockwise main route is approximately 555 m long, 12 m wide, and rated Sport / 3. The full-width start gate retains the 12 m lead-in, timing trim and unrestricted post-finish release. The normal route follows the flat bypass; the jump route saves approximately 27 m. Solo, 2–4 local drivers, 1–6 laps and tournaments use the same course definition.
 
 ## Geometry and tuning

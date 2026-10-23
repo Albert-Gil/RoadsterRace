@@ -7,7 +7,7 @@ try {
   await page.goto('http://127.0.0.1:5173/');
   await page.waitForFunction(() => Boolean(window.__roadster), undefined, { timeout: 30000 });
   const renderer = await page.evaluate(() => { const gl = document.querySelector('canvas').getContext('webgl2'), ext = gl?.getExtension('WEBGL_debug_renderer_info'); return gl && ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : null; });
-  await page.getByRole('button', { name: "Let's race" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
+  await page.getByRole('button', { name: "Time Trial" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
   await page.evaluate(() => window.__roadster.usePracticeLine());
   await page.getByRole('button', { name: 'Race this line' }).click();
   await page.waitForFunction(() => window.__roadster.getState().phase === 'racing');

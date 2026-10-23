@@ -5,7 +5,7 @@ mkdirSync('artifacts/race-settings', { recursive: true });
 
 test('solo preferences persist, one lap finishes cleanly, and six-lap bests stay separate', async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
-  await page.goto('/'); await page.getByRole('button', { name: "Let's race" }).click();
+  await page.goto('/'); await page.getByRole('button', { name: "Time Trial" }).click();
   await page.getByRole('button', { name: '6 laps', exact: true }).click();
   await page.getByRole('textbox', { name: 'Driver 1 name' }).fill('Taylor <b>');
   await page.getByRole('textbox', { name: 'Driver 1 name' }).press('End');
@@ -14,7 +14,7 @@ test('solo preferences persist, one lap finishes cleanly, and six-lap bests stay
   await page.getByRole('textbox', { name: 'Driver 1 name' }).press('Backspace');
   await page.getByRole('group', { name: 'Driver 1 paint' }).getByRole('button', { name: 'Ultraviolet', exact: true }).click();
   await page.screenshot({ path: 'artifacts/race-settings/solo-garage.png' });
-  await page.reload(); await page.getByRole('button', { name: "Let's race" }).click();
+  await page.reload(); await page.getByRole('button', { name: "Time Trial" }).click();
   await expect(page.getByRole('textbox', { name: 'Driver 1 name' })).toHaveValue('Taylor <b>');
   await expect(page.getByRole('button', { name: '6 laps', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('group', { name: 'Driver 1 paint' }).getByRole('button', { name: 'Ultraviolet', exact: true })).toHaveAttribute('aria-pressed', 'true');
@@ -46,7 +46,7 @@ test('solo preferences persist, one lap finishes cleanly, and six-lap bests stay
 
 test('custom names and paints survive a six-lap local race, results and rematch', async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
-  await page.goto('/'); await page.getByRole('button', { name: 'Race with friends' }).click();
+  await page.goto('/'); await page.getByRole('button', { name: 'Multiplayer' }).click();
   await page.getByRole('button', { name: '6 laps', exact: true }).click();
   for (const [index, name, paint] of [[1, 'Ana & Max', 'Verdant green'], [2, 'Lee', 'Solar yellow']] as const) {
     await page.getByRole('textbox', { name: `Driver ${index} name` }).fill(name);
@@ -76,7 +76,7 @@ test('custom names and paints survive a six-lap local race, results and rematch'
 });
 
 test('garage fits phone portrait/landscape and tablet with reachable names, paint and start controls', async ({ page }) => {
-  await page.goto('/'); await page.getByRole('button', { name: 'Race with friends' }).click();
+  await page.goto('/'); await page.getByRole('button', { name: 'Multiplayer' }).click();
   await page.getByRole('button', { name: '4 players', exact: true }).click();
   await expect(page.locator('#mode-label')).toHaveText('4 PLAYER LOCAL RACE');
   for (const [width, height] of [[844, 390], [390, 844], [1024, 768]]) {

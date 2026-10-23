@@ -585,3 +585,45 @@ p { font-size: 14px; line-height: 1.5; }
     bottom: calc(env(safe-area-inset-bottom, 0px) + 88px); max-width: calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 24px);
   }
 }
+
+/* One fixed usable rectangle for drawing and racing; no header/footer bands. */
+.playground #course-space { left:calc(env(safe-area-inset-left,0px) + 60px);right:calc(env(safe-area-inset-right,0px) + 60px);top:env(safe-area-inset-top,0px);bottom:env(safe-area-inset-bottom,0px); }
+.playground:is([data-phase="drawing"],[data-phase="preview"]) .topbar { right:calc(env(safe-area-inset-right,0px) + 6px);top:calc(env(safe-area-inset-top,0px) + 6px);width:48px; }
+.playground:is([data-phase="drawing"],[data-phase="preview"]) :is(.sound-control,.planning-button) { width:48px;min-height:48px;min-width:44px; }
+.playground:is([data-phase="drawing"],[data-phase="preview"]) .panel {right:calc(env(safe-area-inset-right,0px) + 6px);top:calc(env(safe-area-inset-top,0px) + 62px);width:48px;}
+.playground:is([data-phase="drawing"],[data-phase="preview"]) .panel-actions {gap:6px;}
+.playground:is([data-phase="racing"],[data-phase="countdown"],[data-phase="ready"],[data-phase="paused"]) :is(.topbar,.circuit-caption,.lower-wordmark,.rotate-note) {display:none;}
+.playground:is([data-phase="racing"],[data-phase="countdown"],[data-phase="ready"],[data-phase="paused"]) .race-hud {left:calc(env(safe-area-inset-left,0px) + 3px);top:50%;transform:translateY(-50%);width:54px;box-sizing:border-box;padding:6px 2px;gap:8px;flex-direction:column;border-radius:3px;}
+.playground .race-hud strong {font-size:13px;}.playground .race-hud small {font-size:8px;}.playground .hud-divider {display:none;}
+.playground .thrust-control {width:48px;height:48px;padding:3px;bottom:calc(env(safe-area-inset-bottom,0px) + 6px);right:calc(env(safe-area-inset-right,0px) + 6px);}
+.playground .thrust-inner {padding:0;gap:1px;}.playground .pod-title {font-size:8px;}.playground .pod-status {font-size:8px;}.playground .pod-name,.playground .pod-lap {display:none;}.playground .pod-identity {font-size:8px;}.playground .thrust-inner svg{width:14px;height:14px;}
+.playground:not([data-players="1"]) .racer-0 {left:calc(env(safe-area-inset-left,0px) + 6px);bottom:calc(env(safe-area-inset-bottom,0px) + 6px);}
+.playground:not([data-players="1"]) .racer-1 {right:calc(env(safe-area-inset-right,0px) + 6px);bottom:calc(env(safe-area-inset-bottom,0px) + 6px);}
+.playground:not([data-players="1"]) .racer-2 {left:calc(env(safe-area-inset-left,0px) + 6px);top:calc(env(safe-area-inset-top,0px) + 6px);}
+.playground:not([data-players="1"]) .racer-3 {right:calc(env(safe-area-inset-right,0px) + 6px);top:calc(env(safe-area-inset-top,0px) + 6px);}
+.playground .pause-button {left:auto;right:calc(env(safe-area-inset-right,0px) + 6px);bottom:50%;width:48px;min-height:44px;}
+@media (orientation:portrait) and (max-width:650px) {
+ .playground #course-space {left:env(safe-area-inset-left,0px);right:env(safe-area-inset-right,0px);top:calc(env(safe-area-inset-top,0px) + 56px);bottom:calc(env(safe-area-inset-bottom,0px) + 60px);}
+ .playground:is([data-phase="drawing"],[data-phase="preview"]) .topbar{top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 6px);left:6px;}
+ .playground:is([data-phase="drawing"],[data-phase="preview"]) .panel{top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 6px);left:60px;right:auto;width:auto;}
+ .playground .race-hud{left:50%;top:calc(env(safe-area-inset-top,0px) + 4px);transform:translateX(-50%);width:auto;flex-direction:row;padding:5px 10px;gap:14px;}
+ .playground .pause-button{bottom:calc(env(safe-area-inset-bottom,0px) + 6px);right:calc(50% - 24px);}
+}
+
+.cpu-tag{font:600 8px/1 var(--font-body);letter-spacing:.08em;opacity:.65;}.vehicle-label .cpu-tag{display:block;font-size:6px;}
+
+/* Sound stays reachable during a race/pause without restoring a header band. */
+.playground:is([data-phase="racing"],[data-phase="countdown"],[data-phase="ready"],[data-phase="paused"]) .topbar{display:flex;left:auto;right:calc(env(safe-area-inset-right,0px) + 6px);top:calc(50% + 12px);width:48px;gap:0;}
+.playground:is([data-phase="racing"],[data-phase="countdown"],[data-phase="ready"],[data-phase="paused"]) .topbar :is(.brand,.topbar-center,.touch-test-link,.sound-label){display:none;}
+.playground:is([data-phase="racing"],[data-phase="countdown"],[data-phase="ready"],[data-phase="paused"]) .sound-control{width:48px;min-height:48px;padding:0;}
+@media (orientation:portrait) and (max-width:650px){.playground:is([data-phase="racing"],[data-phase="countdown"],[data-phase="ready"],[data-phase="paused"]) .topbar{left:calc(env(safe-area-inset-left,0px) + 60px);right:auto;top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 6px);}}
+
+[data-phase="welcome"] .panel-actions{flex-wrap:wrap;}
+
+/* Override the legacy multiplayer header/center-pause specificity as well. */
+.playground[data-phase]:not([data-players="1"]) .pause-button{left:auto;right:calc(env(safe-area-inset-right,0px) + 6px);transform:none;}
+.playground[data-phase]:not([data-players="1"]):is([data-phase="racing"],[data-phase="countdown"],[data-phase="ready"],[data-phase="paused"]) .topbar{left:auto;right:calc(env(safe-area-inset-right,0px) + 6px);top:calc(50% + 12px);width:48px;}
+@media (orientation:portrait) and (max-width:650px){
+ .playground[data-phase]:not([data-players="1"]) .pause-button{right:calc(50% - 24px);}
+ .playground[data-phase]:not([data-players="1"]):is([data-phase="racing"],[data-phase="countdown"],[data-phase="ready"],[data-phase="paused"]) .topbar{left:calc(env(safe-area-inset-left,0px) + 60px);right:auto;top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 6px);}
+}

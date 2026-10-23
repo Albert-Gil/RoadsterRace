@@ -7,7 +7,7 @@ try {
  page.on('pageerror',e=>errors.push(e.message));
  await page.goto('http://127.0.0.1:5173/?circuit=golden-gate'); await page.waitForFunction(()=>window.__roadster?.getGraphics().renderReady);
  await page.screenshot({path:'artifacts/golden-city/welcome.png'});
- await page.getByRole('button',{name:"Let's race"}).click(); await page.getByRole('button',{name:'1 lap',exact:true}).click(); await page.getByRole('button',{name:'Draw racing line'}).click();
+ await page.getByRole('button',{name:"Time Trial"}).click(); await page.getByRole('button',{name:'1 lap',exact:true}).click(); await page.getByRole('button',{name:'Draw racing line'}).click();
  await page.screenshot({path:'artifacts/golden-city/drawing-desktop.png'});
  await page.evaluate(() => window.__roadster.usePracticeLine()); await page.waitForFunction(()=>window.__roadster.getGraphics().renderReady); await page.waitForTimeout(150); await page.screenshot({path:'artifacts/golden-city/after.png'});
  if(process.env.CAPTURE_VIEWS_ONLY!=='1') {

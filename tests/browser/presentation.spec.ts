@@ -5,7 +5,7 @@ const audio = (page: import('@playwright/test').Page) => page.evaluate(() => (wi
 
 test('perspective shows real depth while drawing and countdown keep the same projection', async ({ page }) => {
   await page.goto('/'); await page.waitForFunction(() => (window as any).__roadster?.getGraphics().renderReady);
-  await page.getByRole('button', { name: "Let's race" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
+  await page.getByRole('button', { name: "Time Trial" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
   const geometry = await page.evaluate(() => {
     const game = (window as any).__roadster, width = (z: number) => { const a = game.project({ x: 0, z }), b = game.project({ x: 5, z }); return Math.hypot(a.x - b.x, a.y - b.y); };
     return { nearWidth: width(-30), farWidth: width(30), start: game.project(game.getTrack().start), ground: game.project({ x: -10, y: 0, z: -6 }), roof: game.project({ x: -10, y: 5, z: -6 }), graphics: game.getGraphics() };
@@ -26,7 +26,7 @@ test('sound opts in, follows a race, silences on pause and mute, and survives th
   await page.getByRole('button', { name: 'Turn sound on' }).click();
   await expect.poll(async () => (await audio(page)).context).toBe('running');
   await expect(page.getByRole('button', { name: 'Turn sound off' })).toHaveAttribute('aria-pressed', 'true');
-  await page.getByRole('button', { name: "Let's race" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
+  await page.getByRole('button', { name: "Time Trial" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
   await page.evaluate(() => (window as any).__roadster.usePracticeLine()); await page.getByRole('button', { name: 'Race this line' }).click();
   await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'racing');
   await expect.poll(async () => (await audio(page)).levels.drive).toBeGreaterThan(0.025);

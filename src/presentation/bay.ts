@@ -67,7 +67,7 @@ export function buildBay(scene: Scene, track: TrackDefinition, theme: Presentati
       box('city-light-post', x, 2.1, z, 0.12, 4, 0.12, metal); box('city-light-head', x, 4.15, z, 0.6, 0.12, 0.38, white);
     }
   }
-  for (const [x, z] of [[-33, 3], [-15, 3], [21, 17], [82, 13], [97, 13], [-99, 23], [-89, 23], [74, 101], [111, 101]].map(([x, z]) => [-x, z])) {
+  for (const [x, z] of [[-33, 3], [-15, 3], [21, 17], [102, 13], [117, 13], [-115, 23], [-105, 23], [74, 101], [111, 101]].map(([x, z]) => [-x, z])) {
     box('city-planter', x, 0.25, z, 1.8, 0.5, 1.8, concrete);
     const tree = MeshBuilder.CreateSphere('city-tree', { diameter: 2.7, segments: 5 }, scene); tree.position.set(x, 2.5, z); tree.scaling.set(0.85, 1.4, 0.85); tree.material = x < 0 ? leaf : leafLight;
     box('city-tree-trunk', x, 1, z, 0.25, 2, 0.25, rock);
@@ -82,12 +82,12 @@ export function buildBay(scene: Scene, track: TrackDefinition, theme: Presentati
   const bridge = track.bridges![0], span = Math.hypot(bridge.to.x - bridge.from.x, bridge.to.z - bridge.from.z);
   box('bridge-deck', 0, -0.27, 42, span, 0.54, bridge.width, concrete);
   for (const x of [-28, 28]) {
-    for (const z of [34.6, 49.4]) {
+    for (const z of [32.5, 51.5]) {
       box('bridge-supported-pier', x, -0.9, z, 1.6, 2.2, 1.6, concrete); box('bridge-tower-leg', x, 6.7, z, 1.25, 13.4, 1.25, red);
     }
-    box('bridge-tower-crossbeam', x, 13.05, 42, 1.25, 0.65, 16.05, red);
+    box('bridge-tower-crossbeam', x, 13.05, 42, 1.25, 0.65, 20.25, red);
   }
-  for (const z of [34.6, 49.4]) {
+  for (const z of [32.5, 51.5]) {
     const path = Array.from({ length: 49 }, (_, i) => {
       const x = -44 + i / 48 * 88, y = Math.abs(x) <= 28 ? 5.5 + 7.55 * (x / 28) ** 2 : 13.05 - (Math.abs(x) - 28) * 0.72;
       return new Vector3(x, y, z);

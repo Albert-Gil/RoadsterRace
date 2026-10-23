@@ -226,7 +226,7 @@ export class RaceSimulation {
       else s.distance = Math.max(previous, gateDistance - 0.001);
     }
     const movement = s.distance - previous;
-    const inBranch = this.track.jumps?.some(j => { const c = jumpCoordinates(s.position, j); return c.along > -12 && c.along < j.rampLength + j.gap + this.track.carLength && Math.abs(c.across) < j.width; });
+    const inBranch = this.track.jumps?.some(j => { const c = jumpCoordinates(s.position, j); return this.route.jumps?.includes(j.id) && c.along > jumpCoordinates(j.branch[0],j).along-this.track.carLength/2 && c.along < j.corridorLength && Math.abs(c.across) < j.width; });
     if (s.movement === 'grounded' && !inBranch && vehicleSupported(s.position, s.heading, this.track) && s.lineError < 1 && !barrierContact(s.position, s.heading, this.track, 0.4)) this.lastSafeDistance = s.distance;
     if (s.distance - this.progressAnchor > 0.5) { this.progressAnchor = s.distance; this.stuckTicks = 0; }
     else if (now < this.collisionNearbyUntil) this.stuckTicks += dt / RULES.dt;

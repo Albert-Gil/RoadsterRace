@@ -10,7 +10,7 @@ try {
   await page.goto('http://127.0.0.1:5173/?circuit=orbital-launchyard');
   await page.waitForFunction(() => window.__roadster?.getGraphics().renderReady, undefined, { timeout: 30000 });
   await page.screenshot({ path: 'artifacts/orbital/welcome.png' });
-  await page.getByRole('button', { name: "Let's race" }).click();
+  await page.getByRole('button', { name: "Time Trial" }).click();
   await page.screenshot({ path: 'artifacts/orbital/setup.png' });
   await page.getByRole('button', { name: '2 players', exact: true }).click(); await page.screenshot({ path: 'artifacts/orbital/setup-local.png' });
   await page.getByRole('button', { name: 'Solo', exact: true }).click();

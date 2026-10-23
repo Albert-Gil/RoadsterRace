@@ -5,7 +5,7 @@ import { canStartDrawing, trimDrawing, joinLap, gateCoordinates, gatePoint } fro
 import { blockedRouteSection } from './barriers';
 import { validateSupports, branchProjection } from './support';
 
-export const COMPILER_VERSION = 8;
+export const COMPILER_VERSION = 9;
 export const PACE_RANGE = Object.freeze({ min: 9, max: 30 });
 export const PACE_FILTER = Object.freeze({ gestureRadius: 5, compiledRadius: 8 });
 

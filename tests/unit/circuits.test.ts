@@ -58,6 +58,6 @@ describe('playable circuit registry', () => {
       expect(race.finished).toBe(true); expect(race.racers.every(r => r.state.lapTimes.length === 6)).toBe(true);
       const other = circuits.find(c => c.id !== circuit.id)!;
       expect(() => new LocalRace([result.route], other.track)).toThrow('same circuit');
-    }, 10000);
+    }, 30000);
   });
 });

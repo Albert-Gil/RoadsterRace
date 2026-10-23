@@ -34,7 +34,7 @@ test('car proportions follow delayed phone rotation layout and toolbar resizing'
   // Canvas-only resizing also represents browser toolbar height changes.
   await page.locator('main').evaluate(main => main.style.height = '320px');
   await proportional(page);
-  await page.getByRole('button', { name: "Let's race" }).click();
+  await page.getByRole('button', { name: "Time Trial" }).click();
   await proportional(page);
   await page.locator('main').evaluate(main => main.style.removeProperty('height'));
   for (const viewport of [{ width: 390, height: 844 }, { width: 667, height: 320 }, { width: 1024, height: 768 }, { width: 390, height: 844 }]) {

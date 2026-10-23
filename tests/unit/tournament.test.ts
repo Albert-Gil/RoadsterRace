@@ -45,6 +45,13 @@ describe('local championship', () => {
   test('Launchsite aliases preserve old preferences and Golden Gate has a distinct map and length', () => {
     expect(findCircuit('launchsite').id).toBe('orbital-launchyard'); expect(findCircuit('launchsite').track.name).toBe('Launchsite');
     const track = findCircuit('golden-gate').track;
-    expect(track.name).toBe('Golden Gate'); expect(track.length).toBeGreaterThan(430); expect(track.length).toBeLessThan(470);
+    expect(track.name).toBe('Golden Gate'); expect(track.length).toBeGreaterThan(430); expect(track.length).toBeLessThan(520);
+  });
+  test('solo save retains CPU controllers, difficulty and seed and rejects contradictory controllers',()=>{
+    const drivers=defaultPreferences().drivers.map((d,i)=>({...d,controller:i===0?'human':'computer'}));
+    const saved={state:createTournament(rounds,4,3),drivers,options:{mode:'solo-race',difficulty:'hard',seed:103}};
+    const restored=parseTournament(JSON.stringify(saved));expect(restored?.options).toEqual(saved.options);expect(restored?.drivers).toEqual(drivers);
+    expect(parseTournament(JSON.stringify({...saved,drivers:drivers.map(d=>({...d,controller:'computer'}))}))).toBeNull();
+    expect(parseTournament(JSON.stringify({...saved,options:{...saved.options,seed:NaN}}))).toBeNull();
   });
 });

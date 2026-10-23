@@ -125,16 +125,16 @@ export function buildCoast(scene: Scene, track: TrackDefinition, theme: Presenta
     box('circuit-banner', x + 0.8, 5.7, -4, 1.6, 2.5, 0.06, accent); shadow(x, -4, 2, 3);
   }
   // A stepped spectator stand behind the top straight makes vertical scale legible.
-  box('grandstand-foundation', -14, 0.2, 54.5, 28, 0.4, 10, white);
+  box('grandstand-foundation', -14, 0.2, 57.5, 28, 0.4, 10, white);
   for (let row = 0; row < 5; row++) {
-    const y = 0.6 + row * 0.8, z = 51 + row * 1.55;
+    const y = 0.6 + row * 0.8, z = 54 + row * 1.55;
     box('grandstand-tier', -14, y / 2, z, 26, y, 1.6, white);
     box('grandstand-seat', -14, y + 0.19, z, 24.5, 0.28, 0.45, accent);
     for (let i = 0; i < 12; i++) box('seat-divider', -25.5 + i * 2.05, y + 0.36, z + 0.18, 0.07, 0.4, 0.09, trim);
   }
-  for (const x of [-27, -1]) for (const z of [51, 58]) box('grandstand-column', x, 3.4, z, 0.28, 6.8, 0.28, trim);
-  const standRoof = box('grandstand-canopy', -14, 7, 54.5, 30, 0.25, 11, white); standRoof.rotation.x = -0.06;
-  box('grandstand-fascia', -14, 6.8, 49, 30, 0.55, 0.16, accent);
+  for (const x of [-27, -1]) for (const z of [54, 61]) box('grandstand-column', x, 3.4, z, 0.28, 6.8, 0.28, trim);
+  const standRoof = box('grandstand-canopy', -14, 7, 57.5, 30, 0.25, 11, white); standRoof.rotation.x = -0.06;
+  box('grandstand-fascia', -14, 6.8, 52, 30, 0.55, 0.16, accent);
   // A small offshore sailing boat adds scale, far outside the driving apron.
   const hull = MeshBuilder.CreateSphere('sailboat-hull', { diameter: 1, segments: 8 }, scene); hull.scaling.set(2.6, 0.9, 7); hull.position.set(97, -2.65, 22); hull.rotation.y = -0.4; hull.material = white;
   const sail = new Mesh('sail', scene), sailData = new VertexData();

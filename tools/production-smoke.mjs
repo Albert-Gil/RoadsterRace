@@ -11,9 +11,9 @@ try {
     const onError = e => errors.push(e.message), onResponse = r => requests.push(r.url());
     page.on('pageerror', onError); page.on('response', onResponse);
     await page.goto(`${process.env.PREVIEW_URL ?? 'http://127.0.0.1:4175'}/${query}`);
-    await page.getByRole('button', { name: "Let's race" }).waitFor();
+    await page.getByRole('button', { name: "Time Trial" }).waitFor();
     await page.getByRole('button', { name: 'Turn sound on' }).click();
-    await page.getByRole('button', { name: "Let's race" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
+    await page.getByRole('button', { name: "Time Trial" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
     await page.getByRole('button', { name: 'Start again', exact: true }).waitFor();
     const details = await page.evaluate(() => ({ phase: document.querySelector('main').dataset.phase, circuit: document.querySelector('.circuit-caption').textContent, theme: document.documentElement.dataset.theme, soundEnabled: document.querySelector('#sound-button').getAttribute('aria-pressed') === 'true', testApiAbsent: !('__roadster' in window) }));
     if (errors.length || !details.testApiAbsent || !details.soundEnabled || details.phase !== 'drawing' || await page.getByRole('button', { name: 'Try a practice line' }).count()) throw new Error(JSON.stringify({ errors, details }));
@@ -28,7 +28,7 @@ try {
     const onError = e => errors.push(e.message); page.on('pageerror', onError);
     await page.goto(`${process.env.PREVIEW_URL ?? 'http://127.0.0.1:4175'}/${query}`);
     await page.getByRole('button', { name: 'Turn sound on' }).click();
-    await page.getByRole('button', { name: 'Race with friends' }).click();
+    await page.getByRole('button', { name: 'Multiplayer' }).click();
     await page.getByRole('button', { name: '4 players', exact: true }).click();
     await page.getByRole('button', { name: 'Plan your lines' }).click();
     // Normal play deliberately has no automatic practice plan. Smoke-check the

@@ -8,7 +8,7 @@ try {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, ...(process.env.CAPTURE_RACE === '1' ? { recordVideo: { dir: `${directory}/video`, size: { width: 1440, height: 900 } } } : {}) });
   const page = await context.newPage(), video = page.video(), errors = []; page.on('pageerror', e => errors.push(e.message));
   await page.goto('http://127.0.0.1:5173/?circuit=santa-monica');
-  await page.getByRole('button', { name: "Let's race" }).click({ timeout: 15000 }).catch(async e => { console.log(JSON.stringify({ errors, body: await page.locator('body').innerText() })); await page.screenshot({path: `${directory}/error.png`}); throw e; });
+  await page.getByRole('button', { name: "Time Trial" }).click({ timeout: 15000 }).catch(async e => { console.log(JSON.stringify({ errors, body: await page.locator('body').innerText() })); await page.screenshot({path: `${directory}/error.png`}); throw e; });
   await page.getByRole('button', { name: '1 lap', exact: true }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
   await page.waitForFunction(() => window.__roadster?.getGraphics().renderReady);
   await page.screenshot({ path: `${directory}/desktop-circuit.png` });
@@ -32,7 +32,7 @@ try {
     await page.screenshot({ path: `${directory}/desktop-results.png` });
   }
   for (const [name, viewport] of [['phone-landscape', { width: 844, height: 390 }], ['phone-portrait', { width: 390, height: 844 }], ['tablet', { width: 1024, height: 768 }]]) {
-    await page.setViewportSize(viewport); await page.goto('http://127.0.0.1:5173/?circuit=santa-monica'); await page.getByRole('button', { name: "Let's race" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
+    await page.setViewportSize(viewport); await page.goto('http://127.0.0.1:5173/?circuit=santa-monica'); await page.getByRole('button', { name: "Time Trial" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
     await page.waitForFunction(() => window.__roadster?.getGraphics().renderReady); await page.screenshot({ path: `${directory}/${name}.png` });
   }
   initial.errors = errors; await writeFile(`${directory}/capture-report.json`, JSON.stringify(initial, null, 2)); console.log(JSON.stringify(initial, null, 2));

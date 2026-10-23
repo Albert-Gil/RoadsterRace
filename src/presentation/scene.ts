@@ -1,3 +1,6 @@
+import { LapGhost } from './lap-ghost';
+import type { ReplayFrame } from '../core/lap-replay';
+import { roadEdges } from '../core/road-geometry';
 import { Engine } from '@babylonjs/core/Engines/engine';
 import { Camera } from '@babylonjs/core/Cameras/camera';
 import { FreeCamera } from '@babylonjs/core/Cameras/freeCamera';
@@ -40,6 +43,8 @@ export class GameScene {
   readonly scene: Scene;
   readonly camera: FreeCamera;
   readonly vehicle: VehicleView;
+  private lapGhost: LapGhost;
+  setGhost(pose:ReplayFrame|null){this.lapGhost.update(pose);}
   readonly vehicles: VehicleView[] = [];
   private materials = new Map<string, StandardMaterial>();
   private lines: PaceLine[] = [];
@@ -95,7 +100,7 @@ export class GameScene {
     else { let run: Point[] = []; for (const p of track.centerline) { if (bridgeAt(p, track)) { if (run.length > 1) this.openRibbon('road-shoulder', run, track.roadWidth + 2.5, 0.04).material = shoulder; run = []; } else run.push(p); } if (run.length > 1) this.openRibbon('road-shoulder', run, track.roadWidth + 2.5, 0.04).material = shoulder; }
     this.ribbon('asphalt', track.centerline, track.roadWidth, 0.10).material = this.roadMaterial = mat('asphalt', theme.scene.asphalt);
     for (const jump of track.jumps ?? []) {
-      this.openRibbon('jump-approach-asphalt', [jump.branch[0], jump.from], jump.width, 0.1).material = this.roadMaterial;
+      this.openRibbon('jump-approach-asphalt', [...jump.branch.filter(p=>jumpCoordinates(p,jump).along<0), jump.from], jump.width, 0.1).material = this.roadMaterial;
       this.openRibbon('jump-landing-asphalt', [{ x: jump.from.x + jump.forward.x * (jump.rampLength + jump.gap), z: jump.from.z + jump.forward.z * (jump.rampLength + jump.gap) }, jump.branch.at(-1)!], jump.width, 0.1).material = this.roadMaterial;
     }
     this.roadMaterial.diffuseTexture = surfaceTexture(this.scene, 'asphalt');
@@ -157,6 +162,7 @@ export class GameScene {
         if (this.sceneryRuntime.shadowCasterMaterials.has(material) || material === white || material === accent) this.shadows.addShadowCaster(merged, false);
       }
     }
+    this.lapGhost = new LapGhost(this.scene);
     this.jumpFeedback = new JumpFeedback(this.scene);
     this.vehicle = new VehicleView(this.scene, theme); this.vehicles.push(this.vehicle); this.vehicle.update({ ...track.start, heading: startHeading });
     this.registerVehicleShadows(this.vehicle); void this.vehicle.loadAsset(visualAssets.vehicle).then(() => this.registerVehicleShadows(this.vehicle));
@@ -174,11 +180,7 @@ export class GameScene {
     this.canvasResizeObserver.observe(canvas);
   }
   private ribbon(name: string, points: Point[], width: number, y: number) {
-    const sides = [-1, 1].map(side => points.map((p, i) => {
-      const a = points[modulo(i - 1, points.length - 1)], b = points[(i + 1) % (points.length - 1)];
-      const len = distance(a, b) || 1;
-      return new Vector3(p.x - (b.z - a.z) / len * width / 2 * side, y, p.z + (b.x - a.x) / len * width / 2 * side);
-    }));
+    const sides = roadEdges(points, width).map(side => side.map(p => new Vector3(p.x,y,p.z)));
     let travelled = 0;
     const uv = points.map((point, i) => { if (i) travelled += distance(point, points[i - 1]); return travelled / 7; });
     const mesh = MeshBuilder.CreateRibbon(name, { pathArray: sides, sideOrientation: Mesh.FRONTSIDE, uvs: sides.flatMap((_, side) => uv.map(u => new Vector2(u, side))) }, this.scene);
@@ -187,10 +189,7 @@ export class GameScene {
     return mesh;
   }
   private openRibbon(name: string, points: Point[], width: number, y: number) {
-    const sides = [-1, 1].map(side => points.map((p, i) => {
-      const a = points[Math.max(0, i - 1)], b = points[Math.min(points.length - 1, i + 1)], length = distance(a, b) || 1;
-      return new Vector3(p.x - (b.z - a.z) / length * width / 2 * side, y, p.z + (b.x - a.x) / length * width / 2 * side);
-    }));
+    const sides = roadEdges(points,width,false).map(side=>side.map(p=>new Vector3(p.x,y,p.z)));
     const mesh = MeshBuilder.CreateRibbon(name, { pathArray: sides, sideOrientation: Mesh.DOUBLESIDE }, this.scene); mesh.setVerticesData(VertexBuffer.NormalKind, Array.from({ length: mesh.getTotalVertices() * 3 }, (_, i) => i % 3 === 1 ? 1 : 0)); return mesh;
   }
   resize() {
@@ -207,25 +206,27 @@ export class GameScene {
     const w = rect.width, h = rect.height;
     this.camera.viewport = new Viewport(0, 0, 1, 1);
     const aspect = this.engine.getRenderWidth() / this.engine.getRenderHeight();
-    const elevation = sceneTuning.camera.elevationDegrees * Math.PI / 180, yaw = sceneTuning.camera.azimuthDegrees * Math.PI / 180;
-    const away = new Vector3(Math.sin(yaw) * Math.cos(elevation), Math.sin(elevation), -Math.cos(yaw) * Math.cos(elevation));
-    const right = new Vector3(Math.cos(yaw), 0, Math.sin(yaw)), up = Vector3.Cross(away, right);
+    const elevation = (Math.min(w,h)<=500?sceneTuning.camera.compactElevationDegrees:sceneTuning.camera.elevationDegrees) * Math.PI / 180;
     const tangent = Math.tan(this.camera.fov / 2);
-    const courseCenter = this.track.supports ? new Vector3((Math.min(...this.track.centerline.map(p => p.x)) + Math.max(...this.track.centerline.map(p => p.x))) / 2, 0, (Math.min(...this.track.centerline.map(p => p.z)) + Math.max(...this.track.centerline.map(p => p.z))) / 2) : Vector3.Zero();
-    const cx = (left - rightInset) / w, cy = (bottom - top) / h;
-    const rx = Math.max(0.2, (w - left - rightInset) / w) * sceneTuning.camera.fittingMargin;
-    const ry = Math.max(0.2, (h - top - bottom) / h) * sceneTuning.camera.fittingMargin;
-    let cameraDistance = 0;
-    // Fit the actual course and its sand apron, rather than unused bounding-box corners.
-    const apron = interactive ? (this.track.roadWidth - this.track.carWidth) / 2 + this.track.roadWidth + 2 : this.track.roadWidth / 2 + 4;
-    for (const p of [...this.track.centerline, ...(this.track.jumps ?? []).flatMap(j => j.branch)]) for (let i = 0; i < 12; i++) {
-      const margin = this.track.supports ? p.x > 32 ? 7.5 : 12 : apron;
-      const a = i / 12 * Math.PI * 2, point = new Vector3(p.x + Math.cos(a) * margin, 0, p.z + Math.sin(a) * margin).subtract(courseCenter);
-      const depth = Vector3.Dot(point, away);
-      // Account for perspective depth when centering the course beside the toolbar.
-      cameraDistance = Math.max(cameraDistance, depth + Math.max(Math.abs(Vector3.Dot(point, right) + cx * tangent * aspect * depth) / (tangent * aspect * rx), Math.abs(Vector3.Dot(point, up) + cy * tangent * depth) / (tangent * ry)));
-    }
-    const offset = right.scale(-cx * tangent * aspect * cameraDistance).add(up.scale(-cy * tangent * cameraDistance)).add(courseCenter);
+    const paths = [this.track.centerline,...(this.track.jumps??[]).map(j=>j.branch)];
+    const fitted = paths.flatMap((p,i)=>roadEdges(p,this.track.roadWidth,i===0).flat()).map(p=>new Vector3(p.x,0,p.z));
+    for(const across of [-this.track.roadWidth/2,this.track.roadWidth/2]) fitted.push(new Vector3(...(()=>{const p=gatePoint(this.track,across,-12);return [p.x,0,p.z] as [number,number,number];})()));
+    for(const j of this.track.jumps??[]) for(const along of [8,25,45]) fitted.push(new Vector3(j.from.x+j.forward.x*along,5,j.from.z+j.forward.z*along));
+    const courseCenter = new Vector3((Math.min(...fitted.map(p=>p.x))+Math.max(...fitted.map(p=>p.x)))/2,0,(Math.min(...fitted.map(p=>p.z))+Math.max(...fitted.map(p=>p.z)))/2);
+    const cx = (left-rightInset)/w, cy=(bottom-top)/h;
+    const rx=Math.max(0.2,(w-left-rightInset-2*sceneTuning.camera.clearancePixels)/w),ry=Math.max(0.2,(h-top-bottom-2*sceneTuning.camera.clearancePixels)/h);
+    const candidate = (degrees:number)=>{
+      const yaw=degrees*Math.PI/180;
+      const away=new Vector3(Math.sin(yaw)*Math.cos(elevation),Math.sin(elevation),-Math.cos(yaw)*Math.cos(elevation));
+      const right=new Vector3(Math.cos(yaw),0,Math.sin(yaw)),up=Vector3.Cross(away,right);
+      let d=0;
+      for(const p of fitted){ const point=p.subtract(courseCenter),depth=Vector3.Dot(point,away); d=Math.max(d,depth+Math.max(Math.abs(Vector3.Dot(point,right)+cx*tangent*aspect*depth)/(tangent*aspect*rx),Math.abs(Vector3.Dot(point,up)+cy*tangent*depth)/(tangent*ry))); }
+      return {away,right,up,d};
+    };
+    let fit=candidate(sceneTuning.camera.azimuthDegrees);
+    for(let yaw=0;yaw<180;yaw+=sceneTuning.camera.azimuthStep){const c=candidate(yaw);if(c.d<fit.d*0.995)fit=c;}
+    const {away,right,up,d:cameraDistance}=fit;
+    const offset=right.scale(-cx*tangent*aspect*cameraDistance).add(up.scale(-cy*tangent*cameraDistance)).add(courseCenter);
     // Narrow portrait fits may place the camera beyond the old 1000 m far plane.
     // Keep the whole venue visible and retain depth precision at the road surface.
     this.camera.minZ = Math.max(1, cameraDistance / 100);
@@ -330,7 +331,7 @@ export class GameScene {
   }
   showError(point?: Point, section?: Point[]) { this.errorLine?.dispose(); this.errorLine = undefined; this.errorMarker.isVisible = !!point; if (point) this.errorMarker.position.set(point.x, 0.3, point.z); if (section) this.errorLine = new PaceLine(this.scene, section, section.map(() => 9), this.theme, 0, false, true, false, this.track); }
   showStart(show: boolean) { this.marker.isVisible = show; this.approach.isVisible = show; }
-  get depthFeatures() { return { decorativeMotion: this.scene.meshes.filter(m => m.metadata?.dynamicScenery).map(m => ({name: m.name, rotation: m.rotation.asArray(), position: m.position.asArray()})), perspective: this.camera.mode === Camera.PERSPECTIVE_CAMERA, shadowMapSize: this.shadows.getShadowMap()?.getSize().width ?? 0, shadowCasters: this.shadows.getShadowMap()?.renderList?.length ?? 0, renderReady: this.scene.isReady() && this.showcase.scene.isReady(), worldReady: this.scene.isReady(), showcaseReady: this.showcase.scene.isReady(), pending: [...this.scene.meshes, ...this.showcase.scene.meshes].filter(m => !m.isReady(true)).map(m => m.name), carTriangles: this.vehicle.triangleCount, showcaseTriangles: this.showcase.car.triangleCount, pace: this.theme.pace, lineWidths: this.lines.map(line => line.cssWidths), ignoredStrokeCount: this.ignoredLines.length }; }
+  get depthFeatures() { return { ghostVisible:this.lapGhost.visible, decorativeMotion: this.scene.meshes.filter(m => m.metadata?.dynamicScenery).map(m => ({name: m.name, rotation: m.rotation.asArray(), position: m.position.asArray()})), perspective: this.camera.mode === Camera.PERSPECTIVE_CAMERA, shadowMapSize: this.shadows.getShadowMap()?.getSize().width ?? 0, shadowCasters: this.shadows.getShadowMap()?.renderList?.length ?? 0, renderReady: this.scene.isReady() && this.showcase.scene.isReady(), worldReady: this.scene.isReady(), showcaseReady: this.showcase.scene.isReady(), pending: [...this.scene.meshes, ...this.showcase.scene.meshes].filter(m => !m.isReady(true)).map(m => m.name), carTriangles: this.vehicle.triangleCount, showcaseTriangles: this.showcase.car.triangleCount, pace: this.theme.pace, lineWidths: this.lines.map(line => line.cssWidths), ignoredStrokeCount: this.ignoredLines.length }; }
   render(time: number) {
     const reduced = this.reducedMotion.matches;
     (this.marker.material as StandardMaterial).alpha = reduced ? 0.32 : 0.29 + Math.sin(time * 3) * 0.05;

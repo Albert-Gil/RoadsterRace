@@ -19,7 +19,7 @@ export default defineConfig({
       args: graphicsArgs,
     },
     screenshot: 'only-on-failure',
-    trace: 'retain-on-failure',
+    trace: 'on-first-retry',
   },
   webServer: {
     command: 'node node_modules/vite/bin/vite.js --host 0.0.0.0 --port 5173 --strictPort',

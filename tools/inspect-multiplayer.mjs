@@ -4,7 +4,7 @@ try {
   const context = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
   const page = await context.newPage();
   await page.goto('http://127.0.0.1:5173/');
-  await page.getByRole('button', { name: 'Race with friends' }).click();
+  await page.getByRole('button', { name: 'Multiplayer' }).click();
   await page.getByRole('button', { name: '4 players', exact: true }).click();
   await page.screenshot({ path: 'artifacts/multiplayer-setup-phone.png' });
   await page.getByRole('button', { name: 'Plan your lines' }).click();
