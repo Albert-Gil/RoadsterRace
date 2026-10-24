@@ -5,7 +5,7 @@ import { waitForPhase } from './ui';
 const stage = process.env.VENUE_CAPTURE_STAGE ?? 'after';
 const directory = `artifacts/venue-detail/${stage}`;
 mkdirSync(directory, { recursive: true });
-for (const circuit of ['coastal-launch', 'launchsite', 'golden-gate', 'santa-monica', 'grand-canyon']) {
+for (const circuit of ['coastal-launch', 'launchsite', 'golden-gate', 'santa-monica', 'grand-canyon', 'la-nights']) {
  for (const mode of ['Time Trial', 'Solo Race']) {
   test(`${circuit} ${mode}: scenery, phone framing and active-effect budget`, async ({ page }) => {
     const errors: string[] = [];

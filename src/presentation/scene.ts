@@ -12,6 +12,7 @@ import { ImageProcessingConfiguration } from '@babylonjs/core/Materials/imagePro
 import { HemisphericLight } from '@babylonjs/core/Lights/hemisphericLight';
 import { DirectionalLight } from '@babylonjs/core/Lights/directionalLight';
 import { ShadowGenerator } from '@babylonjs/core/Lights/Shadows/shadowGenerator';
+import { GlowLayer } from '@babylonjs/core/Layers/glowLayer';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
 import { VertexBuffer } from '@babylonjs/core/Buffers/buffer';
@@ -26,7 +27,7 @@ import { bridgeAt } from '../core/bridge';
 import { gestureSpeeds } from '../core/route';
 import type { CompiledRoute, DrawSample, DrawingTrim, Point, TrackDefinition } from '../core/types';
 import type { PresentationTheme } from './themes';
-import { sceneTuning, sceneryTheme, sceneryLighting } from './themes';
+import { sceneTuning, sceneryTheme, sceneryLighting, nightAppearance } from './themes';
 import { visualAssets } from './assets';
 import { assetUrl } from './urls';
 import { VehicleView } from './vehicle';
@@ -63,6 +64,7 @@ export class GameScene {
   private roadMaterial: StandardMaterial;
   private terrainMaterial: StandardMaterial;
   private light: DirectionalLight;
+  private vehicleFill?: HemisphericLight;
   private sceneryRuntime: SceneryRuntime;
   private jumpFeedback: JumpFeedback;
   feedback(point: Point, splash: boolean) { this.jumpFeedback.emit(point, splash); }
@@ -94,6 +96,12 @@ export class GameScene {
     this.scene.environmentTexture = createReflectionSky(this.scene); this.scene.environmentIntensity = 0.85;
     const lighting = sceneryLighting[scenery];
     const ambient = new HemisphericLight('ambient', new Vector3(0, 1, 0), this.scene); ambient.intensity = sceneTuning.lighting.ambient; ambient.diffuse = Color3.FromHexString(lighting.ambient); ambient.groundColor = Color3.FromHexString(lighting.ground);
+    if(scenery==='night-city')ambient.intensity=nightAppearance.ambientIntensity;
+    if(scenery==='night-city'){
+      this.vehicleFill=new HemisphericLight('night-car-fill',new Vector3(0,1,0),this.scene);
+      this.vehicleFill.intensity=nightAppearance.vehicleFill;
+      this.vehicleFill.setEnabled(false);
+    }
     this.light = new DirectionalLight('sun', new Vector3(0.55, -1, 0.45).normalize(), this.scene); this.light.position.set(-70, 127, -57); this.light.diffuse = Color3.FromHexString(lighting.sun);
     this.light.shadowFrustumSize = scenery === 'coastal' ? 210 : 250; this.light.shadowMinZ = 1; this.light.shadowMaxZ = 350; this.light.autoUpdateExtends = false;
     this.shadows = new ShadowGenerator(sceneTuning.lighting.shadowMapSize, this.light); this.shadows.usePercentageCloserFiltering = true; this.shadows.filteringQuality = ShadowGenerator.QUALITY_MEDIUM; this.shadows.bias = 0.0004; this.shadows.normalBias = 0.08; this.shadows.setDarkness(sceneTuning.lighting.shadowDarkness);
@@ -178,6 +186,12 @@ export class GameScene {
       }
     }
     this.lapGhost = new LapGhost(this.scene);
+    if(scenery==='night-city'){
+      const glow=new GlowLayer('night-architecture-glow',this.scene,{mainTextureFixedSize:nightAppearance.glowTextureSize,blurKernelSize:nightAppearance.glowKernel});
+      glow.intensity=nightAppearance.glowIntensity;
+      // Only the already-batched emissive architecture enters the small glow render target.
+      for(const mesh of this.scene.meshes)if(mesh instanceof Mesh&&(mesh.material?.name.startsWith('la-neon-')||mesh.material?.name==='la-windows'))glow.addIncludedOnlyMesh(mesh);
+    }
     this.jumpFeedback = new JumpFeedback(this.scene);
     this.vehicle = new VehicleView(this.scene, theme); this.vehicles.push(this.vehicle); this.vehicle.update({ ...track.start, heading: startHeading });
     this.registerVehicleShadows(this.vehicle); void this.vehicle.loadAsset(visualAssets.vehicle).then(() => this.registerVehicleShadows(this.vehicle));
@@ -261,7 +275,7 @@ export class GameScene {
     this.scene.updateTransformMatrix(true);
     this.lines.forEach(line => line.resize()); this.ignoredLines.forEach(line => line.resize()); this.errorLine?.resize();
   }
-  setLayout(mode: string) { this.layoutMode = mode; this.scene.imageProcessingConfiguration.exposure = ['welcome', 'setup', 'results'].includes(mode) ? 0.45 : 1.12; this.resize(); }
+  setLayout(mode: string) { this.layoutMode = mode; const menu=['welcome','setup','results'].includes(mode);this.scene.imageProcessingConfiguration.exposure = this.scenery==='night-city' ? (menu?nightAppearance.menuExposure:nightAppearance.gameExposure) : (menu ? 0.45 : 1.12); this.resize(); }
   setTheme(theme: PresentationTheme) {
     theme = sceneryTheme(theme, this.scenery);
     this.theme = theme;
@@ -289,10 +303,12 @@ export class GameScene {
   private registerVehicleShadows(vehicle: VehicleView) {
     if (this.scene.isDisposed) return;
     for (const mesh of vehicle.root.getChildMeshes()) if (mesh.material && !mesh.material.needAlphaBlending()) {
+      if(this.vehicleFill&&!this.vehicleFill.includedOnlyMeshes.includes(mesh))this.vehicleFill.includedOnlyMeshes.push(mesh);
       mesh.receiveShadows = true;
       // Body and aero silhouette suffice at gameplay scale; wheels use the contact shadow.
       if (mesh.name === 'roadster-paint' || mesh.name === 'roadster-carbon') this.shadows.addShadowCaster(mesh, false);
     }
+    if(this.vehicleFill?.includedOnlyMeshes.length)this.vehicleFill.setEnabled(true);
   }
   showVehicles(player: number | null, count: number) { this.vehicles.forEach((vehicle, i) => vehicle.setEnabled(i < count && (player === null || i === player))); }
   setPlanningPlayer(player: number | null) {

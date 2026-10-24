@@ -452,7 +452,7 @@ p { font-size: 14px; line-height: 1.5; }
   .circuit-card-meta { font-size: 8px; letter-spacing: .07em; }
 }
 .ready-actions { display: flex; justify-content: center; gap: 12px; }
-.circuit-options { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.circuit-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 @media (max-width: 1050px) { .circuit-options { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .circuit-card strong { font-size: 24px; }
 .format-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }

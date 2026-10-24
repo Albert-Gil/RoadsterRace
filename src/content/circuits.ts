@@ -3,9 +3,10 @@ import { coastalTrack } from '../core/track';
 import { orbitalTrack } from '../core/tracks/orbital';
 import { santaMonicaTrack } from '../core/tracks/santa-monica';
 import { grandCanyonTrack } from '../core/tracks/grand-canyon';
+import { laNightsTrack } from '../core/tracks/la-nights';
 import type { TrackDefinition } from '../core/types';
 
-export type SceneryId = 'coastal' | 'spaceport' | 'bay' | 'sunset' | 'canyon';
+export type SceneryId = 'coastal' | 'spaceport' | 'bay' | 'sunset' | 'canyon' | 'night-city';
 export interface CircuitDefinition {
   id: string;
   number: string;
@@ -32,6 +33,9 @@ export const circuits: readonly CircuitDefinition[] = [
   { id: grandCanyonTrack.id, number: '05', scenery: 'canyon', track: grandCanyonTrack, difficulty: 'SPORT / 3',
     tagline: 'Carve the canyon.', description: 'Packed dirt, elevated mesas and an airborne crossing above the canyon floor.',
     features: [`${Math.round(grandCanyonTrack.length)} m`] },
+  { id: laNightsTrack.id, number: '06', scenery: 'night-city', track: laNightsTrack, difficulty: 'EXPERT / 4',
+    tagline: 'Own the night.', description: 'Downtown boulevards, an industrial water crossing and a hidden backlot alley.',
+    features: [`${Math.round(laNightsTrack.length)} m`] },
 ];
 export const defaultCircuit = circuits[0];
 export const findCircuit = (id: unknown) => circuits.find(circuit => circuit.id === (id === 'launchsite' ? 'orbital-launchyard' : id)) ?? defaultCircuit;

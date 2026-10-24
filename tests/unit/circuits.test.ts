@@ -61,6 +61,8 @@ describe('playable circuit registry', () => {
       expect(race.finished).toBe(true); expect(race.racers.every(r => r.state.lapTimes.length === 6)).toBe(true);
       const other = circuits.find(c => c.id !== circuit.id)!;
       expect(() => new LocalRace([result.route], other.track)).toThrow('same circuit');
-    }, 30000);
+    // Six full laps with four swept-contact cars on the longer venues can
+    // exceed 30 s on shared CI hosts. This asserts correctness, not CPU speed.
+    }, 90000);
   });
 });

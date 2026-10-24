@@ -3,6 +3,9 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { waitForPhase } from './ui';
 mkdirSync('artifacts/drawing-layout', { recursive: true });
 const cases = [
+  { circuit: 'la-nights', width: 844, height: 390 },
+  { circuit: 'la-nights', width: 390, height: 844 },
+  { circuit: 'la-nights', width: 1024, height: 768 },
   { circuit: 'grand-canyon', width: 844, height: 390 },
   { circuit: 'grand-canyon', width: 390, height: 844 },
   { circuit: 'grand-canyon', width: 1024, height: 768 },

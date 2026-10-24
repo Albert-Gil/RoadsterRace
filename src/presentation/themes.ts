@@ -53,6 +53,7 @@ export const sceneTuning = {
 
 /** Biome colors stay independent of interface branding and the driver's selected paint. */
 export const sceneryPalettes = {
+  'night-city': { terrain:'#253348',embankment:'#3a4960',asphalt:'#a6b5cf',shoulder:'#41506b',structure:'#24314b',curb:'#c2d4ec',glass:'#15243c',foliage:'#254455',foliageLight:'#416477',rock:'#45546c',trunk:'#4a4658',water:'#122b41',foam:'#668ca2',sky:'#0b1227',sunlight:.42 },
   coastal: { terrain: '#dec697', embankment: '#a2ae7c', water: '#277e8d', shallows: '#76b8af', foliage: '#3e644a', foliageLight: '#839757' },
   sunset: { terrain: '#e4c59d', embankment: '#c8a47e', asphalt: '#9ca4ad', shoulder: '#ba9c7c', structure: '#765d60', foliage: '#526e58', foliageLight: '#8d9e68', rock: '#c5ac92', trunk: '#9c735a', water: '#388ca2', shallows: '#6bb5b9', foam: '#f1dbc3', sky: '#e5a3a0', sunlight: 1.08 },
   bay: { terrain: '#b9c2a6', embankment: '#bdbea8', asphalt: '#a7b2b8', shoulder: '#b5aa8f', structure: '#34434d', foliage: '#4c6857', foliageLight: '#879873', rock: '#b4b8ae', trunk: '#7e7769', water: '#3b8196', shallows: '#689b9c', foam: '#d7e8df', sky: '#b1ccd1', sunlight: 1.05 },
@@ -62,6 +63,7 @@ export const sceneryPalettes = {
   canyon: { terrain:'#bd8963',embankment:'#c69c72',asphalt:'#aa895d',shoulder:'#c3a27a',rock:'#ae6344',foliage:'#68724b',foliageLight:'#8c9565',trunk:'#765640',water:'#98785d',sky:'#e5c6a5',sunlight:1.08 },
 } satisfies Record<string, Partial<PresentationTheme['scene']>>;
 export const sceneryLighting = {
+  'night-city': {ambient:'#a4bce8',ground:'#3e4768',sun:'#9bbaff'},
   coastal: { ambient: '#d6e5ed', ground: '#6e6957', sun: '#fff0cf' },
   sunset: { ambient: '#f7c9cb', ground: '#816c77', sun: '#ffd29b' },
   bay: { ambient: '#dcebf1', ground: '#717b6b', sun: '#fff1d5' },
@@ -69,6 +71,7 @@ export const sceneryLighting = {
   canyon: { ambient:'#ead3b8',ground:'#836451',sun:'#ffdab0' },
 };
 export const canyonAppearance={cliff:['#a85f43','#bc7850','#d39464','#e1ad79'],mesa:'#c6986b',road:'#aa895d',ruts:'#705c42',dryWash:'#d9b891',scrub:'#68724b',guard:'#96745a'};
+export const nightAppearance={facades:['#384863','#52445c','#354e5e'],neon:['#fa5ca8','#49d8ef','#d9a674'],window:'#ffdc9d',darkWindow:'#111d32',signBackground:'#11162b',poolOpacity:.48,glowIntensity:.4,glowTextureSize:256,glowKernel:24,ambientIntensity:.8,vehicleFill:.55,gameExposure:1.12,menuExposure:.65};
 export function sceneryTheme(theme: PresentationTheme, scenery: keyof typeof sceneryPalettes): PresentationTheme {
   return { ...theme, scene: { ...theme.scene, ...sceneryPalettes[scenery] } };
 }

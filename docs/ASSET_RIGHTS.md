@@ -46,3 +46,7 @@ Architectural mullions, rooftop terraces, industrial service details, pier brack
 ## Grand Canyon additions — 2026-10-23
 
 The fictional canyon layout, elevated trails, natural crest, layered sandstone mesas, cliff support faces, scrub and dirt/rut/sandstone textures are original procedural geometry and seeded canvas artwork in `src/presentation/canyon.ts`, `textures.ts` and the authored track data. No downloaded geography, Grand Canyon photography, park branding, terrain model or third-party audio was added. Existing vehicle/font notices and user-supplied sound provenance remain intact. Canyon wind is the existing synthesized role; granular dirt uses the supplied recording at a quieter mix. Local gameplay captures depict this prototype's actual simulation.
+
+## LA nights additions — 2026-10-24
+
+The fictional street layout, channel, buildings, lit-window grids, rooftop details, palms, light-pool texture and LA NIGHTS / ORBIT / ECHO / VOLT signage are original procedural geometry and canvas artwork. No third-party Los Angeles model or brand artwork is used. Existing city ambience is reused under its recorded user-supplied provenance.

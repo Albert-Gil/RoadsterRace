@@ -11,6 +11,7 @@ import { buildSantaMonica } from './santa-monica';
 import { finishVenue } from './venue-polish';
 import { buildCanyon } from './canyon';
 import { dressVenue } from './venue-detail';
+import { buildLANights } from './la-nights';
 
 export interface SceneryRuntime {
   shadowCasterMaterials: Set<StandardMaterial>;
@@ -19,7 +20,8 @@ export interface SceneryRuntime {
 export function buildScenery(id: SceneryId, scene: Scene, track: TrackDefinition, theme: PresentationTheme, materials: Map<string, StandardMaterial>): SceneryRuntime {
   if(id==='canyon')return buildCanyon(scene,track,theme,materials);
   let runtime: SceneryRuntime;
-  if (id === 'sunset') runtime = buildSantaMonica(scene, track, theme, materials);
+  if (id === 'night-city') runtime = buildLANights(scene, track, theme, materials);
+  else if (id === 'sunset') runtime = buildSantaMonica(scene, track, theme, materials);
   else if (id === 'bay') runtime = buildBay(scene, track, theme, materials);
   else if (id === 'spaceport') runtime = buildSpaceport(scene, track, theme, materials);
   else {
@@ -30,7 +32,7 @@ export function buildScenery(id: SceneryId, scene: Scene, track: TrackDefinition
     } };
   }
   buildCircuitDetails(scene, track, theme, materials, runtime.shadowCasterMaterials, id === 'coastal');
-  finishVenue(id, scene, track, theme, materials);
-  dressVenue(id, scene, materials);
+  if(id!=='night-city')finishVenue(id, scene, track, theme, materials);
+  if(id!=='night-city')dressVenue(id, scene, materials);
   return runtime;
 }

@@ -63,7 +63,7 @@ Solo keeps the bottom-right thrust/hop pads with Space (Thrust) and H (Hop). The
 
 The separate **Touch test** screen remains available for the 50-cycle input diagnostic.
 
-### Tournaments and five circuits
+### Tournaments and six circuits
 
 Choose **Tournament** in Solo Race or Multiplayer setup. **Full Tour** races Coastal Launch, Launchsite, Golden Gate, Santa Monica and Grand Canyon in that order. **Custom Tour** supports 2–12 races, repeated venues and up/down reordering. The selected 1–6 laps apply throughout; each round begins with fresh private drawing turns.
 
@@ -156,3 +156,7 @@ Circuit metadata lives in `src/content/circuits.ts`, physical Orbital geometry i
 See [Golden Gate city and drawing guide](docs/GOLDEN_CITY_DRAWING.md) for gate tolerances, lap blending, supported city placement and bridge exceptions.
 
 Launchsite now includes an optional manually activated Hop service lane. See [heavier flight and shortcut tuning](docs/HEAVY_HOP.md).
+
+### LA nights
+
+The sixth circuit adds original neon-lit downtown scenery, an optional storm-channel jump and a hidden manual-Hop backlot lane. Open `/?circuit=la-nights`. See [LA nights](docs/LA_NIGHTS.md) for route and art details.
