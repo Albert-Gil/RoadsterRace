@@ -181,7 +181,7 @@ try {
       assert.equal(await page.locator('meta[name=robots]').getAttribute('content'), 'noindex,nofollow');
       assert.equal(await page.locator('.brand').getAttribute('href'), base);
       assert.equal(await page.locator('.brand img').evaluate(img => img.complete && img.naturalWidth > 0), true);
-      await page.getByRole('button', { name: 'Turn sound on' }).click();
+      if (await page.getByRole('button', { name: 'Turn sound on' }).count()) await page.getByRole('button', { name: 'Turn sound on' }).click();
       await page.getByRole('button', { name: "Time Trial" }).click();
       const build = await page.locator('.build-id').textContent();
       assert.ok(build.startsWith('TEST BUILD '));

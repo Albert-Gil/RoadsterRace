@@ -11,7 +11,6 @@ import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture';
 import type { Scene } from '@babylonjs/core/scene';
 import type { Point, TrackDefinition } from '../core/types';
-import { groundHeight } from '../core/support';
 import { sunsetAppearance as art, type PresentationTheme } from './themes';
 import { surfaceTexture } from './textures';
 import { santaMonicaAuthoredBuildings as santaMonicaBuildings } from '../content/santa-monica-art';
@@ -79,7 +78,6 @@ export function buildSantaMonica(scene: Scene, track: TrackDefinition, theme: Pr
   };
   sign('SANTA MONICA / SUNSET RUN', -14, -24, 22, 'sunset-title');
   sign('PACIFIC PIER', 94, 24.1, 12, 'pier-title');
-  sign('JUMP  ↗', track.jumps![0].from.x, track.jumps![0].from.z+11, 7, 'ramp-title');
 
   // Beachfront facades sit inside the protected garden footprint; furniture is protected too.
   const facade = [coral, white, gold];
@@ -138,23 +136,14 @@ export function buildSantaMonica(scene: Scene, track: TrackDefinition, theme: Pr
   const trainParts = Array.from({ length: 3 }, (_, i) => box('coaster-train-car', -i * 1.2, 0, 0, 1, 0.7, 0.7, coral));
   const train = Mesh.MergeMeshes(trainParts, true, true)!; train.name = 'animated-coaster-train'; train.metadata = { dynamicScenery: true };
 
-  // Physical ramp geometry and bright directional chevrons make the optional shortcut legible.
+  // The physical ramp remains discoverable without shortcut signs or special paint.
   const jump = track.jumps![0];
   const rampPaths = [-1, 1].map(side => [0, jump.rampLength].map(along => {
     const p = jumpPoint(jump, along, side * jump.width / 2);
     return new Vector3(p.x, 0.11 + jump.lipHeight * along / jump.rampLength, p.z);
   }));
   const ramp = MeshBuilder.CreateRibbon('physical-jump-ramp', { pathArray: rampPaths, sideOrientation: Mesh.DOUBLESIDE }, scene); ramp.material = dark;
-  for (const along of [1.2, 3.7, 6.2]) {
-    const points = [[along - 0.8, -jump.width * 0.3], [along + 0.3, 0], [along - 0.8, jump.width * 0.3]].map(([a, side]) => {
-      const p = jumpPoint(jump, a, side); return new Vector3(p.x, groundHeight(p, track) + 0.17, p.z);
-    });
-    tube('jump-gold-chevron', points, 0.13, gold);
-  }
   const landingAlong = jump.rampLength + jump.gap;
-  const lip = jumpPoint(jump, jump.rampLength), landing = jumpPoint(jump, landingAlong + 0.2);
-  box('takeoff-lip-band', lip.x, jump.lipHeight + 0.13, lip.z, 0.28, 0.04, jump.width, gold);
-  box('landing-edge-band', landing.x, 0.13, landing.z, 0.35, 0.035, jump.width, gold);
   for (let along = landingAlong + 2; along < jump.corridorLength; along += 3) {
     const p = jumpPoint(jump, along); box('landing-deck-seam', p.x, 0.115, p.z, 0.04, 0.01, jump.width - 0.7, white);
   }

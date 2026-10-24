@@ -35,7 +35,7 @@ import { surfaceTexture } from './textures';
 import { createReflectionSky } from './environment';
 import { PaceLine } from './pace-line';
 import { VehicleShowcase } from './showcase';
-import { jumpCoordinates, FLIGHT_RULES } from '../core/support';
+import { jumpCoordinates, flightGravity, FLIGHT_RULES } from '../core/support';
 import { RULES } from '../core/simulation';
 import { planningHeight } from './planning-height';
 import { JumpFeedback } from './jump-feedback';
@@ -226,7 +226,7 @@ export class GameScene {
     const fitted = paths.flatMap((p,i)=>roadEdges(p,this.track.roadWidth,i===0).flat()).map(p=>new Vector3(p.x,0,p.z));
     for(const across of [-this.track.roadWidth/2,this.track.roadWidth/2]) fitted.push(new Vector3(...(()=>{const p=gatePoint(this.track,across,-12);return [p.x,0,p.z] as [number,number,number];})()));
     // Reserve the complete manual-hop height envelope, including a ramp launch.
-    const hopEnvelope = RULES.hopLaunchSpeed ** 2 / (2 * FLIGHT_RULES.gravity) + FLIGHT_RULES.carHeight + 0.3;
+    const hopEnvelope = RULES.hopLaunchSpeed ** 2 / (2 * flightGravity('hop')) + FLIGHT_RULES.carHeight + 0.3;
     for (const p of [...fitted]) fitted.push(new Vector3(p.x, hopEnvelope, p.z));
     for(const j of this.track.jumps??[]) for(const along of [8,25,45]) fitted.push(new Vector3(j.from.x+j.forward.x*along,hopEnvelope+j.lipHeight,j.from.z+j.forward.z*along));
     const courseCenter = new Vector3((Math.min(...fitted.map(p=>p.x))+Math.max(...fitted.map(p=>p.x)))/2,0,(Math.min(...fitted.map(p=>p.z))+Math.max(...fitted.map(p=>p.z)))/2);

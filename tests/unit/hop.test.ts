@@ -5,7 +5,7 @@ import { COMPILER_VERSION, compileRoute, createPracticeSamples, sampleRoute } fr
 import { FixedStepClock, RaceSimulation, RULES } from '../../src/core/simulation';
 import { LocalRace } from '../../src/core/local-race';
 import { shouldComputerHop, stepComputers } from '../../src/core/computer';
-import { jumpPoint, vehicleSupported } from '../../src/core/support';
+import { flightGravity, FLIGHT_RULES, jumpPoint, vehicleSupported } from '../../src/core/support';
 import { vehicleContact } from '../../src/core/vehicle-contact';
 import { LapRecorder, lapRecordKey, replayPose } from '../../src/core/lap-replay';
 import { PointerOwnership } from '../../src/input/ownership';
@@ -19,13 +19,33 @@ const line: CompiledRoute = { trackId: flat.id, trackVersion: flat.version, vers
 function moving(sim: RaceSimulation, speed: number, heading = 0) {
   Object.assign(sim.state, { speed, velocity: { x: Math.sin(heading) * speed, z: Math.cos(heading) * speed }, heading });
 }
+
+test('only manual hops use stronger gravity, preserving their original flight duration', () => {
+  expect(flightGravity('hop')).toBe(72);
+  for (const origin of ['ramp', 'fall', null] as const) expect(flightGravity(origin)).toBe(36);
+  expect(FLIGHT_RULES.rampLaunchBoost).toBe(8);
+  expect(2 * RULES.hopLaunchSpeed / flightGravity('hop')).toBe(2 * 17 / 36);
+});
+
+test.each([0, 20, 30, 42])('a %i m/s hop doubles height without adding flight distance or time', speed => {
+  const sim = new RaceSimulation(line, flat); moving(sim, speed); sim.pressHop();
+  let peak = 0, landingTime: number | undefined;
+  for (let i = 0; i < 70 && landingTime === undefined; i++) {
+    sim.step(); peak = Math.max(peak, sim.state.elevation);
+    landingTime = sim.drainEvents().find(e => e.type === 'landing')?.time;
+  }
+  expect(peak).toBeCloseTo(8.028, 2);
+  expect(landingTime).toBeDefined(); expect(Math.abs(landingTime! - 2 * 17 / 36)).toBeLessThan(RULES.dt);
+  expect(sim.state.position.z).toBeCloseTo(speed * sim.state.time, 8);
+  expect(sim.state.position.x).toBeCloseTo(0, 8);
+});
 test.each(circuits)('$id supports an independent manual hop without new support metadata', ({ track }) => {
   const r = compileRoute(createPracticeSamples(track, 7), track); if (!r.ok) throw Error(r.message);
   const sim = new RaceSimulation(r.route, track), events: string[] = []; sim.pressHop();
   let peak = 0, airtime = 0;
   for (let tick = 0; tick < 80; tick++) { sim.step(); peak = Math.max(peak, sim.state.elevation); events.push(...sim.drainEvents().map(e => e.type)); if (events.includes('landing')) { airtime = sim.state.time; break; } }
   expect(events).toContain('hop'); expect(events).toContain('landing'); expect(airtime).toBeCloseTo(0.95, 1);
-  expect(peak).toBeCloseTo(4.014, 2); expect(sim.state.hopReadyAt).toBe(7); expect(sim.state.hopCount).toBe(1); expect(sim.state.thrustCount).toBe(0);
+  expect(peak).toBeCloseTo(8.028, 2); expect(sim.state.hopReadyAt).toBe(7); expect(sim.state.hopCount).toBe(1); expect(sim.state.thrustCount).toBe(0);
 });
 test('moving hops preserve speed in flight, suppress tire forces and keep thrust independent', () => {
   const sim = new RaceSimulation(line, flat); moving(sim, 20); sim.pressHop();
@@ -80,7 +100,7 @@ test.each([20, 30, 42].flatMap(speed => [-20, 0, 20].map(yaw => ({ speed, yaw })
 test('hop on a ramp uses local height and cannot stack a second lip impulse', () => {
   const track = circuits[3].track, jump = track.jumps![0], r = compileRoute(createPracticeSamples(track, 7, true), track); if (!r.ok) throw Error(r.message);
   const sim = new RaceSimulation(r.route, track); sim.state.position = jumpPoint(jump, 7); moving(sim, 30, Math.PI / 2); sim.pressHop();
-  sim.step(); expect(sim.state.elevation).toBeGreaterThan(1.05); expect(sim.state.verticalVelocity).toBeLessThan(17);
+  sim.step(); expect(sim.state.elevation).toBeGreaterThan(1.05); expect(sim.state.verticalVelocity).toBeLessThan(34);
   const events = sim.drainEvents().map(e => e.type);
   for (let i = 0; i < 100 && !events.includes('landing'); i++) { sim.step(); events.push(...sim.drainEvents().map(e => e.type)); }
   expect(events).toContain('landing'); expect(events).not.toContain('takeoff'); expect(sim.state.recoveryCount).toBe(0);

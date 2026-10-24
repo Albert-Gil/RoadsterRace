@@ -25,7 +25,7 @@ async function drawAndRace(page: Page, count = 2) {
 test('Full Tour scores all four circuits, survives refresh and ends with a championship', async ({ page }) => {
   test.setTimeout(300000);
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
-  await page.goto('/?circuit=golden-gate'); await page.getByRole('button', { name: 'Turn sound on', exact: true }).click();
+  await page.goto('/?circuit=golden-gate');
   await page.getByRole('button', { name: 'Multiplayer', exact: false }).click();
   await page.getByRole('button', { name: '4 players', exact: true }).click();
   await page.getByRole('button', { name: 'Tournament', exact: true }).click();

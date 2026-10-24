@@ -2,17 +2,13 @@ import { test, expect } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { waitForPhase } from './ui';
 mkdirSync('artifacts/heavy-hop',{recursive:true});
-for(const viewport of [{width:844,height:390},{width:390,height:844},{width:320,height:568}])test(`hop-required preview stays in the phone control rail at ${viewport.width}x${viewport.height}`,async({page})=>{
+for(const viewport of [{width:844,height:390},{width:390,height:844},{width:320,height:568}])test(`shortcut preview stays unmarked at ${viewport.width}x${viewport.height}`,async({page})=>{
   await page.setViewportSize(viewport);await page.goto('/?circuit=launchsite');
   await page.getByRole('button',{name:'Time Trial',exact:true}).click();
   await page.getByRole('button',{name:'Draw racing line',exact:true}).click();
   await page.evaluate(()=>(window as any).__roadster.usePracticeLine('service-hop'));
-  const badge=page.locator('.hop-required');await expect(badge).toHaveText('Hop required');
-  const bounds=await badge.boundingBox();expect(bounds).not.toBeNull();
-  expect(bounds!.x).toBeGreaterThanOrEqual(0);expect(bounds!.y).toBeGreaterThanOrEqual(0);
-  expect(bounds!.x+bounds!.width).toBeLessThanOrEqual(viewport.width);expect(bounds!.y+bounds!.height).toBeLessThanOrEqual(viewport.height);
-  const course=await page.locator('#course-space').boundingBox();
-  expect(bounds!.x<course!.x+course!.width&&bounds!.x+bounds!.width>course!.x&&bounds!.y<course!.y+course!.height&&bounds!.y+bounds!.height>course!.y).toBe(false);
+  await expect(page.locator('.hop-required')).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'Race this line',exact:true})).toBeVisible();
   await page.screenshot({path:`artifacts/heavy-hop/hop-preview-${viewport.width}.png`});
 });
 test('Launchsite shortcut preview and actual hop gameplay',async({browser})=>{
@@ -21,7 +17,7 @@ test('Launchsite shortcut preview and actual hop gameplay',async({browser})=>{
   await page.goto('/?circuit=launchsite');await page.getByRole('button',{name:'Time Trial',exact:true}).click();
   await page.getByRole('button',{name:'1 lap',exact:true}).click();await page.getByRole('button',{name:'Draw racing line',exact:true}).click();
   await page.evaluate(()=>(window as any).__roadster.usePracticeLine('service-hop'));
-  await expect(page.locator('.hop-required')).toHaveText('Hop required');
+  await expect(page.locator('.hop-required')).toHaveCount(0);
   await page.waitForFunction(()=>(window as any).__roadster.getGraphics().renderReady);
   await page.screenshot({path:'artifacts/heavy-hop/launchsite-shortcut-preview.png'});
   await page.getByRole('button',{name:'Race this line',exact:true}).click();
@@ -35,7 +31,7 @@ test('Launchsite shortcut preview and actual hop gameplay',async({browser})=>{
   const firing=await page.evaluate(()=>(window as any).__roadster.getGraphics());
   expect(firing.drawCalls).toBeLessThanOrEqual(90);
   await page.screenshot({path:'artifacts/heavy-hop/cold-gas-firing.png'});
-  await page.waitForFunction(()=>(window as any).__roadster.getState().race.elevation>3.9);
+  await page.waitForFunction(()=>(window as any).__roadster.getState().race.elevation>7.9);
   const apex=await page.evaluate(()=>({state:(window as any).__roadster.getState(),graphics:(window as any).__roadster.getGraphics()}));
   await page.screenshot({path:'artifacts/heavy-hop/shortcut-hop-apex.png'});
   expect(apex.graphics.carTriangles).toBeLessThanOrEqual(10000);expect(apex.graphics.drawCalls).toBeLessThanOrEqual(90);

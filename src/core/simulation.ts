@@ -5,7 +5,7 @@ import { DEFAULT_LAPS, validateLapCount } from './race-options';
 import { RULES } from './rules';
 import { createContactLog, stepRacers } from './stepping';
 import type { CompiledRoute, Point, RaceEvent, RaceState, TrackDefinition } from './types';
-import { branchProjection, FLIGHT_RULES, groundHeight, jumpCoordinates, rampAt, supported, takeoffCrossing, vehicleSupported } from './support';
+import { branchProjection, flightGravity, FLIGHT_RULES, groundHeight, jumpCoordinates, rampAt, supported, takeoffCrossing, vehicleSupported } from './support';
 import { permittedHopBarriers } from './hop-shortcuts';
 
 export { RULES };
@@ -211,18 +211,19 @@ export class RaceSimulation {
       && corridor.along >= (s.flightOrigin === 'hop' ? -this.track.carLength : jump.rampLength - 0.1)
       && corridor.along <= jump.corridorLength && Math.abs(corridor.across) <= (jump.width - this.track.carWidth) / 2;
     if (s.flightOrigin === 'fall' || jump && !approved || !vehicleSupported(proposed, s.heading, this.track) && !approved) this.invalidFlight = true;
-    let height = oldHeight + s.verticalVelocity * dt - FLIGHT_RULES.gravity * dt * dt / 2;
+    const gravity = flightGravity(s.flightOrigin);
+    let height = oldHeight + s.verticalVelocity * dt - gravity * dt * dt / 2;
     const landingHeight = groundHeight(proposed, this.track);
     // Check the support at the actual crossing, not merely at the end of the step.
     const oldGround = groundHeight(old, this.track);
-    const crossing = oldHeight >= oldGround && height <= landingHeight && (s.verticalVelocity - FLIGHT_RULES.gravity * dt < 0 || landingHeight > oldGround);
+    const crossing = oldHeight >= oldGround && height <= landingHeight && (s.verticalVelocity - gravity * dt < 0 || landingHeight > oldGround);
     const fraction = crossing ? clamp((oldHeight - oldGround) / Math.max(1e-9, oldHeight - oldGround - height + landingHeight), 0, 1) : 1;
     const at = { x: lerp(old.x, proposed.x, fraction), z: lerp(old.z, proposed.z, fraction) };
     const lands = !this.invalidFlight && crossing && vehicleSupported(at, s.heading, this.track);
     if (lands) height = landingHeight;
     // Only a compiled manual-hop corridor can grant actual-height clearance of its authored obstacle.
     const collision = sweepVehicle(old, proposed, oldHeading, s.heading, { x: vx, z: vz }, this.track, oldHeight, height, true, this.allowedHopBarriers(proposed));
-    s.position = collision.position; s.velocity = collision.velocity; s.elevation = height; s.verticalVelocity -= FLIGHT_RULES.gravity * dt;
+    s.position = collision.position; s.velocity = collision.velocity; s.elevation = height; s.verticalVelocity -= gravity * dt;
     s.speed = Math.hypot(s.velocity.x, s.velocity.z); s.drifting = false; s.sandAmount = 0; s.acceleration = 0; s.steeringRate = 0;
     if (collision.collided && collision.impact > 1.5 && s.tick - this.lastCollisionTick > 24) {
       this.lastCollisionTick = s.tick; s.collisionCount++; this.markContact(now);

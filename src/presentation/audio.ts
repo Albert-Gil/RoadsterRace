@@ -1,5 +1,6 @@
-import { audioAssets, audioMix, type AudioAssets, type SoundAsset, type SoundCue, type SoundLoop } from './audio-assets';
+import { audioAssets, audioMix, soundLoops, venueLoop, type VenueAudio, type AudioAssets, type SoundAsset, type SoundCue, type SoundLoop } from './audio-assets';
 import { assetUrl } from './urls';
+import { MenuMusic } from './menu-music';
 
 export interface AudioFrame { active: boolean; speed: number; slip: number; sand: number }
 const limit = (value: number, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, value));
@@ -28,6 +29,9 @@ export function synthCue(context: BaseAudioContext, destination: AudioNode, type
     source.connect(filter).connect(envelope).connect(destination); source.start(when); source.stop(when + duration); source.onended = () => { source.disconnect(); filter.disconnect(); envelope.disconnect(); }; nodes.push(source);
     if (!scrape) { tone(90, 0.22, 0, 0.36, 32, 'triangle'); tone(430, 0.1, 0.005, 0.1, 140); }
   }
+  else if (type === 'ui-select') tone(600, .06, 0, .06, 420);
+  else if (type === 'ui-confirm') { tone(620, .12, 0, .07); tone(900, .12, .06, .06); }
+  else if (type === 'ui-back') tone(420, .1, 0, .06, 260);
   else if (type === 'hop') { tone(105, 0.24, 0, 0.2, 490, 'triangle'); tone(740, 0.13, 0.035, 0.06, 230); }
   else if (type === 'takeoff') { tone(140, 0.22, 0, 0.12, 430, 'triangle'); }
   else if (type === 'landing') { tone(80, 0.14, 0, 0.36, 26, 'triangle'); tone(190, 0.07, 0, 0.07, 65); }
@@ -70,10 +74,15 @@ export class GameAudio {
   private failed = new Set<string>();
   private shots = new Set<AudioScheduledSourceNode>();
   private lastCue = new Map<SoundCue, number>();
-  private levels: Record<SoundLoop, number> = { drive: 0, tire: 0, sand: 0, coast: 0 };
+  private levels: Record<SoundLoop, number> = { drive: 0, tire: 0, sand: 0, coast: 0, launchsite: 0, city: 0, pier: 0 };
+  private ambience: SoundLoop = 'coast';
   private active = false;
-  muted = true;
+  private menuMusic?: MenuMusic;
+  private musicWanted = false;
+  muted = false;
   constructor(private assets: AudioAssets = audioAssets) {}
+  setVenue(venue: VenueAudio) { this.ambience = venueLoop[venue]; }
+  setMenuMusic(enabled: boolean) { this.musicWanted = enabled; this.menuMusic?.setEnabled(enabled && !this.muted); }
   unlock() {
     try {
       if (!this.context) {
@@ -86,20 +95,23 @@ export class GameAudio {
         this.analyser = c.createAnalyser(); this.analyser.fftSize = 512;
         this.master.connect(compressor).connect(this.analyser).connect(c.destination); this.noise = noiseBuffer(c);
         this.createVoices(); void this.loadAssets();
+        if (this.assets.music) this.menuMusic = new MenuMusic(c, this.master, this.assets.music, audioMix.music);
       }
       if (this.context.state === 'suspended') void this.context.resume().catch(() => {});
+      this.menuMusic?.setEnabled(this.musicWanted && !this.muted);
       return true;
     } catch { return false; }
   }
   toggle() {
     if (this.muted && !this.unlock()) return;
     this.muted = !this.muted;
+    this.menuMusic?.setEnabled(this.musicWanted && !this.muted, this.muted);
     if (this.master && this.context) this.master.gain.setTargetAtTime(this.muted ? 0 : audioMix.master, this.context.currentTime, 0.015);
     if (this.muted) this.stopCues();
   }
   private createVoices() {
     const c = this.context!;
-    for (const role of ['drive', 'tire', 'sand', 'coast'] as const) {
+    for (const role of soundLoops) {
       const gain = c.createGain(); gain.gain.value = 0; gain.connect(this.master!);
       const sources: AudioScheduledSourceNode[] = [], voice: Voice = { gain, sources };
       if (role === 'drive') {
@@ -157,7 +169,13 @@ export class GameAudio {
     this.active = frame.active;
     const c = this.context; if (!c) return;
     const speed = limit(frame.speed / 42), moving = limit(frame.speed / 5);
-    this.levels = frame.active && !this.muted ? { drive: audioMix.drive * moving * (0.25 + speed * 0.75), tire: audioMix.tire * limit(frame.slip) * moving * (1 - frame.sand), sand: audioMix.sand * frame.sand * moving, coast: audioMix.coast } : { drive: 0, tire: 0, sand: 0, coast: 0 };
+    this.levels = { drive: 0, tire: 0, sand: 0, coast: 0, launchsite: 0, city: 0, pier: 0 };
+    if (frame.active && !this.muted) {
+      this.levels.drive = audioMix.drive * moving * (0.25 + speed * .75);
+      this.levels.tire = audioMix.tire * limit(frame.slip) * moving * (1 - frame.sand);
+      this.levels.sand = audioMix.sand * frame.sand * moving;
+      this.levels[this.ambience] = audioMix.coast;
+    }
     for (const [role, voice] of this.voices) {
       const amount = this.levels[role], now = c.currentTime, fade = frame.active ? 0.08 : 0.012;
       voice.gain.gain.setTargetAtTime(voice.sample ? 0 : amount, now, fade);
@@ -168,11 +186,11 @@ export class GameAudio {
       } else if (voice.filter) voice.filter.frequency.setTargetAtTime(role === 'tire' ? 900 + speed * 1300 : role === 'sand' ? 700 + speed * 2000 : 380, now, 0.15);
     }
   }
-  silence() { this.mix({ active: false, speed: 0, slip: 0, sand: 0 }); this.stopCues(); }
+  silence() { this.musicWanted = false; this.menuMusic?.setEnabled(false, true); this.mix({ active: false, speed: 0, slip: 0, sand: 0 }); this.stopCues(); }
   private stopCues() { for (const node of this.shots) { try { node.stop(); } catch { /* Already ended. */ } } this.shots.clear(); }
   getStatus() {
     let outputRms = 0;
     if (this.analyser) { const data = new Float32Array(this.analyser.fftSize); this.analyser.getFloatTimeDomainData(data); outputRms = Math.sqrt(data.reduce((sum, value) => sum + value * value, 0) / data.length); }
-    return { muted: this.muted, available: !!this.context, context: this.context?.state ?? 'locked', active: this.active, levels: { ...this.levels }, loaded: [...this.buffers.keys()], failed: [...this.failed], outputRms };
+    return { muted: this.muted, available: !!this.context, context: this.context?.state ?? 'locked', active: this.active, ambience: this.ambience, levels: { ...this.levels }, loaded: [...this.buffers.keys()], failed: [...this.failed], music: this.menuMusic?.getStatus() ?? null, outputRms };
   }
 }

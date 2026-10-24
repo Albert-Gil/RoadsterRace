@@ -48,6 +48,10 @@ const pauseButton = document.querySelector<HTMLButtonElement>('.pause-button')!,
 const diagnosticSection = document.querySelector<HTMLElement>('#diagnostics')!, raceProgress = document.querySelector<HTMLElement>('.race-progress')!;
 const labels = [...document.querySelectorAll<HTMLElement>('.vehicle-label')];
 const audio = new GameAudio();
+// Browser autoplay unlock must happen synchronously in a real user gesture.
+for (const event of ['pointerdown', 'keydown'] as const) {
+  document.addEventListener(event, () => { if (!audio.muted) { audio.setMenuMusic(phaseLayout(phase).menuMusic); audio.unlock(); } }, { capture: true });
+}
 let ownership = new PointerOwnership();
 let phase: Phase = 'welcome', returnPhase: Phase = 'welcome', route: CompiledRoute | null = null, race: LocalRace | null = null;
 let playerCount = 1, setupCount = 2, turn = 0, confirmedRoutes: CompiledRoute[] = [], readyPlayers: boolean[] = [];
@@ -63,6 +67,7 @@ let exitReturn: Phase = 'welcome', tourSaveFailed = false;
 const circuitQuery = new URLSearchParams(location.search);
 let activeCircuit = findCircuit(circuitQuery.has('circuit') ? circuitQuery.get('circuit') : preferences.circuitId);
 let activeTrack = activeCircuit.track;
+audio.setVenue(activeCircuit.scenery);
 preferences.circuitId = activeCircuit.id;
 const startPose = () => ({ ...activeTrack.start, heading: Math.atan2(activeTrack.centerline[1].x - activeTrack.start.x, activeTrack.centerline[1].z - activeTrack.start.z) });
 let lapCount = preferences.laps;
@@ -114,6 +119,7 @@ function selectCircuit(id: string) {
   route = null; race = null; confirmedRoutes = []; readyPlayers = []; previousPoses = []; stroke = []; turn = 0; playerCount = 1;
   const engine = world.engine; world.dispose(false);
   activeCircuit = next; activeTrack = next.track; preferences.circuitId = next.id;
+  audio.setVenue(next.scenery);
   world = new GameScene(canvas, activeTrack, theme, activeCircuit.scenery, engine);
   applyDriverPresentation(); renderControls(); notice.textContent = ''; lastFrame = performance.now();
   best = bestTimes.get(bestKey()) ?? null; saveSettings();
@@ -161,6 +167,7 @@ function setPhase(next: Phase) {
   if (!layout.ghostAllowed) world?.setGhost(null);
   if (!layout.driveAudio) audio.mix({ active: false, speed: 0, slip: 0, sand: 0 });
   if (layout.silence) audio.silence();
+  audio.setMenuMusic(layout.menuMusic);
   hud.hidden = !layout.hudVisible;
   controls.querySelectorAll<HTMLButtonElement>('.ability-control').forEach(pad => { pad.hidden = !layout.padVisible(pad.dataset.ability as Ability); pad.disabled = layout.padsDisabled; });
   pauseButton.hidden = !layout.pauseVisible; countdownElement.hidden = !layout.countdownVisible; diagnosticSection.hidden = !layout.diagnosticsVisible;
@@ -185,7 +192,7 @@ function panelMarkup(message?: string): string | null {
     case 'tour-replace': return tourReplacePanel();
     case 'tour-resume': return tourDiscardPanel();
     case 'handoff': return handoffPanel({ confirmedCount: confirmedRoutes.length, playerCount, turn, playerName });
-    case 'drawing': case 'preview': return planningPanel({ preview: phase === 'preview', playerCount, turn, playerName, humans, hopRequired: !!route?.hopShortcuts?.length, inTour: !!activeTour, message });
+    case 'drawing': case 'preview': return planningPanel({ preview: phase === 'preview', playerCount, turn, playerName, humans, inTour: !!activeTour, message });
     case 'ready': return readyPanel({ playerCount, lapCount, readyPlayers, ghostSeconds: CONTACT_RULES.ghostStartSeconds });
     case 'paused': return pausedPanel();
     case 'results':
@@ -325,6 +332,10 @@ app.addEventListener('click', e => {
   if (action === 'diagnostics') { if (phase === 'racing' || phase === 'countdown') pauseRace(); cancelStroke(); clearRaceInput(); returnPhase = phase; ownership.clear(); setPhase('diagnostics'); updateDiagnostics(); }
   if (action === 'exit-diagnostics') { ownership.clear(); setPhase(returnPhase); }
   if (action === 'reset-diagnostics') { ownership.clear(); ownership = new PointerOwnership(); updateDiagnostics(); }
+  if (action && !['pause', 'resume', 'confirm'].includes(action)) {
+    const back = ['home', 'redraw', 'redraw-all', 'configure-race', 'exit-diagnostics', 'tour-save-exit', 'tour-back-setup'].includes(action);
+    audio.cue(back ? 'ui-back' : ['start-session', 'retry', 'tour-draw', 'tour-next', 'tour-resume', 'take-turn'].includes(action) ? 'ui-confirm' : 'ui-select');
+  }
 });
 
 panel.addEventListener('input', event => {

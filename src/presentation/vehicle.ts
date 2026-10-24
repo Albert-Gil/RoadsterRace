@@ -111,7 +111,7 @@ export class VehicleView {
     this.dust.isPickable = false; this.dust.isVisible = false; this.dust.alwaysSelectAsActiveMesh = true;
     this.setTheme(theme);
   }
-  impact(time: number, landing = false) { this.impactUntil = time + 0.22; this.landingImpact = landing; }
+  impact(time: number, landing = false) { this.impactUntil = time + sceneTuning.vehicle.impactDuration; this.landingImpact = landing; }
   setIdentity(player: number | null, theme: PresentationTheme) { this.identity = player; this.setTheme(theme); }
   setEnabled(enabled: boolean) { this.root.setEnabled(enabled); this.shadow.setEnabled(enabled); this.coldGas.mesh.setEnabled(enabled && this.detail === 'race'); this.vapor.setEnabled(enabled && this.detail === 'race'); this.tireMarks.setEnabled(enabled && this.detail === 'race'); this.dust.setEnabled(enabled); }
   clearEffects() { this.vapor.clear(); this.coldGas.mesh.isVisible = false; this.tireMarks.clear(); this.previousTime = 0; this.wheelDistance = 0; this.impactUntil = -1; }
@@ -124,7 +124,7 @@ export class VehicleView {
     this.chassis.rotation.z += ((reduced ? 0 : Math.max(-0.045, Math.min(0.045, -steeringRate * speed * 0.0016))) - this.chassis.rotation.z) * blend;
     this.chassis.rotation.x += ((reduced ? 0 : Math.max(-0.035, Math.min(0.035, acceleration * 0.004))) - this.chassis.rotation.x) * blend;
     this.tail.emissiveColor.set(acceleration < -0.8 ? 2.5 : 0.5, 0.015, 0.005);
-    this.chassis.position.y = !reduced && time < this.impactUntil ? -(this.landingImpact ? 0.10 : 0.05) * Math.sin((this.impactUntil - time) / 0.22 * Math.PI) : 0;
+    this.chassis.position.y = !reduced && time < this.impactUntil ? -(this.landingImpact ? sceneTuning.vehicle.landingCompression : sceneTuning.vehicle.contactCompression) * Math.sin((this.impactUntil - time) / sceneTuning.vehicle.impactDuration * Math.PI) : 0;
     const shadowY = position.airborne ? position.shadowY ?? 0 : position.y ?? 0, clearance = Math.max(0, (position.y ?? 0) - shadowY);
     this.shadow.position.set(position.x + 0.15, (this.detail === 'showcase' ? 0.135 : 0.125) + shadowY, position.z); this.shadow.rotation.y = position.heading;
     this.shadow.scaling.setAll((this.detail === 'race' ? sceneTuning.vehicle.racingScale : 1) * (1 + clearance * 0.08)); (this.shadow.material as StandardMaterial).alpha = 0.5 / (1 + clearance * 0.2);

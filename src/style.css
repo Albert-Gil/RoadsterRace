@@ -442,7 +442,7 @@ p { font-size: 14px; line-height: 1.5; }
 .circuit-card strong { display: block; font: italic 700 26px/1 var(--font-display); text-transform: uppercase; }
 .circuit-card small { display: block; margin-top: 7px; padding-right: 34px; font-size: 9px; line-height: 1.4; color: var(--muted); }
 .circuit-length { position: absolute; right: 12px; bottom: 15px; color: var(--muted); font-size: 9px; }
-.circuit-description { font-size: 11px; color: var(--muted); margin: 10px 0 20px; }
+.cpu-opponents { font-size: 11px; color: var(--muted); margin: 10px 0 20px; }
 @media (orientation: portrait) and (max-width: 800px) {
   .circuit-card { padding: 10px; }
   .circuit-card svg { height: 65px; }
@@ -583,14 +583,14 @@ p { font-size: 14px; line-height: 1.5; }
 }
 
 /* One fixed usable rectangle for drawing and racing; no header/footer bands. */
-.playground #course-space { left:calc(env(safe-area-inset-left,0px) + 60px);right:calc(env(safe-area-inset-right,0px) + 60px);top:env(safe-area-inset-top,0px);bottom:env(safe-area-inset-bottom,0px); }
+.playground #course-space { left:calc(env(safe-area-inset-left,0px) + var(--ability-rail));right:calc(env(safe-area-inset-right,0px) + var(--ability-rail));top:env(safe-area-inset-top,0px);bottom:env(safe-area-inset-bottom,0px); }
 .playground:is([data-phase="drawing"],[data-phase="preview"]) .topbar { right:calc(env(safe-area-inset-right,0px) + 6px);top:calc(env(safe-area-inset-top,0px) + 6px);width:48px; }
 .playground:is([data-phase="drawing"],[data-phase="preview"]) :is(.sound-control,.planning-button) { width:48px;min-height:48px;min-width:44px; }
 .playground:is([data-phase="drawing"],[data-phase="preview"]) .panel {right:calc(env(safe-area-inset-right,0px) + 6px);top:calc(env(safe-area-inset-top,0px) + 62px);width:48px;}
 .playground:is([data-phase="drawing"],[data-phase="preview"]) .panel-actions {gap:6px;}
 .playground:is([data-phase="racing"],[data-phase="countdown"],[data-phase="ready"],[data-phase="paused"]) :is(.topbar,.circuit-caption,.lower-wordmark,.rotate-note) {display:none;}
 .playground:is([data-phase="racing"],[data-phase="countdown"],[data-phase="ready"],[data-phase="paused"]) .race-hud {left:calc(env(safe-area-inset-left,0px) + 3px);top:50%;transform:translateY(-50%);width:54px;box-sizing:border-box;padding:6px 2px;gap:8px;flex-direction:column;border-radius:3px;}
-.playground .race-hud strong {font-size:13px;}.playground .race-hud small {font-size:8px;}.playground .hud-divider {display:none;}
+.playground .race-hud {line-height:1.2;}.playground .race-hud strong {display:block;font-size:13px;line-height:1.1;}.playground .race-hud small {font-size:8px;margin-bottom:2px;}.playground .hud-divider {display:none;}
 .playground .thrust-inner {padding:0;gap:1px;}.playground .pod-title {font-size:8px;}.playground .pod-status {font-size:8px;}.playground .pod-name,.playground .pod-lap {display:none;}.playground .pod-identity {font-size:8px;}.playground .thrust-inner svg{width:14px;height:14px;}
 .playground:not([data-players="1"]) .racer-0 {left:calc(env(safe-area-inset-left,0px) + 6px);bottom:calc(env(safe-area-inset-bottom,0px) + 6px);}
 .playground:not([data-players="1"]) .racer-1 {right:calc(env(safe-area-inset-right,0px) + 6px);bottom:calc(env(safe-area-inset-bottom,0px) + 6px);}
@@ -598,7 +598,7 @@ p { font-size: 14px; line-height: 1.5; }
 .playground:not([data-players="1"]) .racer-3 {right:calc(env(safe-area-inset-right,0px) + 6px);top:calc(env(safe-area-inset-top,0px) + 6px);}
 .playground .pause-button {left:auto;right:calc(env(safe-area-inset-right,0px) + 6px);bottom:50%;width:48px;min-height:44px;}
 @media (orientation:portrait) and (max-width:650px) {
- .playground #course-space {left:env(safe-area-inset-left,0px);right:env(safe-area-inset-right,0px);top:calc(env(safe-area-inset-top,0px) + 56px);bottom:calc(env(safe-area-inset-bottom,0px) + 60px);}
+ .playground #course-space {left:env(safe-area-inset-left,0px);right:env(safe-area-inset-right,0px);top:calc(env(safe-area-inset-top,0px) + var(--ability-rail));bottom:calc(env(safe-area-inset-bottom,0px) + var(--ability-rail));}
  .playground:is([data-phase="drawing"],[data-phase="preview"]) .topbar{top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 6px);left:6px;}
  .playground:is([data-phase="drawing"],[data-phase="preview"]) .panel{top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 6px);left:60px;right:auto;width:auto;}
  .playground .race-hud{left:50%;top:calc(env(safe-area-inset-top,0px) + 4px);transform:translateX(-50%);width:auto;flex-direction:row;padding:5px 10px;gap:14px;}
@@ -632,7 +632,7 @@ p { font-size: 14px; line-height: 1.5; }
 .playground[data-phase="paused"] [data-action="home"] { min-height:48px; }
 
 /* Two independent abilities stay inside the existing course rails. Pad sizes are defined once here. */
-.playground { --thrust-size:56px; --hop-size:44px; --ability-gap:6px; }
+.playground { --thrust-size:64px; --hop-size:44px; --ability-gap:6px; --ability-rail:calc(var(--thrust-size) + 4px); }
 .playground .ability-cluster { position:absolute;z-index:8;display:flex;flex-direction:column-reverse;align-items:center;gap:var(--ability-gap);width:var(--thrust-size);pointer-events:none;right:calc(env(safe-area-inset-right,0px) + 2px);bottom:calc(env(safe-area-inset-bottom,0px) + 4px); }
 .playground .ability-cluster .ability-control { position:relative;inset:auto;flex:none;margin:0;pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none; }
 .playground .ability-cluster .thrust-control { width:var(--thrust-size);height:var(--thrust-size);padding:3px; }
@@ -651,7 +651,7 @@ p { font-size: 14px; line-height: 1.5; }
  .playground .ability-cluster:is(.racer-0,.racer-1) { bottom:calc(env(safe-area-inset-bottom,0px) + 2px); }
  .playground .ability-cluster:not(.racer-0), .playground[data-players="1"] .ability-cluster { flex-direction:row-reverse; }
  .playground .ability-cluster.racer-2 { flex-direction:row; }
- .playground[data-phase]:is([data-phase="racing"],[data-phase="countdown"],[data-phase="paused"]) .race-hud { max-width:calc(100vw - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px) - 216px);padding:4px 2px;gap:5px; }
+ .playground[data-phase]:is([data-phase="racing"],[data-phase="countdown"],[data-phase="paused"]) .race-hud { max-width:calc(100vw - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px) - 232px);padding:4px 2px;gap:5px; }
  .playground .race-hud strong {font-size:12px;}.playground .race-hud small {font-size:7px;}
 }
 
@@ -666,13 +666,12 @@ p { font-size: 14px; line-height: 1.5; }
 
 @media (orientation:portrait) and (max-width:650px) {
  .playground[data-phase]:is([data-phase="racing"],[data-phase="countdown"],[data-phase="ready"],[data-phase="paused"]) .topbar,
- .playground[data-phase]:not([data-players="1"]):is([data-phase="racing"],[data-phase="countdown"],[data-phase="ready"],[data-phase="paused"]) .topbar { left:calc(50% - 50px);right:auto; }
- .playground[data-phase] .pause-button,.playground[data-phase]:not([data-players="1"]) .pause-button { right:calc(50% - 50px); }
+ .playground[data-phase]:not([data-players="1"]):is([data-phase="racing"],[data-phase="countdown"],[data-phase="ready"],[data-phase="paused"]) .topbar { left:calc(50% - 44px);right:auto;width:44px; }
+ .playground[data-phase]:is([data-phase="racing"],[data-phase="countdown"],[data-phase="ready"],[data-phase="paused"]) .sound-control {width:44px;min-height:44px;}
+ .playground[data-phase] .pause-button,.playground[data-phase]:not([data-players="1"]) .pause-button { right:calc(50% - 44px);width:44px; }
  .playground[data-phase]:is([data-phase="racing"],[data-phase="countdown"],[data-phase="paused"]) .race-hud { padding:4px 2px;gap:5px; }
  .playground:is([data-players="1"],[data-players="2"]) .race-hud { max-width:calc(100vw - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px) - 12px); }
 }
 @media (orientation:portrait) and (max-width:360px) {
  .playground:is([data-players="3"],[data-players="4"]) .race-hud > div:last-child { display:none; }
 }
-
-.hop-required { display: block; box-sizing: border-box; width: 48px; margin-top: 6px; text-align: center; line-height: 1.3; flex: 0 0 48px; color: #eff5f7; border: 1px solid #ffffff38; background: #111b24df; padding: 6px 2px; font-size: 10px; font-weight: 600; border-radius: 3px; }

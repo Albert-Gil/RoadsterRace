@@ -87,3 +87,16 @@ A and B are implemented, with a first lightweight C scenery pass. The current Or
 ## Santa Monica implementation — 2026-10-22
 
 The approved fourth venue now extends the registry with a sunset beachfront/pier loop, original wheel/coaster scenery, a normal flat bypass and a physical automatic ramp over a water opening. This supersedes the earlier proposed next-venue order above; Alpine Relay and Neon Harbour remain future concepts. Manual hop controls and global leaderboards remain deferred. The supported-surface/flight contracts and version-8 compatibility policy are documented in `SANTA_MONICA.md`. New Full Tours include all four venues; existing schedules remain unchanged.
+
+## Ideas retained for later — 2026-10-23
+
+The user liked these directions and requested that they be kept for later. This is a planning backlog, not authorization to implement them now. The current focus is the ElevenLabs sound brief.
+
+- Nighttime Launchsite with floodlights, illuminated garages and a rocket-launch backdrop.
+- Multiple competitive routes: a safe road, technical alternatives and explicitly validated hop shortcuts.
+- Slipstreaming and more tactical overtaking, with fair shared rules.
+- Private online races through room links, with each person playing on their own phone.
+- A circuit creator with scenery, protected areas and authored jumpable obstacles, plus shareable layouts.
+- Racing liveries with stripes, numbers, wheel finishes and original sponsor artwork.
+
+Future implementations must retain the current protected-area, supported-surface, progression, collision, phone-layout and rules-versioning requirements. The older milestone notes above are historical; current manual-hop behavior is documented in `HEAVY_HOP.md`.

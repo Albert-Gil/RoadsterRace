@@ -15,7 +15,7 @@ for (const viewport of [{ width: 844, height: 390 }, { width: 390, height: 844 }
     await page.getByRole('button', { name: 'Race this line', exact: true }).click();
     await waitForPhase(page, 'racing');
     const pad = await page.locator('#thrust-button').boundingBox();
-    expect(pad!.width).toBe(56); expect(pad!.height).toBe(56);
+    expect(pad!.width).toBe(64); expect(pad!.height).toBe(64);
     const sound = await page.locator('#sound-button').boundingBox();
     expect(pad!.x + pad!.width <= sound!.x || sound!.x + sound!.width <= pad!.x || pad!.y + pad!.height <= sound!.y || sound!.y + sound!.height <= pad!.y).toBe(true);
     if (viewport.height > viewport.width) {

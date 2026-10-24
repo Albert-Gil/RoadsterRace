@@ -20,9 +20,9 @@ export function buildCircuitDetails(scene: Scene, track: TrackDefinition, theme:
   const marking = mat('track-ivory', theme.venue.marking, false), worn = mat('asphalt-repair', theme.venue.repair, false); worn.alpha = 0.4;
   const box = (name: string, p: Point, y: number, w: number, h: number, d: number, material: StandardMaterial, angle = 0) => { const m = MeshBuilder.CreateBox(name, { width: w, height: h, depth: d }, scene); m.position.set(p.x, y, p.z); m.rotation.y = angle; m.material = material; return m; };
   const label = (name: string, text: string, width: number, height: number, p: Point, y: number, angle = 0) => {
-    const textureWidth = text === 'HOP' ? 256 : 1024;
+    const textureWidth = 1024;
     const texture = new DynamicTexture(name, { width: textureWidth, height: 128 }, scene, false); const ctx = texture.getContext() as CanvasRenderingContext2D;
-    ctx.fillStyle = '#19242c'; ctx.fillRect(0, 0, textureWidth, 128); ctx.fillStyle = '#ed3949'; ctx.fillRect(0, 0, 18, 128); ctx.font = text === 'HOP' ? 'italic bold 96px sans-serif' : 'italic bold 62px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#f3f1e8'; ctx.fillText(text, textureWidth / 2, text === 'HOP' ? 100 : 86); texture.update();
+    ctx.fillStyle = '#19242c'; ctx.fillRect(0, 0, textureWidth, 128); ctx.fillStyle = '#ed3949'; ctx.fillRect(0, 0, 18, 128); ctx.font = 'italic bold 62px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#f3f1e8'; ctx.fillText(text, textureWidth / 2, 86); texture.update();
     const m = mat(name, '#ffffff'); m.diffuseTexture = texture; m.emissiveColor.setAll(0.12); m.backFaceCulling = false;
     const sign = MeshBuilder.CreatePlane(name, { width, height }, scene); sign.position.set(p.x, y, p.z); sign.rotation.y = angle; sign.material = m; return sign;
   };
@@ -68,21 +68,6 @@ export function buildCircuitDetails(scene: Scene, track: TrackDefinition, theme:
     }
   }
   for (const shortcut of track.hopShortcuts ?? []) {
-    const obstacle = track.barriers.find(b => b.id === shortcut.obstacleId)!;
-    const z = obstacle.footprint[0].z, left = obstacle.footprint[0].x;
-    // The striped face is flush with the authoritative one-metre barrier.
-    for (let i = 0; i < 16; i++) {
-      box('hop-hazard-face', {x:left+i+0.5,z:z-0.015},0.5,0.96,0.86,0.02,i%2?dark:marking);
-      box('hop-hazard-cap', {x:left+i+0.5,z:z+0.5},1.01,0.96,0.02,0.94,i%2?dark:marking);
-    }
-    const center = left + shortcut.width / 2;
-    const paint = label('service-hop-sign', 'HOP', 6, 2.6, {x:center,z:z-10},0.16);
-    paint.rotation.x = Math.PI / 2;
-    // A broad, painted activation band: ten metres before the service barrier.
-    for (const offset of [-5, 5]) {
-      box('hop-activation-zone', {x:center+offset,z:z-10},0.15,0.15,0.015,4,marking);
-      for (const side of [-1,1]) box('hop-lane-arrow',{x:center+offset+side*0.38,z:z-9},0.15,0.14,0.015,1.1,marking,side*0.7);
-    }
     for (const side of [-1,1]) {
       const edge=roadEdges(shortcut.branch,shortcut.width-0.5,false)[side===-1?0:1];
       const line=MeshBuilder.CreateRibbon('service-lane-edge',{pathArray:[edge.map(p=>new Vector3(p.x-0.05,0.145,p.z)),edge.map(p=>new Vector3(p.x+0.05,0.145,p.z))],sideOrientation:Mesh.DOUBLESIDE},scene);

@@ -45,10 +45,10 @@ describe('panel markup', () => {
     const saved = welcomePanel({ tagline: 'Your line. Your race.', savedTour: { completed: 2, total: 4 }, incompatibleTour: true });
     expect(saved).toContain('2/4 RACES'); expect(saved).toContain('cannot resume'); expect(saved).toContain('Your line.<br>Your race.');
   });
-  test('planning shows the hop badge and escapes validation messages', () => {
-    const html = planningPanel({ preview: true, playerCount: 1, turn: 0, playerName: () => 'P', humans: () => 1, hopRequired: true, inTour: false, message: '<b>x</b>' });
-    expect(html).toContain('Hop required'); expect(html).toContain('&lt;b&gt;x&lt;/b&gt;'); expect(html).toContain('aria-label="Race this line"');
-    expect(planningPanel({ preview: false, playerCount: 2, turn: 1, playerName: () => 'Bea', humans: () => 2, hopRequired: false, inTour: true })).toContain('data-action="home"');
+  test('planning keeps shortcut requirements hidden and escapes validation messages', () => {
+    const html = planningPanel({ preview: true, playerCount: 1, turn: 0, playerName: () => 'P', humans: () => 1, inTour: false, message: '<b>x</b>' });
+    expect(html).not.toContain('Hop required'); expect(html).toContain('&lt;b&gt;x&lt;/b&gt;'); expect(html).toContain('aria-label="Race this line"');
+    expect(planningPanel({ preview: false, playerCount: 2, turn: 1, playerName: () => 'Bea', humans: () => 2, inTour: true })).toContain('data-action="home"');
   });
   test('race results mark shared places and time trial reports the fastest lap', () => {
     const standings = [{ player: 1, rank: 1, progress: 0, finished: true, finishTime: 40.001 }, { player: 0, rank: 1, progress: 0, finished: true, finishTime: 40.004 }, { player: 2, rank: 3, progress: 0, finished: true, finishTime: 41 }];

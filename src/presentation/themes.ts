@@ -45,7 +45,7 @@ export const themes: Record<string, PresentationTheme> = {
 
 /** Presentation only: camera, lighting and quality never enter route compilation or physics. */
 export const sceneTuning = {
-  vehicle: { racingScale: 1.12 },
+  vehicle: { racingScale: 1.12, landingCompression: 0.09, contactCompression: 0.05, impactDuration: 0.22 },
   camera: { elevationDegrees: 42, compactElevationDegrees: 65, azimuthDegrees: 5, verticalFov: 0.5, fittingMargin: 1, clearancePixels: 6, azimuthStep: 5 },
   grading: { exposure: 1.16, contrast: 1.1 },
   lighting: { ambient: 0.55, sunlight: 1.25, shadowDarkness: 0.32, shadowMapSize: 1024 },

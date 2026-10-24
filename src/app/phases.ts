@@ -23,6 +23,7 @@ export function phaseLayout(phase: Phase) {
     sceneLayout: phase.startsWith('tour-') ? 'results' : phase,
     ghostAllowed: among(phase, ['racing', 'paused', 'countdown']),
     driveAudio: phase === 'racing',
+    menuMusic: among(phase, ['welcome', 'setup', 'results', 'tour-intro', 'tour-resume', 'tour-exit', 'tour-replace']),
     silence: among(phase, ['paused', 'welcome', 'drawing', 'diagnostics', 'error']),
   };
 }

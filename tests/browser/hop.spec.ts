@@ -27,7 +27,7 @@ for (const viewport of [{ width: 844, height: 390 }, { width: 390, height: 844 }
     const overlaps = (a: any, b: any) => a.x < b.right && a.right > b.x && a.y < b.bottom && a.bottom > b.y;
     expect(layout.pads).toHaveLength(8);
     for (const [i, p] of layout.pads.entries()) {
-      expect(p.width).toBe(p.ability === 'hop' ? 44 : 56); expect(p.height).toBe(p.width);
+      expect(p.width).toBe(p.ability === 'hop' ? 44 : 64); expect(p.height).toBe(p.width);
       expect(p.x).toBeGreaterThanOrEqual(0); expect(p.right).toBeLessThanOrEqual(viewport.width); expect(p.y).toBeGreaterThanOrEqual(0); expect(p.bottom).toBeLessThanOrEqual(viewport.height);
       expect(overlaps(p, layout.course), `road overlap ${i}: ${JSON.stringify(layout)}`).toBe(false);
       for (const other of [...layout.pads.slice(i + 1), layout.hud, ...layout.others]) expect(overlaps(p, other), `control overlap ${i}: ${JSON.stringify(layout)}`).toBe(false);
@@ -87,7 +87,7 @@ test('hop keyboard hold, focused buttons, pause and retry preserve independent a
 test('actual hop and ramp gameplay capture retains the one-car rendering budget', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 844, height: 390 }, recordVideo: { dir: 'artifacts/hop/video', size: { width: 844, height: 390 } } });
   const page = await context.newPage(), errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
-  await page.goto('/?circuit=santa-monica'); await page.getByRole('button', { name: 'Turn sound on', exact: true }).click();
+  await page.goto('/?circuit=santa-monica');
   await page.getByRole('button', { name: 'Time Trial', exact: true }).click(); await page.getByRole('button', { name: '1 lap', exact: true }).click(); await page.getByRole('button', { name: 'Draw racing line', exact: true }).click();
   await page.evaluate(() => (window as any).__roadster.usePracticeLine(true)); await page.getByRole('button', { name: 'Race this line', exact: true }).click();
   await waitForPhase(page, 'racing');

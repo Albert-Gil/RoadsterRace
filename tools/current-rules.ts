@@ -1,7 +1,7 @@
 // Generates docs/CURRENT_RULES.md from the source of truth. Run `pnpm docs:rules` after a
 // tuning or version change; `tests/unit/current-rules.test.ts` fails when the file is stale.
 import { RULES } from '../src/core/simulation';
-import { FLIGHT_RULES } from '../src/core/support';
+import { flightGravity, FLIGHT_RULES } from '../src/core/support';
 import { CONTACT_RULES } from '../src/core/vehicle-contact';
 import { COMPILER_VERSION, PACE_RANGE, PACE_FILTER } from '../src/core/route';
 import { DRAWING_RULES } from '../src/core/route-cleanup';
@@ -47,7 +47,8 @@ const documentation: Record<string, Record<string, Unit>> = {
     driftEndAngle: ['rad', 'Slip angle below which a drift ends'],
   },
   FLIGHT_RULES: {
-    gravity: ['m/s²', 'Gravity for hops, ramps and falls'],
+    gravity: ['m/s²', 'Gravity for automatic ramps and unsupported falls'],
+    hopGravity: ['m/s²', 'Gravity during manual hops'],
     rampLaunchBoost: ['m/s', 'Upward velocity added at a ramp lip, before the slope term'],
     carHeight: ['m', 'Vertical vehicle envelope for walls and car contacts'],
     waterHeight: ['m', 'Water surface elevation'],
@@ -93,7 +94,7 @@ function table(name: string, values: Record<string, number>) {
 }
 
 export function currentRulesMarkdown() {
-  const peak = RULES.hopLaunchSpeed ** 2 / (2 * FLIGHT_RULES.gravity), airtime = 2 * RULES.hopLaunchSpeed / FLIGHT_RULES.gravity;
+  const peak = RULES.hopLaunchSpeed ** 2 / (2 * flightGravity('hop')), airtime = 2 * RULES.hopLaunchSpeed / flightGravity('hop');
   const courses = ['| Circuit | ID | Track version | Road width (m) | Centerline (m) | Barriers | Branches |', '|---|---|---:|---:|---:|---:|---|',
     ...circuits.map(({ track }) => `| ${track.name} | \`${track.id}\` | ${track.version} | ${format(track.roadWidth)} | ${track.length.toFixed(1)} | ${track.barriers.length} | ${[
       ...(track.jumps ?? []).map(j => `ramp \`${j.id}\``), ...(track.hopShortcuts ?? []).map(h => `hop lane \`${h.id}\``), ...(track.bridges ?? []).map(b => `bridge \`${b.id}\``),

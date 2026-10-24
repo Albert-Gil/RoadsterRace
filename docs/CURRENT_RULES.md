@@ -8,7 +8,7 @@ Conventions: SI units; horizontal plane (x, z) with y up; heading 0 points along
 
 | Item | Version |
 |---|---:|
-| Vehicle rules (`RULES.version`) | 11 |
+| Vehicle rules (`RULES.version`) | 12 |
 | Route compiler (`COMPILER_VERSION`) | 10 |
 | Coastal Launch track (`coastal-launch`) | 3 |
 | Launchsite track (`orbital-launchyard`) | 3 |
@@ -32,7 +32,7 @@ Vehicle envelope: 2.2 m × 5.2 m. Race distance: 1–6 laps (default 2). Champio
 
 | Key | Value | Unit | Meaning |
 |---|---:|---|---|
-| `version` | 11 | — | Vehicle rules version; stored with records and championships |
+| `version` | 12 | — | Vehicle rules version; stored with records and championships |
 | `dt` | 0.0166667 | s | Fixed simulation step (two equal substeps per step) |
 | `laps` | 2 | laps | Default race distance |
 | `acceleration` | 6 | m/s² | Maximum pace-following acceleration |
@@ -45,7 +45,7 @@ Vehicle envelope: 2.2 m × 5.2 m. Race distance: 1–6 laps (default 2). Champio
 | `thrustDuration` | 0.7 | s | Thrust burst length |
 | `thrustRecharge` | 5 | s | Thrust recharge, measured from activation |
 | `hopRecharge` | 7 | s | Hop recharge, measured from activation |
-| `hopLaunchSpeed` | 17 | m/s | Upward velocity of a manual hop |
+| `hopLaunchSpeed` | 34 | m/s | Upward velocity of a manual hop |
 | `flightLaunchCorrection` | 0.349066 (20°) | rad | Largest momentum rotation at launch |
 | `flightTurnRate` | 0.523599 (30°/s) | rad/s | Largest momentum rotation rate in flight |
 | `asphaltGrip` | 48 | m/s² | Lateral acceleration limit on asphalt |
@@ -62,13 +62,14 @@ Vehicle envelope: 2.2 m × 5.2 m. Race distance: 1–6 laps (default 2). Champio
 | `driftStartAngle` | 0.17 (9.74028°) | rad | Slip angle that starts a drift |
 | `driftEndAngle` | 0.09 (5.15662°) | rad | Slip angle below which a drift ends |
 
-Derived: level-ground manual hop peak 4.014 m and airtime 0.944 s. Ramp launch upward velocity is `rampLaunchBoost + max(0, forward speed) × lipHeight / rampLength`.
+Derived: level-ground manual hop peak 8.028 m and airtime 0.944 s. Ramp launch upward velocity is `rampLaunchBoost + max(0, forward speed) × lipHeight / rampLength`.
 
 ## FLIGHT_RULES
 
 | Key | Value | Unit | Meaning |
 |---|---:|---|---|
-| `gravity` | 36 | m/s² | Gravity for hops, ramps and falls |
+| `gravity` | 36 | m/s² | Gravity for automatic ramps and unsupported falls |
+| `hopGravity` | 72 | m/s² | Gravity during manual hops |
 | `rampLaunchBoost` | 8 | m/s | Upward velocity added at a ramp lip, before the slope term |
 | `carHeight` | 1.05 | m | Vertical vehicle envelope for walls and car contacts |
 | `waterHeight` | -2.4 | m | Water surface elevation |

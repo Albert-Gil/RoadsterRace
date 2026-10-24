@@ -1,8 +1,10 @@
 import { clamp, cumulative, distance, lerp, mix, projectToPolyline } from './geometry';
 import { insideBarrier } from './barriers';
-import type { Point, TrackDefinition, TrackJump } from './types';
+import type { Point, RaceState, TrackDefinition, TrackJump } from './types';
 
-export const FLIGHT_RULES = Object.freeze({ gravity: 36, rampLaunchBoost: 8, carHeight: 1.05, waterHeight: -2.4 });
+export const FLIGHT_RULES = Object.freeze({ gravity: 36, hopGravity: 72, rampLaunchBoost: 8, carHeight: 1.05, waterHeight: -2.4 });
+/** A manual hop keeps its gravity even when crossing an automatic ramp lip. */
+export const flightGravity = (origin: RaceState['flightOrigin']) => origin === 'hop' ? FLIGHT_RULES.hopGravity : FLIGHT_RULES.gravity;
 const footprintBounds = new WeakMap<Point[], { x0: number; x1: number; z0: number; z1: number }>();
 export const inFootprint = (p: Point, footprint: Point[]) => {
   let bounds = footprintBounds.get(footprint);
@@ -58,7 +60,7 @@ export function validateSupports(points: Point[], track: TrackDefinition): { ok:
         return c.along >= -track.carLength && c.along <= j.corridorLength && Math.abs(c.across) <= (j.width - track.carWidth) / 2 - 0.12;
       });
       if (!vehicleSupported(p, heading, track)) {
-        if (!corridor || (b.x - a.x) * corridor.forward.x + (b.z - a.z) * corridor.forward.z <= 0) return { ok: false, point: p, message: 'Water ahead. Use the marked ramp or stay on the pier bypass.' };
+        if (!corridor || (b.x - a.x) * corridor.forward.x + (b.z - a.z) * corridor.forward.z <= 0) return { ok: false, point: p, message: 'The line crosses unsupported water. Stay on the pier or enter the ramp straight.' };
         traversals.add(corridor.id);
       }
     }
@@ -69,7 +71,7 @@ export function validateSupports(points: Point[], track: TrackDefinition): { ok:
     const exit = points.findIndex((p, i) => i > entry && jumpCoordinates(p, j).along >= j.rampLength + j.gap + track.carLength / 2 && Math.abs(jumpCoordinates(p, j).across) <= (j.width - track.carWidth) / 2);
     if (entry < 0 || exit < 0 || points.slice(entry, exit + 1).some((p, i, all) => {
       const c = jumpCoordinates(p, j); return Math.abs(c.across) > (j.width - track.carWidth) / 2 - 0.12 || i > 0 && c.along < jumpCoordinates(all[i - 1], j).along - 0.01;
-    })) return { ok: false, point: j.from, message: 'Enter the ramp straight and draw forward through the marked landing corridor.' };
+    })) return { ok: false, point: j.from, message: 'Enter the ramp straight and leave room for the car on the landing deck.' };
   }
   return { ok: true, jumps: [...traversals] };
 }

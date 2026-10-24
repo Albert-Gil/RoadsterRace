@@ -1,6 +1,6 @@
 # Sound direction and replaceable recordings
 
-Sound is optional. Tap the speaker button to enable it. It begins muted and unlocks the browser's audio context from that gesture. The default palette is original Web Audio synthesis: a restrained electric drive tone, tire friction, sandy scrub, quiet coastal air, compressed-air thrust and short race cues. There is no combustion-engine roar, voiceover or background song.
+Sound defaults enabled and unlocks on the first real tap or key press. The speaker button mutes/unmutes it. The user-supplied 21 recordings now cover abilities, surfaces, impacts, menus, race cues and all four circuit ambience beds; original Web Audio synthesis remains for missing roles. The supplied 64-second menu music streams separately on menu/results screens and stays off during drawing and racing. See `AUDIO_INTEGRATION.md` for exact filename mapping, source preservation, preparation and the menu-music prompt.
 
 ## What follows the race
 
@@ -12,7 +12,7 @@ Sound is optional. Tap the speaker button to enable it. It begins muted and unlo
 - Pause, app interruption and leaving play silence the driving layers. Pause/interruption also cancel unfinished cues. Mute fades the master output and cancels cues; the race continues normally.
 - Audio only reads game state. Loading, muting or changing sounds cannot change grip, speed, timing or results.
 
-## Replacing with ElevenLabs exports later
+## Replacing recordings
 
 No ElevenLabs service is connected yet. Generate/export sounds separately, put the files in `public/audio/`, and map them in `src/presentation/audio-assets.ts`. No API key or generator is needed in the browser. Existing synthesis remains a fallback while files load and if a file is missing, unsupported, corrupt or too large.
 
@@ -63,10 +63,10 @@ Keep silence before a cue very short. Trim tails and fade loop joins. Avoid norm
 The browser checks measure actual output, silence on pause/mute, successful recording decode, and fallback after a missing file or invalid audio data. The preview check measures audibility, unclipped peaks and quiet gaps. These checks cannot decide whether a sound is pleasant; use a real gameplay listening pass for that. Physical Safari audio verification remains pending.
 
 
-The current three-course build shares the same neutral synthesized air loop and race sound roles. Dedicated Launchsite industrial ambience remains part of a later recording/art pass; it can use the existing local-asset replacement system. No ElevenLabs network service is required at runtime.
+Each of the four courses now selects its own supplied ambient loop: `coast`, `launchsite`, `city` or `pier`. Only the selected bed is audible. No ElevenLabs network service is required at runtime.
 
 ## Physical multiplayer sound roles
 
-The three-course build adds `car-impact` (a low thump plus metallic/noise transient, about 0.22 s) and `scrape` (quiet band-limited friction, about 0.14 s). The pair event drives one cue, with strength-based gain; repeat impacts are throttled per pair and the shared mix bounds simultaneous voices. Scrape tails stop naturally after contact; pause/mute stops cues immediately. Existing `collision` remains the barrier sound. These are local synthesized fallbacks, ready for replacement through `audioAssets.cues` with exported recordings. No API key or ElevenLabs runtime connection is needed.
+The `car-impact` role now uses the supplied recording; `scrape` retains its quiet synthesized friction fallback. The pair event drives one cue, with strength-based gain; repeat impacts are throttled per pair and the shared mix bounds simultaneous voices. Scrape tails stop naturally after contact; pause/mute stops cues immediately. Existing `collision` remains the barrier sound. No API key or ElevenLabs runtime connection is needed.
 
-The cue preview now includes car impact and scraping. A silent gameplay capture remains separate from this audible cue preview. Dedicated coastal/industrial/Bay ambience is a later recording pass; all three currently share the existing air loop.
+The synthesized cue preview includes car impact and scraping as fallback references. It does not audition the newly supplied recordings. A silent gameplay capture remains separate from an audible cue preview. Actual-device listening remains necessary for the new recordings and loop joins.

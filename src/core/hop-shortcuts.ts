@@ -43,7 +43,7 @@ export function validateHopShortcuts(points: Point[], track: TrackDefinition): {
       return main.distance > (track.roadWidth - track.carWidth) / 2 && Math.abs(q.progress - obstacleAt) < track.carLength * 2.5 && q.distance < shortcut.width / 2 + 0.1 && q.distance < main.distance - 1;
     });
     if (!touches) continue;
-    const failure = (point: Point) => ({ ok: false as const, point, message: 'Use the full marked hop lane, from its entry to its exit. Leave room for the car.' });
+    const failure = (point: Point) => ({ ok: false as const, point, message: 'The line cuts outside the service lane. Follow it through and leave room for the car.' });
     let entry: { index: number; point: Point; at: number } | undefined, exit: typeof entry;
     for (let i = 1; i < points.length; i++) {
       if (!entry) { const hit = crossing(points[i - 1], points[i], shortcut, false); if (hit) entry = { index: i, point: hit.point, at: lerp(ds[i - 1], ds[i], hit.t) }; }

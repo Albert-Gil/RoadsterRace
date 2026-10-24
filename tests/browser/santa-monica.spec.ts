@@ -58,7 +58,7 @@ test('real touch draws bypass and jump in landscape, portrait and tablet; rides 
 
 test('jump race renders elevation, pauses safely, completes, and retry resets flight', async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
-  await page.goto('/?circuit=santa-monica'); await page.getByRole('button', { name: 'Turn sound on', exact: true }).click();
+  await page.goto('/?circuit=santa-monica');
   await page.getByRole('button', { name: "Time Trial" }).click(); await page.getByRole('button', { name: '1 lap', exact: true }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
   await touchLap(page, true); await page.getByRole('button', { name: 'Race this line' }).click();
   await page.waitForFunction(() => (window as any).__roadster.getState().race?.elevation > 1.4);

@@ -1,6 +1,6 @@
 import { angleDelta, clamp, distance } from './geometry';
 import { blockedRouteSection } from './barriers';
-import { FLIGHT_RULES, groundHeight, vehicleSupported } from './support';
+import { flightGravity, groundHeight, vehicleSupported } from './support';
 import { compileRoute, createPracticeSamples, sampleRoute, PACE_RANGE } from './route';
 import { RULES } from './simulation';
 import type { CompiledRoute, TrackDefinition } from './types';
@@ -42,7 +42,7 @@ export function shouldComputerHop(race: LocalRace, player: number) {
       && along > 0 && along <= 10 && Math.abs(across) < track.carWidth * 1.5 && s.speed - o.speed >= 2;
   });
   if (!blocked) return false;
-  const duration = 2 * RULES.hopLaunchSpeed / FLIGHT_RULES.gravity;
+  const duration = 2 * RULES.hopLaunchSpeed / flightGravity('hop');
   const samples = Array.from({ length: 25 }, (_, n) => ({ x: s.position.x + s.velocity.x * duration * n / 24, z: s.position.z + s.velocity.z * duration * n / 24 }));
   const line = Array.from({ length: 9 }, (_, n) => sampleRoute(race.routes[player], s.distance + s.speed * duration * n / 8));
   if (line.some(p => Math.abs(p.curvature) > 0.012 || Math.abs(angleDelta(Math.atan2(forward.x, forward.z), p.heading)) > Math.PI / 18)

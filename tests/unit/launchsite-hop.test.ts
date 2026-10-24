@@ -35,7 +35,7 @@ test.each([20,25,30])('a manual hop at %i m/s clears the full obstacle footprint
   s.distance=route.points.reduce((best,p)=>distance(p,start)<distance(sampleRoute(route,best),start)?p.distance:best,0);
   sim.pressHop(); let peak=0;
   for(let i=0;i<50;i++){sim.step();peak=Math.max(peak,s.elevation);}
-  expect(s.position.z).toBeGreaterThan(-12); expect(s.collisionCount).toBe(0); expect(peak).toBeCloseTo(4.014,2);
+  expect(s.position.z).toBeGreaterThan(-12); expect(s.collisionCount).toBe(0); expect(peak).toBeCloseTo(8.028,2);
 });
 test.each(['none','late','early'])('a %s hop makes physical contact instead of bypassing the obstacle', timing => {
   const route=plan(), sim=new RaceSimulation(route,track,1), s=sim.state;
