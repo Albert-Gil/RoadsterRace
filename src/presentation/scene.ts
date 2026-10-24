@@ -17,6 +17,7 @@ import { VertexBuffer } from '@babylonjs/core/Buffers/buffer';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { Texture } from '@babylonjs/core/Materials/Textures/texture';
 import { Scene } from '@babylonjs/core/scene';
+import type { SceneInstrumentation } from '@babylonjs/core/Instrumentation/sceneInstrumentation';
 import '@babylonjs/core/Culling/ray';
 import { distance, mix, modulo } from '../core/geometry';
 import { drawingStart, startGate, gatePoint, trimDrawing } from '../core/start-finish';
@@ -71,7 +72,10 @@ export class GameScene {
   inspectVehicle(view: 'front' | 'side' | 'rear') { this.showcase.inspectView(view); }
   get showcaseProjection() { return this.showcase.projectionMetrics; }
   ready = false;
+  /** Development metric: draw calls of the last frame (world scene, plus the menu showcase when shown), via public instrumentation. Always 0 in production. */
   drawCalls = 0;
+  private instrumentation?: SceneInstrumentation;
+  private showcaseInstrumentation?: SceneInstrumentation;
   constructor(readonly canvas: HTMLCanvasElement, readonly track: TrackDefinition, theme: PresentationTheme, readonly scenery: SceneryId = 'coastal', engine?: Engine) {
     theme = sceneryTheme(theme, scenery);
     this.theme = theme;
@@ -171,10 +175,15 @@ export class GameScene {
     this.jumpFeedback = new JumpFeedback(this.scene);
     this.vehicle = new VehicleView(this.scene, theme); this.vehicles.push(this.vehicle); this.vehicle.update({ ...track.start, heading: startHeading });
     this.registerVehicleShadows(this.vehicle); void this.vehicle.loadAsset(visualAssets.vehicle).then(() => this.registerVehicleShadows(this.vehicle));
-    for (const [url, material] of [[visualAssets.roadTexture, this.roadMaterial], [visualAssets.terrainTexture, this.terrainMaterial]] as const) {
+    for (const [url, material] of [[visualAssets.roadTexture, this.roadMaterial]] as const) {
       if (url) material.diffuseTexture = new Texture(assetUrl(url), this.scene, false, true, Texture.TRILINEAR_SAMPLINGMODE, undefined, () => { material.diffuseTexture?.dispose(); material.diffuseTexture = null; });
     }
     this.showcase = new VehicleShowcase(this.engine, theme);
+    // Loaded only for development builds; the inspector and browser budgets read drawCalls.
+    if (import.meta.env.DEV) void import('@babylonjs/core/Instrumentation/sceneInstrumentation').then(({ SceneInstrumentation }) => {
+      if (this.scene.isDisposed) return;
+      this.instrumentation = new SceneInstrumentation(this.scene); this.showcaseInstrumentation = new SceneInstrumentation(this.showcase.scene);
+    });
     this.setTheme(theme); this.resize(); this.ready = true;
     // Mobile layout / dynamic viewport units may settle after window.resize.
     // Follow the canvas itself so its drawing buffer never stays portrait-sized
@@ -345,10 +354,10 @@ export class GameScene {
     (this.marker.material as StandardMaterial).alpha = reduced ? 0.32 : 0.29 + Math.sin(time * 3) * 0.05;
     this.sceneryRuntime.update(time, reduced);
     this.jumpFeedback.update(time, reduced);
-    const callsBefore = this.engine._drawCalls.current;
+    // Each instrumented scene restarts the shared engine counter as it begins rendering.
     this.scene.render();
-    if (['welcome', 'setup', 'results'].includes(this.layoutMode)) this.showcase.render(time);
-    this.drawCalls = this.engine._drawCalls.current - callsBefore;
+    this.drawCalls = this.instrumentation?.drawCallsCounter.current ?? 0;
+    if (['welcome', 'setup', 'results'].includes(this.layoutMode)) { this.showcase.render(time); this.drawCalls += this.showcaseInstrumentation?.drawCallsCounter.current ?? 0; }
   }
-  dispose(disposeEngine = true) { this.ready = false; this.canvasResizeObserver.disconnect(); this.showcase.dispose(); this.scene.dispose(); if (disposeEngine) this.engine.dispose(); }
+  dispose(disposeEngine = true) { this.ready = false; this.canvasResizeObserver.disconnect(); this.instrumentation?.dispose(); this.showcaseInstrumentation?.dispose(); this.showcase.dispose(); this.scene.dispose(); if (disposeEngine) this.engine.dispose(); }
 }

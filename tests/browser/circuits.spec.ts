@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
+import { waitForPhase } from './ui';
 mkdirSync('artifacts/orbital', { recursive: true });
 const state = (page: Page) => page.evaluate(() => (window as any).__roadster.getState());
 
@@ -34,7 +35,7 @@ test('course switching clears plans, retains drivers and distance, scopes bests 
   await page.getByRole('button', { name: '1 lap', exact: true }).click();
   await page.getByRole('button', { name: 'Draw racing line' }).click(); await page.evaluate(() => (window as any).__roadster.usePracticeLine());
   await page.getByRole('button', { name: 'Race this line' }).click();
-  await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'results');
+  await waitForPhase(page, 'results');
   expect((await state(page)).best).toBeGreaterThan(0);
   await page.getByRole('button', { name: 'Race setup', exact: true }).click();
   await page.getByRole('button', { name: 'Launchsite circuit', exact: true }).click();
@@ -89,7 +90,7 @@ test('Orbital phone touch drawing rejects protected cuts and races a wide outer-
     expect(capture.gaps.some((gap: number) => gap > 500) || capture.interruptions.length > 0).toBe(true);
     await page.getByRole('button', { name: 'Resume', exact: true }).click();
   }
-  await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'results', undefined, { timeout: 90000 });
+  await waitForPhase(page, 'results', 90000);
   expect((await state(page)).race.lapTimes).toHaveLength(1); expect(errors).toEqual([]); await context.close();
 });
 
@@ -104,14 +105,14 @@ for (const count of [2, 3, 4]) test(`Orbital ${count}-player race finishes with 
   }
   await page.waitForFunction(() => (window as any).__roadster.getGraphics().renderReady);
   for (const key of ['KeyA', 'KeyL', 'KeyQ', 'KeyP'].slice(0, count)) await page.keyboard.press(key);
-  await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'racing');
+  await waitForPhase(page, 'racing');
   await page.keyboard.press('KeyA');
   await page.waitForFunction(() => (window as any).__roadster.getState().players[0].thrustCount === 1);
   expect((await state(page)).players.slice(1).every((p: any) => p.thrustCount === 0)).toBe(true);
   const calls: number[] = [];
   for (let i = 0; i < 5; i++) { await page.waitForTimeout(100); calls.push(await page.evaluate(() => (window as any).__roadster.getGraphics().drawCalls)); }
   await page.screenshot({ path: `artifacts/orbital/${count}-player-race.png` });
-  await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'results', undefined, { timeout: 90000 });
+  await waitForPhase(page, 'results', 90000);
   const finished = await state(page); expect(finished.players.every((p: any) => p.finished && p.lapTimes.length === 1)).toBe(true);
   expect(Math.max(...calls)).toBeLessThanOrEqual(150); expect(errors).toEqual([]);
   await page.screenshot({ path: `artifacts/orbital/${count}-player-results.png` });

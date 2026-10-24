@@ -9,6 +9,7 @@ Build on the approved browser prototype and local multiplayer: two to four seque
 - Simulation uses a 60 Hz fixed step. Visual quality and theme must not change results.
 - Touch ownership lasts until release/cancel; never route solely through the primary pointer.
 - Use the pinned pnpm toolchain and lockfile. Run `pnpm typecheck`, `pnpm test`, and `pnpm build` after meaningful changes. Run relevant browser tests for input/session/presentation changes.
+- After changing tuning constants or versions, run `pnpm docs:rules` (docs/CURRENT_RULES.md is generated and test-checked). Changes that must not alter race results (refactors, presentation) must pass `pnpm test:legacy` against HEAD.
 - Document physical Safari verification as pending until a real device has been tested. Automated mobile emulation is supplemental evidence.
 - Preserve existing planning documents. Never put secrets or generated dependencies in version control.
 - Local preview and the public Albert-Gil/RoadsterRace GitHub Pages testing site are authorized. External posts/promotion and additional hosting services remain outside the milestone. Deploy only verified main builds of dist/; keep assets/Home beneath the configured base path. No service worker/offline caching during testing. Physical hosted Safari checks remain pending until performed on hardware.

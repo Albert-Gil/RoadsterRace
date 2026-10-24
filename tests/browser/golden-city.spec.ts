@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { mkdirSync, copyFileSync, existsSync, writeFileSync } from 'node:fs';
+import { waitForPhase } from './ui';
 mkdirSync('artifacts/golden-city', { recursive: true });
 if (existsSync('artifacts/golden-gate/circuit-preview.png') && !existsSync('artifacts/golden-city/before.png')) copyFileSync('artifacts/golden-gate/circuit-preview.png', 'artifacts/golden-city/before.png');
 const state = (page: Page) => page.evaluate(() => (window as any).__roadster.getState());
@@ -57,9 +58,9 @@ for (const circuit of ['coastal-launch', 'orbital-launchyard', 'golden-gate']) t
   expect((await graphics(page)).lineWidths).toEqual([[14, 10]]); expect((await graphics(page)).ignoredStrokeCount).toBe(2);
   await page.screenshot({ path: `artifacts/golden-city/${circuit}-lead-in.png` });
   await page.keyboard.press('KeyT'); expect((await state(page)).route).toEqual(before.route); expect((await graphics(page)).ignoredStrokeCount).toBe(2);
-  await page.getByRole('button', { name: 'Race this line' }).click(); await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'racing');
+  await page.getByRole('button', { name: 'Race this line' }).click(); await waitForPhase(page, 'racing');
   expect((await graphics(page)).lineWidths).toEqual([[11, 8]]); expect((await graphics(page)).ignoredStrokeCount).toBe(0);
-  await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'results', undefined, { timeout: 90000 });
+  await waitForPhase(page, 'results', 90000);
   expect((await state(page)).race.lapTimes).toHaveLength(1); expect(errors).toEqual([]);
 });
 test('Golden Gate real browser touch works at high density in phone layouts; canceled lead-ins are cleared', async ({ browser }) => {
@@ -88,13 +89,13 @@ for (const count of [2, 3, 4]) test(`Golden Gate ${count}-car bridge race comple
   for (let i = 0; i < count; i++) { if (i) await page.getByRole('button', { name: `I'm Player ${i + 1}` }).click(); await page.evaluate(() => (window as any).__roadster.usePracticeLine()); await page.getByRole('button', { name: 'Lock in my line' }).click(); }
   await page.waitForFunction(() => (window as any).__roadster.getGraphics().renderReady);
   for (const key of ['KeyA', 'KeyL', 'KeyQ', 'KeyP'].slice(0, count)) await page.keyboard.press(key);
-  await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'racing');
+  await waitForPhase(page, 'racing');
   for (const key of ['KeyA', 'KeyL', 'KeyQ', 'KeyP'].slice(0, count)) await page.keyboard.press(key);
   const samples: any[] = [];
   await page.waitForFunction(() => (window as any).__roadster.getState().players.some((p: any) => p.position.x > -40 && p.position.x < 40 && p.position.z > 36 && p.position.z < 48), undefined, { timeout: 90000 });
   await page.screenshot({ path: `artifacts/golden-city/bridge-race-${count}.png` });
   for (let i = 0; i < 5; i++) { samples.push(await graphics(page)); await page.waitForTimeout(120); }
-  await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'results', undefined, { timeout: 240000 });
+  await waitForPhase(page, 'results', 240000);
   const result = await state(page); expect(result.players.every((p: any) => p.finished && p.lapTimes.length === (count === 4 ? 6 : 1))).toBe(true);
   expect(result.contactCount).toBeGreaterThan(0); expect(Math.max(...samples.map(g => g.drawCalls))).toBeLessThanOrEqual(150); expect(errors).toEqual([]);
   writeFileSync(`artifacts/golden-city/race-${count}-report.json`, JSON.stringify({ samples, result, errors }, null, 2));

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { waitForPhase } from './ui';
 
 test('a fast drawn lap visibly slides off its route, slows in sand and steers back', async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
@@ -28,7 +29,7 @@ test('a fast drawn lap visibly slides off its route, slows in sand and steers ba
   await page.waitForFunction(speed => { const s = (window as any).__roadster.getState().race; return s.sandAmount > 0.5 && s.speed < speed - 1; }, speedBefore);
   await page.waitForFunction(() => { const s = (window as any).__roadster.getState().race; return s.sandAmount === 0 && s.lineError < 1 && !s.drifting; }, undefined, { timeout: 30000 });
   await page.screenshot({ path: 'artifacts/drift-recovered.png' });
-  await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'results', undefined, { timeout: 120000 });
+  await waitForPhase(page, 'results', 120000);
   expect((await page.evaluate(() => (window as any).__roadster.getState())).race.lapTimes).toHaveLength(2);
   await expect(page.locator('#panel')).not.toContainText(/Carry less|drifts\.|clean line|well-timed/i);
   expect(errors).toEqual([]); await cdp.detach();

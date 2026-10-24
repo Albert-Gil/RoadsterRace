@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
+import { waitForPhase } from './ui';
 
 async function open(page: Page) {
   await page.goto('/'); await page.waitForFunction(() => (window as any).__roadster?.getGraphics().renderReady);
@@ -49,14 +50,14 @@ for (const count of [3, 4]) test(`${count} drivers finish both laps with the upg
     await page.getByRole('button', { name: 'Lock in my line' }).click();
   }
   for (let i = 0; i < count; i++) await page.getByRole('button', { name: `Player ${i + 1} thrust`, exact: true }).click();
-  await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'racing');
+  await waitForPhase(page, 'racing');
   const samples: any[] = [];
   for (let j = 0; j < 8; j++) {
     if (j === 2) for (const key of ['KeyA', 'KeyL', 'KeyQ', 'KeyP'].slice(0, count)) await page.keyboard.press(key);
     await page.waitForTimeout(150); samples.push(await page.evaluate(() => (window as any).__roadster.getGraphics()));
   }
   await page.screenshot({ path: `artifacts/overhaul/${count}-player-race.png` });
-  await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'results', undefined, { timeout: 120000 });
+  await waitForPhase(page, 'results', 120000);
   const state = await page.evaluate(() => (window as any).__roadster.getState());
   expect(state.players.every((p: any) => p.finished && p.lapTimes.length === 2)).toBe(true);
   expect(errors).toEqual([]); expect(Math.max(...samples.map(s => s.drawCalls))).toBeLessThanOrEqual(150);

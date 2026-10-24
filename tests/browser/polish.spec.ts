@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
+import { waitForPhase, currentPhase } from './ui';
 
 mkdirSync('artifacts/polish', { recursive: true });
 for (const viewport of [{ width: 844, height: 390 }, { width: 390, height: 844 }]) {
@@ -12,7 +13,7 @@ for (const viewport of [{ width: 844, height: 390 }, { width: 390, height: 844 }
     await page.getByRole('button', { name: 'Draw racing line', exact: true }).click();
     await page.evaluate(() => (window as any).__roadster.usePracticeLine());
     await page.getByRole('button', { name: 'Race this line', exact: true }).click();
-    await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'racing');
+    await waitForPhase(page, 'racing');
     const pad = await page.locator('#thrust-button').boundingBox();
     expect(pad!.width).toBe(56); expect(pad!.height).toBe(56);
     const sound = await page.locator('#sound-button').boundingBox();
@@ -51,7 +52,7 @@ for (const circuit of ['coastal-launch', 'launchsite', 'golden-gate', 'santa-mon
     await page.evaluate(() => (window as any).__roadster.usePracticeLine());
     await page.waitForFunction(() => (window as any).__roadster.getGraphics().renderReady);
     await page.getByRole('button', { name: 'Race this line', exact: true }).click();
-    await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'racing');
+    await waitForPhase(page, 'racing');
     await page.keyboard.press('Space');
     const metrics = await page.evaluate(async () => {
       const samples: any[] = [];
@@ -73,8 +74,8 @@ test('Home from a paused championship preserves completed progress through the e
   await page.getByRole('button', { name: 'Start tournament', exact: true }).click();
   await page.getByRole('button', { name: 'Draw your lines', exact: false }).click();
   await page.evaluate(() => (window as any).__roadster.usePracticeLine()); await page.getByRole('button', { name: 'Race this line', exact: true }).click();
-  await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'racing'); await page.keyboard.press('Escape');
+  await waitForPhase(page, 'racing'); await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Home', exact: true }).click();
-  expect(await page.evaluate(() => (window as any).__roadster.getState().phase)).toBe('tour-exit');
+  expect(await currentPhase(page)).toBe('tour-exit');
   await expect(page.getByRole('button', { name: /Save.*exit/i })).toBeVisible();
 });

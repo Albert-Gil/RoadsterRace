@@ -5,9 +5,13 @@ import { posix } from 'node:path';
 import { stripTypeScriptTypes } from 'node:module';
 import { SourceTextModule } from 'node:vm';
 
-// Run with node --experimental-vm-modules. Baseline files are read from Git;
+// Run with `pnpm test:legacy` (node --experimental-vm-modules). Compares the working tree
+// against a Git revision on identical course geometry, for changes that must not alter
+// race results (refactors, presentation work). Baseline files are read with `git show`;
 // neither checkout nor working files are switched or modified.
-const baseline = '0050ec0', records = [];
+// LEGACY_BASELINE selects the revision (default HEAD). Behaviour-changing work bumps
+// RULES.version/COMPILER_VERSION and is expected to differ; this check is not for it.
+const baseline = process.env.LEGACY_BASELINE || 'HEAD', records = [];
 async function runtime(ref) {
   const cache = new Map();
   async function module(path) {
@@ -25,25 +29,25 @@ async function runtime(ref) {
   return { circuits: entries[0].circuits, ...entries[1], ...entries[2] };
 }
 const old = await runtime(baseline), current = await runtime();
-for (const circuit of old.circuits.slice(0,3)) for (const count of [2, 4]) {
+for (const circuit of old.circuits) for (const count of [1, 2, 4]) {
   const run = runtime => {
     const track = old.circuits.find(c => c.id === circuit.id).track;
     const compiled = runtime.compileRoute(runtime.createPracticeSamples(track), track); assert.equal(compiled.ok, true);
     const race = new runtime.LocalRace(Array(count).fill(compiled.route), track, 2);
     for (let tick = 0; tick < 18000 && !race.finished; tick++) {
-      for (let p = 0; p < count; p++) if ((tick + p * 63) % 300 === 0) race.pressThrust(p);
+      for (let p = 0; p < count; p++) { if ((tick + p * 63) % 300 === 0) race.pressThrust(p); if ((tick + p * 97) % 480 === 240) race.pressHop(p); }
       race.step();
     }
-    assert.equal(race.finished, true); return race.racers.map(r => ({ finish: r.state.finishTime, laps: r.state.lapTimes, drifts: r.state.driftCount, collisions: r.state.collisionCount, recoveries: r.state.recoveryCount }));
+    assert.equal(race.finished, true); return race.racers.map(r => ({ finish: r.state.finishTime, laps: r.state.lapTimes, drifts: r.state.driftCount, collisions: r.state.collisionCount, recoveries: r.state.recoveryCount, hops: r.state.hopCount }));
   };
   const before = run(old), after = run(current);
   for (let p = 0; p < count; p++) {
-    assert.ok(Math.abs(before[p].finish - after[p].finish) < 1e-8);
+    assert.ok(Math.abs(before[p].finish - after[p].finish) < 1e-8, `${circuit.id}/${count}/${p}: finish ${before[p].finish} vs ${after[p].finish}`);
     before[p].laps.forEach((time, i) => assert.ok(Math.abs(time - after[p].laps[i]) < 1e-8));
-    for (const key of ['drifts', 'collisions', 'recoveries']) assert.equal(before[p][key], after[p][key]);
+    for (const key of ['drifts', 'collisions', 'recoveries', 'hops']) assert.equal(before[p][key], after[p][key], `${circuit.id}/${count}/${p}: ${key}`);
   }
   records.push({ circuit: circuit.id, count, before, after });
 }
-await mkdir('artifacts/phone-upgrade', { recursive: true });
-await writeFile('artifacts/phone-upgrade/legacy-multiplayer.json', JSON.stringify({ baseline, passed: true, records }, null, 2));
-console.log(`All ${records.length} legacy multiplayer fixtures match ${baseline}.`);
+await mkdir('artifacts/legacy-handling', { recursive: true });
+await writeFile('artifacts/legacy-handling/report.json', JSON.stringify({ baseline, passed: true, records }, null, 2));
+console.log(`All ${records.length} handling fixtures (1/2/4 cars, every circuit) match ${baseline}.`);

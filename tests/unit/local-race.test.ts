@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { LocalRace } from '../../src/core/local-race';
 import { compileRoute, createPracticeSamples } from '../../src/core/route';
-import { FixedStepClock, RULES } from '../../src/core/simulation';
+import { FixedStepClock, RaceSimulation, RULES } from '../../src/core/simulation';
 import { coastalTrack } from '../../src/core/track';
 
 function route(seconds = 7) {
@@ -83,3 +83,18 @@ describe('shared local race', () => {
     expect(session.standings().map(r => r.rank)).toEqual([1, 1, 3]);
   });
 });
+
+test('a single RaceSimulation and a one-car LocalRace share one stepping implementation', async () => {
+  const { circuits } = await import('../../src/content/circuits');
+  for (const { track } of circuits) {
+    const compiled = compileRoute(createPracticeSamples(track, 4), track); if (!compiled.ok) throw new Error(compiled.message);
+    const single = new RaceSimulation(compiled.route, track, 2), race = new LocalRace([compiled.route], track, 2);
+    for (let tick = 0; tick < 18000 && !race.finished; tick++) {
+      if (tick % 300 === 0) { single.pressThrust(); race.pressThrust(0); }
+      if (tick % 420 === 210) { single.pressHop(); race.pressHop(0); }
+      single.step(); race.step();
+      if (tick % 60 === 0) expect(single.state).toEqual(race.racers[0].state);
+    }
+    expect(race.finished).toBe(true); expect(single.state).toEqual(race.racers[0].state);
+  }
+}, 60000);

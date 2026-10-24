@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
+import { waitForPhase } from './ui';
 mkdirSync('artifacts/heavy-hop',{recursive:true});
 for(const viewport of [{width:844,height:390},{width:390,height:844},{width:320,height:568}])test(`hop-required preview stays in the phone control rail at ${viewport.width}x${viewport.height}`,async({page})=>{
   await page.setViewportSize(viewport);await page.goto('/?circuit=launchsite');
@@ -24,7 +25,7 @@ test('Launchsite shortcut preview and actual hop gameplay',async({browser})=>{
   await page.waitForFunction(()=>(window as any).__roadster.getGraphics().renderReady);
   await page.screenshot({path:'artifacts/heavy-hop/launchsite-shortcut-preview.png'});
   await page.getByRole('button',{name:'Race this line',exact:true}).click();
-  await page.waitForFunction(()=>(window as any).__roadster.getState().phase==='racing');
+  await waitForPhase(page, 'racing');
   await page.waitForFunction(()=>{
     const s=(window as any).__roadster.getState().race;
     return s.position.x>49&&s.position.x<55&&s.position.z>-29&&s.position.z<-25;
@@ -38,7 +39,7 @@ test('Launchsite shortcut preview and actual hop gameplay',async({browser})=>{
   const apex=await page.evaluate(()=>({state:(window as any).__roadster.getState(),graphics:(window as any).__roadster.getGraphics()}));
   await page.screenshot({path:'artifacts/heavy-hop/shortcut-hop-apex.png'});
   expect(apex.graphics.carTriangles).toBeLessThanOrEqual(10000);expect(apex.graphics.drawCalls).toBeLessThanOrEqual(90);
-  await page.waitForFunction(()=>(window as any).__roadster.getState().phase==='results');
+  await waitForPhase(page, 'results');
   const result=await page.evaluate(()=>(window as any).__roadster.getState());
   expect(result.race.collisionCount).toBe(0);expect(result.race.recoveryCount).toBe(0);expect(result.race.hopCount).toBe(1);
   expect(errors).toEqual([]);writeFileSync('artifacts/heavy-hop/gameplay.json',JSON.stringify({firing,apex,result,errors},null,2));

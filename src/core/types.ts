@@ -27,7 +27,6 @@ export interface TrackDefinition {
   barriers: TrackBarrier[];
   length: number;
   distances: number[];
-  checkpoints: Point[];
   start: Point;
   startFinish?: StartFinishGate;
   bridges?: TrackBridge[];

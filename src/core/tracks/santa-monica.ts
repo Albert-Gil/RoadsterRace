@@ -1,5 +1,5 @@
 import { roundedCircuit } from '../road-geometry';
-import { closedSpline, cumulative, distance, projectToPolyline, samplePolyline } from '../geometry';
+import { closedSpline, cumulative, distance, projectToPolyline } from '../geometry';
 import { createStartFinish } from '../start-finish';
 import type { Point, SupportSurface, TrackBarrier, TrackDefinition, TrackJump } from '../types';
 
@@ -55,13 +55,12 @@ const authoredTrack: TrackDefinition = {
   id: 'santa-monica', version: 2, name: 'Santa Monica', centerline, distances, length,
   roadWidth: 16, carWidth: 2.2, carLength: 5.2, start: centerline[0], startFinish: createStartFinish(centerline[0], centerline[1], 16),
   supports, waterOpenings: [{ id: 'pacific-gap', footprint: rectangle(62, -20, 10, 16) }], jumps: [jump], barriers,
-  checkpoints: Array.from({ length: 8 }, (_, i) => samplePolyline(centerline, distances, i * length / 8)),
 };
 
 /** Reflect the authored venue once so its start-to-pier loop runs clockwise. */
 export function reflectSantaVenue(track: TrackDefinition): TrackDefinition {
   const point = (p: Point): Point => ({ x: p.x, z: -p.z });
-  return { ...track, centerline: track.centerline.map(point), start: point(track.start), checkpoints: track.checkpoints.map(point),
+  return { ...track, centerline: track.centerline.map(point), start: point(track.start),
     startFinish: track.startFinish ? { ...track.startFinish, center: point(track.startFinish.center), forward: point(track.startFinish.forward) } : undefined,
     barriers: track.barriers.map(b => ({ ...b, footprint: b.footprint.map(point) })),
     supports: track.supports?.map(s => ({ ...s, footprint: s.footprint.map(point) })), waterOpenings: track.waterOpenings?.map(s => ({ ...s, footprint: s.footprint.map(point) })),
