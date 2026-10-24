@@ -9,12 +9,15 @@ import { buildSpaceport } from './spaceport';
 import { buildCircuitDetails } from './circuit-details';
 import { buildSantaMonica } from './santa-monica';
 import { finishVenue } from './venue-polish';
+import { buildCanyon } from './canyon';
+import { dressVenue } from './venue-detail';
 
 export interface SceneryRuntime {
   shadowCasterMaterials: Set<StandardMaterial>;
   update(time: number, reducedMotion: boolean): void;
 }
 export function buildScenery(id: SceneryId, scene: Scene, track: TrackDefinition, theme: PresentationTheme, materials: Map<string, StandardMaterial>): SceneryRuntime {
+  if(id==='canyon')return buildCanyon(scene,track,theme,materials);
   let runtime: SceneryRuntime;
   if (id === 'sunset') runtime = buildSantaMonica(scene, track, theme, materials);
   else if (id === 'bay') runtime = buildBay(scene, track, theme, materials);
@@ -28,5 +31,6 @@ export function buildScenery(id: SceneryId, scene: Scene, track: TrackDefinition
   }
   buildCircuitDetails(scene, track, theme, materials, runtime.shadowCasterMaterials, id === 'coastal');
   finishVenue(id, scene, track, theme, materials);
+  dressVenue(id, scene, materials);
   return runtime;
 }

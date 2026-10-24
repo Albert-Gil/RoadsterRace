@@ -4,6 +4,7 @@ import { computerRoute, stepComputers } from './core/computer';
 import { LapRecorder, lapRecordKey, replayPose, type LapRecord } from './core/lap-replay';
 import { loadLap, saveLap } from './presentation/lap-storage';
 import './style.css';
+import { roadGrade, supportBelow } from './core/elevation';
 import { angleDelta, clamp, distance, lerp } from './core/geometry';
 import { LocalRace, startingGrid } from './core/local-race';
 import { compileRoute, createPracticeSamples, sampleRoute, COMPILER_VERSION } from './core/route';
@@ -275,14 +276,14 @@ function updateVehicles(alpha: number) {
       airborne: s.movement === 'airborne',
       hopAge: s.flightOrigin === 'hop' ? s.time - s.flightStartedAt : undefined,
       supportY: supported(s.position, activeTrack) ? groundHeight(s.position, activeTrack) : undefined,
-      surfaceAt: (x: number, z: number) => supported({x,z}, activeTrack) ? groundHeight({x,z}, activeTrack) : undefined,
-      shadowY: supported(s.position, activeTrack) ? 0 : FLIGHT_RULES.waterHeight,
-      pitch: s.movement === 'airborne' ? clamp(Math.atan2(s.verticalVelocity, Math.max(12, s.speed)), -(s.flightOrigin === 'hop' ? hopEffects.maxBodyPitch : 0.25), s.flightOrigin === 'hop' ? hopEffects.maxBodyPitch : 0.25) : (() => { const j = rampAt(s.position, activeTrack); return j ? Math.atan(j.lipHeight / j.rampLength) * (Math.sin(s.heading) * j.forward.x + Math.cos(s.heading) * j.forward.z) : 0; })(),
+      surfaceAt: (x: number, z: number) => supported({...s.position,x,z}, activeTrack) ? groundHeight({...s.position,x,z}, activeTrack) : undefined,
+      shadowY: activeTrack.sections ? supportBelow(s.position,s.elevation,activeTrack)??-2.6 : supported(s.position, activeTrack) ? groundHeight(s.position,activeTrack) : FLIGHT_RULES.waterHeight,
+      pitch: s.movement === 'airborne' ? clamp(Math.atan2(s.verticalVelocity, Math.max(12, s.speed)), -(s.flightOrigin === 'hop' ? hopEffects.maxBodyPitch : 0.25), s.flightOrigin === 'hop' ? hopEffects.maxBodyPitch : 0.25) : (() => { if(activeTrack.sections)return Math.atan(roadGrade(activeTrack,s.position.courseProgress??0));const j = rampAt(s.position, activeTrack); return j ? Math.atan(j.lipHeight / j.rampLength) * (Math.sin(s.heading) * j.forward.x + Math.cos(s.heading) * j.forward.z) : 0; })(),
       heading: previous && !s.finished ? previous.heading + angleDelta(previous.heading, s.heading) * alpha : s.heading,
     } : grid ? grid[i] : sampleRoute(line, 0);
     const absent = !!s && (playerCount > 1 && s.finished || s.time < s.recoveringUntil || s.recoveryWaiting);
     world.vehicles[i].setEnabled(!absent); if (playerCount > 1) labels[i].hidden = absent || !['ready', 'countdown'].includes(phase);
-    world.vehicles[i].update(pose, s?.finished ? 0 : s?.speed, !!s && !s.finished && s.time < s.thrustUntil, s?.time, s?.sandAmount, s?.drifting, s?.steeringRate, s?.acceleration);
+    world.vehicles[i].update(pose, s?.finished ? 0 : s?.speed, !!s && !s.finished && s.time < s.thrustUntil, s?.time, s&&activeTrack.surface==='packed-dirt'?Math.max(.12,s.sandAmount):s?.sandAmount, s?.drifting, s?.steeringRate, s?.acceleration);
     if (playerCount > 1) { const point=world.project(pose),safe=document.querySelector('#course-space')!.getBoundingClientRect();labels[i].style.left=`${clamp(point.x+(i-(playerCount-1)/2)*13,safe.left+8,safe.right-8)}px`;labels[i].style.top=`${clamp(point.y-17-i%2*13,safe.top+8,safe.bottom-8)}px`; }
 
   });
@@ -359,7 +360,7 @@ document.querySelector('#sound-button')!.addEventListener('click', () => {
   if (!audio.muted) audio.cue('ready'); else if (!audio.getStatus().available) showNotice('Sound is unavailable in this browser. You can still race.');
 });
 function appendSample(event: PointerEvent) {
-  const point = world.groundPoint(event.clientX, event.clientY); if (!point) return;
+  const point = world.groundPoint(event.clientX, event.clientY, stroke.at(-1)); if (!point) return;
   const sample = { ...point, time: event.timeStamp }; if (!stroke.length || distance(sample, stroke[stroke.length - 1]) > 0.1) stroke.push(sample);
 }
 canvas.addEventListener('pointerdown', e => {
@@ -431,7 +432,7 @@ try {
       updateVehicles(alpha); updateHud();
       const human=session.racers[0].state;world.setGhost(sessionOptions.mode==='time-trial'&&preferences.ghost!==false&&activeGhost?replayPose(activeGhost,Math.max(0,human.time-human.lapStartedAt)):null);
       const moving = session.racers.map(racer => racer.state).filter(s => !s.finished);
-      audio.mix({ active: true, speed: Math.max(0, ...moving.map(s => s.speed)), slip: Math.max(0, ...moving.map(s => s.drifting ? clamp(Math.abs(s.slipAngle) * 2, 0.1, 1) : 0)), sand: Math.max(0, ...moving.map(s => s.sandAmount)) });
+      audio.mix({ active: true, speed: Math.max(0, ...moving.map(s => s.speed)), dirt:activeTrack.surface==='packed-dirt', slip: Math.max(0, ...moving.map(s => s.drifting ? clamp(Math.abs(s.slipAngle) * 2, 0.1, 1) : 0)), sand: Math.max(0, ...moving.map(s => s.sandAmount)) });
       session.racers.forEach((racer, i) => { if (!rechargeAnnounced[i] && !racer.state.finished && racer.state.time >= racer.state.thrustReadyAt) { rechargeAnnounced[i] = true; audio.cue('ready'); } });
       if (session.finished) { if (activeTour && activeTour.state.results.length === roundIndex) { activeTour.state = finalizeRound(activeTour.state, roundIndex, { circuitId: activeTrack.id, trackVersion: activeTrack.version }, session.standings().map(r => ({ player: r.player, rank: r.rank, finishTime: r.finishTime! }))); persistTour(); } if (playerCount === 1) { best = Math.min(best ?? Infinity, session.racers[0].state.finishTime!); bestTimes.set(bestKey(), best); } world.setShowcasePaint(finishFor(driverPaint(session.standings()[0].player)).color); notice.textContent = ''; clearRaceInput(); setPhase('results'); }
     } else if (phase === 'ready' || phase === 'countdown' || phase === 'paused') updateVehicles(1);

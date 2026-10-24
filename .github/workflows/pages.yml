@@ -24,7 +24,7 @@ jobs:
       matrix:
         # Software WebGL is slow on hosted runners. Keep every smoke check,
         # with independent groups and require them all before deployment.
-        group: [coastal-launch, launchsite, golden-gate, santa-monica, phone, multiplayer, solo, tournament]
+        group: [coastal-launch, launchsite, golden-gate, santa-monica, grand-canyon, phone, multiplayer, solo, tournament]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

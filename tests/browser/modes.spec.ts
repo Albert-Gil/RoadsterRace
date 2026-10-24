@@ -8,7 +8,7 @@ async function finish(page:any){
   if((await state(page)).phase==='paused'){console.log('Resuming headless interruption:',(await state(page)).pauseReason);await page.getByRole('button',{name:'Resume',exact:true}).click();}
   try{await waitForPhase(page, 'results', 5000);return;}catch(error){if((error as Error).name!=='TimeoutError')throw error;}
  }
- throw new Error('Race did not complete within the bounded browser check');
+ const stalled=await state(page),saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('roadster-race.tournament.v1')??'null'));await test.info().attach('unfinished-race',{body:JSON.stringify({...stalled,savedOptions:saved?.options},null,2),contentType:'application/json'});throw new Error(`Race did not complete on ${stalled.circuitId}: ${JSON.stringify(stalled.players.map((p:any)=>({finished:p.finished,distance:p.distance,recovery:p.recoveryCount,position:p.position})))}`);
 }
 
 test('Solo Race has three CPU cars, one human control and a deterministic rematch',async({page})=>{
@@ -46,17 +46,20 @@ test('Time Trial stores lap replay, reloads it and keeps the ghost outside the c
   await page.getByRole('button',{name:'Best-lap ghost on',exact:true}).click();await expect(page.getByRole('button',{name:'Best-lap ghost off',exact:true})).toHaveAttribute('aria-pressed','false');
 });
 
-test('solo Full Tour scores all four venues and resumes controller types and difficulty',async({page})=>{
-  test.setTimeout(300000);
+test('solo Full Tour scores all five venues and resumes controller types and difficulty',async({page})=>{
+  test.setTimeout(420000);
+  // A recorded session seed makes collision-heavy tour regressions reproducible.
+  await page.addInitScript(()=>{Math.random=()=>92/0x7fffffff;});
   await page.goto('/');await page.getByRole('button',{name:'Solo Race',exact:true}).click();
   await page.getByRole('button',{name:'Hard',exact:true}).click();await page.getByRole('button',{name:'1 lap',exact:true}).click();
   await page.getByRole('button',{name:'Tournament',exact:true}).click();await page.getByRole('button',{name:'Start tournament',exact:true}).click();
-  for(let round=0;round<4;round++){
+  for(let round=0;round<5;round++){
+    console.log('Solo tour round',round+1,(await state(page)).circuitId);
     if(round===1){await page.reload();await page.getByRole('button',{name:'Resume tournament',exact:false}).click();const resumed=await state(page);expect(resumed.mode).toBe('solo-race');expect(resumed.difficulty).toBe('hard');expect(resumed.humanCount).toBe(1);}
     await page.getByRole('button',{name:'Draw your lines',exact:false}).click();await plan(page);await finish(page);
     const completed=await state(page);expect(completed.tournament.results.length).toBe(round+1);
     for(const f of completed.tournament.results[round].finishes)expect(completed.tournament.results[round].points[f.player]).toBe([10,6,4,0][f.rank-1]);
-    if(round<3)await page.getByRole('button',{name:'Next race',exact:false}).click();
+    if(round<4)await page.getByRole('button',{name:'Next race',exact:false}).click();
   }
   await expect(page.locator('#panel')).toContainText('TOURNAMENT COMPLETE');
 });

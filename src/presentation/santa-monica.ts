@@ -131,7 +131,17 @@ export function buildSantaMonica(scene: Scene, track: TrackDefinition, theme: Pr
   const coasterPath = Array.from({ length: 97 }, (_, i) => {
     const a = i / 96 * Math.PI * 2; return new Vector3(105 + Math.cos(a) * 8, 2.6 + (1 + Math.cos(a * 2 + 0.6)) * 2.1, 31 + Math.sin(a) * 4.8);
   });
-  tube('sunset-coaster-track', coasterPath, 0.16, gold);
+  for (const side of [-1, 1]) {
+    const rail = coasterPath.map(p => {
+      const radial = new Vector3(p.x - 105, 0, p.z - 31).normalize().scale(side * .3);
+      return p.add(radial);
+    });
+    tube('sunset-coaster-track', rail, 0.09, gold);
+  }
+  for (let i = 0; i < 96; i += 3) {
+    const p = coasterPath[i], radial = new Vector3(p.x - 105, 0, p.z - 31).normalize().scale(.43);
+    tube('coaster-track-tie', [p.subtract(radial), p.add(radial)], .055, white);
+  }
   for (let i = 0; i < 96; i += 8) { const p = coasterPath[i]; box('coaster-trestle', p.x, p.y / 2, p.z, 0.18, p.y, 0.18, white); }
   const trainParts = Array.from({ length: 3 }, (_, i) => box('coaster-train-car', -i * 1.2, 0, 0, 1, 0.7, 0.7, coral));
   const train = Mesh.MergeMeshes(trainParts, true, true)!; train.name = 'animated-coaster-train'; train.metadata = { dynamicScenery: true };

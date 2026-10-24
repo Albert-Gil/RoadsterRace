@@ -2,7 +2,7 @@
 
 A browser racing game with Solo Race against three computer drivers, local Multiplayer for two to four people, and Time Trial with a personal-best ghost: draw a line and its pace, race one to six laps, and time your rechargeable thrust and hop. Visuals are replaceable through shared settings and assets. No account, backend, or external service is required to play.
 
-Four venues are available: Coastal Launch, Launchsite, Golden Gate and **Santa Monica**. Santa Monica adds a sunset amusement pier, an optional automatic ramp over water and a flat bypass. Draw through the ramp to take the shortcut; use the existing thrust pad to help clear it. Newly created Full Tours end at Santa Monica. See [course and jump tuning](docs/SANTA_MONICA.md).
+Five venues are available: Coastal Launch, Launchsite, Golden Gate, Santa Monica and **Grand Canyon**. Grand Canyon adds a 568.8 m packed-dirt figure-eight with elevated trails, an automatic crest jump over the lower road, and an unmarked manual-hop alternate trail. Newly created Full Tours end at Grand Canyon. See [canyon layout, flight and surface tuning](docs/GRAND_CANYON.md) and [local verification](docs/GRAND_CANYON_VERIFICATION.md). The new circuit remains local until separately published.
 
 All roads are now **16 metres wide**, including Golden Gate's bridge and Santa Monica's pier/jump surfaces. The fixed camera fits the actual road tightly, with a phone-friendly orientation and compact controls. See [phone framing, computer drivers and lap ghosts](docs/PHONE_AND_MODES.md).
 
@@ -10,7 +10,7 @@ Solo Race provides Easy/Normal/Hard opponents, with three slightly different CPU
 
 The latest playability pass enlarges thrust pads and racing cars, hides floating race tags, adds explicit pause Home navigation, and joins grid starts to each driver's line without chasing the stripe. All four venues receive lighting, surface and architectural detail improvements. See [playability and venue polish](docs/PLAYABILITY_POLISH.md).
 
-**Hop** now gives an immediate one-second lift with a separate seven-second recharge. Both manual hops and automatic ramps gently guide momentum instead of launching according to momentary body yaw. Sand drag is slightly lower; its reduced grip remains. No new obstacle shortcuts are enabled. See [hop controls, flight assistance and tuning](docs/HOP.md).
+**Hop** now gives an immediate one-second lift with a separate seven-second recharge. Both manual hops and automatic ramps gently guide momentum instead of launching according to momentary body yaw. Sand drag is slightly lower; its reduced grip remains. Authored obstacle shortcuts remain unmarked. See [hop controls, flight assistance and tuning](docs/HOP.md).
 
 ## Online testing
 
@@ -63,9 +63,9 @@ Solo keeps the bottom-right thrust/hop pads with Space (Thrust) and H (Hop). The
 
 The separate **Touch test** screen remains available for the 50-cycle input diagnostic.
 
-### Tournaments and four circuits
+### Tournaments and five circuits
 
-Choose **Tournament** in Solo Race or Multiplayer setup. **Full Tour** races Coastal Launch, Launchsite, Golden Gate and Santa Monica in that order. **Custom Tour** supports 2–12 races, repeated venues and up/down reordering. The selected 1–6 laps apply throughout; each round begins with fresh private drawing turns.
+Choose **Tournament** in Solo Race or Multiplayer setup. **Full Tour** races Coastal Launch, Launchsite, Golden Gate, Santa Monica and Grand Canyon in that order. **Custom Tour** supports 2–12 races, repeated venues and up/down reordering. The selected 1–6 laps apply throughout; each round begins with fresh private drawing turns.
 
 First/second/third/fourth receive **10/6/4/0 points**. Race ties share place points and skip following ranks; equal championship totals share the title. Completed points save locally. **Resume tournament** preserves earlier results and restarts the unfinished round with fresh lines. Drivers and schedule lock at tournament start.
 

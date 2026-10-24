@@ -44,6 +44,6 @@ export function contactImpulse(a: ContactBody, b: ContactBody, normal: Point) {
   return -incoming;
 }
 export function separateBody(body: ContactBody, delta: Point, track: TrackDefinition, permitted: readonly string[] = []) {
-  const result = sweepVehicle(body.position, { x: body.position.x + delta.x, z: body.position.z + delta.z }, body.heading, body.heading, body.velocity, track, body.elevation ?? 0, body.elevation ?? 0, (body.elevation ?? 0) > 0, permitted);
+  const result = sweepVehicle(body.position, { ...body.position, x: body.position.x + delta.x, z: body.position.z + delta.z }, body.heading, body.heading, body.velocity, track, body.elevation ?? 0, body.elevation ?? 0, (body.elevation ?? 0) > 0, permitted);
   body.position = result.position; body.velocity = result.velocity;
 }

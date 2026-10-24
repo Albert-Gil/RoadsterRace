@@ -22,7 +22,8 @@ export function computerRoute(track: TrackDefinition, difficulty: Difficulty, op
   if(!result.ok) result=compileRoute(createPracticeSamples(track,7,false),track);
   if(!result.ok)throw new Error(`No safe computer plan for ${track.name}: ${result.message}`);
   const route=result.route, factor=AI_TUNING[difficulty]*(0.99+opponent*0.01);
-  route.points.forEach(p=>{p.desiredSpeed=clamp(Math.sqrt(RULES.asphaltGrip*0.68/Math.max(0.008,Math.abs(p.curvature)))*factor,PACE_RANGE.min,Math.min(PACE_RANGE.max,PACE_RANGE.max*factor));});
+  route.points.forEach(p=>{p.desiredSpeed=clamp(Math.sqrt((track.surface==='packed-dirt'?RULES.dirtGrip:RULES.asphaltGrip)*0.68/Math.max(0.008,Math.abs(p.curvature)))*factor,PACE_RANGE.min,Math.min(PACE_RANGE.max,PACE_RANGE.max*factor));});
+  if(track.sections)for(const p of route.points)for(const j of track.jumps??[])if(j.kind==='crest'&&p.courseProgress!>=j.entryProgress&&p.courseProgress!<=j.exitProgress)p.desiredSpeed=Math.max(22,p.desiredSpeed);
   // Anticipate braking rather than giving the controller stronger brakes.
   for(let pass=0;pass<2;pass++)for(let i=route.points.length-2;i>=0;i--){const p=route.points[i],n=route.points[i+1];p.desiredSpeed=Math.min(p.desiredSpeed,Math.sqrt(n.desiredSpeed*n.desiredSpeed+2*RULES.braking*0.65*distance(p,n)));}
   route.points.at(-1)!.desiredSpeed=route.points[0].desiredSpeed;

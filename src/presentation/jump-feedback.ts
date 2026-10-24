@@ -26,7 +26,7 @@ export class JumpFeedback {
     this.mesh.isVisible = this.pulses.length > 0 && !reduced; if (!this.mesh.isVisible) return;
     this.colors.fill(0);
     this.pulses.forEach((p, slot) => {
-      const r = 0.6 + p.age * (p.splash ? 7 : 3.5), y = p.splash ? -2.35 : 0.18;
+      const r = 0.6 + p.age * (p.splash ? 7 : 3.5), y = p.splash ? -2.35 : (p.point.y??0)+0.18;
       for (let i = 0; i < 24; i++) for (let v = 0; v < 4; v++) {
         const a = (i + (v === 1 || v === 2 ? 1 : 0)) / 24 * Math.PI * 2, radius = r + (v < 2 ? -0.18 : 0.18);
         const at = (slot * 96 + i * 4 + v) * 3, c = (slot * 96 + i * 4 + v) * 4;

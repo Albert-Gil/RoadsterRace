@@ -1,5 +1,6 @@
 import { LapGhost } from './lap-ghost';
 import type { ReplayFrame } from '../core/lap-replay';
+import { drawingRay, roadHeight } from '../core/elevation';
 import { roadEdges } from '../core/road-geometry';
 import { Engine } from '@babylonjs/core/Engines/engine';
 import { Camera } from '@babylonjs/core/Cameras/camera';
@@ -99,6 +100,9 @@ export class GameScene {
     const mat = (role: string, color: string) => { const m = new StandardMaterial(role, this.scene); m.diffuseColor = Color3.FromHexString(color); m.specularColor.setAll(0.04); m.backFaceCulling = false; this.materials.set(role, m); return m; };
     this.sceneryRuntime = buildScenery(scenery, this.scene, track, theme, this.materials);
     this.terrainMaterial = this.materials.get('terrain')!;
+    const p = track.centerline, n = p.length - 1;
+    const white = mat('curb', theme.scene.curb), accent = mat('accent', '#b32a35');
+    if(track.sections){this.roadMaterial=this.materials.get('asphalt')!;}else{
     const shoulder = mat('shoulder', theme.scene.shoulder);
     if (track.supports) { /* Authored pier surfaces replace unsupported sand shoulders. */ }
     else if (!track.bridges?.length) this.ribbon('road-shoulder', track.centerline, track.roadWidth + 2.5, 0.04).material = shoulder;
@@ -115,16 +119,18 @@ export class GameScene {
     this.roadMaterial.diffuseTexture = surfaceTexture(this.scene, 'asphalt');
     const rubber = mat('rubbered-racing-surface', '#161b20'); rubber.disableLighting = true; rubber.emissiveColor = Color3.FromHexString('#161b20'); rubber.diffuseTexture = surfaceTexture(this.scene, 'rubber'); rubber.useAlphaFromDiffuseTexture = true; rubber.alpha = 0.28;
     this.ribbon('established-tire-wear', track.centerline, track.roadWidth * 0.48, 0.121).material = rubber;
-    const white = mat('curb', theme.scene.curb), accent = mat('accent', '#b32a35');
-    const p = track.centerline, n = p.length - 1;
+    const curbInner = roadEdges(p, track.roadWidth + .05), curbOuter = roadEdges(p, track.roadWidth + 1.45);
     for (let i = 0; i < n; i += 3) {
-      const a = p[i], b = p[(i + 3) % n], dx = b.x - a.x, dz = b.z - a.z, len = Math.hypot(dx, dz), nx = -dz / len, nz = dx / len;
-      for (const side of [-1, 1]) {
+      const a = p[i], b = p[Math.min(i + 3, n)];
+      for (const side of [0, 1]) {
         if (i < 35 || i > n - 12 || bridgeAt(a, track) || bridgeAt(b, track)) continue;
-        const curb = MeshBuilder.CreateBox('curb', { width: 0.7, height: 0.16, depth: len + 0.1 }, this.scene);
-        curb.position.set((a.x + b.x) / 2 + nx * side * (track.roadWidth / 2 + 0.1), 0.17, (a.z + b.z) / 2 + nz * side * (track.roadWidth / 2 + 0.1));
-        curb.rotation.y = Math.atan2(dx, dz); curb.material = Math.floor(i / 3) % 2 ? white : accent;
+        // Follow the shared bounded road edge instead of overlapping straight boxes on bends.
+        const pathArray = [curbInner, curbOuter].map(edges => edges[side].slice(i, Math.min(i + 3, n) + 1).map(v => new Vector3(v.x, .18, v.z)));
+        const curb = MeshBuilder.CreateRibbon('curb', { pathArray, sideOrientation: Mesh.DOUBLESIDE }, this.scene);
+        curb.setVerticesData(VertexBuffer.NormalKind, Array.from({ length: curb.getTotalVertices() }, () => [0, 1, 0]).flat());
+        curb.material = Math.floor(i / 3) % 2 ? white : accent;
       }
+    }
     }
     const black = mat('checker', '#303d40');
     const gate = startGate(track);
@@ -149,7 +155,7 @@ export class GameScene {
       const i = Math.min(n - 1, Math.floor(fraction * n));
       const a = p[i], b = p[i + 1], angle = Math.atan2(b.x - a.x, b.z - a.z);
       const dx = Math.sin(angle), dz = Math.cos(angle);
-      const tri = MeshBuilder.CreateLines('direction-arrow', { points: [new Vector3(a.x - dx - dz * 0.8, 0.2, a.z - dz + dx * 0.8), new Vector3(a.x + dx, 0.2, a.z + dz), new Vector3(a.x - dx + dz * 0.8, 0.2, a.z - dz - dx * 0.8)] }, this.scene);
+      const tri = MeshBuilder.CreateLines('direction-arrow', { points: [new Vector3(a.x - dx - dz * 0.8, (a.y??0)+0.2, a.z - dz + dx * 0.8), new Vector3(a.x + dx, (a.y??0)+0.2, a.z + dz), new Vector3(a.x - dx + dz * 0.8, (a.y??0)+0.2, a.z - dz - dx * 0.8)] }, this.scene);
       tri.color = Color3.FromHexString('#edf4e8');
     }
     // Bake static scenery by material: curbs and foliage should not each cost a draw call.
@@ -176,7 +182,8 @@ export class GameScene {
     this.vehicle = new VehicleView(this.scene, theme); this.vehicles.push(this.vehicle); this.vehicle.update({ ...track.start, heading: startHeading });
     this.registerVehicleShadows(this.vehicle); void this.vehicle.loadAsset(visualAssets.vehicle).then(() => this.registerVehicleShadows(this.vehicle));
     for (const [url, material] of [[visualAssets.roadTexture, this.roadMaterial]] as const) {
-      if (url) material.diffuseTexture = new Texture(assetUrl(url), this.scene, false, true, Texture.TRILINEAR_SAMPLINGMODE, undefined, () => { material.diffuseTexture?.dispose(); material.diffuseTexture = null; });
+      // Asphalt artwork must never replace the packed-dirt venue's own material.
+      if (url && !track.sections) material.diffuseTexture = new Texture(assetUrl(url), this.scene, false, true, Texture.TRILINEAR_SAMPLINGMODE, undefined, () => { material.diffuseTexture?.dispose(); material.diffuseTexture = null; });
     }
     this.showcase = new VehicleShowcase(this.engine, theme);
     // Loaded only for development builds; the inspector and browser budgets read drawCalls.
@@ -223,12 +230,13 @@ export class GameScene {
     const elevation = (Math.min(w,h)<=500?sceneTuning.camera.compactElevationDegrees:sceneTuning.camera.elevationDegrees) * Math.PI / 180;
     const tangent = Math.tan(this.camera.fov / 2);
     const paths = [this.track.centerline,...(this.track.jumps??[]).map(j=>j.branch),...(this.track.hopShortcuts??[]).map(j=>j.branch)];
-    const fitted = paths.flatMap((p,i)=>roadEdges(p,this.track.roadWidth,i===0).flat()).map(p=>new Vector3(p.x,0,p.z));
+    const fitted = paths.flatMap((path,i)=>roadEdges(path,this.track.roadWidth,i===0).flatMap(side=>side.map((p,n)=>new Vector3(p.x,this.track.sections?roadHeight(this.track,path[n].courseProgress??0):0,p.z))));
     for(const across of [-this.track.roadWidth/2,this.track.roadWidth/2]) fitted.push(new Vector3(...(()=>{const p=gatePoint(this.track,across,-12);return [p.x,0,p.z] as [number,number,number];})()));
     // Reserve the complete manual-hop height envelope, including a ramp launch.
     const hopEnvelope = RULES.hopLaunchSpeed ** 2 / (2 * flightGravity('hop')) + FLIGHT_RULES.carHeight + 0.3;
-    for (const p of [...fitted]) fitted.push(new Vector3(p.x, hopEnvelope, p.z));
+    for (const p of [...fitted]) fitted.push(new Vector3(p.x, p.y+hopEnvelope, p.z));
     for(const j of this.track.jumps??[]) for(const along of [8,25,45]) fitted.push(new Vector3(j.from.x+j.forward.x*along,hopEnvelope+j.lipHeight,j.from.z+j.forward.z*along));
+    for(const j of this.track.jumps??[])if(j.kind==='crest'){const v=j.launchBoost!+RULES.maxSpeed*j.launchSlope!,at=RULES.maxSpeed*v/FLIGHT_RULES.gravity;fitted.push(new Vector3(j.from.x+j.forward.x*at,j.takeoffElevation!+v*v/(2*FLIGHT_RULES.gravity)+FLIGHT_RULES.carHeight+.3,j.from.z+j.forward.z*at));}
     const courseCenter = new Vector3((Math.min(...fitted.map(p=>p.x))+Math.max(...fitted.map(p=>p.x)))/2,0,(Math.min(...fitted.map(p=>p.z))+Math.max(...fitted.map(p=>p.z)))/2);
     const cx = (left-rightInset)/w, cy=(bottom-top)/h;
     const rx=Math.max(0.2,(w-left-rightInset-2*sceneTuning.camera.clearancePixels)/w),ry=Math.max(0.2,(h-top-bottom-2*sceneTuning.camera.clearancePixels)/h);
@@ -259,7 +267,7 @@ export class GameScene {
     this.theme = theme;
     // Scenery fills the entire viewport; UI surfaces are small independent overlays.
     this.scene.clearColor = Color4.FromHexString(`${theme.ui.surface}ff`);
-    for (const [role, color] of Object.entries({ 'barrier-concrete': theme.venue.concrete, 'galvanized-rail': theme.venue.metal, 'race-red': theme.venue.accent, 'race-charcoal': theme.venue.rubber, 'track-ivory': theme.venue.marking, 'asphalt-repair': theme.venue.repair })) this.materials.get(role)!.diffuseColor = Color3.FromHexString(color);
+    for (const [role, color] of Object.entries({ 'barrier-concrete': theme.venue.concrete, 'galvanized-rail': theme.venue.metal, 'race-red': theme.venue.accent, 'race-charcoal': theme.venue.rubber, 'track-ivory': theme.venue.marking, 'asphalt-repair': theme.venue.repair })) {const material=this.materials.get(role);if(material)material.diffuseColor=Color3.FromHexString(color);}
     for (const role of ['water', 'shallows', 'foam', 'terrain', 'embankment', 'asphalt', 'shoulder', 'curb', 'foliage', 'foliageLight', 'rock', 'trunk'] as const) { const m = this.materials.get(role); if (m) { m.diffuseColor = Color3.FromHexString(theme.scene[role]); if (m.disableLighting) m.emissiveColor = m.diffuseColor.clone(); } }
     for (const [role, color] of [['wet-sand', theme.scene.shoulder], ['water-glints', theme.scene.foam], ['architecture', theme.scene.curb], ['architecture-trim', theme.scene.structure], ['architecture-glass', theme.scene.glass], ['architecture-accent', this.scenery === 'coastal' ? theme.players[0] : theme.venue.accent], ['orbital-metal', theme.venue.metal]]) { const m = this.materials.get(role); if (!m) continue; m.diffuseColor = Color3.FromHexString(color); if (m.disableLighting) m.emissiveColor = m.diffuseColor.clone(); }
     this.terrainMaterial.emissiveColor = Color3.FromHexString(theme.scene.terrain).scale(0.015);
@@ -294,7 +302,7 @@ export class GameScene {
     this.materials.get('start-glow')!.emissiveColor = color.scale(0.5);
   }
   get visibleRouteCount() { return this.lines.length; }
-  groundPoint(clientX: number, clientY: number): Point | null {
+  groundPoint(clientX: number, clientY: number, previous?:Point): Point | null {
     const rect = this.canvas.getBoundingClientRect();
     // Babylon applies hardware scaling internally. Compensate for drawing-buffer
     // integer rounding first (e.g. 667 CSS px at 1.5x becomes 1000 device px).
@@ -302,6 +310,7 @@ export class GameScene {
     const x = (clientX - rect.left) * this.engine.getRenderWidth() / rect.width * scale;
     const y = (clientY - rect.top) * this.engine.getRenderHeight() / rect.height * scale;
     const ray = this.scene.createPickingRay(x, y, Matrix.Identity(), this.camera);
+    if(this.track.sections)return drawingRay(ray,this.track,previous);
     if (Math.abs(ray.direction.y) < 1e-8) return null;
     let t = (0.15 - ray.origin.y) / ray.direction.y;
     const flat = { x: ray.origin.x + ray.direction.x * t, z: ray.origin.z + ray.direction.z * t };

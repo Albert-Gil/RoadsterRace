@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest';
 import { circuits } from '../../src/content/circuits';
 import { minimumRadius, roadEdges } from '../../src/core/road-geometry';
+import { roadHeight } from '../../src/core/elevation';
 import { distance } from '../../src/core/geometry';
 import { compileRoute, createPracticeSamples } from '../../src/core/route';
 
@@ -17,6 +18,7 @@ for(const {track} of circuits){
   }
   for(const edge of [a,b])for(let i=0;i<edge.length-1;i++)for(let j=i+2;j<edge.length-1;j++){
    if(i===0&&j===edge.length-2)continue;
+   if(track.sections && Math.abs(roadHeight(track,track.distances[i])-roadHeight(track,track.distances[j]))>3)continue;
    const p=edge[i],q=edge[i+1],r=edge[j],s=edge[j+1];
    const turn=(a:typeof p,b:typeof p,c:typeof p)=>(b.x-a.x)*(c.z-a.z)-(b.z-a.z)*(c.x-a.x);
    expect(turn(p,q,r)*turn(p,q,s)<-1e-8&&turn(r,s,p)*turn(r,s,q)<-1e-8).toBe(false);

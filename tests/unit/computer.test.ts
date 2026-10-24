@@ -21,7 +21,7 @@ test.each(circuits)('$id computer plans are safe, deterministic and finish six l
     }).sort((a,b)=>a-b);
     medians.push(times[1]);
 
-    expect(routes.filter(r=>r.jumps?.length).length).toBe(track.jumps?.length?(difficulty==='easy'?0:difficulty==='normal'?1:2):0);
+    expect(routes.filter(r=>r.jumps?.length).length).toBe(track.sections?3:track.jumps?.length?(difficulty==='easy'?0:difficulty==='normal'?1:2):0);
   }
   expect(medians[0]).toBeGreaterThan(medians[1]);expect(medians[1]).toBeGreaterThan(medians[2]);
 }, 180000);

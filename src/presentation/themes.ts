@@ -59,13 +59,16 @@ export const sceneryPalettes = {
   spaceport: { terrain: '#d1bc9b', embankment: '#a69a85', asphalt: '#aeb1ad', shoulder: '#a99c85',
     structure: '#33404b', curb: '#e8e8dd', glass: '#243746', foliage: '#68674b', foliageLight: '#8d8863',
     rock: '#a69883', trunk: '#7d715d', sky: '#cfae94', sunlight: 1.05 },
+  canyon: { terrain:'#bd8963',embankment:'#c69c72',asphalt:'#aa895d',shoulder:'#c3a27a',rock:'#ae6344',foliage:'#68724b',foliageLight:'#8c9565',trunk:'#765640',water:'#98785d',sky:'#e5c6a5',sunlight:1.08 },
 } satisfies Record<string, Partial<PresentationTheme['scene']>>;
 export const sceneryLighting = {
   coastal: { ambient: '#d6e5ed', ground: '#6e6957', sun: '#fff0cf' },
   sunset: { ambient: '#f7c9cb', ground: '#816c77', sun: '#ffd29b' },
   bay: { ambient: '#dcebf1', ground: '#717b6b', sun: '#fff1d5' },
   spaceport: { ambient: '#ddd6cf', ground: '#756755', sun: '#ffddb2' },
+  canyon: { ambient:'#ead3b8',ground:'#836451',sun:'#ffdab0' },
 };
+export const canyonAppearance={cliff:['#a85f43','#bc7850','#d39464','#e1ad79'],mesa:'#c6986b',road:'#aa895d',ruts:'#705c42',dryWash:'#d9b891',scrub:'#68724b',guard:'#96745a'};
 export function sceneryTheme(theme: PresentationTheme, scenery: keyof typeof sceneryPalettes): PresentationTheme {
   return { ...theme, scene: { ...theme.scene, ...sceneryPalettes[scenery] } };
 }
@@ -101,5 +104,9 @@ export const hopEffects = { pulse: 0.22, nozzleHeight: 0.20, puffs: 16, lifetime
 /** Shared city materials; architecture placement is authored in content/golden-city.ts. */
 export const cityAppearance = { bridge: '#cb4b36', facades: ['#caba91', '#8aa49a', '#bb8068', '#9daabb', '#d8be8d', '#9b8173'], paving: '#bbb7a6', roof: '#52616a', shop: '#354953', window: '#456575', warmWindow: '#b9bd9d' };
 export const sunsetAppearance = { deck: '#a9866b', steel: '#465360', ivory: '#f6e4cc', glass: '#4a7e91', coral: '#e67b77', gold: '#eec575' };
+
+/** Decorative density/scale only. All geometry is batched and stays on existing structures. */
+export const venueDetail = { floorSpacing: 1.9, rockLayers: 7, mesaStones: 34, stoneScale: 1.15,
+  strataContrast: .12, dirtWearOpacity: .12, dirtTextureScale: 3 };
 
 export const ghostAppearance = { color: '#a6e5ed', opacity: 0.32 };

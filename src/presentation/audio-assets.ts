@@ -1,9 +1,9 @@
 /** Replace these roles with local recordings (including future ElevenLabs exports). */
 export type SoundCue = 'countdown' | 'start' | 'thrust' | 'hop' | 'drift' | 'lap' | 'finish' | 'ready' | 'collision' | 'car-impact' | 'scrape' | 'recovery' | 'takeoff' | 'landing' | 'splash' | 'ui-select' | 'ui-confirm' | 'ui-back';
-export type SoundLoop = 'drive' | 'tire' | 'sand' | 'coast' | 'launchsite' | 'city' | 'pier';
-export const soundLoops: readonly SoundLoop[] = ['drive', 'tire', 'sand', 'coast', 'launchsite', 'city', 'pier'];
-export type VenueAudio = 'coastal' | 'spaceport' | 'bay' | 'sunset';
-export const venueLoop: Record<VenueAudio, SoundLoop> = { coastal: 'coast', spaceport: 'launchsite', bay: 'city', sunset: 'pier' };
+export type SoundLoop = 'drive' | 'tire' | 'sand' | 'coast' | 'launchsite' | 'city' | 'pier' | 'canyon';
+export const soundLoops: readonly SoundLoop[] = ['drive', 'tire', 'sand', 'coast', 'launchsite', 'city', 'pier', 'canyon'];
+export type VenueAudio = 'coastal' | 'spaceport' | 'bay' | 'sunset' | 'canyon';
+export const venueLoop: Record<VenueAudio, SoundLoop> = { coastal: 'coast', spaceport: 'launchsite', bay: 'city', sunset: 'pier',canyon:'canyon' };
 export interface SoundAsset { url: string; gain?: number; loopStart?: number; loopEnd?: number }
 export interface AudioAssets { cues: Partial<Record<SoundCue, SoundAsset>>; loops: Partial<Record<SoundLoop, SoundAsset>>; music?: SoundAsset }
 const recording = (name: string, gain = 1): SoundAsset => ({ url: `audio/${name}.mp3`, gain });

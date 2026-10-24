@@ -15,7 +15,7 @@ test('20 short recordings decode, music streams, and each venue selects its own 
   await expect.poll(async () => (await audio()).music?.playing).toBe(true);
   await expect.poll(async () => (await audio()).music?.duration).toBeGreaterThan(63);
   expect((await audio()).failed).toEqual([]);
-  for (const [id, role] of [['coastal-launch', 'coast'], ['launchsite', 'launchsite'], ['golden-gate', 'city'], ['santa-monica', 'pier']]) {
+  for (const [id, role] of [['coastal-launch', 'coast'], ['launchsite', 'launchsite'], ['golden-gate', 'city'], ['santa-monica', 'pier'], ['grand-canyon','canyon']]) {
     if (id !== 'coastal-launch') await page.locator(`[data-action="circuit"][data-circuit="${id === 'launchsite' ? 'orbital-launchyard' : id}"]`).click();
     expect((await audio()).ambience).toBe(role);
   }

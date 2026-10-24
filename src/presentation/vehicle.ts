@@ -144,7 +144,7 @@ export class VehicleView {
         const size = (impact ? 0.3 : 0.7) + age * 1.4, offset = i * this.dustBase.length;
         for (let j = 0; j < this.dustBase.length; j += 3) {
           this.dustPositions[offset + j] = x + this.dustBase[j] * size;
-          this.dustPositions[offset + j + 1] = 0.4 + age * 0.5 + this.dustBase[j + 1] * size;
+          this.dustPositions[offset + j + 1] = (position.y??0) + 0.4 + age * 0.5 + this.dustBase[j + 1] * size;
           this.dustPositions[offset + j + 2] = z + this.dustBase[j + 2] * size;
         }
       }

@@ -32,6 +32,7 @@ const documentation: Record<string, Record<string, Unit>> = {
     hopLaunchSpeed: ['m/s', 'Upward velocity of a manual hop'],
     flightLaunchCorrection: ['rad', 'Largest momentum rotation at launch'],
     flightTurnRate: ['rad/s', 'Largest momentum rotation rate in flight'],
+    dirtGrip: ['m/s²', 'Packed-dirt lateral grip'],
     asphaltGrip: ['m/s²', 'Lateral acceleration limit on asphalt'],
     sandGrip: ['m/s²', 'Lateral acceleration limit on sand'],
     asphaltResponse: ['1/s', 'Velocity alignment gain per radian of slip on asphalt'],
@@ -97,7 +98,7 @@ export function currentRulesMarkdown() {
   const peak = RULES.hopLaunchSpeed ** 2 / (2 * flightGravity('hop')), airtime = 2 * RULES.hopLaunchSpeed / flightGravity('hop');
   const courses = ['| Circuit | ID | Track version | Road width (m) | Centerline (m) | Barriers | Branches |', '|---|---|---:|---:|---:|---:|---|',
     ...circuits.map(({ track }) => `| ${track.name} | \`${track.id}\` | ${track.version} | ${format(track.roadWidth)} | ${track.length.toFixed(1)} | ${track.barriers.length} | ${[
-      ...(track.jumps ?? []).map(j => `ramp \`${j.id}\``), ...(track.hopShortcuts ?? []).map(h => `hop lane \`${h.id}\``), ...(track.bridges ?? []).map(b => `bridge \`${b.id}\``),
+      ...(track.jumps ?? []).map(j => `${j.kind === 'crest' ? 'crest' : 'ramp'} \`${j.id}\``), ...(track.hopShortcuts ?? []).map(h => `hop lane \`${h.id}\``), ...(track.bridges ?? []).map(b => `bridge \`${b.id}\``),
     ].join(', ') || '—'} |`)];
   return `# Current rules and course values
 
@@ -122,7 +123,7 @@ ${courses.join('\n')}
 Vehicle envelope: ${format(circuits[0].track.carWidth)} m × ${format(circuits[0].track.carLength)} m. Race distance: ${MIN_LAPS}–${MAX_LAPS} laps (default ${DEFAULT_LAPS}). Championship points by place: ${CHAMPIONSHIP_POINTS.join(' / ')}.
 
 ${table('RULES', RULES)}
-Derived: level-ground manual hop peak ${peak.toFixed(3)} m and airtime ${airtime.toFixed(3)} s. Ramp launch upward velocity is \`rampLaunchBoost + max(0, forward speed) × lipHeight / rampLength\`.
+Derived: level-ground manual hop peak ${peak.toFixed(3)} m and airtime ${airtime.toFixed(3)} s. Santa Monica ramp launch upward velocity is \`rampLaunchBoost + max(0, forward speed) × lipHeight / rampLength\`. Grand Canyon uses its authored natural crest: \`16 + max(0, forward speed) × 0.20\` from 8 m to the 6 m receiving surface, across an 18 m unsupported opening. Grounded elevation changes do not add slope acceleration.
 
 ${table('FLIGHT_RULES', FLIGHT_RULES)}
 ${table('CONTACT_RULES', CONTACT_RULES)}

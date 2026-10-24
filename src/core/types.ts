@@ -1,12 +1,14 @@
-export interface Point { x: number; z: number }
+export interface Point { x: number; z: number; y?: number; sectionId?: string; courseProgress?: number }
 export interface DrawSample extends Point { time: number }
-export interface TrackBarrier { id: string; footprint: Point[]; height: number; baseHeight?: number; kind?: 'infield' | 'bridge-rail' | 'bridge-support' | 'pier-rail' | 'service-barrier'; bridgeId?: string }
+export interface TrackBarrier { id: string; footprint: Point[]; height: number; baseHeight?: number; sectionId?: string; kind?: 'infield' | 'bridge-rail' | 'bridge-support' | 'pier-rail' | 'service-barrier' | 'cliff-rail' | 'cliff-face'; bridgeId?: string }
+export interface RoadSection { id: string; from: number; to: number; heights: [number, number][]; supportWidth: number; flight?: boolean }
 export interface SupportSurface { id: string; footprint: Point[] }
 export interface TrackJump {
   id: string; from: Point; forward: Point; width: number; rampLength: number; lipHeight: number;
   gap: number; runout: number; corridorLength: number;
   /** Alternate road coordinates, mapped onto the bypass's ordered course distance. */
   branch: Point[]; entryProgress: number; exitProgress: number;
+  kind?: 'crest'; takeoffElevation?: number; landingElevation?: number; launchBoost?: number; launchSlope?: number;
 }
 /** A manual-hop branch, independent of automatic ramps and water support. */
 export interface HopShortcut {
@@ -34,6 +36,8 @@ export interface TrackDefinition {
   waterOpenings?: SupportSurface[];
   jumps?: TrackJump[];
   hopShortcuts?: HopShortcut[];
+  sections?: RoadSection[];
+  surface?: 'packed-dirt';
 }
 export interface RoutePoint extends Point {
   distance: number;
@@ -67,7 +71,7 @@ export interface RaceState {
   thrustReadyAt: number;
   hopReadyAt: number;
   hopCount: number;
-  flightOrigin: 'hop' | 'ramp' | 'fall' | null;
+  flightOrigin: 'hop' | 'ramp' | 'crest' | 'fall' | null;
   flightStartedAt: number;
   position: Point;
   elevation: number;
@@ -84,7 +88,8 @@ export interface RaceState {
   drifting: boolean;
   driftCount: number;
   sandAmount: number;
-  surface: 'asphalt' | 'sand';
+  surface: 'asphalt' | 'sand' | 'packed-dirt';
+  supportSectionId?: string;
   checkpoint: number;
   thrustCount: number;
   finished: boolean;

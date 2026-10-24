@@ -5,8 +5,9 @@ import { canStartDrawing, trimDrawing, joinLap, gateCoordinates, gatePoint } fro
 import { blockedRouteSection } from './barriers';
 import { validateSupports, branchProjection } from './support';
 import { validateHopShortcuts } from './hop-shortcuts';
+import { annotateRoad } from './elevation';
 
-export const COMPILER_VERSION = 10;
+export const COMPILER_VERSION = 11;
 export const PACE_RANGE = Object.freeze({ min: 9, max: 30 });
 export const PACE_FILTER = Object.freeze({ gestureRadius: 5, compiledRadius: 8 });
 
@@ -70,6 +71,7 @@ export function compileRoute(input: DrawSample[], track: TrackDefinition): Route
     if (distance(p, last) > 0.08) samples.push(p);
   }
   if (samples.length < 12) return { ok: false, message: 'Draw all the way around the circuit.' };
+  if(track.sections) {const rawSupport=validateSupports(samples,track);if(!rawSupport.ok)return rawSupport;samples=annotateRoad(samples,track);}
   const rawDuration = trimmed.samples.at(-1)!.time / 1000;
   const retainedShortcuts = validateHopShortcuts(samples, track); if (!retainedShortcuts.ok) return retainedShortcuts;
   const retainedCrossing = blockedRouteSection(samples, track, retainedShortcuts.obstacles);
@@ -133,6 +135,7 @@ export function compileRoute(input: DrawSample[], track: TrackDefinition): Route
     const t = clamp((s - smoothDistances[index]) / Math.max(1e-9, smoothDistances[index + 1] - smoothDistances[index]), 0, 1);
     return { ...mix(geometry[index], geometry[index + 1], t), distance: s, desiredSpeed: lerp(filteredSpeeds[index], filteredSpeeds[index + 1], t), curvature: 0 };
   });
+  points=annotateRoad(points,track);
   const error = validateGeometry(points, track);
   if (error) return error;
   for (let i = 0; i < count; i++) {
@@ -161,7 +164,7 @@ export function createPracticeSamples(track: TrackDefinition, durationSeconds = 
     const j = selected, a = track.distances.findIndex(d => d >= j.entryProgress), b = track.distances.findIndex(d => d >= j.exitProgress), branchDistances = cumulative(j.branch);
     const branch = Array.from({ length: 78 }, (_, i) => samplePolyline(j.branch, branchDistances, i / 77 * branchDistances.at(-1)!));
     const points = [...track.centerline.slice(0, a), ...branch, ...track.centerline.slice(b)], ds = cumulative(points);
-    return points.map((p, i) => ({ ...p, time: ds[i] / ds.at(-1)! * durationSeconds * 1000 }));
+    return annotateRoad(points,track).map((p, i) => ({ ...p, time: ds[i] / ds.at(-1)! * durationSeconds * 1000 }));
   }
   return track.centerline.map((p, i) => ({ ...p, time: track.distances[i] / track.length * durationSeconds * 1000 }));
 }

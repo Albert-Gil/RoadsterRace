@@ -45,8 +45,11 @@ export function barrierContact(position: Point, heading: number, track: TrackDef
   for (const barrier of track.barriers) {
     // Above-road obstacles protect the infield/rails in this milestone. Submerged
     // landing faces retain their real height so an approved jump can pass above.
-    const jumpable = permitted.includes(barrier.id);
-    const protectedColumn = protectFlight && !jumpable && (barrier.baseHeight ?? 0) + barrier.height > 1e-6;
+    if(barrier.kind==='cliff-face'&&barrier.sectionId===position.sectionId)continue;
+    const crossingFace = barrier.kind==='cliff-face'&&permitted.includes(barrier.id);
+    const jumpable = barrier.kind!=='cliff-face'&&permitted.includes(barrier.id);
+    const protectedColumn = protectFlight && !jumpable && !crossingFace && (barrier.baseHeight ?? 0) + barrier.height > 1e-6
+      && (!track.sections || barrier.kind==='infield' || barrier.kind==='cliff-face' || barrier.sectionId===position.sectionId);
     if (!protectedColumn && (elevation >= (barrier.baseHeight ?? 0) + barrier.height + (jumpable ? 0.15 : 0) - 1e-6 || elevation + 1.05 <= (barrier.baseHeight ?? 0))) continue;
     const box = bounds(barrier);
     if (Math.max(a.x, b.x) + radius < box.minX || Math.min(a.x, b.x) - radius > box.maxX || Math.max(a.z, b.z) + radius < box.minZ || Math.min(a.z, b.z) - radius > box.maxZ) continue;
@@ -76,7 +79,7 @@ export function sweepVehicle(from: Point, to: Point, oldHeading: number, heading
   let position = { ...from }, motion = { x: (to.x - from.x) / steps, z: (to.z - from.z) / steps }, v = { ...velocity };
   let impact = 0, point: Point | undefined, collided = false;
   for (let i = 1; i <= steps; i++) {
-    position = { x: position.x + motion.x, z: position.z + motion.z };
+    position = { ...position, x: position.x + motion.x, z: position.z + motion.z };
     for (let pass = 0; pass < 4; pass++) {
       const contact = barrierContact(position, oldHeading + angle * i / steps, track, 0, fromHeight + (toHeight - fromHeight) * i / steps, protectFlight, permitted);
       if (!contact) break;
@@ -93,11 +96,13 @@ export function sweepVehicle(from: Point, to: Point, oldHeading: number, heading
 
 export function blockedRouteSection(points: Point[], track: TrackDefinition, permitted: readonly string[] = []) {
   const physical = permitted.length ? { ...track, barriers: track.barriers.filter(b => !permitted.includes(b.id)) } : track;
+  const crossingPhysical=track.sections?{...physical,barriers:physical.barriers.filter(b=>b.kind!=='cliff-face')}:physical;
   for (let i = 1; i < points.length; i++) {
     const a = points[i - 1], b = points[i], heading = Math.atan2(b.x - a.x, b.z - a.z), count = Math.max(1, Math.ceil(distance(a, b) / 0.4));
     for (let j = 0; j <= count; j++) {
       const p = mix(a, b, j / count);
-      if (barrierContact(p, heading, physical, 0.12)) return { point: p, section: [a, b] };
+      const approvedCrossing=track.sections&&track.jumps?.some(j=>j.kind==='crest'&&p.courseProgress!==undefined&&p.courseProgress>=j.entryProgress&&p.courseProgress<=j.exitProgress&&Math.abs((p.x-j.from.x)*j.forward.z-(p.z-j.from.z)*j.forward.x)<=(j.width-track.carWidth)/2);
+      if (barrierContact(p, heading, approvedCrossing?crossingPhysical:physical, 0.12, track.sections ? p.y??0 : 0)) return { point: p, section: [a, b] };
     }
   }
   return null;

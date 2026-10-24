@@ -8,12 +8,13 @@ Conventions: SI units; horizontal plane (x, z) with y up; heading 0 points along
 
 | Item | Version |
 |---|---:|
-| Vehicle rules (`RULES.version`) | 12 |
-| Route compiler (`COMPILER_VERSION`) | 10 |
+| Vehicle rules (`RULES.version`) | 13 |
+| Route compiler (`COMPILER_VERSION`) | 11 |
 | Coastal Launch track (`coastal-launch`) | 3 |
 | Launchsite track (`orbital-launchyard`) | 3 |
 | Golden Gate track (`golden-gate`) | 3 |
 | Santa Monica track (`santa-monica`) | 2 |
+| Grand Canyon track (`grand-canyon`) | 1 |
 
 Records, ghosts, session bests and championships are scoped by these versions. Change a version whenever a value below changes race results.
 
@@ -25,6 +26,7 @@ Records, ghosts, session bests and championships are scoped by these versions. C
 | Launchsite | `orbital-launchyard` | 3 | 16 | 460.6 | 7 | hop lane `service-hop` |
 | Golden Gate | `golden-gate` | 3 | 16 | 496.4 | 25 | bridge `golden-span` |
 | Santa Monica | `santa-monica` | 2 | 16 | 660.7 | 104 | ramp `pacific-hop` |
+| Grand Canyon | `grand-canyon` | 1 | 16 | 568.8 | 9 | crest `canyon-crest`, hop lane `mesa-service-trail` |
 
 Vehicle envelope: 2.2 m × 5.2 m. Race distance: 1–6 laps (default 2). Championship points by place: 10 / 6 / 4 / 0.
 
@@ -32,7 +34,7 @@ Vehicle envelope: 2.2 m × 5.2 m. Race distance: 1–6 laps (default 2). Champio
 
 | Key | Value | Unit | Meaning |
 |---|---:|---|---|
-| `version` | 12 | — | Vehicle rules version; stored with records and championships |
+| `version` | 13 | — | Vehicle rules version; stored with records and championships |
 | `dt` | 0.0166667 | s | Fixed simulation step (two equal substeps per step) |
 | `laps` | 2 | laps | Default race distance |
 | `acceleration` | 6 | m/s² | Maximum pace-following acceleration |
@@ -49,6 +51,7 @@ Vehicle envelope: 2.2 m × 5.2 m. Race distance: 1–6 laps (default 2). Champio
 | `flightLaunchCorrection` | 0.349066 (20°) | rad | Largest momentum rotation at launch |
 | `flightTurnRate` | 0.523599 (30°/s) | rad/s | Largest momentum rotation rate in flight |
 | `asphaltGrip` | 48 | m/s² | Lateral acceleration limit on asphalt |
+| `dirtGrip` | 38.4 | m/s² | Packed-dirt lateral grip |
 | `sandGrip` | 6.5 | m/s² | Lateral acceleration limit on sand |
 | `asphaltResponse` | 7.5 | 1/s | Velocity alignment gain per radian of slip on asphalt |
 | `sandResponse` | 1.8 | 1/s | Velocity alignment gain per radian of slip on sand |
@@ -62,7 +65,7 @@ Vehicle envelope: 2.2 m × 5.2 m. Race distance: 1–6 laps (default 2). Champio
 | `driftStartAngle` | 0.17 (9.74028°) | rad | Slip angle that starts a drift |
 | `driftEndAngle` | 0.09 (5.15662°) | rad | Slip angle below which a drift ends |
 
-Derived: level-ground manual hop peak 8.028 m and airtime 0.944 s. Ramp launch upward velocity is `rampLaunchBoost + max(0, forward speed) × lipHeight / rampLength`.
+Derived: level-ground manual hop peak 8.028 m and airtime 0.944 s. Santa Monica ramp launch upward velocity is `rampLaunchBoost + max(0, forward speed) × lipHeight / rampLength`. Grand Canyon uses its authored natural crest: `16 + max(0, forward speed) × 0.20` from 8 m to the 6 m receiving surface, across an 18 m unsupported opening. Grounded elevation changes do not add slope acceleration.
 
 ## FLIGHT_RULES
 

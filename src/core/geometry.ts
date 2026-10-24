@@ -3,7 +3,9 @@ import type { Point } from './types';
 export const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 export const distance = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.z - b.z);
 export const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-export const mix = (a: Point, b: Point, t: number): Point => ({ x: lerp(a.x, b.x, t), z: lerp(a.z, b.z, t) });
+export const mix = (a: Point, b: Point, t: number): Point => ({ x: lerp(a.x, b.x, t), z: lerp(a.z, b.z, t),
+  ...(a.y !== undefined && b.y !== undefined ? {y:lerp(a.y,b.y,t)} : {}),
+  ...(a.courseProgress !== undefined && b.courseProgress !== undefined ? {courseProgress:lerp(a.courseProgress,b.courseProgress,t),sectionId:t<.5?a.sectionId:b.sectionId} : {}) });
 export const modulo = (v: number, n: number) => ((v % n) + n) % n;
 export const angleDelta = (from: number, to: number) => modulo(to - from + Math.PI, Math.PI * 2) - Math.PI;
 

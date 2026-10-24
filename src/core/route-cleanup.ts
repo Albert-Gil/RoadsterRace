@@ -1,11 +1,13 @@
 import { clamp, cumulative, distance, lerp, mix } from './geometry';
 import type { DrawSample, Point, TrackDefinition } from './types';
 import { branchProjection } from './support';
+import { locateRoad } from './elevation';
 
 export const DRAWING_RULES = Object.freeze({ runoffRoadWidths: 1, backwardTolerance: 0.08, localLoopRoadWidths: 2.5 });
 
 /** Keep course association continuous when a wide line passes near another part of a hairpin. */
 export function projectCourse(point: Point, track: TrackDefinition, previous?: { point: Point; progress: number }) {
+  if(track.sections){const r=locateRoad(point,track,previous?.progress,previous?Math.max(12,distance(point,previous.point)*1.75+2):12);return {distance:r.distance,progress:r.progress,score:r.score};}
   let best = { distance: Infinity, progress: 0, score: Infinity };
   const movement = previous ? distance(point, previous.point) : 0;
   for (let i = 0; i < track.centerline.length - 1; i++) {

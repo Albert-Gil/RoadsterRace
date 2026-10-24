@@ -2,7 +2,7 @@ import { audioAssets, audioMix, soundLoops, venueLoop, type VenueAudio, type Aud
 import { assetUrl } from './urls';
 import { MenuMusic } from './menu-music';
 
-export interface AudioFrame { active: boolean; speed: number; slip: number; sand: number }
+export interface AudioFrame { active: boolean; speed: number; slip: number; sand: number; dirt?: boolean }
 const limit = (value: number, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, value));
 
 function noiseBuffer(context: BaseAudioContext) {
@@ -74,7 +74,7 @@ export class GameAudio {
   private failed = new Set<string>();
   private shots = new Set<AudioScheduledSourceNode>();
   private lastCue = new Map<SoundCue, number>();
-  private levels: Record<SoundLoop, number> = { drive: 0, tire: 0, sand: 0, coast: 0, launchsite: 0, city: 0, pier: 0 };
+  private levels: Record<SoundLoop, number> = { drive: 0, tire: 0, sand: 0, coast: 0, launchsite: 0, city: 0, pier: 0, canyon:0 };
   private ambience: SoundLoop = 'coast';
   private active = false;
   private menuMusic?: MenuMusic;
@@ -169,11 +169,11 @@ export class GameAudio {
     this.active = frame.active;
     const c = this.context; if (!c) return;
     const speed = limit(frame.speed / 42), moving = limit(frame.speed / 5);
-    this.levels = { drive: 0, tire: 0, sand: 0, coast: 0, launchsite: 0, city: 0, pier: 0 };
+    this.levels = { drive: 0, tire: 0, sand: 0, coast: 0, launchsite: 0, city: 0, pier: 0, canyon:0 };
     if (frame.active && !this.muted) {
       this.levels.drive = audioMix.drive * moving * (0.25 + speed * .75);
-      this.levels.tire = audioMix.tire * limit(frame.slip) * moving * (1 - frame.sand);
-      this.levels.sand = audioMix.sand * frame.sand * moving;
+      this.levels.tire = frame.dirt ? 0 : audioMix.tire * limit(frame.slip) * moving * (1 - frame.sand);
+      this.levels.sand = audioMix.sand * (frame.dirt ? Math.max(frame.sand, .18 + .18*limit(frame.slip)) : frame.sand) * moving;
       this.levels[this.ambience] = audioMix.coast;
     }
     for (const [role, voice] of this.voices) {
