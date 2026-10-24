@@ -1,4 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
+import { waitForPhase } from './ui';
+import { formatTime } from '../../src/ui/format';
 
 const state = (page: Page) => page.evaluate(() => (window as any).__roadster.getState());
 async function ready(page: Page, query = '') {
@@ -66,7 +68,7 @@ test('two-lap race, held thrust, pause/resume, results and retry', async ({ page
   await ready(page); await page.getByRole('button', { name: "Time Trial" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
   await page.evaluate(() => (window as any).__roadster.usePracticeLine());
   await page.getByRole('button', { name: 'Race this line' }).click();
-  await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'racing');
+  await waitForPhase(page, 'racing');
   await page.keyboard.down('Space');
   await page.waitForFunction(() => { const s = (window as any).__roadster.getState().race; return s.thrustCount > 0 && s.time > s.thrustReadyAt + 0.1; });
   expect((await state(page)).race.thrustCount).toBe(1);
@@ -74,11 +76,14 @@ test('two-lap race, held thrust, pause/resume, results and retry', async ({ page
   const paused = (await state(page)).race.time; await page.waitForTimeout(300);
   expect((await state(page)).race.time).toBe(paused);
   await page.getByRole('button', { name: 'Resume' }).click();
-  await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'racing');
+  await waitForPhase(page, 'racing');
   await page.keyboard.press('Space');
   await page.waitForFunction(() => (window as any).__roadster.getState().race.thrustCount === 2);
-  await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'results', undefined, { timeout: 120000 });
+  await waitForPhase(page, 'results', 120000);
   const result = await state(page); expect(result.race.lapTimes).toHaveLength(2); expect(result.best).toBe(result.race.finishTime);
+  // Time Trial shows the fastest lap as the headline result and both splits.
+  await expect(page.locator('.finish-time')).toHaveText(formatTime(Math.min(...result.race.lapTimes)));
+  await expect(page.locator('.result-detail span')).toHaveText(result.race.lapTimes.map((lap: number, i: number) => `Lap ${i + 1} ${formatTime(lap)}`));
   await page.screenshot({ path: 'artifacts/race-results.png' });
   await page.getByRole('button', { name: 'Race again' }).click();
   const retry = await state(page); expect(retry.phase).toBe('countdown'); expect(retry.race.time).toBe(0); expect(retry.race.thrustCount).toBe(0); expect(retry.route).toEqual(result.route);

@@ -1,6 +1,6 @@
 import { roundedCircuit } from './road-geometry';
 import { createStartFinish } from './start-finish';
-import { closedSpline, cumulative, samplePolyline } from './geometry';
+import { closedSpline, cumulative } from './geometry';
 import type { TrackDefinition } from './types';
 
 const centerline = roundedCircuit([
@@ -28,5 +28,4 @@ export const coastalTrack: TrackDefinition = {
       { x: 30, z: -14 },
     ] },
   ].map(b=>{if(!['coastal-gardens','apex-rocks'].includes(b.id))return b;const cx=b.footprint.reduce((s,p)=>s+p.x,0)/b.footprint.length,cz=b.footprint.reduce((s,p)=>s+p.z,0)/b.footprint.length;return {...b,footprint:b.footprint.map(p=>({x:cx+(p.x-cx)*0.86,z:cz+(p.z-cz)*0.86+(b.id==='apex-rocks'?4:0)}))};}),
-  checkpoints: Array.from({ length: 8 }, (_, i) => samplePolyline(centerline, distances, i * length / 8)),
 };

@@ -1,5 +1,7 @@
 # Wider circuits and three modes
 
+> **Historical milestone record.** Values below describe the state when each section was written and several are superseded (rules, compiler and track versions, pace range, grip, sand drag, road width and control sizes). Current values: [CURRENT_RULES.md](CURRENT_RULES.md), generated from the source.
+
 All four venues now have 16 m roads. Coastal Launch v3, Launchsite v2, Golden Gate v3 and Santa Monica v2 use circular corner transitions instead of spline overshoot. Road edges are shared between asphalt, markings and camera fitting. Ordinary protected obstacles retain at least 5 m runoff; bridge/pier rails remain intentional exceptions. Bridge towers, supported decks and jump landing edges move with the road. Santa Monica's bypass is opened up to preserve the optional jump as a shortcut. Hotels are set behind a protected verge clear of the start straight; pier piles follow supported driving surfaces rather than obsolete hardcoded placements.
 
 ## Phone framing

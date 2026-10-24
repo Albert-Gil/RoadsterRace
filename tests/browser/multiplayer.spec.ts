@@ -1,4 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
+import { resultRows, waitForPhase } from './ui';
+import { formatTime } from '../../src/ui/format';
 
 const state = (page: Page) => page.evaluate(() => (window as any).__roadster.getState());
 async function planFriends(page: Page, count: number) {
@@ -41,8 +43,12 @@ test('four-player ghost start uses race time, survives pause and resets on remat
   await page.getByRole('button', { name: 'Resume', exact: true }).click();
   await page.waitForFunction(() => { const s = (window as any).__roadster.getState(); return s.phase === 'racing' && s.ghostStartRemaining === 0; });
   await expect(page.locator('#pace-label')).toHaveText('FINISHED');
-  await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'results', undefined, { timeout: 120000 });
+  await waitForPhase(page, 'results', 120000);
   const result = await state(page); expect(result.players.every((p: any) => p.finished)).toBe(true);
+  // The visible table must match the simulation: one row per car, in finishing order, with displayed times.
+  const rows = await resultRows(page);
+  expect(rows.map(r => r.time)).toEqual(result.standings.map((s: any) => formatTime(s.finishTime)));
+  expect(rows.map(r => r.place.replace('=', ''))).toEqual(result.standings.map((s: any) => String(s.rank)));
   await page.getByRole('button', { name: 'Rematch', exact: false }).click();
   for (const key of ['KeyA', 'KeyL', 'KeyQ', 'KeyP']) await page.keyboard.press(key);
   await page.waitForFunction(() => { const s = (window as any).__roadster.getState(); return s.phase === 'racing' && s.race.time > 0.1; });
@@ -57,7 +63,7 @@ test('two-player handoff, ready check, independent thrust, finish order and fres
   expect((await state(page)).phase).toBe('ready'); expect((await state(page)).readyPlayers).toEqual([true, false]);
   await page.getByRole('button', { name: 'Player 2 thrust', exact: true }).click();
   expect((await state(page)).phase).toBe('countdown'); expect((await state(page)).players.map((p: any) => p.time)).toEqual([0, 0]);
-  await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'racing');
+  await waitForPhase(page, 'racing');
   expect((await state(page)).players.map((p: any) => p.thrustCount)).toEqual([0, 0]);
   await page.keyboard.down('KeyA');
   await page.waitForFunction(() => { const s = (window as any).__roadster.getState().players[0]; return s.thrustCount > 0 && s.time > s.thrustReadyAt + 0.1; });
@@ -67,9 +73,9 @@ test('two-player handoff, ready check, independent thrust, finish order and fres
   const paused = (await state(page)).players.map((p: any) => p.time); await page.waitForTimeout(200);
   expect((await state(page)).players.map((p: any) => p.time)).toEqual(paused);
   await page.getByRole('button', { name: 'Resume', exact: true }).click();
-  await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'racing');
+  await waitForPhase(page, 'racing');
   await page.screenshot({ path: 'artifacts/multiplayer-race.png' });
-  await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'results', undefined, { timeout: 120000 });
+  await waitForPhase(page, 'results', 120000);
   const finished = await state(page);
   expect(finished.players.every((p: any) => p.finished && p.lapTimes.length === 2)).toBe(true);
   expect(finished.standings[0].player).toBe(0); expect(finished.best).toBeNull();
@@ -98,7 +104,7 @@ test('four simultaneous corner touches on a phone retain ownership, never auto-r
   await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 10 });
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: points });
   expect((await state(page)).readyPlayers).toEqual([true, true, true, true]);
-  await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'racing');
+  await waitForPhase(page, 'racing');
   expect((await state(page)).players.map((p: any) => p.thrustCount)).toEqual([0, 0, 0, 0]);
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: points });
@@ -115,7 +121,7 @@ test('four simultaneous corner touches on a phone retain ownership, never auto-r
     expect(photographed.pauseReason).toBe('render-delay');
     console.log('High-density screenshot triggered the frame-gap pause safeguard');
     await page.getByRole('button',{name:'Resume',exact:true}).click();
-    await page.waitForFunction(()=>(window as any).__roadster.getState().phase==='racing');
+    await waitForPhase(page, 'racing');
   }
 
   // A fresh touch in just P3's corner must only activate that player.
@@ -125,7 +131,7 @@ test('four simultaneous corner touches on a phone retain ownership, never auto-r
   const paused = await state(page); expect(paused.phase).toBe('paused'); expect(paused.raceInputs.active).toEqual([0, 0, 0, 0]);
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] });
   await page.getByRole('button', { name: 'Resume', exact: true }).click();
-  await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'racing');
+  await waitForPhase(page, 'racing');
   expect((await state(page)).players.map((p: any) => p.thrustCount)).toEqual([1, 1, 2, 1]);
   await page.keyboard.press('Escape'); await page.getByRole('button', { name: 'Restart race' }).click();
   await page.getByRole('button', { name: 'Draw new lines' }).click();
@@ -143,7 +149,7 @@ test('three players require three ready pads and expose only their three control
   expect((await state(page)).readyPlayers).toEqual([false, false, false]);
   await page.keyboard.press('KeyA'); await page.keyboard.press('KeyL');
   await page.keyboard.press('KeyQ'); expect((await state(page)).phase).toBe('countdown');
-  await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'racing');
+  await waitForPhase(page, 'racing');
   await page.keyboard.press('KeyL');
   await page.waitForFunction(() => (window as any).__roadster.getState().players[1].thrustCount === 1);
   expect((await state(page)).players.map((p: any) => p.thrustCount)).toEqual([0, 1, 0]);

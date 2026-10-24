@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
+import { waitForPhase } from './ui';
 
 mkdirSync('artifacts/race-settings', { recursive: true });
 
@@ -22,10 +23,10 @@ test('solo preferences persist, one lap finishes cleanly, and six-lap bests stay
   await page.getByRole('button', { name: 'Draw racing line' }).click();
   await page.evaluate(() => (window as any).__roadster.usePracticeLine());
   await page.getByRole('button', { name: 'Race this line' }).click();
-  await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'racing');
+  await waitForPhase(page, 'racing');
   await page.keyboard.press('Space');
   await expect(page.locator('#race-lap')).toContainText('/ 1');
-  await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'results');
+  await waitForPhase(page, 'results');
   const finished = await page.evaluate(() => (window as any).__roadster.getState());
   expect(finished.race.lapTimes).toHaveLength(1); expect(finished.best).toBe(finished.race.finishTime);
   await expect(page.locator('.result-detail > span')).toHaveCount(1);
@@ -59,11 +60,11 @@ test('custom names and paints survive a six-lap local race, results and rematch'
   await page.getByRole('button', { name: "I'm Lee" }).click();
   await page.evaluate(() => (window as any).__roadster.usePracticeLine()); await page.getByRole('button', { name: 'Lock in my line' }).click();
   await page.getByRole('button', { name: 'Ana & Max thrust', exact: true }).click(); await page.getByRole('button', { name: 'Lee thrust', exact: true }).click();
-  await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'racing');
+  await waitForPhase(page, 'racing');
   await page.keyboard.press('KeyA');
   await expect(page.locator('.racer-0 .pod-name')).toHaveText('Ana & Max');
   await expect(page.locator('.racer-1 .pod-lap')).toContainText('/6');
-  await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'results', undefined, { timeout: 150000 });
+  await waitForPhase(page, 'results', 150000);
   const result = await page.evaluate(() => (window as any).__roadster.getState());
   expect(result.players.every((p: any) => p.finished && p.lapTimes.length === 6)).toBe(true);
   await expect(page.locator('.standings')).toContainText('Ana & Max'); await expect(page.locator('.standings')).toContainText('Lee');

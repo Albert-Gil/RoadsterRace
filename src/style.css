@@ -68,7 +68,7 @@ strong i { font-style: normal; font-size: 11px; font-weight: 400; color: var(--m
 .countdown { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; pointer-events: none; z-index: 7; background: #d6e4e026; }
 .countdown span { font-size: 140px; line-height: 1; font-weight: 750; color: var(--accent); letter-spacing: -0.08em; text-shadow: 0 7px 40px #ffffff80; }
 .countdown small { font-size: 9px; letter-spacing: 0.16em; margin-top: 20px; color: var(--text); font-weight: 650; }
-.thrust-control { --charge: 360deg; position: absolute; bottom: max(32px, env(safe-area-inset-bottom)); right: max(32px, env(safe-area-inset-right)); width: 125px; height: 125px; padding: 5px; border: 0; border-radius: 50%; color: var(--accent); background: conic-gradient(var(--accent) var(--charge), var(--border) var(--charge)); touch-action: none; user-select: none; -webkit-user-select: none; box-shadow: 0 8px 30px #20333d24; z-index: 8; }
+.thrust-control { --charge: 360deg; border: 0; border-radius: 50%; color: var(--accent); background: conic-gradient(var(--accent) var(--charge), var(--border) var(--charge)); touch-action: none; user-select: none; -webkit-user-select: none; box-shadow: 0 8px 30px #20333d24; z-index: 8; }
 .thrust-inner { height: 100%; width: 100%; border: 4px solid var(--surface); border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--surface); }
 .thrust-control svg { width: 27px; height: 27px; margin-bottom: 4px; }
 .thrust-control strong { font-size: 12px; letter-spacing: 0.05em; }
@@ -137,7 +137,6 @@ strong i { font-style: normal; font-size: 11px; font-weight: 400; color: var(--m
   .race-hud { top: max(11px, env(safe-area-inset-top)); padding: 8px 15px; gap: 14px; }
   .race-hud strong { font-size: 19px; }
   .race-hud small { font-size: 6px; }
-  .thrust-control { width: 94px; height: 94px; bottom: max(16px, env(safe-area-inset-bottom)); right: max(20px, env(safe-area-inset-right)); }
   .thrust-control strong { font-size: 10px; }
   .thrust-control svg { width: 22px; height: 22px; margin-bottom: 1px; }
   .race-notice { bottom: 25px; font-size: 9px; padding: 9px 13px; max-width: 55%; white-space: normal; text-align: center; }
@@ -173,7 +172,6 @@ strong i { font-style: normal; font-size: 11px; font-weight: 400; color: var(--m
   .lower-wordmark { display: none; }
   .race-hud { top: 80px; padding: 12px 18px; gap: 15px; }
   .race-hud strong { font-size: 22px; }
-  .thrust-control { bottom: max(60px, env(safe-area-inset-bottom)); right: 24px; width: 104px; height: 104px; }
   .pause-button { bottom: 70px; left: 24px; }
   .race-notice { bottom: 190px; max-width: 90%; white-space: normal; text-align: center; }
   .diagnostics-heading { width: 85%; }
@@ -230,7 +228,6 @@ kbd { font: inherit; font-size: 8px; border: 1px solid var(--border); border-rad
   .player-options { margin: 10px 0; }
   .player-options button { min-height: 36px; }
   [data-phase="ready"] .panel { padding: 16px 20px; width: 310px; }
-  .playground:not([data-players="1"]) .thrust-control { width: 92px; height: 92px; }
   .pod-identity { font-size: 14px; margin-bottom: 2px; }
   .pod-rank { font-size: 8px; }
   .thrust-control .pod-title { font-size: 9px; }
@@ -245,7 +242,6 @@ kbd { font: inherit; font-size: 8px; border: 1px solid var(--border); border-rad
   .playground:not([data-players="1"])[data-phase="results"] .panel { max-height: calc(100svh - 75px); overflow-y: auto; }
 }
 @media (orientation: portrait) and (max-width: 800px) {
-  .playground:not([data-players="1"]) .thrust-control { width: 88px; height: 88px; }
   .playground:not([data-players="1"]) .racer-2, .playground:not([data-players="1"]) .racer-3 { top: 150px; }
   .playground:not([data-players="1"]):is([data-phase="racing"], [data-phase="countdown"], [data-phase="ready"]) .topbar { left: 24px; right: 24px; }
   .playground:not([data-players="1"]) .race-notice { bottom: 190px; }
@@ -295,7 +291,7 @@ p { font-size: 14px; line-height: 1.5; }
 .countdown span { font-family: var(--font-display); font-style: italic; font-size: 150px; color: #fff; text-shadow: 6px 6px 0 var(--accent), 0 10px 50px #0008; }
 .countdown::before { content: ''; width: 146px; height: 24px; margin-bottom: 18px; background: radial-gradient(circle, var(--accent) 7px, #19212c 8px, #19212c 11px, transparent 12px) 0 0 / 29px 24px; }
 .countdown small { padding: 8px 12px; background: #111820e6; }
-.thrust-control { box-shadow: 0 8px 28px #0006; padding: 4px; }
+.thrust-control { box-shadow: 0 8px 28px #0006; }
 .thrust-inner { background: radial-gradient(circle at 50% 35%, #2c3944, var(--surface) 70%); border-width: 3px; }
 .thrust-control strong { font-family: var(--font-display); font-style: italic; font-size: 21px; }
 .thrust-control[data-firing="true"] { box-shadow: 0 0 0 5px #ffffff33, 0 0 35px var(--identity, var(--accent)); }
@@ -595,7 +591,6 @@ p { font-size: 14px; line-height: 1.5; }
 .playground:is([data-phase="racing"],[data-phase="countdown"],[data-phase="ready"],[data-phase="paused"]) :is(.topbar,.circuit-caption,.lower-wordmark,.rotate-note) {display:none;}
 .playground:is([data-phase="racing"],[data-phase="countdown"],[data-phase="ready"],[data-phase="paused"]) .race-hud {left:calc(env(safe-area-inset-left,0px) + 3px);top:50%;transform:translateY(-50%);width:54px;box-sizing:border-box;padding:6px 2px;gap:8px;flex-direction:column;border-radius:3px;}
 .playground .race-hud strong {font-size:13px;}.playground .race-hud small {font-size:8px;}.playground .hud-divider {display:none;}
-.playground .thrust-control {width:48px;height:48px;padding:3px;bottom:calc(env(safe-area-inset-bottom,0px) + 6px);right:calc(env(safe-area-inset-right,0px) + 6px);}
 .playground .thrust-inner {padding:0;gap:1px;}.playground .pod-title {font-size:8px;}.playground .pod-status {font-size:8px;}.playground .pod-name,.playground .pod-lap {display:none;}.playground .pod-identity {font-size:8px;}.playground .thrust-inner svg{width:14px;height:14px;}
 .playground:not([data-players="1"]) .racer-0 {left:calc(env(safe-area-inset-left,0px) + 6px);bottom:calc(env(safe-area-inset-bottom,0px) + 6px);}
 .playground:not([data-players="1"]) .racer-1 {right:calc(env(safe-area-inset-right,0px) + 6px);bottom:calc(env(safe-area-inset-bottom,0px) + 6px);}
@@ -629,7 +624,6 @@ p { font-size: 14px; line-height: 1.5; }
 }
 
 /* Larger live ability target without reclaiming the phone's drawing surface. */
-.playground .thrust-control { width:56px; height:56px; }
 .playground .pod-title, .playground .pod-status { font-size:9px; }
 .playground .thrust-inner svg { width:18px; height:18px; }
 [data-phase="paused"] [data-action="home"] svg { width:20px; height:20px; }
@@ -637,21 +631,22 @@ p { font-size: 14px; line-height: 1.5; }
 
 .playground[data-phase="paused"] [data-action="home"] { min-height:48px; }
 
-/* Two independent abilities stay inside the existing course rails. */
-.playground .ability-cluster { position:absolute;z-index:8;display:flex;flex-direction:column-reverse;align-items:center;gap:6px;width:56px;pointer-events:none;right:calc(env(safe-area-inset-right,0px) + 2px);bottom:calc(env(safe-area-inset-bottom,0px) + 4px); }
+/* Two independent abilities stay inside the existing course rails. Pad sizes are defined once here. */
+.playground { --thrust-size:56px; --hop-size:44px; --ability-gap:6px; }
+.playground .ability-cluster { position:absolute;z-index:8;display:flex;flex-direction:column-reverse;align-items:center;gap:var(--ability-gap);width:var(--thrust-size);pointer-events:none;right:calc(env(safe-area-inset-right,0px) + 2px);bottom:calc(env(safe-area-inset-bottom,0px) + 4px); }
 .playground .ability-cluster .ability-control { position:relative;inset:auto;flex:none;margin:0;pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none; }
-.playground .ability-cluster .thrust-control { width:56px;height:56px; }
+.playground .ability-cluster .thrust-control { width:var(--thrust-size);height:var(--thrust-size);padding:3px; }
 .playground:not([data-players="1"]) .ability-cluster:is(.racer-0,.racer-2) { left:calc(env(safe-area-inset-left,0px) + 2px);right:auto; }
 .playground:not([data-players="1"]) .ability-cluster:is(.racer-1,.racer-3) { right:calc(env(safe-area-inset-right,0px) + 2px);left:auto; }
 .playground .ability-cluster:is(.racer-2,.racer-3) { top:calc(env(safe-area-inset-top,0px) + 4px);bottom:auto;flex-direction:column; }
-.hop-control { --charge:360deg;width:44px;height:44px;padding:3px;border:0;border-radius:50%;color:var(--identity,var(--accent));background:conic-gradient(currentColor var(--charge),var(--border) var(--charge));box-shadow:0 5px 18px #0005; }
+.hop-control { --charge:360deg;width:var(--hop-size,44px);height:var(--hop-size,44px);padding:3px;border:0;border-radius:50%;color:var(--identity,var(--accent));background:conic-gradient(currentColor var(--charge),var(--border) var(--charge));box-shadow:0 5px 18px #0005; }
 .hop-inner { display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100%;border-radius:50%;background:var(--surface);line-height:1;gap:1px; }
 .hop-inner svg { width:13px;height:13px; }.hop-inner strong { font:italic 700 9px/1 var(--font-display);letter-spacing:.03em; }.hop-status { font-size:8px;font-variant-numeric:tabular-nums;color:var(--muted); }
 .hop-control[data-ready="false"] { color:var(--muted); }.hop-control:disabled { opacity:.75; }.hop-control[data-firing="true"] { box-shadow:0 0 16px var(--identity,var(--accent)); }
 .hop-control:focus-visible { outline:2px solid var(--text);outline-offset:2px; }
 .ability-cluster:is(.racer-2,.racer-3) .hop-inner { transform:rotate(180deg); }
 @media (orientation:portrait) and (max-width:650px) {
- .playground .ability-cluster, .playground .ability-cluster:is(.racer-2,.racer-3) { flex-direction:row;width:106px;height:56px;bottom:calc(env(safe-area-inset-bottom,0px) + 2px); }
+ .playground .ability-cluster, .playground .ability-cluster:is(.racer-2,.racer-3) { flex-direction:row;width:calc(var(--thrust-size) + var(--hop-size) + var(--ability-gap));height:var(--thrust-size);bottom:calc(env(safe-area-inset-bottom,0px) + 2px); }
  .playground .ability-cluster:is(.racer-2,.racer-3) { top:env(safe-area-inset-top,0px);bottom:auto; }
  .playground .ability-cluster:is(.racer-0,.racer-1) { bottom:calc(env(safe-area-inset-bottom,0px) + 2px); }
  .playground .ability-cluster:not(.racer-0), .playground[data-players="1"] .ability-cluster { flex-direction:row-reverse; }

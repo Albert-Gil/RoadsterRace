@@ -5,7 +5,7 @@ import { cleanDriverName, escapeHtml, finishFor, paintFinishes } from './race-se
 import { circuits, circuitMapPath, findCircuit } from '../content/circuits';
 
 const corners = ['Bottom left', 'Bottom right', 'Top left', 'Top right'];
-const keys = ['A', 'L', 'Q', 'P'];
+const keys = ['A', 'L', 'Q', 'P'], hopKeys = ['Z', 'K', 'W', 'O'];
 
 export function raceSetupMarkup(preferences: RacePreferences, count: number, tour?: TourSetup, options: SessionOptions = {mode: 'multiplayer', difficulty: 'normal', seed: 1}, ghost = true) {
   const selected = findCircuit(preferences.circuitId);
@@ -23,8 +23,8 @@ export function raceSetupMarkup(preferences: RacePreferences, count: number, tou
     <div class="driver-grid">${preferences.drivers.slice(0, count).map((driver, index) => {
       const finish = finishFor(driver.paint), name = escapeHtml(cleanDriverName(driver.name, index));
       return `<section class="driver-card" aria-label="Driver ${index + 1}" style="--driver-paint:${finish.color}">
-        <div class="driver-card-top"><span class="driver-card-number">${String(index + 1).padStart(2, '0')}</span><span>${count === 1 ? 'Solo driver' : corners[index]} <kbd>${count === 1 ? 'Space' : keys[index]}</kbd></span></div>
-        <label class="driver-name-label" for="driver-${index}-name">Driver name</label><input id="driver-${index}-name" class="driver-name-input" data-driver-name="${index}" aria-label="Driver ${index + 1} name" value="${name}" maxlength="36" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done">
+        <div class="driver-card-top"><span class="driver-card-number">${String(index + 1).padStart(2, '0')}</span><span>${count === 1 ? 'Solo driver' : corners[index]} <kbd title="Thrust">${count === 1 ? 'Space' : keys[index]}</kbd> <kbd title="Hop">${count === 1 ? 'H' : hopKeys[index]}</kbd></span></div>
+        <label class="driver-name-label" for="driver-${index}-name">Driver name</label><input id="driver-${index}-name" class="driver-name-input" data-driver-name="${index}" aria-label="Driver ${index + 1} name" value="${name}" maxlength="18" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done">
         <div class="paint-options" role="group" aria-label="Driver ${index + 1} paint">${paintFinishes.map(paint => `<button class="paint-swatch" data-action="driver-paint" data-driver="${index}" data-paint="${paint.id}" aria-label="${paint.name}" title="${paint.name}" aria-pressed="${driver.paint === paint.id}" style="--swatch:${paint.color}"><span></span></button>`).join('')}</div>
         <div class="paint-caption"><span>${escapeHtml(finish.name)}</span><span>ROADSTER</span></div>
       </section>`;

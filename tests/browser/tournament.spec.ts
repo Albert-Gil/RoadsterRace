@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { createTournament, finalizeRound } from '../../src/core/tournament';
+import { waitForPhase } from './ui';
 mkdirSync('artifacts/golden-gate', { recursive: true });
 const state = (page: Page) => page.evaluate(() => (window as any).__roadster.getState());
 test('older three-circuit championships are explained as incompatible after widening',async({page})=>{
@@ -18,7 +19,7 @@ async function drawAndRace(page: Page, count = 2) {
   }
   await page.waitForFunction(() => (window as any).__roadster.getGraphics().renderReady);
   for (const key of ['KeyA', 'KeyL', 'KeyQ', 'KeyP'].slice(0, count)) await page.keyboard.press(key);
-  await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'racing');
+  await waitForPhase(page, 'racing');
   await page.keyboard.press('KeyA'); await page.keyboard.press('KeyL');
 }
 test('Full Tour scores all four circuits, survives refresh and ends with a championship', async ({ page }) => {
@@ -41,7 +42,7 @@ test('Full Tour scores all four circuits, survives refresh and ends with a champ
       await page.waitForTimeout(350); await page.screenshot({ path: 'artifacts/golden-gate/thrust-race.png' });
       reports.push({ graphics: await page.evaluate(() => (window as any).__roadster.getGraphics()), audio: await page.evaluate(() => (window as any).__roadster.getAudio()) });
     }
-    await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'results', undefined, { timeout: 120000 });
+    await waitForPhase(page, 'results', 120000);
     const done = await state(page); expect(done.tournament.results).toHaveLength(round + 1);
     expect(done.tournament.results[round].points).toEqual(Array.from({ length: 4 }, (_, p) => [10, 6, 4, 0][done.tournament.results[round].finishes.find((f: any) => f.player === p).rank - 1]));
     expect(done.players.every((p: any) => p.finished)).toBe(true); reports.push({ round, contactCount: done.contactCount, results: done.tournament.results[round] });
@@ -91,6 +92,6 @@ test('Golden Gate solo and responsive garage preserve layout and clear projectio
   await page.getByRole('button', { name: '1 lap', exact: true }).click(); await page.getByRole('button', { name: 'Draw racing line', exact: false }).click(); await page.evaluate(() => (window as any).__roadster.usePracticeLine());
   await page.waitForFunction(() => (window as any).__roadster.getGraphics().renderReady); await page.screenshot({ path: 'artifacts/golden-gate/circuit-preview.png' });
   expect(await page.evaluate(() => (window as any).__roadster.getProjectionError())).toBeLessThan(0.01);
-  await page.getByRole('button', { name: 'Race this line', exact: false }).click(); await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'results', undefined, { timeout: 90000 });
+  await page.getByRole('button', { name: 'Race this line', exact: false }).click(); await waitForPhase(page, 'results', 90000);
   expect((await state(page)).race.lapTimes).toHaveLength(1); expect(errors).toEqual([]);
 });

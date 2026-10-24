@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
+import { waitForPhase } from './ui';
 mkdirSync('artifacts/drawing-layout', { recursive: true });
 const cases = [
   { circuit: 'coastal-launch', width: 844, height: 390 },
@@ -47,7 +48,7 @@ for (const spec of cases) test(`edge-to-edge ${spec.circuit} ${spec.width}x${spe
   expect(delta(preview.points)).toBeLessThan(0.001);
   await page.screenshot({ path: `artifacts/drawing-layout/${spec.circuit}-${spec.width}-preview.png` });
   await page.getByRole('button', { name: 'Race this line' }).click();
-  await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'racing');
+  await waitForPhase(page, 'racing');
   const racing = await page.evaluate(() => { const g = (window as any).__roadster; return g.getTrack().centerline.map((p: any) => g.project(p)); });
   expect(delta(racing)).toBeLessThan(0.001); expect(errors).toEqual([]);
   writeFileSync(`artifacts/drawing-layout/${spec.circuit}-${spec.width}-report.json`, JSON.stringify({ spec, controls: plan.controls, track: { width: Math.max(...plan.points.map((p: any) => p.x)) - Math.min(...plan.points.map((p: any) => p.x)), height: Math.max(...plan.points.map((p: any) => p.y)) - Math.min(...plan.points.map((p: any) => p.y)) }, previewDelta: delta(preview.points), raceDelta: delta(racing), errors }, null, 2));

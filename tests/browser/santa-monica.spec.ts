@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
+import { waitForPhase } from './ui';
 mkdirSync('artifacts/santa-monica', { recursive: true });
 const state = (p: Page) => p.evaluate(() => (window as any).__roadster.getState());
 const graphics = (p: Page) => p.evaluate(() => (window as any).__roadster.getGraphics());
@@ -64,7 +65,7 @@ test('jump race renders elevation, pauses safely, completes, and retry resets fl
   const airborne = await state(page); expect(airborne.race.movement).toBe('airborne'); expect(airborne.renderedPlayers[0].y).toBeGreaterThan(1.3);
   await page.keyboard.press('Escape'); const paused = await state(page); await page.waitForTimeout(250); expect((await state(page)).race).toEqual(paused.race);
   await page.screenshot({ path: 'artifacts/santa-monica/airborne-paused.png' }); await page.getByRole('button', { name: 'Resume', exact: true }).click();
-  await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'results', undefined, { timeout: 90000 });
+  await waitForPhase(page, 'results', 90000);
   const completed = await state(page); expect(completed.race.lapTimes).toHaveLength(1); expect(completed.race.elevation).toBe(0);
   await page.getByRole('button', { name: 'Race again', exact: false }).click();
   expect((await state(page)).race.movement).toBe('grounded'); expect((await state(page)).race.elevation).toBe(0); expect((await state(page)).race.recoveryCount).toBe(0);
@@ -79,10 +80,10 @@ test('four players race mixed branches with bounded draw calls and a clean remat
   }
   await page.waitForFunction(() => (window as any).__roadster.getGraphics().renderReady);
   for (const key of ['KeyA', 'KeyL', 'KeyQ', 'KeyP']) await page.keyboard.press(key);
-  await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'racing');
+  await waitForPhase(page, 'racing');
   const calls: number[] = [];
   for (let i = 0; i < 10; i++) { for (const key of ['KeyA', 'KeyL', 'KeyQ', 'KeyP']) await page.keyboard.press(key); calls.push((await graphics(page)).drawCalls); await page.waitForTimeout(50); }
-  await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'results', undefined, { timeout: 120000 });
+  await waitForPhase(page, 'results', 120000);
   const finished = await state(page); expect(finished.players.every((p: any) => p.finished)).toBe(true); expect(Math.max(...calls)).toBeLessThanOrEqual(150);
   writeFileSync('artifacts/santa-monica/multiplayer-report.json', JSON.stringify({ maxDrawCalls: Math.max(...calls), players: finished.players, standings: finished.standings }, null, 2));
   await page.screenshot({ path: 'artifacts/santa-monica/multiplayer-results.png' }); await page.getByRole('button', { name: 'Rematch', exact: true }).click();

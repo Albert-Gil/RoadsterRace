@@ -42,5 +42,4 @@ export const goldenGateTrack: TrackDefinition = {
       { ...rectangle(`outer-abutment-${side}`, x, 48.5, 0.35, 61.5), kind: 'bridge-support' as const, bridgeId: bridge.id, height: 0.8 },
     ]), ...rails, ...supports,
   ],
-  checkpoints: Array.from({ length: 8 }, (_, i) => samplePolyline(centerline, distances, i * length / 8)),
 };

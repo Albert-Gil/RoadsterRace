@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
+import { waitForPhase } from './ui';
 
 const audio = (page: import('@playwright/test').Page) => page.evaluate(() => (window as any).__roadster.getAudio());
 
@@ -28,7 +29,7 @@ test('sound opts in, follows a race, silences on pause and mute, and survives th
   await expect(page.getByRole('button', { name: 'Turn sound off' })).toHaveAttribute('aria-pressed', 'true');
   await page.getByRole('button', { name: "Time Trial" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
   await page.evaluate(() => (window as any).__roadster.usePracticeLine()); await page.getByRole('button', { name: 'Race this line' }).click();
-  await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'racing');
+  await waitForPhase(page, 'racing');
   await expect.poll(async () => (await audio(page)).levels.drive).toBeGreaterThan(0.025);
   await expect.poll(async () => (await audio(page)).outputRms).toBeGreaterThan(0.001);
   await page.keyboard.press('Space'); await page.waitForFunction(() => (window as any).__roadster.getState().race.thrustCount === 1);
@@ -36,7 +37,7 @@ test('sound opts in, follows a race, silences on pause and mute, and survives th
   await page.keyboard.press('Escape'); await page.waitForTimeout(450);
   expect((await audio(page)).active).toBe(false); expect((await audio(page)).outputRms).toBeLessThan(0.0001);
   await page.getByRole('button', { name: 'Resume', exact: true }).click();
-  await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'racing');
+  await waitForPhase(page, 'racing');
   await expect.poll(async () => (await audio(page)).outputRms).toBeGreaterThan(0.001);
   await page.getByRole('button', { name: 'Turn sound off' }).click(); await page.waitForTimeout(450);
   expect((await audio(page)).outputRms).toBeLessThan(0.0001);

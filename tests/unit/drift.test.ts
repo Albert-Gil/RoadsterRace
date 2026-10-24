@@ -77,7 +77,7 @@ describe('momentum, steering recovery and real surfaces', () => {
   test('drifting on asphalt preserves constant requested speed with no grip penalty', () => {
     const points = Array.from({ length: 181 }, (_, i) => ({ x: Math.sin(i / 180 * Math.PI * 2) * 9, z: Math.cos(i / 180 * Math.PI * 2) * 9 }));
     const distances = cumulative(points), length = distances.at(-1)!;
-    const track: TrackDefinition = { id: 'wide-circle', version: 1, name: 'Tire test', centerline: points, distances, length, roadWidth: 100, carWidth: 2.2, carLength: 5.2, barriers: [], start: points[0], checkpoints: [] };
+    const track: TrackDefinition = { id: 'wide-circle', version: 1, name: 'Tire test', centerline: points, distances, length, roadWidth: 100, carWidth: 2.2, carLength: 5.2, barriers: [], start: points[0] };
     const r: CompiledRoute = { version: COMPILER_VERSION, trackId: track.id, trackVersion: track.version, length, drawingDuration: 2, points: points.map((p, i) => ({ ...p, distance: distances[i], desiredSpeed: 25, curvature: 1 / 9 })) };
     const sim = new RaceSimulation(r, track); sim.state.speed = 25; sim.state.velocity = { x: 25, z: 0 };
     let driftSeen = false;

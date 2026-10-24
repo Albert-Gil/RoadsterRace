@@ -13,7 +13,7 @@ import type { CompiledRoute, TrackDefinition } from '../../src/core/types';
 
 const centerline = [{ x: 0, z: 0 }, { x: 0, z: 200 }, { x: 200, z: 200 }, { x: 200, z: 0 }, { x: 0, z: 0 }];
 const distances = cumulative(centerline);
-const flat: TrackDefinition = { id: 'hop-test', version: 1, name: 'Hop fixture', centerline, distances, length: 800, roadWidth: 16, carWidth: 2.2, carLength: 5.2, start: centerline[0], checkpoints: [], barriers: [] };
+const flat: TrackDefinition = { id: 'hop-test', version: 1, name: 'Hop fixture', centerline, distances, length: 800, roadWidth: 16, carWidth: 2.2, carLength: 5.2, start: centerline[0], barriers: [] };
 const line: CompiledRoute = { trackId: flat.id, trackVersion: flat.version, version: COMPILER_VERSION, length: 800, drawingDuration: 7,
   points: Array.from({ length: 801 }, (_, d) => ({ ...samplePolyline(centerline, distances, d), distance: d, desiredSpeed: 30, curvature: 0 })) };
 function moving(sim: RaceSimulation, speed: number, heading = 0) {

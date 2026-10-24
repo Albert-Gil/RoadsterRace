@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
+import { waitForPhase } from './ui';
 mkdirSync('artifacts/hop', { recursive: true });
 const state = (page: Page) => page.evaluate(() => (window as any).__roadster.getState());
 async function friends(page: Page, count = 4) {
@@ -11,7 +12,7 @@ async function friends(page: Page, count = 4) {
     await page.evaluate(() => (window as any).__roadster.usePracticeLine()); await page.getByRole('button', { name: 'Lock in my line', exact: true }).click();
   }
   for (const key of ['KeyA', 'KeyL', 'KeyQ', 'KeyP'].slice(0, count)) await page.keyboard.press(key);
-  await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'racing');
+  await waitForPhase(page, 'racing');
 }
 
 for (const viewport of [{ width: 844, height: 390 }, { width: 390, height: 844 }, { width: 320, height: 568 }, { width: 1024, height: 768 }]) {
@@ -58,7 +59,7 @@ test('eight real touches retain player and ability ownership through hold, slidi
   // Fifty overlapping browser touch cycles supplement the core ownership test.
   // Pause during the cycles avoids accidentally running an entire race.
   await page.keyboard.press('Escape'); const paused = await state(page); await page.waitForTimeout(150); expect((await state(page)).players).toEqual(paused.players);
-  await page.getByRole('button', { name: 'Resume', exact: true }).click(); await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'racing');
+  await page.getByRole('button', { name: 'Resume', exact: true }).click(); await waitForPhase(page, 'racing');
   for (let i = 0; i < 50; i++) {
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: points });
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] });
@@ -73,7 +74,7 @@ test('hop keyboard hold, focused buttons, pause and retry preserve independent a
   await page.getByRole('button', { name: '1 lap', exact: true }).click(); await page.getByRole('button', { name: 'Draw racing line', exact: true }).click();
   await page.evaluate(() => (window as any).__roadster.usePracticeLine()); await page.getByRole('button', { name: 'Race this line', exact: true }).click();
   await expect(page.locator('#hop-button')).toBeDisabled(); await page.keyboard.press('KeyH');
-  expect((await state(page)).race.hopCount).toBe(0); await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'racing');
+  expect((await state(page)).race.hopCount).toBe(0); await waitForPhase(page, 'racing');
   await page.keyboard.down('KeyH'); await page.keyboard.press('Space');
   await page.waitForFunction(() => (window as any).__roadster.getState().race.time > 7.2); await page.keyboard.up('KeyH');
   expect((await state(page)).race.hopCount).toBe(1); expect((await state(page)).race.thrustCount).toBe(1);
@@ -89,7 +90,7 @@ test('actual hop and ramp gameplay capture retains the one-car rendering budget'
   await page.goto('/?circuit=santa-monica'); await page.getByRole('button', { name: 'Turn sound on', exact: true }).click();
   await page.getByRole('button', { name: 'Time Trial', exact: true }).click(); await page.getByRole('button', { name: '1 lap', exact: true }).click(); await page.getByRole('button', { name: 'Draw racing line', exact: true }).click();
   await page.evaluate(() => (window as any).__roadster.usePracticeLine(true)); await page.getByRole('button', { name: 'Race this line', exact: true }).click();
-  await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'racing');
+  await waitForPhase(page, 'racing');
   await page.keyboard.press('KeyH'); await page.keyboard.press('Space');
   await page.waitForFunction(() => (window as any).__roadster.getState().race.elevation > 0.9);
   const hop = await page.evaluate(() => ({ state: (window as any).__roadster.getState(), graphics: (window as any).__roadster.getGraphics() }));
@@ -101,7 +102,7 @@ test('actual hop and ramp gameplay capture retains the one-car rendering budget'
   expect(await page.evaluate(() => (window as any).__roadster.getGraphics().hopCores)).toBe(0);
   await page.screenshot({ path: 'artifacts/hop/ramp-jump-landscape.png' });
   if ((await state(page)).phase === 'paused') await page.getByRole('button', { name: 'Resume', exact: true }).click();
-  await page.waitForFunction(() => (window as any).__roadster.getState().phase === 'results', undefined, { timeout: 120000 });
+  await waitForPhase(page, 'results', 120000);
   const result = await state(page); expect(result.race.hopCount).toBe(1); expect(result.race.recoveryCount).toBe(0); expect(errors).toEqual([]);
   writeFileSync('artifacts/hop/gameplay.json', JSON.stringify({ hop, result, errors }, null, 2));
   await context.close(); await page.video()!.saveAs('artifacts/hop/hop-and-ramp-gameplay.webm');

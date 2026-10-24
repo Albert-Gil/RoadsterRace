@@ -1,11 +1,12 @@
 import { expect,test } from '@playwright/test';
+import { waitForPhase } from './ui';
 const state=(page:any)=>page.evaluate(()=>(window as any).__roadster.getState());
 async function plan(page:any){await page.evaluate(()=>(window as any).__roadster.usePracticeLine());await page.getByRole('button',{name:'Race this line',exact:true}).click();}
 async function finish(page:any){
  const deadline=Date.now()+150000;
  while(Date.now()<deadline){
   if((await state(page)).phase==='paused'){console.log('Resuming headless interruption:',(await state(page)).pauseReason);await page.getByRole('button',{name:'Resume',exact:true}).click();}
-  try{await page.waitForFunction(()=>(window as any).__roadster.getState().phase==='results',undefined,{timeout:5000});return;}catch(error){if((error as Error).name!=='TimeoutError')throw error;}
+  try{await waitForPhase(page, 'results', 5000);return;}catch(error){if((error as Error).name!=='TimeoutError')throw error;}
  }
  throw new Error('Race did not complete within the bounded browser check');
 }
@@ -15,7 +16,7 @@ test('Solo Race has three CPU cars, one human control and a deterministic rematc
   await page.goto('/?circuit=santa-monica');await page.getByRole('button',{name:'Solo Race',exact:true}).click();
   await expect(page.getByRole('button',{name:'Normal',exact:true})).toHaveAttribute('aria-pressed','true');
   await page.getByRole('button',{name:'1 lap',exact:true}).click();await page.getByRole('button',{name:'Draw racing line'}).click();await plan(page);
-  await page.waitForFunction(()=>(window as any).__roadster.getState().phase==='racing');
+  await waitForPhase(page, 'racing');
   expect((await state(page)).humanCount).toBe(1);expect((await state(page)).players.length).toBe(4);
   await expect(page.locator('.racer-pad')).toHaveCount(1);
   expect((await state(page)).visibleRouteCount).toBe(1);
@@ -37,7 +38,7 @@ test('Time Trial stores lap replay, reloads it and keeps the ghost outside the c
   await page.waitForFunction(()=>(window as any).__roadster.getState().personalBestLap!==null);
   expect((await state(page)).personalBestLap).toBe(completed.personalBestLap);
   await page.getByRole('button',{name:'Draw racing line'}).click();await plan(page);
-  await page.waitForFunction(()=>(window as any).__roadster.getState().phase==='racing');
+  await waitForPhase(page, 'racing');
   const metrics=await page.evaluate(()=>{const g=(window as any).__roadster;return {state:g.getState(),graphics:g.getGraphics()};});
   expect(metrics.state.players.length).toBe(1);expect(metrics.graphics.ghostVisible).toBe(true);expect(metrics.graphics.drawCalls).toBeLessThanOrEqual(90);
   await page.keyboard.press('Escape');const before=await state(page);await page.waitForTimeout(300);expect((await state(page)).race.time).toBe(before.race.time);

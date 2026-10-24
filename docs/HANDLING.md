@@ -1,5 +1,7 @@
 # Drawing sensitivity, drift and sand
 
+> **Historical milestone record.** Values below describe the state when each section was written and several are superseded (rules, compiler and track versions, pace range, grip, sand drag, road width and control sizes). Current values: [CURRENT_RULES.md](CURRENT_RULES.md), generated from the source.
+
 The October 20 handling revision implements the user's requested behavior: gentler interpretation of steering/pace, outward momentum when a turn is too fast, active steering back to the drawn line, and lower grip plus drag on sand. The former instant 45% speed loss and 0.85-second penalty window are removed.
 
 ## How the car moves

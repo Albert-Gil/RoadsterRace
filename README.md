@@ -52,14 +52,14 @@ The supplied desktop runtime also provides pnpm at `C:\Users\alber\.cache\codex-
 4. Tap your pad for thrust during the race. Cars start on a separated grid with three seconds of ghosting, then physically collide: rear impacts transfer momentum, side contacts push and slide, and crashes can send you into sand or barriers. Finished cars leave active racing while everyone else completes the distance.
 5. See finishing order and individual times. Times equal to the displayed hundredth share a place. **Rematch** preserves all lines and requests readiness again; **Draw new lines** starts at Player 1.
 
-| Player | Corner | Desktop key |
-|---|---|---|
-| 1 | Bottom left | A |
-| 2 | Bottom right | L |
-| 3 | Top left | Q |
-| 4 | Top right | P |
+| Player | Corner | Thrust key | Hop key |
+|---|---|---|---|
+| 1 | Bottom left | A | Z |
+| 2 | Bottom right | L | K |
+| 3 | Top left | Q | W |
+| 4 | Top right | P | O |
 
-Solo keeps the bottom-right thrust pad and Space key. The top two multiplayer controls face players seated opposite the screen. Numbered car labels supplement color. Escape pauses everyone together. An interruption during the ready check clears readiness; an interrupted race requires an explicit resume and countdown. Four people are best served by a tablet; real-device comfort and Safari performance still need testing.
+Solo keeps the bottom-right thrust/hop pads with Space (Thrust) and H (Hop). The top two multiplayer controls face players seated opposite the screen. Numbered car labels supplement color. Escape pauses everyone together. An interruption during the ready check clears readiness; an interrupted race requires an explicit resume and countdown. Four people are best served by a tablet; real-device comfort and Safari performance still need testing.
 
 The separate **Touch test** screen remains available for the 50-cycle input diagnostic.
 
@@ -91,7 +91,11 @@ pnpm test:pages
 pnpm build
 pnpm report:size
 pnpm preview
+pnpm docs:rules
+pnpm test:legacy
 ```
+
+`pnpm docs:rules` regenerates [docs/CURRENT_RULES.md](docs/CURRENT_RULES.md) after a tuning or version change (`pnpm test` fails while it is stale). `pnpm test:legacy` replays 1-, 2- and 4-car races with thrust and hop on every circuit and requires results identical to a Git revision (default `HEAD`, or `LEGACY_BASELINE=<rev>`); use it for refactors and presentation work that must not change race results.
 
 Browser checks use locally installed Google Chrome on Windows and Playwright Chromium on Linux (`pnpm exec playwright install --with-deps chromium`). Set `CHROME_PATH` for another installed Chrome/Chromium executable. By default they use software WebGL and touch emulation, so they do not certify physical Safari performance. If the preview server is not already running, the browser suite starts a local test server. `test:pages` needs a production build made with `VITE_BASE_PATH=/RoadsterRace/`; see the online-testing guide.
 
@@ -125,9 +129,11 @@ Recordings can replace individual roles through `src/presentation/audio-assets.t
 
 ## Architecture
 
-`src/core` contains track data, route compilation, and the engine-independent 60 Hz simulation. `LocalRace` advances all cars through shared forces/contact substeps, commits physical progress afterward and ranks positions against the common circuit. The core tournament module scores complete rounds independently of presentation and local storage. `src/input` contains independent pointer ownership. `src/presentation` contains themes, assets, procedural scenery/cars, optional GLB loading, and audio cues. `src/main.ts` coordinates drawing turns, readiness, races and DOM controls. Theme changes cannot alter route or simulation data.
+`src/core` contains track data, route compilation, and the engine-independent 60 Hz simulation. `LocalRace` advances all cars through shared forces/contact substeps, commits physical progress afterward and ranks positions against the common circuit. The core tournament module scores complete rounds independently of presentation and local storage. `src/core/stepping.ts` is the single fixed-step loop shared by `LocalRace` and `RaceSimulation`. `src/input` contains independent pointer ownership and the `InputRouter` for ability pads and keys. `src/presentation` contains themes, assets, procedural scenery/cars, optional GLB loading, and audio cues. `src/ui` holds pure panel/control markup and the HUD renderer; `src/app` holds the application shell, phase layout rules and the development inspector. `src/main.ts` coordinates drawing turns, readiness, races and phase transitions. Theme changes cannot alter route or simulation data.
 
-Current scope: four playable circuits; Solo Race against three computer drivers; two-to-four-human local Multiplayer; single races and saved tournaments; Time Trial with browser-local fastest-lap records and replay ghosts; one to six laps; saved names/paint; thrust, physical contacts and the authored Santa Monica ramp; rematches, two presentation presets, touch diagnostics and public GitHub Pages testing. Manual hop, challenge mode, global records, native iOS and promotion remain later milestones.
+Current scope: four playable circuits; Solo Race against three computer drivers; two-to-four-human local Multiplayer; single races and saved tournaments; Time Trial with browser-local fastest-lap records and replay ghosts; one to six laps; saved names/paint; thrust, manual hop, physical contacts, the authored Santa Monica ramp and the Launchsite hop lane; rematches, two presentation presets, touch diagnostics and public GitHub Pages testing. Challenge mode, global records, online multiplayer, native iOS and promotion remain later milestones.
+
+Current rule, compiler and course values are listed in [docs/CURRENT_RULES.md](docs/CURRENT_RULES.md), which is generated from the source (`pnpm docs:rules`) and checked by `pnpm test`. Dated milestone documents in `docs/` record history; where their numbers differ, the generated file and the code are authoritative.
 
 See [multiplayer decisions and next steps](docs/MULTIPLAYER.md), [verification and device checklist](docs/VERIFICATION.md), [original asset ledger](docs/ASSET_RIGHTS.md), and the existing detailed planning documents. Physical iPhone/iPad verification remains pending until tested on actual hardware.
 

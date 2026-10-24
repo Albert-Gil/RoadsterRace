@@ -1,6 +1,6 @@
 import { roundedCircuit } from '../road-geometry';
 import { createStartFinish } from '../start-finish';
-import { cumulative, projectToPolyline, samplePolyline } from '../geometry';
+import { cumulative, projectToPolyline } from '../geometry';
 import type { HopShortcut, Point, TrackDefinition } from '../types';
 
 const centerline = roundedCircuit([
@@ -45,5 +45,4 @@ export const orbitalTrack: TrackDefinition = {
     { id: 'service-hop-barrier', height: 1, kind: 'service-barrier', footprint: rect(44, -16.5, 16, 1) },
   ].map(b=>b.id==='assembly-island'?{...b,footprint:b.footprint.map(p=>({x:-8+(p.x+8)*0.96,z:-15+(p.z+15)*0.96}))}:b) as TrackDefinition['barriers'],
   hopShortcuts: [serviceHop],
-  checkpoints: Array.from({ length: 8 }, (_, i) => samplePolyline(centerline, distances, i * length / 8)),
 };

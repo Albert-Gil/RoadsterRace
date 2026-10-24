@@ -17,42 +17,28 @@ import { circuits, findCircuit } from './content/circuits';
 import { canStartDrawing } from './core/start-finish';
 import type { Ability, CompiledRoute, DrawSample, DrawingTrim } from './core/types';
 import { PointerOwnership } from './input/ownership';
+import { InputRouter } from './input/router';
+import { appShellMarkup } from './app/shell';
+import { modeLabel, phaseLayout, type Phase } from './app/phases';
+import { installDevApi } from './app/dev-api';
+import { formatTime } from './ui/format';
+import { renderHud } from './ui/hud';
+import { abilityControlsMarkup } from './ui/controls';
+import { welcomePanel } from './ui/panels/welcome';
+import { tourDiscardPanel, tourExitPanel, tourIntroPanel, tourReplacePanel } from './ui/panels/tournament';
+import { handoffPanel, planningPanel } from './ui/panels/planning';
+import { errorPanel, pausedPanel, readyPanel } from './ui/panels/race';
+import { raceResultsPanel, timeTrialResultsPanel } from './ui/panels/results';
 import { GameAudio } from './presentation/audio';
 import { GameScene } from './presentation/scene';
 import { applyPlayerColors, applyTheme, themes, hopEffects } from './presentation/themes';
 import { cleanDriverName, escapeHtml, finishFor, loadPreferences, savePreferences } from './presentation/race-settings';
 import { raceSetupMarkup } from './presentation/race-setup';
 
-type Phase = 'welcome' | 'setup' | 'handoff' | 'drawing' | 'preview' | 'ready' | 'countdown' | 'racing' | 'paused' | 'results' | 'diagnostics' | 'error' | 'tour-intro' | 'tour-resume' | 'tour-exit' | 'tour-replace';
 const app = document.querySelector<HTMLDivElement>('#app')!;
 let theme = new URLSearchParams(location.search).get('theme') === 'graphite' ? themes.graphite : themes.coastal;
 applyTheme(theme);
-app.innerHTML = `
-  <main class="playground" data-phase="welcome" data-players="1">
-    <canvas id="race-canvas" aria-label="Coastal racing circuit. Draw your line with a finger or mouse." tabindex="0"></canvas>
-    <div id="course-space" aria-hidden="true"></div>
-    <div class="scene-vignette" aria-hidden="true"></div>
-    <div id="vehicle-labels" aria-hidden="true">${[0, 1, 2, 3].map(i => `<span class="vehicle-label" data-car="${i}" hidden>${i + 1}</span>`).join('')}</div>
-    <header class="topbar">
-      <a class="brand" href="${assetUrl('')}" aria-label="Roadster Race home"><img class="brand-mark" alt="" width="38" height="38"><span class="brand-name"></span></a>
-      <div class="topbar-center"><span class="live-dot"></span><span id="mode-label">SOLO PLAYGROUND</span></div>
-      <div class="header-actions"><button class="icon-button sound-control" id="sound-button" aria-label="Turn sound on" aria-pressed="false" title="Sound"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4V9Z" fill="currentColor"/><path class="sound-waves" d="M16 8c2 2 2 6 0 8m3-11c4 4 4 10 0 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path class="sound-slash" d="m4 3 17 18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span class="sound-label">Sound off</span></button><button class="quiet-button touch-test-link" data-action="diagnostics">Touch test <span aria-hidden="true">↗</span></button></div>
-    </header>
-    <div class="circuit-caption"><span class="caption-line"></span><div>01 / COASTAL LAUNCH<small>One circuit. Endless possibilities.</small></div></div>
-    <section class="race-hud" aria-label="Race timing" hidden><div><small>TIME</small><strong id="race-time">00:00.00</strong></div><span class="hud-divider"></span><div><small id="lap-label">LAP</small><strong id="race-lap">1 <i>/ 2</i></strong></div><span class="hud-divider"></span><div><small id="pace-label">PACE</small><strong id="race-speed">0 <i>km/h</i></strong></div></section>
-    <section id="panel" class="panel" aria-live="polite"></section>
-    <div class="countdown" hidden><span id="countdown-value">3</span><small id="countdown-label">YOUR LINE. YOUR MOMENT.</small></div>
-    <div class="race-notice" role="status"></div><div id="race-controls"></div>
-    <button class="pause-button icon-button" data-action="pause" aria-label="Pause race" hidden>Ⅱ</button>
-    <div class="race-progress" hidden><span></span></div>
-    <div class="rotate-note"><span aria-hidden="true">↻</span> Turn your device sideways for the best line.</div>
-    <section id="diagnostics" class="diagnostics" hidden aria-label="Four-player touch test">
-      <div class="diagnostics-heading"><span class="eyebrow">FOUR CORNERS. FOUR PLAYERS.</span><h1>Touch is personal.</h1><p>Press together. Slide away. Each touch stays with its own corner.</p><button class="quiet-button" data-action="exit-diagnostics">← Back to the circuit</button><button class="quiet-button" data-action="reset-diagnostics">Reset counts</button></div>
-      ${[0, 1, 2, 3].map(i => `<button class="diagnostic-pad pad-${i}" data-player="${i}" aria-label="Player ${i + 1} touch pad"><span class="player-number">0${i + 1}</span><strong>PLAYER ${i + 1}</strong><span class="pad-status">READY</span><small><b class="pad-count">0</b> presses · <b class="pad-cancel">0</b> cancels</small></button>`).join('')}
-      <p class="diagnostics-footnote">Touch ownership check · real iPhone/iPad verification pending</p>
-    </section>
-    <div class="lower-wordmark" aria-hidden="true">DRAW. RACE. REPEAT.</div>
-  </main>`;
+app.innerHTML = appShellMarkup();
 
 const playground = app.querySelector<HTMLElement>('.playground')!;
 const canvas = document.querySelector<HTMLCanvasElement>('#race-canvas')!;
@@ -61,7 +47,7 @@ const countdownElement = document.querySelector<HTMLElement>('.countdown')!, con
 const pauseButton = document.querySelector<HTMLButtonElement>('.pause-button')!, notice = document.querySelector<HTMLElement>('.race-notice')!;
 const diagnosticSection = document.querySelector<HTMLElement>('#diagnostics')!, raceProgress = document.querySelector<HTMLElement>('.race-progress')!;
 const labels = [...document.querySelectorAll<HTMLElement>('.vehicle-label')];
-const audio = new GameAudio(), raceTouches = new PointerOwnership(), heldKeys = new Set<string>();
+const audio = new GameAudio();
 let ownership = new PointerOwnership();
 let phase: Phase = 'welcome', returnPhase: Phase = 'welcome', route: CompiledRoute | null = null, race: LocalRace | null = null;
 let playerCount = 1, setupCount = 2, turn = 0, confirmedRoutes: CompiledRoute[] = [], readyPlayers: boolean[] = [];
@@ -89,11 +75,19 @@ let pauseReason='';
 let countdownBeat = 3, rechargeAnnounced: boolean[] = [];
 let world: GameScene;
 let previewGrid: { routes: CompiledRoute[]; track: typeof activeTrack; rotation: number; poses: ReturnType<typeof startingGrid> } | null = null;
-const clock = new FixedStepClock(), keys = ['KeyA', 'KeyL', 'KeyQ', 'KeyP'];
-const hopKeys = ['KeyZ', 'KeyK', 'KeyW', 'KeyO'];
-const corners = ['bottom left', 'bottom right', 'top left', 'top right'];
-const formatTime = (seconds: number) => { const cs = Math.max(0, Math.round(seconds * 100)), minutes = Math.floor(cs / 6000); return `${String(minutes).padStart(2, '0')}:${((cs % 6000) / 100).toFixed(2).padStart(5, '0')}`; };
-const arrow = '<span aria-hidden="true">↗</span>';
+const clock = new FixedStepClock();
+// Thrust/hop pads and keys. Drawing input stays on the canvas handlers below.
+const input = new InputRouter(controls, {
+  humans, padsActive: () => ['ready', 'racing'].includes(phase), keysActive: () => ['ready', 'racing', 'countdown'].includes(phase),
+  activate, pause: () => pauseRace(),
+  extraKey: e => {
+    if (import.meta.env.DEV && e.code === 'KeyT' && !e.repeat) {
+      theme = theme.id === 'coastal' ? themes.graphite : themes.coastal; applyTheme(theme); brand(); world.setTheme(theme); applyDriverPresentation();
+      if (['ready', 'countdown', 'racing', 'paused', 'results'].includes(phase) && confirmedRoutes.length === playerCount) world.drawRaceLines(sessionOptions.mode==='solo-race'?confirmedRoutes.slice(0,1):confirmedRoutes);
+      else world.drawLine(route ?? (phase === 'drawing' && stroke.length ? stroke : null), route ? drawingTrim : undefined); renderPanel(); updateHud();
+    }
+  },
+});
 const driverName=(i:number)=>activeTour?.drivers[i]?activeTour.drivers[i].name:sessionOptions.mode==='solo-race'&&i>0?CPU_DRIVERS[i-1].name:cleanDriverName(preferences.drivers[i].name,i);
 const driverPaint=(i:number)=>activeTour?.drivers[i]?activeTour.drivers[i].paint:sessionOptions.mode==='solo-race'&&i>0?CPU_DRIVERS[i-1].paint:preferences.drivers[i].paint;
 const cpuTag=(i:number)=>sessionOptions.mode==='solo-race'&&i>0?' <small class="cpu-tag">CPU</small>':'';
@@ -153,60 +147,56 @@ function resumeTournament() {
   if (activeTour.state.results.length === activeTour.state.rounds.length) { roundIndex = activeTour.state.results.length - 1; selectCircuit(activeTour.state.rounds[roundIndex].circuitId); playerCount = activeTour.state.playerCount; renderControls(); world.showVehicles(-1, playerCount); applyDriverPresentation(); setPhase('results'); }
   else beginTourRound();
 }
-const playerChip = (i: number) => `<span class="player-chip" style="--identity:var(--player-${i + 1});--identity-ink:var(--player-${i + 1}-ink)">${i + 1}</span>`;
 function brand() { document.querySelector<HTMLImageElement>('.brand-mark')!.src = assetUrl(theme.branding.logo); document.querySelector('.brand-name')!.textContent = theme.branding.title; }
 brand();
 document.querySelector<HTMLImageElement>('.brand-mark')!.addEventListener('error', e => { (e.currentTarget as HTMLImageElement).hidden = true; });
 
 function renderControls() {
-  controls.innerHTML = Array.from({ length: humans() }, (_, i) => `<div class="ability-cluster racer-${i}" style="--identity:var(--player-${i + 1})"><button ${i === 0 ? 'id="thrust-button"' : ''} class="thrust-control racer-pad ability-control" data-racer="${i}" data-ability="thrust" aria-label="${playerCount === 1 ? 'Activate thrust' : `${playerName(i)} thrust`}" hidden><span class="thrust-inner">${playerCount > 1 ? `<span class="pod-identity">P${i + 1} <span class="pod-rank"></span></span><span class="pod-name">${playerName(i)}</span>` : '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m13.5 2-8 12h6L10.5 22l8-12h-6z" fill="currentColor"/></svg>'}<strong class="pod-title">THRUST</strong><small ${i === 0 ? 'id="thrust-status"' : ''} class="pod-status">READY</small><span class="pod-lap">${playerCount > 1 ? `LAP 1/${lapCount} · ${keys[i].slice(3)}` : ''}</span></span></button><button ${i === 0 ? 'id="hop-button"' : ''} class="hop-control ability-control" data-racer="${i}" data-ability="hop" aria-label="${playerCount === 1 ? 'Activate hop' : `${playerName(i)} hop`}" hidden><span class="hop-inner"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 11 6-7 6 7M12 4v13M5 21h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><strong>HOP</strong><small class="hop-status">READY</small></span></button></div>`).join('');
+  controls.innerHTML = abilityControlsMarkup({ humans: humans(), playerCount, lapCount, playerName });
 }
-function clearRaceInput() { race?.clearCommands(); raceTouches.clear(); heldKeys.clear(); clock.reset(); }
+function clearRaceInput() { race?.clearCommands(); input.clear(); clock.reset(); }
 function setPhase(next: Phase) {
   phase = next; playground.dataset.phase = phase; playground.dataset.players = String(humans()); playground.dataset.mode=sessionOptions.mode; playground.dataset.tournament = String(!!activeTour);
-  if (!['racing','paused','countdown'].includes(phase))world?.setGhost(null);
-  if (phase !== 'racing') audio.mix({ active: false, speed: 0, slip: 0, sand: 0 });
-  if (['paused', 'welcome', 'drawing', 'diagnostics', 'error'].includes(phase)) audio.silence();
-  hud.hidden = !['racing', 'countdown', 'paused'].includes(phase);
-  controls.querySelectorAll<HTMLButtonElement>('.ability-control').forEach(pad => { pad.hidden = !['ready', 'racing', 'countdown'].includes(phase) || phase === 'ready' && pad.dataset.ability === 'hop'; pad.disabled = phase === 'countdown'; });
-  pauseButton.hidden = phase !== 'racing'; countdownElement.hidden = phase !== 'countdown'; diagnosticSection.hidden = phase !== 'diagnostics';
-  raceProgress.hidden = !['racing', 'paused'].includes(phase); panel.hidden = ['racing', 'countdown', 'diagnostics'].includes(phase);
-  labels.forEach(label => { label.hidden = playerCount === 1 || Number(label.dataset.car) >= playerCount || !['ready', 'countdown'].includes(phase); });
-  world?.showStart(['welcome', 'drawing', 'preview'].includes(phase)); world?.setLayout(phase.startsWith('tour-') ? 'results' : phase);
+  const layout = phaseLayout(phase);
+  if (!layout.ghostAllowed) world?.setGhost(null);
+  if (!layout.driveAudio) audio.mix({ active: false, speed: 0, slip: 0, sand: 0 });
+  if (layout.silence) audio.silence();
+  hud.hidden = !layout.hudVisible;
+  controls.querySelectorAll<HTMLButtonElement>('.ability-control').forEach(pad => { pad.hidden = !layout.padVisible(pad.dataset.ability as Ability); pad.disabled = layout.padsDisabled; });
+  pauseButton.hidden = !layout.pauseVisible; countdownElement.hidden = !layout.countdownVisible; diagnosticSection.hidden = !layout.diagnosticsVisible;
+  raceProgress.hidden = !layout.progressVisible; panel.hidden = !layout.panelVisible;
+  labels.forEach(label => { label.hidden = playerCount === 1 || Number(label.dataset.car) >= playerCount || !layout.labelsVisible; });
+  world?.showStart(layout.startGateVisible); world?.setLayout(layout.sceneLayout);
   updateCircuitCaption(); renderPanel(); updateHud();
 }
+/** Writes the phase panel. Phases without a panel of their own keep the previous content (hidden). */
 function renderPanel(message?: string) {
   const displayedCount = phase === 'setup' ? setupCount : playerCount;
-  document.querySelector('#mode-label')!.textContent = sessionOptions.mode==='time-trial'?'TIME TRIAL':sessionOptions.mode==='solo-race'?'SOLO RACE':`${displayedCount} PLAYER LOCAL RACE`;
-  if (phase === 'welcome') panel.innerHTML = `<span class="eyebrow">A LITTLE PLANNING. A LOT OF RACING.</span><h1>${theme.branding.tagline.replace('. ', '.<br>')}</h1><p>Draw your racing line. Set the pace with your finger.<br class="desktop-break"> Then find the perfect moment to thrust.</p><div class="steps"><span><b>01</b> Draw a line</span><span><b>02</b> Time your thrust</span><span><b>03</b> Race together</span></div><div class="panel-actions"><button class="primary-button" data-action="play">Solo Race ${arrow}</button><button class="text-button" data-action="friends">Multiplayer</button><button class="text-button" data-action="time-trial">Time Trial</button></div><span class="welcome-note">SOLO OR 2–4 PLAYERS · ONE DEVICE · 1–6 LAPS</span>`;
-  if (phase === 'welcome' && savedTour) panel.innerHTML += `<div class="resume-tour"><span>YOUR TOURNAMENT IS SAVED · ${savedTour.state.results.length}/${savedTour.state.rounds.length} RACES</span><button class="secondary-button" data-action="tour-resume">Resume tournament ↗</button><button class="text-button" data-action="tour-discard">Discard tournament</button></div>`;
-  if(phase==='welcome'&&incompatibleTournament())panel.innerHTML+='<p class="save-status">The circuits have changed. Your previous tournament cannot resume; start a new tour.</p>';
-  if (phase === 'setup') panel.innerHTML = raceSetupMarkup(preferences, setupCount, tourSetup,sessionOptions,preferences.ghost!==false);
-  if (phase === 'tour-intro' && activeTour) panel.innerHTML = `<span class="eyebrow">TOURNAMENT · ROUND ${roundIndex + 1} / ${activeTour.state.rounds.length}</span><h2>${escapeHtml(activeTrack.name)}.</h2><p>${playerCount} drivers · ${lapCount} ${lapCount === 1 ? 'lap' : 'laps'}<br>Fresh lines. Same rivals. Every point counts.</p><div class="tour-route-strip">${activeTour.state.rounds.map((r, i) => `<span class="${i === roundIndex ? 'current' : i < roundIndex ? 'done' : ''}">${i + 1} · ${escapeHtml(findCircuit(r.circuitId).track.name)}</span>`).join('')}</div>${tourSaveFailed ? '<p class="save-status">Progress could not be saved on this browser. Keep this page open.</p>' : ''}<div class="panel-actions"><button class="primary-button" data-action="tour-draw">Draw your lines ↗</button><button class="text-button" data-action="home">Save and exit</button></div>`;
-  if (phase === 'tour-exit') panel.innerHTML = `<span class="eyebrow">TOURNAMENT SAVED BETWEEN ROUNDS</span><h2>Take a pit stop?</h2><p>Completed points are kept. This unfinished race will need fresh lines when you return.</p><div class="panel-actions"><button class="primary-button" data-action="tour-continue">Keep playing ↗</button><button class="text-button" data-action="tour-save-exit">Save and exit</button></div>`;
-  if (phase === 'tour-replace') panel.innerHTML = `<span class="eyebrow">A TOURNAMENT IS ALREADY SAVED</span><h2>Continue the rivalry?</h2><p>Resume your championship, or replace it with the new setup.</p><div class="panel-actions"><button class="primary-button" data-action="tour-resume">Resume tournament ↗</button><button class="text-button" data-action="tour-replace-confirm">Discard and start new</button><button class="text-button" data-action="tour-back-setup">Back</button></div>`;
-  if (phase === 'tour-resume') panel.innerHTML = `<span class="eyebrow">DISCARD SAVED TOURNAMENT</span><h2>Start fresh?</h2><p>This removes the saved championship and its points.</p><div class="panel-actions"><button class="primary-button" data-action="tour-discard-confirm">Discard tournament</button><button class="text-button" data-action="tour-discard-cancel">Keep it</button></div>`;
-  if (phase === 'handoff') panel.innerHTML = `<span class="eyebrow">${confirmedRoutes.length} OF ${playerCount} LINES LOCKED IN</span><h2>Pass to ${playerName(turn)}.</h2><p>The previous line is hidden. Draw your own plan, then take your place at the ${corners[turn]}.</p><div class="panel-actions"><button class="primary-button" data-action="take-turn">I'm ${playerName(turn)} ${arrow}</button><button class="text-button" data-action="home">Change mode</button></div>`;
-  if (phase === 'drawing' || phase === 'preview') {
-    const preview = phase === 'preview';
-    const resetIcon = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 10a8 8 0 1 1 1.4 7M4 4v6h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    const setupIcon = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16M8 3v6m8 0v6m-6 0v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
-    const flagIcon = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 21V4m0 0c5-4 9 4 14 0v10c-5 4-9-4-14 0" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m8 4 3 1v4L8 8zm6 2 3-1v4l-3 1zM8 8l3 1v4l-3-1zm6 2 3-1v4l-3 1z" fill="currentColor"/></svg>';
-    panel.innerHTML = `<h2 class="sr-only">${preview ? 'Your line is ready.' : 'Draw your line.'}</h2>${playerCount > 1 ? `<span class="planning-driver" aria-label="${playerName(turn)}, player ${turn + 1} of ${playerCount}" title="${playerName(turn)}">${playerChip(turn)}</span>` : ''}<div class="panel-actions">${preview ? `<button class="planning-button primary-button" data-action="confirm" aria-label="${humans() > 1 ? 'Lock in my line' : 'Race this line'}">${flagIcon}<span>${humans() > 1 ? 'Lock in' : 'Race'}</span></button>` : ''}<button class="planning-button secondary-button" data-action="redraw" aria-label="${preview ? 'Redraw' : 'Start again'}">${resetIcon}<span>Redraw</span></button><button class="planning-button secondary-button" data-action="${activeTour ? 'home' : 'configure-race'}" aria-label="${activeTour ? 'Leave tournament' : 'Race setup'}">${setupIcon}<span>${activeTour ? 'Exit' : 'Setup'}</span></button></div>${preview && route?.hopShortcuts?.length ? `<span class="hop-required">Hop required</span>` : ''}${message ? `<div class="planning-error instruction" role="alert">${escapeHtml(message)}</div>` : ''}`;
+  document.querySelector('#mode-label')!.textContent = modeLabel(sessionOptions.mode, displayedCount);
+  const html = panelMarkup(message);
+  if (html !== null) panel.innerHTML = html;
+}
+function panelMarkup(message?: string): string | null {
+  switch (phase) {
+    case 'welcome': return welcomePanel({ tagline: theme.branding.tagline, savedTour: savedTour ? { completed: savedTour.state.results.length, total: savedTour.state.rounds.length } : null, incompatibleTour: incompatibleTournament() });
+    case 'setup': return raceSetupMarkup(preferences, setupCount, tourSetup,sessionOptions,preferences.ghost!==false);
+    case 'tour-intro': return activeTour ? tourIntroPanel({ roundIndex, roundNames: activeTour.state.rounds.map(r => findCircuit(r.circuitId).track.name), trackName: activeTrack.name, playerCount, lapCount, saveFailed: tourSaveFailed }) : null;
+    case 'tour-exit': return tourExitPanel();
+    case 'tour-replace': return tourReplacePanel();
+    case 'tour-resume': return tourDiscardPanel();
+    case 'handoff': return handoffPanel({ confirmedCount: confirmedRoutes.length, playerCount, turn, playerName });
+    case 'drawing': case 'preview': return planningPanel({ preview: phase === 'preview', playerCount, turn, playerName, humans, hopRequired: !!route?.hopShortcuts?.length, inTour: !!activeTour, message });
+    case 'ready': return readyPanel({ playerCount, lapCount, readyPlayers, ghostSeconds: CONTACT_RULES.ghostStartSeconds });
+    case 'paused': return pausedPanel();
+    case 'results':
+      if (activeTour) { world.setShowcasePaint(finishFor(activeTour.drivers[championshipStandings(activeTour.state)[0].player].paint).color); return tournamentResultsMarkup(activeTour, roundIndex) + (tourSaveFailed ? '<p class="save-status">Progress could not be saved. Keep this page open.</p>' : ''); }
+      if (!race) return null;
+      return playerCount === 1
+        ? timeTrialResultsPanel({ state: race.racers[0].state, lapCount, driver: playerName(0), personalBest: personalLap?.duration })
+        : raceResultsPanel({ standings: race.standings(), lapTimes: race.racers.map(r => r.state.lapTimes), playerName, cpuTag });
+    case 'error': return errorPanel(message);
+    default: return null;
   }
-  if (phase === 'ready') panel.innerHTML = `<span class="eyebrow">${playerCount} PLAYERS · ${lapCount} ${lapCount === 1 ? 'LAP' : 'LAPS'}</span><h2>Take your corner.</h2><p>Everyone tap their numbered pad to get ready.<br>Cars pass through each other for the first ${CONTACT_RULES.ghostStartSeconds} seconds.<br>Thrust recharges every five seconds. One tap, one burst.</p><div class="ready-summary" aria-live="polite">${readyPlayers.filter(Boolean).length} / ${playerCount} ready</div><div class="ready-actions"><button class="text-button" data-action="redraw-all">Draw new lines</button><button class="text-button" data-action="configure-race">Race setup</button></div>`;
-  if (phase === 'paused') panel.innerHTML = `<span class="eyebrow">RACE PAUSED</span><h2>Back in a moment.</h2><div class="panel-actions"><button class="primary-button" data-action="resume">Resume ${arrow}</button><button class="secondary-button" data-action="home" aria-label="Home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m3 11 9-8 9 8M5 9v12h5v-7h4v7h5V9"/></svg>Home</button><button class="text-button" data-action="retry">Restart race</button></div>`;
-  if (phase === 'results' && activeTour) { world.setShowcasePaint(finishFor(activeTour.drivers[championshipStandings(activeTour.state)[0].player].paint).color); panel.innerHTML = tournamentResultsMarkup(activeTour, roundIndex) + (tourSaveFailed ? '<p class="save-status">Progress could not be saved. Keep this page open.</p>' : ''); return; }
-  if (phase === 'results' && race) {
-    if (playerCount === 1) {
-      const s = race.racers[0].state, time = Math.min(...s.lapTimes), newBest = time <= (personalLap?.duration ?? Infinity) + 0.0001;
-      panel.innerHTML = `<span class="eyebrow">${playerName(0)} / ${lapCount} ${lapCount === 1 ? 'LAP' : 'LAPS'}</span><h2>${newBest ? 'Personal best lap.' : 'Time trial complete.'}</h2><div class="finish-time">${formatTime(time)}</div><div class="result-detail">${s.lapTimes.map((lap, index) => `<span>Lap ${index + 1} <b>${formatTime(lap)}</b></span>`).join('')}</div><div class="result-summary"><span>Total ${formatTime(s.finishTime!)} · ${s.thrustCount} thrust ${s.thrustCount === 1 ? 'burst' : 'bursts'}</span><span>Best lap <b>${formatTime(personalLap?.duration??time)}</b></span></div><div class="panel-actions"><button class="primary-button" data-action="retry">Race again ${arrow}</button><button class="text-button" data-action="redraw">Draw a new line</button></div><button class="text-button" data-action="configure-race">Race setup</button>`;
-    } else {
-      const standings = race.standings(), winners = standings.filter(s => s.rank === 1);
-      panel.innerHTML = `<span class="eyebrow">THE LINES HAVE SPOKEN</span><h2>${winners.length > 1 ? 'A shared victory.' : `${playerName(winners[0].player)} takes it.`}</h2><table class="standings"><caption class="sr-only">Finishing order and race times</caption><thead><tr><th>Place</th><th>Player</th><th>Time</th></tr></thead><tbody>${standings.map(s => `<tr><td>${s.rank}${standings.some(other => other.player !== s.player && other.rank === s.rank) ? '=' : ''}</td><th scope="row">${playerChip(s.player)} ${playerName(s.player)}${cpuTag(s.player)}</th><td>${formatTime(s.finishTime!)}<small class="standing-laps">${race!.racers[s.player].state.lapTimes.map((lap, index) => `L${index + 1} ${formatTime(lap)}`).join(' · ')}</small></td></tr>`).join('')}</tbody></table><div class="panel-actions"><button class="primary-button" data-action="retry">Rematch ${arrow}</button><button class="text-button" data-action="redraw-all">Draw new lines</button><button class="text-button" data-action="configure-race">Race setup</button></div>`;
-    }
-  }
-  if (phase === 'error') panel.innerHTML = `<span class="eyebrow">A QUICK PIT STOP</span><h2>Let's get you racing.</h2><p>${message ?? 'The 3D circuit could not start. Try reloading in a current Safari or Chrome browser.'}</p><button class="primary-button" data-action="reload">Try again ${arrow}</button>`;
 }
 
 function newSession(count: number) {
@@ -259,34 +249,9 @@ function activate(player: number, ability: Ability = 'thrust') {
 }
 function showNotice(message: string, seconds = 1.7) { notice.textContent = message; noticeUntil = performance.now() + seconds * 1000; }
 function updateHud() {
-  const standings = race?.standings() ?? [], first = race?.racers[0].state;
-  if (first && race) {
-    const ghost = phase === 'racing' && race.ghostStartRemaining > 0;
-    const leader = sessionOptions.mode==='solo-race'?first:race.racers[standings[0].player].state;
-    hud.dataset.round = activeTour ? `ROUND ${roundIndex + 1}/${activeTour.state.rounds.length} · ${activeTrack.name.toUpperCase()}` : '';
-    document.querySelector('#race-time')!.textContent = formatTime(sessionOptions.mode==='time-trial'?Math.max(0,first.time-first.lapStartedAt):race.time);
-    document.querySelector('#lap-label')!.textContent = sessionOptions.mode!=='multiplayer'?'LAP':'LEADER LAP'; document.querySelector('#race-lap')!.innerHTML = `${leader.lap} <i>/ ${lapCount}</i>`;
-    document.querySelector('#pace-label')!.textContent = sessionOptions.mode==='time-trial'?'BEST LAP':sessionOptions.mode==='solo-race'&&!ghost?'POSITION':ghost ? 'GHOST START' : playerCount === 1 ? first.surface === 'sand' ? 'SAND' : first.drifting ? 'DRIFT' : 'PACE' : 'FINISHED';
-    document.querySelector('#race-speed')!.innerHTML = sessionOptions.mode==='time-trial'?(personalLap?formatTime(personalLap.duration):'—'):sessionOptions.mode==='solo-race'&&!ghost?`${standings.find(s=>s.player===0)!.rank} <i>/ 4</i>`:ghost ? `${Math.ceil(race.ghostStartRemaining)} <i>s</i>` : playerCount === 1 ? `${Math.round(first.speed * 3.6)} <i>km/h</i>` : `${standings.filter(s => s.finished).length} <i>/ ${playerCount}</i>`;
-    raceProgress.querySelector<HTMLElement>('span')!.style.width = `${standings[0].progress / (activeTrack.length * lapCount) * 100}%`;
-  }
-  controls.querySelectorAll<HTMLButtonElement>('.ability-control').forEach(pad => {
-    const i = Number(pad.dataset.racer), hop = pad.dataset.ability === 'hop';
-    const s = race?.racers[i].state, remaining = s ? Math.max(0, (hop ? s.hopReadyAt : s.thrustReadyAt) - s.time) : 0;
-    const recovering = !!s && (s.time < s.recoveringUntil || s.recoveryWaiting);
-    pad.disabled = phase === 'countdown' || (phase === 'racing' && (!!s?.finished || recovering || hop && s?.movement === 'airborne'));
-    pad.style.setProperty('--charge', `${clamp(1 - remaining / (hop ? RULES.hopRecharge : RULES.thrustRecharge), 0, 1) * 360}deg`);
-    if (hop) {
-      pad.dataset.ready = String(remaining < 0.001 && s?.movement !== 'airborne');
-      pad.dataset.firing = String(!!s && s.flightOrigin === 'hop' && s.time - s.flightStartedAt < 0.25);
-      pad.querySelector('.hop-status')!.textContent = s?.finished ? 'DONE' : recovering ? 'WAIT' : remaining > 0.001 ? `${remaining.toFixed(1)}s` : s?.movement === 'airborne' ? 'AIR' : 'READY';
-      return;
-    }
-    pad.dataset.ready = String(phase === 'ready' ? readyPlayers[i] : remaining < 0.001); pad.dataset.firing = String(phase === 'racing' && !!s && s.time < s.thrustUntil);
-    pad.querySelector('.pod-title')!.textContent = phase === 'ready' ? readyPlayers[i] ? 'READY ✓' : 'TAP READY' : recovering ? 'RECOVERING' : s?.finished ? 'FINISHED' : 'THRUST';
-    pad.querySelector('.pod-status')!.textContent = phase === 'ready' ? readyPlayers[i] ? 'WAIT FOR FRIENDS' : driverName(i) : s?.finished ? formatTime(s.finishTime!) : remaining < 0.001 ? 'READY' : `${remaining.toFixed(1)}s`;
-    if (playerCount > 1) { pad.querySelector('.pod-rank')!.textContent = s ? `#${standings.find(item => item.player === i)!.rank}` : ''; pad.querySelector('.pod-lap')!.textContent = `${s && !s.finished ? s.surface === 'sand' ? 'SAND · ' : s.drifting ? 'DRIFT · ' : '' : ''}LAP ${s?.lap ?? 1}/${lapCount} · ${keys[i].slice(3)}`; }
-  });
+  renderHud({ phase, race, mode: sessionOptions.mode, playerCount, lapCount, trackLength: activeTrack.length,
+    tourLabel: activeTour ? `ROUND ${roundIndex + 1}/${activeTour.state.rounds.length} · ${activeTrack.name.toUpperCase()}` : '',
+    personalBest: personalLap?.duration, readyPlayers, driverName, hud, controls, raceProgress });
 }
 function updateVehicles(alpha: number) {
   const rotation = activeTour ? roundIndex % playerCount : 0;
@@ -404,37 +369,6 @@ canvas.addEventListener('pointerup', e => {
 });
 function cancelStroke() { if (drawingPointer === null) return; drawingPointer = null; stroke = []; world.drawLine(null); if (phase === 'drawing') renderPanel('That drawing was interrupted. Start a fresh lap at the start line.'); }
 canvas.addEventListener('pointercancel', cancelStroke); canvas.addEventListener('lostpointercapture', cancelStroke);
-controls.addEventListener('pointerdown', e => {
-  const pad = (e.target as HTMLElement).closest<HTMLButtonElement>('.ability-control');
-  if (!pad || pad.disabled || !['ready', 'racing'].includes(phase) || (e.pointerType === 'mouse' && e.button !== 0)) return;
-  const ability = pad.dataset.ability as Ability;
-  e.preventDefault(); if (raceTouches.down(e.pointerId, Number(pad.dataset.racer), ability)) { pad.setPointerCapture(e.pointerId); activate(Number(pad.dataset.racer), ability); }
-});
-for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) controls.addEventListener(name, e => { raceTouches.up((e as PointerEvent).pointerId, name !== 'pointerup'); });
-// Assistive technologies may activate a button without pointer events.
-controls.addEventListener('click', e => { const pad = (e.target as HTMLElement).closest<HTMLButtonElement>('.ability-control'); if (pad && !pad.disabled && e.detail === 0) activate(Number(pad.dataset.racer), pad.dataset.ability as Ability); });
-window.addEventListener('keydown', e => {
-  if ((e.target as HTMLElement).closest('input, textarea, select, [contenteditable="true"]')) {
-    if (e.code === 'Enter') (e.target as HTMLElement).blur();
-    return;
-  }
-  let player = humans() === 1 && e.code === 'Space' ? 0 : humans() > 1 ? keys.indexOf(e.code) : -1;
-  let ability: Ability = 'thrust';
-  const hopPlayer = humans() === 1 && e.code === 'KeyH' ? 0 : humans() > 1 ? hopKeys.indexOf(e.code) : -1;
-  if (hopPlayer >= 0) { player = hopPlayer; ability = 'hop'; }
-  if ((e.code === 'Space' || e.code === 'Enter') && document.activeElement?.matches('.ability-control')) {
-    const focused = document.activeElement as HTMLButtonElement;
-    player = focused.disabled ? -1 : Number(focused.dataset.racer); ability = focused.dataset.ability as Ability;
-  }
-  if (player >= 0 && player < humans() && ['ready', 'racing', 'countdown'].includes(phase)) { e.preventDefault(); if (!heldKeys.has(e.code) && !e.repeat) activate(player, ability); heldKeys.add(e.code); }
-  if (e.code === 'Escape') pauseRace();
-  if (import.meta.env.DEV && e.code === 'KeyT' && !e.repeat) {
-    theme = theme.id === 'coastal' ? themes.graphite : themes.coastal; applyTheme(theme); brand(); world.setTheme(theme); applyDriverPresentation();
-    if (['ready', 'countdown', 'racing', 'paused', 'results'].includes(phase) && confirmedRoutes.length === playerCount) world.drawRaceLines(sessionOptions.mode==='solo-race'?confirmedRoutes.slice(0,1):confirmedRoutes);
-    else world.drawLine(route ?? (phase === 'drawing' && stroke.length ? stroke : null), route ? drawingTrim : undefined); renderPanel(); updateHud();
-  }
-});
-window.addEventListener('keyup', e => { heldKeys.delete(e.code); });
 function interrupt() {
   audio.silence(); pauseRace('app-interruption'); clearRaceInput(); ownership.clear(); updateDiagnostics(); cancelStroke();
   if (phase === 'ready') { readyPlayers.fill(false); renderPanel(); updateHud(); }
@@ -492,22 +426,5 @@ try {
     } else if (phase === 'ready' || phase === 'countdown' || phase === 'paused') updateVehicles(1);
     if (now > noticeUntil) notice.textContent = ''; world.render(now / 1000);
   });
-  if (import.meta.env.DEV) Object.assign(window, { __roadster: {
-    // Fixture only: normal play has no practice-line shortcut. A future tutorial can reuse the compiler fixture.
-    usePracticeLine: usePractice,
-    getState: () => ({ phase,pauseReason,mode:sessionOptions.mode,difficulty:sessionOptions.difficulty,humanCount:humans(),controllers:Array.from({length:playerCount},(_,i)=>controllerFor(sessionOptions.mode,i)),personalBestLap:personalLap?.duration??null,ghostEnabled:preferences.ghost!==false, tournament: activeTour ? structuredClone(activeTour.state) : null, roundIndex, contactCount: race?.contactCount ?? 0, circuitId: activeCircuit.id, theme: theme.id, playerCount, lapCount, drivers: preferences.drivers.map((driver, i) => ({ name: driverName(i), paint: driverPaint(i), color: finishFor(driverPaint(i)).color })), turn, confirmedCount: confirmedRoutes.length, readyPlayers: [...readyPlayers], visibleRouteCount: world.visibleRouteCount, route: route ? { length: route.length, drawingDuration: route.drawingDuration, joined: drawingTrim?.joined ?? false, leadInCount: drawingTrim?.leadIn.length ?? 0, tailCount: drawingTrim?.tail.length ?? 0, cleanup: route.cleanup ? { ...route.cleanup } : null } : null, race: race ? { ...race.racers[0].state } : null, best,
-      players: race?.racers.map(racer => ({ ...racer.state })) ?? [], standings: race?.standings() ?? [], ghostStartRemaining: race?.ghostStartRemaining ?? 0,
-      renderedPlayers: world.vehicles.slice(0, playerCount).map(vehicle => ({ x: vehicle.root.position.x, y: vehicle.root.position.y, z: vehicle.root.position.z, heading: vehicle.root.rotation.y })),
-      raceInputs: { activations: [...raceTouches.activations], cancellations: [...raceTouches.cancellations], active: [0, 1, 2, 3].map(i => raceTouches.active(i)) },
-      abilityInputs: { thrust: [0,1,2,3].map(i => raceTouches.active(i, 'thrust')), hop: [0,1,2,3].map(i => raceTouches.active(i, 'hop')) },
-      inputs: { activations: [...ownership.activations], cancellations: [...ownership.cancellations], active: [0, 1, 2, 3].map(i => ownership.active(i)) } }),
-    getAudio: () => audio.getStatus(),
-    getShowcaseProjection: () => world.showcaseProjection,
-    inspectVehicle: (view: 'front' | 'side' | 'rear') => world.inspectVehicle(view),
-    getGraphics: () => ({ circuitId: activeCircuit.id, engineScenes: world.engine.scenes.length, ...world.depthFeatures, roadVisible: !!world.scene.getMeshByName('asphalt') && world.scene.getActiveMeshes().contains(world.scene.getMeshByName('asphalt')!), vaporParticles: world.vehicles.map(v => v.vapor.liveCount), meshes: world.scene.meshes.length, activeMeshes: world.scene.getActiveMeshes().length, drawCalls: world.drawCalls, fps: world.engine.getFps(), textures: world.scene.textures.length, hardwareScaling: world.engine.getHardwareScalingLevel() }),
-    project: (point: { x: number; z: number }) => world.project(point), getTrack: () => ({ ...activeTrack, centerline: activeTrack.centerline.map(p => ({ ...p })) }),
-    getRawStroke: () => structuredClone(stroke),
-    getRoute: () => route ? structuredClone(route) : null,
-    getProjectionError: () => { const p = world.project(activeTrack.start), ground = world.groundPoint(p.x, p.y); return ground ? distance(ground, activeTrack.start) : Infinity; },
-  } });
+  if (import.meta.env.DEV) installDevApi(() => ({ phase, pauseReason, sessionOptions, humans, playerCount, personalLap, preferences, activeTour, roundIndex, race, activeCircuit, theme, lapCount, turn, confirmedRoutes, readyPlayers, world, route, drawingTrim, best, stroke, activeTrack, raceTouches: input.touches, ownership, audio, usePractice, driverName, driverPaint }));
 } catch (error) { console.error(error); canvas.hidden = true; setPhase('error'); renderPanel(error instanceof Error ? error.message : undefined); }

@@ -2,21 +2,13 @@ import { angleDelta, clamp, distance, lerp, modulo, projectToPolyline } from './
 import { sampleRoute, COMPILER_VERSION } from './route';
 import { barrierContact, blockedRouteSection, sweepVehicle } from './barriers';
 import { DEFAULT_LAPS, validateLapCount } from './race-options';
+import { RULES } from './rules';
+import { createContactLog, stepRacers } from './stepping';
 import type { CompiledRoute, Point, RaceEvent, RaceState, TrackDefinition } from './types';
 import { branchProjection, FLIGHT_RULES, groundHeight, jumpCoordinates, rampAt, supported, takeoffCrossing, vehicleSupported } from './support';
 import { permittedHopBarriers } from './hop-shortcuts';
 
-export const RULES = Object.freeze({
-  version: 11, dt: 1 / 60, laps: DEFAULT_LAPS,
-  acceleration: 6, braking: 8.5, accelerationJerk: 14, paceResponse: 1.6, paceDeadband: 0.4,
-  maxSpeed: 42, thrustAcceleration: 25, thrustDuration: 0.7, thrustRecharge: 5,
-  hopRecharge: 7, hopLaunchSpeed: 17,
-  flightLaunchCorrection: 20 * Math.PI / 180, flightTurnRate: 30 * Math.PI / 180,
-  asphaltGrip: 48, sandGrip: 6.5, asphaltResponse: 7.5, sandResponse: 1.8, sandDrag: 0.95,
-  steeringResponse: 4.8, steeringRate: 2.8, steeringSmoothing: 7,
-  lookAhead: 4, lookAheadSeconds: 0.25, surfaceTransition: 1.2,
-  driftStartAngle: 0.17, driftEndAngle: 0.09,
-});
+export { RULES };
 
 /** Surface comes from the physical car footprint, never from its planned line. */
 export function sampleSurface(position: Point, track: TrackDefinition) {
@@ -82,14 +74,10 @@ export class RaceSimulation {
     }
     return best;
   }
+  /** One car through the same fixed-step implementation as LocalRace (src/core/stepping.ts). */
   step() {
     if (this.state.finished) return;
-    const now = this.state.tick * RULES.dt;
-    for (let sub = 0; sub < 2 && !this.state.finished; sub++) {
-      const at = now + sub * RULES.dt / 2, old = this.integrate(RULES.dt / 2, at);
-      if (old) this.commitMotion(old, RULES.dt / 2, at);
-    }
-    this.finishTick();
+    stepRacers([this], this.track, this.state.tick * RULES.dt, createContactLog());
   }
   finishTick() { this.state.tick++; if (!this.state.finished) this.state.time = this.state.tick * RULES.dt; }
   /** Predict forces and barrier-constrained movement; shared car contacts run before commitMotion. */

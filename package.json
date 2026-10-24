@@ -13,7 +13,9 @@
     "test": "vitest run",
     "test:browser": "playwright test",
     "test:pages": "node tools/check-pages.mjs",
-    "report:size": "node tools/size-report.mjs"
+    "report:size": "node tools/size-report.mjs",
+    "docs:rules": "node tools/write-current-rules.mjs",
+    "test:legacy": "node --experimental-vm-modules tools/check-legacy-handling.mjs"
   },
   "dependencies": {
     "@babylonjs/core": "9.31.0",
