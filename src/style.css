@@ -3,6 +3,7 @@
 @font-face { font-family: 'Barlow Condensed'; src: url('/assets/fonts/BarlowCondensed-BoldItalic.ttf') format('truetype'); font-weight: 700; font-style: italic; font-display: swap; }
 * { box-sizing: border-box; }
 :root { font-family: var(--font-body); color: var(--text); background: var(--water); font-synthesis: none; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; }
+html, body { touch-action: manipulation; overscroll-behavior: none; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body { margin: 0; }
 button, a { -webkit-tap-highlight-color: transparent; }
 button { font: inherit; cursor: pointer; }
@@ -458,11 +459,18 @@ p { font-size: 14px; line-height: 1.5; }
 .circuit-card strong { font-size: 24px; }
 .format-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .format-options button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: #ffffff08; }
+.graphics-options { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-bottom: 8px; }
+.graphics-options button { min-height: 44px; padding: 8px 4px; }
+.graphics-options button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: #ffffff08; }
+@media (max-width: 520px) { .graphics-options { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.renderer-options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+.renderer-options button { min-height: 44px; padding: 8px 4px; }
+.renderer-options button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: #ffffff08; }
 .tour-editor { padding: 14px; margin-top: 12px; border: 1px solid var(--border); background: #0b141b88; }
 .tour-scoring { font-size: 11px; color: var(--muted); line-height: 1.8; margin: 12px 0; }
 .tour-scoring b { color: var(--text); }
 .schedule-count { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 12px; }
-.tour-editor select { min-height: 44px; min-width: 0; background: #16232d; border: 1px solid #43505a; color: var(--text); padding: 8px; font: 600 14px var(--font-body); }
+.tour-editor select { min-height: 44px; min-width: 0; background: #16232d; border: 1px solid #43505a; color: var(--text); padding: 8px; font: 600 16px var(--font-body); }
 .tour-itinerary { list-style: none; padding: 0; margin: 12px 0 0; }
 .tour-itinerary li { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--border); font-size: 13px; }
 .tour-itinerary select { flex: 1; width: 100%; }

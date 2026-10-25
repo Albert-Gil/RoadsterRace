@@ -14,6 +14,8 @@ The latest playability pass enlarges thrust pads and racing cars, hides floating
 
 **Hop** now gives an immediate one-second lift with a separate seven-second recharge. Both manual hops and automatic ramps gently guide momentum instead of launching according to momentary body yaw. Sand drag is slightly lower; its reduced grip remains. Authored obstacle shortcuts remain unmarked. See [hop controls, flight assistance and tuning](docs/HOP.md).
 
+**Graphics and the iOS app.** Race setup now has a **Graphics** setting (Auto, Low, Medium, High, Ultra). Medium and above light each venue with a real CC0 sky (HDRI) that also reflects in water, glass and the car; add world-space surface detail (sand ripples, asphalt, dirt and grass texture, animated waves) and sharper shadows. High adds ambient occlusion, soft contact-hardening shadows, bloom, anti-aliasing and a colour grade; Ultra adds screen-space reflections and 4K shadow maps. Auto picks a tier for the device and steps down by itself if frames run slow. Pinch and double-tap no longer zoom the page. The game can also be installed as a real iOS app for free testing (sideloaded with your own Apple ID) before deciding on the Apple Developer Program. See [graphics tiers](docs/GRAPHICS.md) and [the iOS app](docs/IOS_APP.md).
+
 ## Online testing
 
 Testing site: **https://albert-gil.github.io/RoadsterRace/**. GitHub Actions verifies main builds before deploying. See [online testing and iPhone installation](docs/ONLINE_TESTING.md) for release, rollback, build labels and physical-device checks. Hosted physical iPhone/iPad verification remains pending until performed on hardware.
@@ -97,6 +99,9 @@ pnpm report:size
 pnpm preview
 pnpm docs:rules
 pnpm test:legacy
+pnpm bake:env      # rebuild the real-sky lighting files (dev-only tools)
+pnpm build:app     # bundle for the iOS app (dist-app/)
+pnpm ios:sync      # build:app, then copy into the Xcode project (ios/)
 ```
 
 `pnpm docs:rules` regenerates [docs/CURRENT_RULES.md](docs/CURRENT_RULES.md) after a tuning or version change (`pnpm test` fails while it is stale). `pnpm test:legacy` replays 1-, 2- and 4-car races with thrust and hop on every circuit and requires results identical to a Git revision (default `HEAD`, or `LEGACY_BASELINE=<rev>`); use it for refactors and presentation work that must not change race results.
@@ -135,7 +140,7 @@ Recordings can replace individual roles through `src/presentation/audio-assets.t
 
 `src/core` contains track data, route compilation, and the engine-independent 60 Hz simulation. `LocalRace` advances all cars through shared forces/contact substeps, commits physical progress afterward and ranks positions against the common circuit. The core tournament module scores complete rounds independently of presentation and local storage. `src/core/stepping.ts` is the single fixed-step loop shared by `LocalRace` and `RaceSimulation`. `src/input` contains independent pointer ownership and the `InputRouter` for ability pads and keys. `src/presentation` contains themes, assets, procedural scenery/cars, optional GLB loading, and audio cues. `src/ui` holds pure panel/control markup and the HUD renderer; `src/app` holds the application shell, phase layout rules and the development inspector. `src/main.ts` coordinates drawing turns, readiness, races and phase transitions. Theme changes cannot alter route or simulation data.
 
-Current scope: four playable circuits; Solo Race against three computer drivers; two-to-four-human local Multiplayer; single races and saved tournaments; Time Trial with browser-local fastest-lap records and replay ghosts; one to six laps; saved names/paint; thrust, manual hop, physical contacts, the authored Santa Monica ramp and the Launchsite hop lane; rematches, two presentation presets, touch diagnostics and public GitHub Pages testing. Challenge mode, global records, online multiplayer, native iOS and promotion remain later milestones.
+Current scope: four playable circuits; Solo Race against three computer drivers; two-to-four-human local Multiplayer; single races and saved tournaments; Time Trial with browser-local fastest-lap records and replay ghosts; one to six laps; saved names/paint; thrust, manual hop, physical contacts, the authored Santa Monica ramp and the Launchsite hop lane; rematches, two presentation presets, touch diagnostics and public GitHub Pages testing. An iOS app wrapper (Capacitor) builds on GitHub Actions for free sideloaded testing; App Store/TestFlight distribution, Challenge mode, global records, online multiplayer and promotion remain later milestones.
 
 Current rule, compiler and course values are listed in [docs/CURRENT_RULES.md](docs/CURRENT_RULES.md), which is generated from the source (`pnpm docs:rules`) and checked by `pnpm test`. Dated milestone documents in `docs/` record history; where their numbers differ, the generated file and the code are authoritative.
 

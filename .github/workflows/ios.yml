@@ -1,0 +1,58 @@
+name: iOS test app (unsigned IPA)
+
+# Builds the Capacitor iOS app on a hosted Mac and publishes an unsigned .ipa as a run artifact.
+# Install it on your own iPhone/iPad with Sideloadly and a free Apple ID (see docs/IOS_APP.md).
+# No Apple Developer Program membership, certificates or secrets are used here.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    # Capacitor 8 requires Xcode 26 or newer (the macOS 26 image default).
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+      - run: pnpm install --frozen-lockfile
+      - name: Build the app bundle and copy it into the Xcode project
+        run: pnpm ios:sync
+        env:
+          ROADSTER_BUILD_ID: ios-${{ github.run_number }}
+      - name: Show the Xcode in use
+        run: xcodebuild -version
+      - name: Build the unsigned app
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build/ios \
+            CURRENT_PROJECT_VERSION=${{ github.run_number }} \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            build
+      - name: Package the .ipa
+        run: |
+          mkdir -p build/ipa/Payload
+          cp -R build/ios/Build/Products/Release-iphoneos/App.app build/ipa/Payload/
+          cd build/ipa && zip -qry ../RoadsterRace-unsigned.ipa Payload
+          ls -l ../RoadsterRace-unsigned.ipa
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RoadsterRace-unsigned-ipa-${{ github.run_number }}
+          path: build/RoadsterRace-unsigned.ipa
+          retention-days: 30
+          if-no-files-found: error

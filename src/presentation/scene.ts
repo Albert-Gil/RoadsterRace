@@ -2,7 +2,8 @@ import { LapGhost } from './lap-ghost';
 import type { ReplayFrame } from '../core/lap-replay';
 import { drawingRay, roadHeight } from '../core/elevation';
 import { roadEdges } from '../core/road-geometry';
-import { Engine } from '@babylonjs/core/Engines/engine';
+import type { AbstractEngine } from '@babylonjs/core/Engines/abstractEngine';
+import { createWebGLEngine, rendererName } from './engine';
 import { Camera } from '@babylonjs/core/Cameras/camera';
 import { FreeCamera } from '@babylonjs/core/Cameras/freeCamera';
 import { Color3, Color4 } from '@babylonjs/core/Maths/math.color';
@@ -20,6 +21,9 @@ import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { Texture } from '@babylonjs/core/Materials/Textures/texture';
 import { Scene } from '@babylonjs/core/scene';
 import type { SceneInstrumentation } from '@babylonjs/core/Instrumentation/sceneInstrumentation';
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh';
+import type { BaseTexture } from '@babylonjs/core/Materials/Textures/baseTexture';
+import type { CubeTexture } from '@babylonjs/core/Materials/Textures/cubeTexture';
 import '@babylonjs/core/Culling/ray';
 import { distance, mix, modulo } from '../core/geometry';
 import { drawingStart, startGate, gatePoint, trimDrawing } from '../core/start-finish';
@@ -27,14 +31,18 @@ import { bridgeAt } from '../core/bridge';
 import { gestureSpeeds } from '../core/route';
 import type { CompiledRoute, DrawSample, DrawingTrim, Point, TrackDefinition } from '../core/types';
 import type { PresentationTheme } from './themes';
-import { sceneTuning, sceneryTheme, sceneryLighting, nightAppearance } from './themes';
+import { sceneTuning, sceneryTheme, sceneryLighting, nightAppearance, graphicsTiers, venueSkies, colorGrade, type GraphicsLevel } from './themes';
+import { ColorCurves } from '@babylonjs/core/Materials/colorCurves';
+import { FrameGovernor, lowerAutomaticLevel, renderPixelRatio, resolveGraphics, type GraphicsChoice } from './graphics';
+import { applySurfaceFinishes, SurfaceDetailPlugin } from './surface-detail';
+import { PostEffects } from './post-processing';
 import { visualAssets } from './assets';
 import { assetUrl } from './urls';
 import { VehicleView } from './vehicle';
 import { buildScenery, type SceneryRuntime } from './scenery';
 import type { SceneryId } from '../content/circuits';
 import { surfaceTexture } from './textures';
-import { createReflectionSky } from './environment';
+import { createReflectionSky, loadSky } from './environment';
 import { PaceLine } from './pace-line';
 import { VehicleShowcase } from './showcase';
 import { jumpCoordinates, flightGravity, FLIGHT_RULES } from '../core/support';
@@ -43,7 +51,7 @@ import { planningHeight } from './planning-height';
 import { JumpFeedback } from './jump-feedback';
 
 export class GameScene {
-  readonly engine: Engine;
+  readonly engine: AbstractEngine;
   readonly scene: Scene;
   readonly camera: FreeCamera;
   readonly vehicle: VehicleView;
@@ -69,6 +77,19 @@ export class GameScene {
   private jumpFeedback: JumpFeedback;
   feedback(point: Point, splash: boolean) { this.jumpFeedback.emit(point, splash); }
   private shadows: ShadowGenerator;
+  private shadowCasters = new Set<AbstractMesh>();
+  private proceduralSky: BaseTexture;
+  private sky: CubeTexture | null = null;
+  private skyFailed = false;
+  private post: PostEffects;
+  private governor = new FrameGovernor();
+  private lastFrame = 0;
+  private stepDownPending = false;
+  /** The tier currently rendered; `graphicsChoice` is the player's setting (auto or fixed). */
+  graphicsLevel: GraphicsLevel = 'medium';
+  private graphicsChoice: GraphicsChoice = 'auto';
+  /** Called after the automatic tier steps down, so menus can show the new level. */
+  onGraphicsChange?: (level: GraphicsLevel) => void;
   private reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   private layoutMode = 'welcome';
   private canvasResizeObserver: ResizeObserver;
@@ -79,12 +100,12 @@ export class GameScene {
   drawCalls = 0;
   private instrumentation?: SceneInstrumentation;
   private showcaseInstrumentation?: SceneInstrumentation;
-  constructor(readonly canvas: HTMLCanvasElement, readonly track: TrackDefinition, theme: PresentationTheme, readonly scenery: SceneryId = 'coastal', engine?: Engine) {
+  constructor(readonly canvas: HTMLCanvasElement, readonly track: TrackDefinition, theme: PresentationTheme, readonly scenery: SceneryId = 'coastal', engine?: AbstractEngine, graphics: GraphicsChoice = 'auto') {
     theme = sceneryTheme(theme, scenery);
     this.theme = theme;
-    this.engine = engine ?? new Engine(canvas, true, { stencil: false, preserveDrawingBuffer: false, powerPreference: 'high-performance', disableWebGL2Support: false, useHighPrecisionMatrix: true }, false);
-    if (this.engine.webGLVersion < 2) { this.engine.dispose(); throw new Error('This prototype needs WebGL 2. Please try a current Safari or Chrome browser.'); }
-    this.engine.setHardwareScalingLevel(1 / Math.min(window.devicePixelRatio || 1, 1.5));
+    this.engine = engine ?? createWebGLEngine(canvas);
+    this.graphicsChoice = graphics; this.graphicsLevel = resolveGraphics(graphics, rendererName(this.engine));
+    this.engine.setHardwareScalingLevel(1 / Math.min(window.devicePixelRatio || 1, graphicsTiers[this.graphicsLevel].maxPixelRatio));
     this.scene = new Scene(this.engine);
     this.scene.skipPointerMovePicking = true; this.scene.skipPointerDownPicking = true; this.scene.skipPointerUpPicking = true;
     this.scene.imageProcessingConfiguration.toneMappingEnabled = true;
@@ -93,7 +114,7 @@ export class GameScene {
     this.scene.imageProcessingConfiguration.contrast = sceneTuning.grading.contrast;
     this.camera = new FreeCamera('fixed-race-camera', new Vector3(0, 140, -140), this.scene);
     this.camera.mode = Camera.PERSPECTIVE_CAMERA; this.camera.fov = sceneTuning.camera.verticalFov; this.camera.setTarget(Vector3.Zero()); this.camera.minZ = 1; this.camera.maxZ = 1000;
-    this.scene.environmentTexture = createReflectionSky(this.scene); this.scene.environmentIntensity = 0.85;
+    this.proceduralSky = createReflectionSky(this.scene); this.scene.environmentTexture = this.proceduralSky; this.scene.environmentIntensity = 0.85;
     const lighting = sceneryLighting[scenery];
     const ambient = new HemisphericLight('ambient', new Vector3(0, 1, 0), this.scene); ambient.intensity = sceneTuning.lighting.ambient; ambient.diffuse = Color3.FromHexString(lighting.ambient); ambient.groundColor = Color3.FromHexString(lighting.ground);
     if(scenery==='night-city')ambient.intensity=nightAppearance.ambientIntensity;
@@ -104,7 +125,7 @@ export class GameScene {
     }
     this.light = new DirectionalLight('sun', new Vector3(0.55, -1, 0.45).normalize(), this.scene); this.light.position.set(-70, 127, -57); this.light.diffuse = Color3.FromHexString(lighting.sun);
     this.light.shadowFrustumSize = scenery === 'coastal' ? 210 : 250; this.light.shadowMinZ = 1; this.light.shadowMaxZ = 350; this.light.autoUpdateExtends = false;
-    this.shadows = new ShadowGenerator(sceneTuning.lighting.shadowMapSize, this.light); this.shadows.usePercentageCloserFiltering = true; this.shadows.filteringQuality = ShadowGenerator.QUALITY_MEDIUM; this.shadows.bias = 0.0004; this.shadows.normalBias = 0.08; this.shadows.setDarkness(sceneTuning.lighting.shadowDarkness);
+    this.shadows = this.createShadows();
     const mat = (role: string, color: string) => { const m = new StandardMaterial(role, this.scene); m.diffuseColor = Color3.FromHexString(color); m.specularColor.setAll(0.04); m.backFaceCulling = false; this.materials.set(role, m); return m; };
     this.sceneryRuntime = buildScenery(scenery, this.scene, track, theme, this.materials);
     this.terrainMaterial = this.materials.get('terrain')!;
@@ -182,7 +203,7 @@ export class GameScene {
       if (merged) {
         if (material === this.roadMaterial) merged.name = 'asphalt';
         merged.isPickable = false; merged.hasVertexAlpha = vertexAlpha; merged.receiveShadows = !material.disableLighting; merged.freezeWorldMatrix();
-        if (this.sceneryRuntime.shadowCasterMaterials.has(material) || material === white || material === accent) this.shadows.addShadowCaster(merged, false);
+        if (this.sceneryRuntime.shadowCasterMaterials.has(material) || material === white || material === accent) this.castShadow(merged);
       }
     }
     this.lapGhost = new LapGhost(this.scene);
@@ -200,6 +221,8 @@ export class GameScene {
       if (url && !track.sections) material.diffuseTexture = new Texture(assetUrl(url), this.scene, false, true, Texture.TRILINEAR_SAMPLINGMODE, undefined, () => { material.diffuseTexture?.dispose(); material.diffuseTexture = null; });
     }
     this.showcase = new VehicleShowcase(this.engine, theme);
+    this.post = new PostEffects(this.scene, this.camera);
+    this.applyGraphics();
     // Loaded only for development builds; the inspector and browser budgets read drawCalls.
     if (import.meta.env.DEV) void import('@babylonjs/core/Instrumentation/sceneInstrumentation').then(({ SceneInstrumentation }) => {
       if (this.scene.isDisposed) return;
@@ -213,6 +236,48 @@ export class GameScene {
       if (this.ready && entries.some(entry => entry.contentRect.width > 0 && entry.contentRect.height > 0)) this.resize();
     });
     this.canvasResizeObserver.observe(canvas);
+  }
+  private castShadow(mesh: AbstractMesh) { this.shadowCasters.add(mesh); this.shadows?.addShadowCaster(mesh, false); }
+  private createShadows() {
+    const tier = graphicsTiers[this.graphicsLevel], shadows = new ShadowGenerator(tier.shadowMapSize, this.light);
+    if (tier.shadowFilter === 'pcss') { shadows.useContactHardeningShadow = true; shadows.contactHardeningLightSizeUVRatio = sceneTuning.lighting.contactHardening; }
+    else shadows.usePercentageCloserFiltering = true;
+    shadows.filteringQuality = { low: ShadowGenerator.QUALITY_LOW, medium: ShadowGenerator.QUALITY_MEDIUM, high: ShadowGenerator.QUALITY_HIGH }[tier.shadowQuality];
+    shadows.bias = 0.0004; shadows.normalBias = 0.08; shadows.setDarkness(sceneTuning.lighting.shadowDarkness);
+    for (const mesh of this.shadowCasters) if (!mesh.isDisposed()) shadows.addShadowCaster(mesh, false);
+    return shadows;
+  }
+  /** Sky, surfaces, post-processing and showcase lighting for the current tier. Shadows are rebuilt by setGraphicsLevel. */
+  private applyGraphics() {
+    const tier = graphicsTiers[this.graphicsLevel], venue = venueSkies[this.scenery];
+    if (tier.skyLighting && !this.skyFailed) {
+      this.sky ??= loadSky(this.scene, venue.file, this.light.direction, () => { this.skyFailed = true; this.applyGraphics(); });
+      this.scene.environmentTexture = this.sky; this.scene.environmentIntensity = venue.intensity;
+    } else { this.scene.environmentTexture = this.proceduralSky; this.scene.environmentIntensity = 0.85; }
+    const sky = this.scene.environmentTexture === this.sky ? this.sky : null;
+    applySurfaceFinishes(this.scene, this.materials, this.scenery, tier, sky, venue.waterReflection);
+    const ip = this.scene.imageProcessingConfiguration;
+    ip.colorCurvesEnabled = !!tier.postProcessing;
+    if (tier.postProcessing) {
+      const curves = new ColorCurves(); curves.globalSaturation = colorGrade.saturation;
+      curves.highlightsHue = colorGrade.highlights.hue; curves.highlightsDensity = colorGrade.highlights.density; curves.highlightsSaturation = colorGrade.highlights.saturation;
+      curves.shadowsHue = colorGrade.shadows.hue; curves.shadowsDensity = colorGrade.shadows.density; curves.shadowsSaturation = colorGrade.shadows.saturation;
+      ip.colorCurves = curves;
+    }
+    this.post.apply(tier, sky);
+    this.showcase.setSkyLighting(tier.skyLighting);
+    this.governor.reset();
+  }
+  private setGraphicsLevel(level: GraphicsLevel) {
+    if (level === this.graphicsLevel) return;
+    this.graphicsLevel = level;
+    this.shadows.dispose(); this.shadows = this.createShadows();
+    this.applyGraphics(); this.resize();
+  }
+  /** Player setting: 'auto' (detected, steps down when slow) or a fixed tier. Never touches the simulation. */
+  setGraphics(choice: GraphicsChoice) {
+    this.graphicsChoice = choice;
+    this.setGraphicsLevel(resolveGraphics(choice, rendererName(this.engine)));
   }
   private ribbon(name: string, points: Point[], width: number, y: number) {
     const sides = roadEdges(points, width).map(side => side.map(p => new Vector3(p.x,y,p.z)));
@@ -228,6 +293,8 @@ export class GameScene {
     const mesh = MeshBuilder.CreateRibbon(name, { pathArray: sides, sideOrientation: Mesh.DOUBLESIDE }, this.scene); mesh.setVerticesData(VertexBuffer.NormalKind, Array.from({ length: mesh.getTotalVertices() * 3 }, (_, i) => i % 3 === 1 ? 1 : 0)); return mesh;
   }
   resize() {
+    const box = this.canvas.getBoundingClientRect(), ratio = renderPixelRatio(this.graphicsLevel, box.width, box.height, window.devicePixelRatio || 1);
+    if (box.width > 0 && Math.abs(this.engine.getHardwareScalingLevel() - 1 / ratio) > 1e-4) this.engine.setHardwareScalingLevel(1 / ratio);
     this.engine.resize();
     this.showcase?.resize(); this.lines.forEach(line => line.resize()); this.ignoredLines.forEach(line => line.resize()); this.errorLine?.resize();
     const interactive = ['drawing', 'preview', 'handoff', 'ready', 'racing', 'countdown', 'paused'].includes(this.layoutMode);
@@ -274,6 +341,7 @@ export class GameScene {
     this.camera.position.copyFrom(away.scale(cameraDistance).add(offset)); this.camera.setTarget(offset);
     // Input/projection can run before the next rendered frame after a mode change.
     this.scene.updateTransformMatrix(true);
+    this.post?.resize();
     this.lines.forEach(line => line.resize()); this.ignoredLines.forEach(line => line.resize()); this.errorLine?.resize();
   }
   setLayout(mode: string) { this.layoutMode = mode; const menu=['welcome','setup','results'].includes(mode);this.scene.imageProcessingConfiguration.exposure = this.scenery==='night-city' ? (menu?nightAppearance.menuExposure:nightAppearance.gameExposure) : (menu ? 0.45 : 1.12); this.resize(); }
@@ -307,7 +375,7 @@ export class GameScene {
       if(this.vehicleFill&&!this.vehicleFill.includedOnlyMeshes.includes(mesh))this.vehicleFill.includedOnlyMeshes.push(mesh);
       mesh.receiveShadows = true;
       // Body and aero silhouette suffice at gameplay scale; wheels use the contact shadow.
-      if (mesh.name === 'roadster-paint' || mesh.name === 'roadster-carbon') this.shadows.addShadowCaster(mesh, false);
+      if (mesh.name === 'roadster-paint' || mesh.name === 'roadster-carbon') this.castShadow(mesh);
     }
     if(this.vehicleFill?.includedOnlyMeshes.length)this.vehicleFill.setEnabled(true);
   }
@@ -374,9 +442,18 @@ export class GameScene {
   }
   showError(point?: Point, section?: Point[]) { this.errorLine?.dispose(); this.errorLine = undefined; this.errorMarker.isVisible = !!point; if (point) this.errorMarker.position.set(point.x, 0.3, point.z); if (section) this.errorLine = new PaceLine(this.scene, section, section.map(() => 9), this.theme, 0, false, true, false, this.track); }
   showStart(show: boolean) { this.marker.isVisible = show; this.approach.isVisible = show; }
-  get depthFeatures() { return { hopCores: this.scene.meshes.filter(m=>m.name === 'four-downward-cold-gas-cores' && m.isEnabled() && m.isVisible).length, vehicleScale: sceneTuning.vehicle.racingScale, ghostVisible:this.lapGhost.visible, decorativeMotion: this.scene.meshes.filter(m => m.metadata?.dynamicScenery).map(m => ({name: m.name, rotation: m.rotation.asArray(), position: m.position.asArray()})), perspective: this.camera.mode === Camera.PERSPECTIVE_CAMERA, shadowMapSize: this.shadows.getShadowMap()?.getSize().width ?? 0, shadowCasters: this.shadows.getShadowMap()?.renderList?.length ?? 0, renderReady: this.scene.isReady() && this.showcase.scene.isReady(), worldReady: this.scene.isReady(), showcaseReady: this.showcase.scene.isReady(), pending: [...this.scene.meshes, ...this.showcase.scene.meshes].filter(m => !m.isReady(true)).map(m => m.name), carTriangles: this.vehicle.triangleCount, showcaseTriangles: this.showcase.car.triangleCount, pace: this.theme.pace, lineWidths: this.lines.map(line => line.cssWidths), ignoredStrokeCount: this.ignoredLines.length }; }
+  get depthFeatures() { return { hopCores: this.scene.meshes.filter(m=>m.name === 'four-downward-cold-gas-cores' && m.isEnabled() && m.isVisible).length, vehicleScale: sceneTuning.vehicle.racingScale, ghostVisible:this.lapGhost.visible, graphicsLevel: this.graphicsLevel, graphicsChoice: this.graphicsChoice, renderer: this.engine.isWebGPU ? 'webgpu' : 'webgl2', postPasses: this.post.passes, sky: this.scene.environmentTexture?.name ?? null, decorativeMotion: this.scene.meshes.filter(m => m.metadata?.dynamicScenery).map(m => ({name: m.name, rotation: m.rotation.asArray(), position: m.position.asArray()})), perspective: this.camera.mode === Camera.PERSPECTIVE_CAMERA, shadowMapSize: this.shadows.getShadowMap()?.getSize().width ?? 0, shadowCasters: this.shadows.getShadowMap()?.renderList?.length ?? 0, renderReady: this.scene.isReady() && this.showcase.scene.isReady(), worldReady: this.scene.isReady(), showcaseReady: this.showcase.scene.isReady(), pending: [...this.scene.meshes, ...this.showcase.scene.meshes].filter(m => !m.isReady(true)).map(m => m.name), carTriangles: this.vehicle.triangleCount, showcaseTriangles: this.showcase.car.triangleCount, pace: this.theme.pace, lineWidths: this.lines.map(line => line.cssWidths), ignoredStrokeCount: this.ignoredLines.length }; }
   render(time: number) {
-    const reduced = this.reducedMotion.matches;
+    const reduced = this.reducedMotion.matches, frameMs = this.lastFrame ? (time - this.lastFrame) * 1000 : 0; this.lastFrame = time;
+    if (this.graphicsChoice === 'auto' && this.governor.sample(frameMs)) this.stepDownPending = true;
+    // Rebuilding shadows and passes can stall a frame; never do it mid-race (it would trigger the slow-frame pause).
+    if (this.stepDownPending && !['racing', 'countdown'].includes(this.layoutMode)) {
+      this.stepDownPending = false;
+      const next = lowerAutomaticLevel();
+      if (next && next !== this.graphicsLevel) { this.setGraphicsLevel(next); this.onGraphicsChange?.(next); }
+    }
+    SurfaceDetailPlugin.time = reduced ? 0 : time;
+    this.post.update();
     (this.marker.material as StandardMaterial).alpha = reduced ? 0.32 : 0.29 + Math.sin(time * 3) * 0.05;
     this.sceneryRuntime.update(time, reduced);
     this.jumpFeedback.update(time, reduced);
@@ -385,5 +462,5 @@ export class GameScene {
     this.drawCalls = this.instrumentation?.drawCallsCounter.current ?? 0;
     if (['welcome', 'setup', 'results'].includes(this.layoutMode)) { this.showcase.render(time); this.drawCalls += this.showcaseInstrumentation?.drawCallsCounter.current ?? 0; }
   }
-  dispose(disposeEngine = true) { this.ready = false; this.canvasResizeObserver.disconnect(); this.instrumentation?.dispose(); this.showcaseInstrumentation?.dispose(); this.showcase.dispose(); this.scene.dispose(); if (disposeEngine) this.engine.dispose(); }
+  dispose(disposeEngine = true) { this.ready = false; this.canvasResizeObserver.disconnect(); this.post.dispose(); this.instrumentation?.dispose(); this.showcaseInstrumentation?.dispose(); this.showcase.dispose(); this.scene.dispose(); if (disposeEngine) this.engine.dispose(); }
 }

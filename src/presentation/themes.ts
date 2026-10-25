@@ -48,8 +48,45 @@ export const sceneTuning = {
   vehicle: { racingScale: 1.12, landingCompression: 0.09, contactCompression: 0.05, impactDuration: 0.22 },
   camera: { elevationDegrees: 42, compactElevationDegrees: 65, azimuthDegrees: 5, verticalFov: 0.5, fittingMargin: 1, clearancePixels: 6, phoneRunoffClearancePixels: 20, azimuthStep: 5 },
   grading: { exposure: 1.16, contrast: 1.1 },
-  lighting: { ambient: 0.55, sunlight: 1.25, shadowDarkness: 0.32, shadowMapSize: 1024 },
+  lighting: { ambient: 0.55, sunlight: 1.25, shadowDarkness: 0.32, contactHardening: 0.012 },
 };
+
+/**
+ * Graphics tiers. Presentation only: no tier changes the fixed-step simulation, timing or input.
+ * The draw-call targets (90 Time Trial / 150 four cars) are verified at Medium. Post-processing
+ * passes and the ambient-occlusion pre-pass add screen passes on High/Ultra, not scene geometry.
+ */
+export type GraphicsLevel = 'low' | 'medium' | 'high' | 'ultra';
+export const graphicsLevels: readonly GraphicsLevel[] = ['low', 'medium', 'high', 'ultra'];
+export interface GraphicsTier {
+  label: string;
+  /** Rendered megapixels for the canvas; large tablets render below their native density. */
+  pixelBudget: number;
+  maxPixelRatio: number;
+  shadowMapSize: number;
+  /** PCSS gives contact-hardening soft shadows; PCF a uniform soft edge. */
+  shadowFilter: 'pcf' | 'pcss';
+  shadowQuality: 'low' | 'medium' | 'high';
+  /** Real-sky (CC0 HDRI) image lighting and reflections; Low keeps the small procedural sky. */
+  skyLighting: boolean;
+  /** World-space procedural normal detail, tonal variation and animated water. */
+  surfaceDetail: boolean;
+  detailTextureSize: 128 | 256;
+  postProcessing: false | { msaa: number; fxaa: boolean; bloom: boolean; sharpen: number };
+  ambientOcclusion: false | { ratio: number; samples: number; radius: number; strength: number };
+  screenReflections: boolean;
+}
+export const graphicsTiers: Record<GraphicsLevel, GraphicsTier> = {
+  low: { label: 'Low', pixelBudget: 0.9, maxPixelRatio: 1, shadowMapSize: 1024, shadowFilter: 'pcf', shadowQuality: 'low', skyLighting: false, surfaceDetail: false, detailTextureSize: 128, postProcessing: false, ambientOcclusion: false, screenReflections: false },
+  medium: { label: 'Medium', pixelBudget: 1.6, maxPixelRatio: 1.5, shadowMapSize: 2048, shadowFilter: 'pcf', shadowQuality: 'medium', skyLighting: true, surfaceDetail: true, detailTextureSize: 128, postProcessing: false, ambientOcclusion: false, screenReflections: false },
+  high: { label: 'High', pixelBudget: 2.6, maxPixelRatio: 2, shadowMapSize: 2048, shadowFilter: 'pcss', shadowQuality: 'medium', skyLighting: true, surfaceDetail: true, detailTextureSize: 256, postProcessing: { msaa: 4, fxaa: false, bloom: true, sharpen: 0.18 }, ambientOcclusion: { ratio: 0.5, samples: 8, radius: 2.4, strength: 1.1 }, screenReflections: false },
+  ultra: { label: 'Ultra', pixelBudget: 4.6, maxPixelRatio: 2.5, shadowMapSize: 4096, shadowFilter: 'pcss', shadowQuality: 'high', skyLighting: true, surfaceDetail: true, detailTextureSize: 256, postProcessing: { msaa: 4, fxaa: true, bloom: true, sharpen: 0.22 }, ambientOcclusion: { ratio: 0.75, samples: 16, radius: 2.4, strength: 1.2 }, screenReflections: true },
+};
+/** Automatic tier adaptation: step down when the measured frame time stays above budget. */
+export const graphicsGovernor = { warmupSeconds: 3, windowSeconds: 4, frameBudgetMs: 1000 / 45, ignoreFrameMs: 250 };
+export const postEffects = { bloomThreshold: 0.88, bloomWeight: 0.32, bloomKernel: 48, bloomScale: 0.5, ssrStrength: 0.55, ssrMaxDistance: 120 };
+/** Film-style grade on High/Ultra (Babylon ColorCurves: hue in degrees, others -100..100): warm highlights, cool shadows. */
+export const colorGrade = { saturation: 8, highlights: { hue: 38, density: 12, saturation: 14 }, shadows: { hue: 205, density: 14, saturation: 12 } };
 
 /** Biome colors stay independent of interface branding and the driver's selected paint. */
 export const sceneryPalettes = {
@@ -70,6 +107,60 @@ export const sceneryLighting = {
   spaceport: { ambient: '#ddd6cf', ground: '#756755', sun: '#ffddb2' },
   canyon: { ambient:'#ead3b8',ground:'#836451',sun:'#ffdab0' },
 };
+/**
+ * Real-sky lighting per venue: prefiltered CC0 HDRIs baked by `pnpm bake:env` into
+ * public/assets/env/. The sky is turned so its brightest direction agrees with the sun.
+ */
+export const venueSkies = {
+  coastal: { file: 'sky', intensity: 0.85, waterReflection: 0.75 },
+  spaceport: { file: 'dawn', intensity: 0.8, waterReflection: 0.7 },
+  bay: { file: 'sky', intensity: 0.85, waterReflection: 0.8 },
+  sunset: { file: 'sunset', intensity: 0.95, waterReflection: 0.6 },
+  canyon: { file: 'dawn', intensity: 0.85, waterReflection: 0.6 },
+  'night-city': { file: 'night', intensity: 0.7, waterReflection: 1 },
+} satisfies Record<keyof typeof sceneryLighting, { file: string; intensity: number; waterReflection: number }>;
+export const showcaseSky = { file: 'studio', intensity: 1.35 };
+
+/**
+ * World-space surface detail by material role (scenery-specific roles override the shared ones).
+ * kind selects a procedural tile; scale is metres per tile; normal is the bump strength;
+ * variation the broad tonal mottling. Water adds animated waves and sky reflection.
+ */
+export type SurfaceKind = 'asphalt' | 'sand' | 'dirt' | 'concrete' | 'grass' | 'rock' | 'water';
+export interface SurfaceFinish { kind: SurfaceKind; scale: number; normal: number; variation: number; walls?: boolean; reflection?: number; roughness?: number; specular?: number; gloss?: number }
+export const surfaceFinishes: Record<string, SurfaceFinish> = {
+  asphalt: { kind: 'asphalt', scale: 10, normal: 0.35, variation: 0.1, specular: 0.09, gloss: 28 },
+  'asphalt-repair': { kind: 'asphalt', scale: 10, normal: 0.3, variation: 0.08 },
+  'rubbered-racing-surface': { kind: 'asphalt', scale: 10, normal: 0.2, variation: 0.06 },
+  shoulder: { kind: 'dirt', scale: 12, normal: 0.5, variation: 0.14 },
+  terrain: { kind: 'sand', scale: 26, normal: 0.6, variation: 0.16 },
+  'wet-sand': { kind: 'sand', scale: 20, normal: 0.3, variation: 0.12, reflection: 0.15, roughness: 0.5, specular: 0.2, gloss: 48 },
+  embankment: { kind: 'grass', scale: 14, normal: 0.55, variation: 0.18 },
+  'barrier-concrete': { kind: 'concrete', scale: 8, normal: 0.25, variation: 0.07 },
+  'city-paving': { kind: 'concrete', scale: 10, normal: 0.3, variation: 0.1 },
+  'pier-timber': { kind: 'concrete', scale: 8, normal: 0.2, variation: 0.1 },
+  rock: { kind: 'rock', scale: 9, normal: 0.7, variation: 0.14, walls: true },
+  'mesa-cap': { kind: 'rock', scale: 14, normal: 0.6, variation: 0.12, walls: true },
+  'sandstone-*': { kind: 'rock', scale: 16, normal: 0.6, variation: 0.1, walls: true },
+  foliage: { kind: 'grass', scale: 2.5, normal: 0.9, variation: 0.22, walls: true },
+  foliageLight: { kind: 'grass', scale: 2.5, normal: 0.9, variation: 0.22, walls: true },
+  trunk: { kind: 'rock', scale: 1.5, normal: 0.6, variation: 0.12, walls: true },
+  architecture: { kind: 'concrete', scale: 6, normal: 0.15, variation: 0.06, walls: true },
+  'city-facade': { kind: 'concrete', scale: 6, normal: 0.15, variation: 0.07, walls: true },
+  water: { kind: 'water', scale: 30, normal: 0.5, variation: 0.08, reflection: 0.6, roughness: 0.16, specular: 0.3, gloss: 150 },
+  shallows: { kind: 'water', scale: 24, normal: 0.35, variation: 0.08, reflection: 0.4, roughness: 0.25 },
+  'architecture-glass': { kind: 'concrete', scale: 40, normal: 0, variation: 0, reflection: 0.65, roughness: 0.12 },
+  'city-shopfront': { kind: 'concrete', scale: 40, normal: 0, variation: 0, reflection: 0.4, roughness: 0.2 },
+  'galvanized-rail': { kind: 'concrete', scale: 40, normal: 0, variation: 0, reflection: 0.35, roughness: 0.35 },
+  'orbital-metal': { kind: 'concrete', scale: 40, normal: 0, variation: 0, reflection: 0.35, roughness: 0.3 },
+  'bay-metal': { kind: 'concrete', scale: 40, normal: 0, variation: 0, reflection: 0.3, roughness: 0.35 },
+};
+export const sceneryFinishes: Partial<Record<keyof typeof sceneryLighting, Record<string, SurfaceFinish>>> = {
+  bay: { terrain: { kind: 'grass', scale: 16, normal: 0.55, variation: 0.18 } },
+  canyon: { terrain: { kind: 'dirt', scale: 22, normal: 0.7, variation: 0.18 }, asphalt: { kind: 'dirt', scale: 12, normal: 0.55, variation: 0.14 }, shoulder: { kind: 'dirt', scale: 16, normal: 0.6, variation: 0.16 } },
+  'night-city': { terrain: { kind: 'concrete', scale: 12, normal: 0.3, variation: 0.12 }, asphalt: { kind: 'asphalt', scale: 10, normal: 0.35, variation: 0.08, reflection: 0.3, roughness: 0.3, specular: 0.25, gloss: 60 } },
+};
+
 export const canyonAppearance={cliff:['#a85f43','#bc7850','#d39464','#e1ad79'],mesa:'#c6986b',road:'#aa895d',ruts:'#705c42',dryWash:'#d9b891',scrub:'#68724b',guard:'#96745a'};
 export const nightAppearance={facades:['#384863','#52445c','#354e5e'],neon:['#fa5ca8','#49d8ef','#d9a674'],window:'#ffdc9d',darkWindow:'#111d32',signBackground:'#11162b',poolOpacity:.48,glowIntensity:.4,glowTextureSize:256,glowKernel:24,ambientIntensity:.8,vehicleFill:.55,gameExposure:1.12,menuExposure:.65};
 export function sceneryTheme(theme: PresentationTheme, scenery: keyof typeof sceneryPalettes): PresentationTheme {

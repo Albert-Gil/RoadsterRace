@@ -2,6 +2,9 @@ import { RawCubeTexture } from '@babylonjs/core/Materials/Textures/rawCubeTextur
 import { Constants } from '@babylonjs/core/Engines/constants';
 import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import type { Scene } from '@babylonjs/core/scene';
+import { CubeTexture } from '@babylonjs/core/Materials/Textures/cubeTexture';
+import '@babylonjs/core/Materials/Textures/Loaders/envTextureLoader';
+import { assetUrl } from './urls';
 
 /** Original small sky/studio reflection cube. No external HDR download is required. */
 export function createReflectionSky(scene: Scene, studio = false) {
@@ -21,4 +24,22 @@ export function createReflectionSky(scene: Scene, studio = false) {
   }
   const texture = new RawCubeTexture(scene, faces, size, Constants.TEXTUREFORMAT_RGBA, Constants.TEXTURETYPE_UNSIGNED_BYTE, true);
   texture.name = 'original-coastal-reflection-sky'; texture.gammaSpace = false; return texture;
+}
+
+/**
+ * Prefiltered real-sky lighting (CC0 HDRI, see docs/ASSET_RIGHTS.md), turned so its brightest
+ * direction agrees with the scene's sun. Calls `fallback` if the file cannot be loaded.
+ */
+export function loadSky(scene: Scene, file: string, sunDirection: Vector3, fallback: () => void) {
+  const url = assetUrl(`assets/env/${file}.env`);
+  const texture: CubeTexture = new CubeTexture(url, scene, null, false, null, () => {
+    const sp = texture.sphericalPolynomial;
+    if (!sp) return;
+    const luminance = (c: Vector3) => c.x * 0.2126 + c.y * 0.7152 + c.z * 0.0722;
+    // The first-order irradiance terms point toward the brightest part of the sky.
+    const bright = new Vector3(luminance(sp.x), luminance(sp.y), luminance(sp.z)), toSun = sunDirection.scale(-1);
+    if (Math.hypot(bright.x, bright.z) > 1e-6) texture.rotationY = Math.atan2(bright.x, bright.z) - Math.atan2(toSun.x, toSun.z);
+  }, () => { if (!scene.isDisposed) fallback(); }, undefined, true, '.env', true);
+  texture.name = `sky-${file}`;
+  return texture;
 }

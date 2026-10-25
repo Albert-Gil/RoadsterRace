@@ -15,15 +15,23 @@
     "test:pages": "node tools/check-pages.mjs",
     "report:size": "node tools/size-report.mjs",
     "docs:rules": "node tools/write-current-rules.mjs",
+    "bake:env": "node tools/bake-environments.mjs",
+    "build:app": "tsc --noEmit && vite build --mode app",
+    "ios:sync": "pnpm build:app && cap sync ios",
     "test:legacy": "node --experimental-vm-modules tools/check-legacy-handling.mjs"
   },
   "dependencies": {
     "@babylonjs/core": "9.31.0",
-    "@babylonjs/loaders": "9.31.0"
+    "@babylonjs/loaders": "9.31.0",
+    "@capacitor/core": "8.5.3",
+    "@capacitor/ios": "8.5.3"
   },
   "devDependencies": {
+    "@capacitor/cli": "8.5.3",
     "@playwright/test": "1.64.1",
+    "@pmndrs/assets": "1.7.0",
     "@types/node": "26.6.5",
+    "three": "0.186.1",
     "typescript": "7.0.2",
     "vite": "8.3.4",
     "vitest": "5.0.5"
