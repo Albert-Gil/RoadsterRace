@@ -3,7 +3,7 @@ import type { DrawSample, Point, TrackDefinition } from './types';
 import { branchProjection } from './support';
 import { locateRoad } from './elevation';
 
-export const DRAWING_RULES = Object.freeze({ runoffRoadWidths: 2.5, minimumLapProgress: 0.72, minimumPhysicalLap: 0.45, backwardTolerance: 0.08, localLoopRoadWidths: 2.5 });
+export const DRAWING_RULES = Object.freeze({ minimumLapProgress: 0.72, minimumPhysicalLap: 0.45, backwardTolerance: 0.08, backwardShare: 0.25, localLoopRoadWidths: 2.5, longestPause: 0.4, coverageBins: 40, coverageRoadWidths: 0.75, longestStepRoadWidths: 2 });
 
 /** Keep course association continuous when a wide line passes near another part of a hairpin. */
 export function projectCourse(point: Point, track: TrackDefinition, previous?: { point: Point; progress: number }, expectedProgress?: number) {
@@ -41,7 +41,7 @@ export function projectCourse(point: Point, track: TrackDefinition, previous?: {
   return best;
 }
 
-interface Node { point: DrawSample; progress: number; index: number }
+interface Node { point: DrawSample; progress: number; index: number; far?: boolean }
 function intersection(a: Point, b: Point, c: Point, d: Point) {
   const ax = b.x - a.x, az = b.z - a.z, bx = d.x - c.x, bz = d.z - c.z;
   const determinant = ax * bz - az * bx;
@@ -84,13 +84,15 @@ export function cleanDrawnRoute(samples: DrawSample[], track: TrackDefinition, g
         repairs++; break;
       }
     }
-    if (distance(point, spatial.at(-1)!.point) > 0.08) spatial.push({ point, progress, index });
-    else if (spatial.length > 1) spatial[spatial.length - 1] = { point, progress, index };
+    // Far from the circuit, projected progress means little: an off-road excursion is kept as drawn.
+    const far = projection.distance > track.roadWidth;
+    if (distance(point, spatial.at(-1)!.point) > 0.08) spatial.push({ point, progress, index, far });
+    else if (spatial.length > 1) spatial[spatial.length - 1] = { point, progress, index, far };
   }
   const nodes: Node[] = [spatial[0]];
   for (const node of spatial.slice(1)) {
-    if (node.progress < -DRAWING_RULES.backwardTolerance) { repairs++; continue; }
-    while (nodes.length > 1 && nodes.at(-1)!.progress > node.progress + DRAWING_RULES.backwardTolerance) { nodes.pop(); repairs++; }
+    if (!node.far && node.progress < -DRAWING_RULES.backwardTolerance) { repairs++; continue; }
+    while (!node.far && nodes.length > 1 && !nodes.at(-1)!.far && nodes.at(-1)!.progress > node.progress + DRAWING_RULES.backwardTolerance) { nodes.pop(); repairs++; }
     if (distance(node.point, nodes.at(-1)!.point) > 0.08) nodes.push(node);
     else if (nodes.length > 1) nodes[nodes.length - 1] = node;
   }

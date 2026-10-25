@@ -4,7 +4,7 @@ import { compileRoute, createPracticeSamples, sampleRoute } from '../../src/core
 import { FixedStepClock, RaceSimulation } from '../../src/core/simulation';
 import { computerRoute } from '../../src/core/computer';
 import { distance } from '../../src/core/geometry';
-import { permittedHopBarriers, validateHopShortcuts } from '../../src/core/hop-shortcuts';
+import { permittedHopBarriers, assessHopShortcuts } from '../../src/core/hop-shortcuts';
 import { LocalRace } from '../../src/core/local-race';
 import { stepComputers } from '../../src/core/computer';
 import { barrierContact, sweepVehicle } from '../../src/core/barriers';
@@ -27,7 +27,7 @@ test.each([-6,-4,4,6])('the safe bypass retains its normal %i m lateral road lin
 test('partial, reversed and obstacle-end cuts never receive a barrier exemption', () => {
   const branch = track.hopShortcuts![0].branch;
   for (const points of [branch.slice(15), [...branch].reverse(), branch.map(p => ({x:p.x+7,z:p.z}))])
-    expect(validateHopShortcuts(points, track).ok).toBe(false);
+    expect(assessHopShortcuts(points, track).obstacles).toEqual([]);
 });
 test.each([20,25,30])('a manual hop at %i m/s clears the full obstacle footprint', speed => {
   const route=plan(), sim=new RaceSimulation(route,track,1), s=sim.state;

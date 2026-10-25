@@ -22,12 +22,14 @@ async function stroke(page: Page, blocked: boolean) {
   await cdp.detach();
 }
 
-test('solid crossing stays visible and cannot be confirmed; pace retains slow and fast sections', async ({ page }) => {
+test('a line squeezed against a solid is accepted for racing; pace retains slow and fast sections', async ({ page }) => {
   await open(page); await page.getByRole('button', { name: "Time Trial" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
   await stroke(page, true);
-  await expect(page.locator('.instruction')).toContainText('inner barrier');
-  await expect(page.getByRole('button', { name: 'Race this line' })).toHaveCount(0);
+  // Accepted as drawn; a crash note appears only if the compiled line actually meets the solid.
+  await expect(page.getByRole('button', { name: 'Race this line' })).toBeVisible();
+  await expect(page.locator('.planning-error[role="alert"]')).toHaveCount(0);
   await page.screenshot({ path: 'artifacts/overhaul/blocked-line.png' });
+  await page.getByRole('button', { name: 'Redraw', exact: true }).click();
   await stroke(page, false);
   await expect(page.getByRole('button', { name: 'Race this line' })).toBeVisible();
   const data = await page.evaluate(() => ({ route: (window as any).__roadster.getRoute(), graphics: (window as any).__roadster.getGraphics() }));

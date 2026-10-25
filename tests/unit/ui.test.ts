@@ -7,6 +7,8 @@ import { raceResultsPanel, timeTrialResultsPanel } from '../../src/ui/panels/res
 import { tourIntroPanel } from '../../src/ui/panels/tournament';
 import { readyPanel } from '../../src/ui/panels/race';
 import { formatTime } from '../../src/ui/format';
+import { appShellMarkup } from '../../src/app/shell';
+import { UI_SCALE, uiScale } from '../../src/app/ui-scale';
 import type { RaceState } from '../../src/core/types';
 
 describe('input routing', () => {
@@ -66,5 +68,25 @@ describe('panel markup', () => {
     const intro = tourIntroPanel({ roundIndex: 1, roundNames: ['A', 'B', 'C'], trackName: 'B', playerCount: 2, lapCount: 1, saveFailed: true });
     expect(intro).toContain('ROUND 2 / 3'); expect(intro).toContain('class="done">1 · A'); expect(intro).toContain('class="current">2 · B'); expect(intro).toContain('could not be saved');
     expect(readyPanel({ playerCount: 3, lapCount: 2, readyPlayers: [true, false, true], ghostSeconds: 3 })).toContain('2 / 3 ready');
+  });
+});
+
+describe('navigation and sizing', () => {
+  test('Home is in the planning rail (Exit stands in for it in tours and the tutorial) and on the ready screen', () => {
+    const view = { playerCount: 1, turn: 0, playerName: () => 'P', humans: () => 1, inTour: false };
+    expect(planningPanel({ ...view, preview: false })).toContain('data-action="home"');
+    expect(planningPanel({ ...view, preview: true })).toContain('data-action="home"');
+    expect((planningPanel({ ...view, inTour: true, preview: false }).match(/data-action="home"/g) ?? []).length).toBe(1);
+    expect(readyPanel({ playerCount: 2, lapCount: 1, readyPlayers: [false, false], ghostSeconds: 3 })).toContain('data-action="home"');
+    expect(appShellMarkup()).toContain('class="quiet-button home-link" data-action="home"');
+  });
+  test('the preview note about crash stretches is informational, never an alert', () => {
+    const html = planningPanel({ preview: true, playerCount: 1, turn: 0, playerName: () => 'P', humans: () => 1, inTour: false, note: 'Your line hits a wall in one place.' });
+    expect(html).toContain('role="status"'); expect(html).not.toContain('role="alert"'); expect(html).toContain('aria-label="Race this line"');
+  });
+  test('controls keep phone sizes on phones and mouse layouts, and grow on large touch screens', () => {
+    expect(uiScale(430, 932, true)).toBe(1); expect(uiScale(932, 430, true)).toBe(1); expect(uiScale(390, 844, true)).toBe(1);
+    expect(uiScale(1440, 900, false)).toBe(1);
+    expect(uiScale(600, 960, true)).toBeCloseTo(600 / 430, 6); expect(uiScale(744, 1133, true)).toBe(UI_SCALE.max); expect(uiScale(820, 1180, true)).toBe(UI_SCALE.max); expect(uiScale(1366, 1024, true)).toBe(UI_SCALE.max);
   });
 });

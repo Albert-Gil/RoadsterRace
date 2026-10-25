@@ -43,42 +43,44 @@ function meetsObstacle(points: Point[], track: TrackDefinition, obstacle: TrackD
   return false;
 }
 
-/** Recognition precedes obstacle exemptions. Both retained and smoothed routes must pass. */
-export function validateHopShortcuts(points: Point[], track: TrackDefinition): { ok: true; traversals: HopTraversal[]; obstacles: string[] } | { ok: false; point: Point; message: string } {
+/**
+ * Complete forward traversals of authored manual-Hop lanes. A line that meets an obstacle
+ * without following its lane is still accepted; that obstacle simply stays solid for it.
+ */
+export function assessHopShortcuts(points: Point[], track: TrackDefinition): { traversals: HopTraversal[]; obstacles: string[] } {
   const traversals: HopTraversal[] = [], obstacles: string[] = [];
-  if (!track.hopShortcuts?.length || points.length < 2) return { ok: true, traversals, obstacles };
+  if (!track.hopShortcuts?.length || points.length < 2) return { traversals, obstacles };
   const ds = cumulative(points);
   for (const shortcut of track.hopShortcuts) {
     const obstacle = track.barriers.find(b => b.id === shortcut.obstacleId);
-    if (!obstacle) return { ok:false, point:shortcut.branch[0], message:'This hop lane has no physical obstacle.' };
+    if (!obstacle) continue;
     const center = { x: obstacle.footprint.reduce((v,p)=>v+p.x,0)/obstacle.footprint.length, z:obstacle.footprint.reduce((v,p)=>v+p.z,0)/obstacle.footprint.length };
     const obstacleAt = shortcutProjection(center,shortcut).progress;
     // A nearby sand cut is an ordinary line unless its full vehicle footprint
     // actually meets this named obstacle. Proximity to the optional lane alone
     // must not force the player to follow the entire authored branch.
     if (!meetsObstacle(points, track, obstacle)) continue;
-    const failure = (point: Point) => ({ ok: false as const, point, message: 'The line cuts outside the service lane. Follow it through and leave room for the car.' });
     let entry: { index: number; point: Point; at: number } | undefined, exit: typeof entry;
     for (let i = 1; i < points.length; i++) {
       if (!entry) { const hit = crossing(points[i - 1], points[i], shortcut, false); if (hit) entry = { index: i, point: hit.point, at: lerp(ds[i - 1], ds[i], hit.t) }; }
       else { const hit = crossing(points[i - 1], points[i], shortcut, true); if (hit) { exit = { index: i, point: hit.point, at: lerp(ds[i - 1], ds[i], hit.t) }; break; } }
     }
-    if (!entry || !exit) return failure(shortcut.branch[Math.floor(shortcut.branch.length / 2)]);
+    if (!entry || !exit) continue;
     const path = [entry.point, ...points.slice(entry.index, exit.index), exit.point];
-    let furthest = 0;
-    for (let i = 1; i < path.length; i++) {
+    let furthest = 0, followed = true;
+    for (let i = 1; i < path.length && followed; i++) {
       const a = path[i - 1], b = path[i], heading = Math.atan2(b.x - a.x, b.z - a.z), n = Math.max(1, Math.ceil(distance(a, b) / SHORTCUT_RULES.sampleSpacing));
       for (let j = 0; j <= n; j++) {
         const p = mix(a, b, j / n), q = shortcutProjection(p, shortcut);
-        if (!insideCorridor(p, heading, shortcut, track) || q.progress < furthest - SHORTCUT_RULES.backwardTolerance) return failure(p);
+        if (!insideCorridor(p, heading, shortcut, track) || q.progress < furthest - SHORTCUT_RULES.backwardTolerance) { followed = false; break; }
         furthest = Math.max(furthest, q.progress);
       }
     }
     // Returning through the bypass or omitting the obstacle is not a shortcut traversal.
-    if (obstacleAt <= 0 || obstacleAt >= furthest) return failure(center);
+    if (!followed || obstacleAt <= 0 || obstacleAt >= furthest) continue;
     traversals.push({ id: shortcut.id, entryDistance: entry.at, exitDistance: exit.at }); obstacles.push(shortcut.obstacleId);
   }
-  return { ok: true, traversals, obstacles };
+  return { traversals, obstacles };
 }
 
 /** Permission is local to a recorded traversal, actual corridor, forward momentum and manual flight. */

@@ -2,12 +2,13 @@ import { clamp, cumulative, distance, lerp, mix, modulo, projectToPolyline, samp
 import type { CompiledRoute, DrawSample, Point, RouteResult, TrackDefinition } from './types';
 import { cleanDrawnRoute, DRAWING_RULES, projectCourse } from './route-cleanup';
 import { canStartDrawing, trimDrawing, joinLap, gateCoordinates, gatePoint } from './start-finish';
-import { blockedRouteSection } from './barriers';
-import { validateSupports, branchProjection } from './support';
-import { validateHopShortcuts } from './hop-shortcuts';
+import { routeContacts } from './barriers';
+import { assessSupports } from './support';
+import { assessHopShortcuts } from './hop-shortcuts';
 import { annotateRoad } from './elevation';
+import { hazardSpans } from './hazards';
 
-export const COMPILER_VERSION = 13;
+export const COMPILER_VERSION = 14;
 export const PACE_RANGE = Object.freeze({ min: 9, max: 30 });
 export const PACE_FILTER = Object.freeze({ gestureRadius: 5, compiledRadius: 8 });
 
@@ -16,36 +17,55 @@ export function paceToSpeed(worldUnitsPerSecond: number, trackLength: number): n
   return lerp(PACE_RANGE.min, PACE_RANGE.max, u * u * (3 - 2 * u));
 }
 
-function validateGeometry(points: Point[], track: TrackDefinition): RouteResult | null {
-  const support = validateSupports(points, track); if (!support.ok) return support;
-  const shortcuts = validateHopShortcuts(points, track); if (!shortcuts.ok) return shortcuts;
-  const blocked = blockedRouteSection(points, track, shortcuts.obstacles);
-  if (blocked) return { ok: false, message: 'Your line crosses an inner barrier. Leave room for the car and redraw this section.', ...blocked };
+/**
+ * Lap-level checks only: the right direction, enough of the circuit and one lap. Barriers,
+ * water and runoff never reject a line; they become hazards the car crashes into.
+ * Also returns each point's unwrapped circuit distance from the first point.
+ */
+function validateLap(points: Point[], track: TrackDefinition): { error: RouteResult | null; course: number[] } {
   let unwrapped = 0, backwards = 0, previous = projectCourse(points[0], track);
-  let visitedSectors = 1;
-  const roadLimit = (track.roadWidth - track.carWidth) / 2 + track.roadWidth * DRAWING_RULES.runoffRoadWidths;
-  const drawnDistances = cumulative(points), drawnLength = drawnDistances.at(-1)!;
-  for (let i = 0; i < points.length; i++) {
-    const p = points[i], projection = projectCourse(p, track, i ? { point: points[i - 1], progress: previous.progress } : undefined, drawnDistances[i] / drawnLength * track.length);
-    if (Math.min(projectToPolyline(p, track.centerline, track.distances).distance, branchProjection(p, track)?.distance ?? Infinity) > roadLimit) return { ok: false, message: 'That line goes too far from the circuit. Stay closer to the road and surrounding sand.', point: p };
-    const delta = i ? projection.progress - previous.progress : 0;
+  const drawnDistances = cumulative(points), drawnLength = drawnDistances.at(-1)!, course = [0];
+  for (let i = 1; i < points.length; i++) {
+    const p = points[i], projection = projectCourse(p, track, { point: points[i - 1], progress: previous.progress }, drawnDistances[i] / drawnLength * track.length);
+    const delta = projection.progress - previous.progress;
     if (delta < 0) backwards -= delta;
-    unwrapped += delta;
-    if (unwrapped >= 0 && unwrapped < track.length) visitedSectors |= 1 << Math.min(3, Math.floor(unwrapped * 4 / track.length));
-    if (i > 0) {
-      const steps = Math.ceil(distance(points[i - 1], p) / 2);
-      for (let j = 1; j < steps; j++) {
-        const probe = mix(points[i - 1], p, j / steps);
-        if (Math.min(projectToPolyline(probe, track.centerline, track.distances).distance, branchProjection(probe, track)?.distance ?? Infinity) > roadLimit) return { ok: false, message: 'That line cuts too far across the infield. Follow the circuit through the surrounding sand.', point: probe };
-      }
-    }
+    unwrapped += delta; course.push(unwrapped);
     previous = projection;
   }
-  if (backwards > track.length * 0.02) return { ok: false, message: 'Follow the arrows around the circuit. Try drawing the other way.', point: points[0] };
-  const sectors = [0, 1, 2, 3].filter(i => visitedSectors & (1 << i)).length;
-  if (unwrapped < track.length * DRAWING_RULES.minimumLapProgress || sectors < 3) return { ok: false, message: 'Continue around the circuit before crossing the finish line.', point: points[points.length - 1] };
-  if (unwrapped > track.length * 1.08) return { ok: false, message: 'Draw just one lap, then lift near the start.', point: points[points.length - 1] };
-  return null;
+  const fail = (message: string, point: Point) => ({ error: { ok: false as const, message, point }, course });
+  if (backwards > track.length * DRAWING_RULES.backwardShare) return fail('Follow the arrows around the circuit. Try drawing the other way.', points[0]);
+  if (unwrapped < track.length * DRAWING_RULES.minimumLapProgress || lapCoverage(points, drawnDistances, track) < DRAWING_RULES.minimumLapProgress) return fail('Continue around the circuit before crossing the finish line.', points[points.length - 1]);
+  if (unwrapped > track.length * 1.08) return fail('Draw just one lap, then lift near the start.', points[points.length - 1]);
+  return { error: null, course };
+}
+
+/**
+ * Share of the circuit the line actually visits: evenly spaced stations on the centerline
+ * count when the line passes within `coverageRoadWidths` of the asphalt, or when it takes an
+ * authored branch spanning them. Off-road wandering still covers the circuit; jumping
+ * straight across the infield past most of it does not.
+ */
+function lapCoverage(points: Point[], drawnDistances: number[], track: TrackDefinition) {
+  const near = track.roadWidth / 2 + track.roadWidth * DRAWING_RULES.coverageRoadWidths, n = DRAWING_RULES.coverageBins;
+  const branches = [...(track.jumps ?? []), ...(track.hopShortcuts ?? [])].filter(b => { const ds = cumulative(b.branch); return projectToPolyline(samplePolyline(b.branch, ds, ds.at(-1)! / 2), points, drawnDistances).distance <= track.roadWidth / 2; });
+  let covered = 0;
+  for (let i = 0; i < n; i++) {
+    const at = (i + 0.5) / n * track.length, station = samplePolyline(track.centerline, track.distances, at);
+    if (projectToPolyline(station, points, drawnDistances).distance <= near || branches.some(b => at >= b.entryProgress && at <= b.exitProgress)) covered++;
+  }
+  return covered / n;
+}
+
+/**
+ * A hesitation (the finger resting, under a metre of movement) does not change the intended
+ * pace: inside the counted lap it lasts at most `longestPause`. It never rejects the drawing.
+ */
+function compressPauses(samples: DrawSample[]): DrawSample[] {
+  let removed = 0;
+  return samples.map((p, i) => {
+    if (i && distance(p, samples[i - 1]) < 1) removed += Math.max(0, p.time - samples[i - 1].time - DRAWING_RULES.longestPause * 1000);
+    return { ...p, time: p.time - removed };
+  });
 }
 
 /** Shared live/compiled gesture interpretation; the trailing live window is provisional. */
@@ -66,28 +86,25 @@ export function compileRoute(input: DrawSample[], track: TrackDefinition): Route
   if (input.some((p, i) => i > 0 && p.time < input[i - 1].time)) return { ok: false, message: 'The drawing was interrupted. Please redraw your lap.' };
   const trimmed = trimDrawing(input, track);
   if (!trimmed.ok) return trimmed;
-  let samples: DrawSample[] = [trimmed.samples[0]];
-  for (const p of trimmed.samples.slice(1)) {
+  const lapSamples = compressPauses(trimmed.samples);
+  let samples: DrawSample[] = [lapSamples[0]];
+  for (const p of lapSamples.slice(1)) {
     const last = samples.at(-1)!;
-    if (p.time - last.time > 2000) return { ok: false, message: 'The drawing was interrupted. Please redraw your lap.', point: p };
     if (distance(p, last) > 0.08) samples.push(p);
   }
   if (samples.length < 12) return { ok: false, message: 'Draw all the way around the circuit.' };
-  if (samples.some((p, i) => i > 0 && distance(samples[i - 1], p) > track.roadWidth * 4)) return { ok: false, message: 'Part of your line is missing. Draw one continuous lap.', point: samples[0] };
-  if(track.sections) {const rawSupport=validateSupports(samples,track);if(!rawSupport.ok)return rawSupport;samples=annotateRoad(samples,track);}
-  const rawDuration = trimmed.samples.at(-1)!.time / 1000;
-  const retainedShortcuts = validateHopShortcuts(samples, track); if (!retainedShortcuts.ok) return retainedShortcuts;
-  const retainedCrossing = blockedRouteSection(samples, track, retainedShortcuts.obstacles);
-  const retainedSupport = validateSupports(samples, track); if (!retainedSupport.ok) return retainedSupport;
-  if (retainedCrossing) return { ok: false, message: 'Your line crosses an inner barrier. Leave room for the car and redraw this section.', ...retainedCrossing };
+  // A finger cannot cover this much ground between two touch events: the stroke lost contact.
+  if (samples.some((p, i) => i > 0 && distance(samples[i - 1], p) > track.roadWidth * DRAWING_RULES.longestStepRoadWidths)) return { ok: false, message: 'Part of your line is missing. Draw one continuous lap.', point: samples[0] };
+  if (track.sections) samples = annotateRoad(samples, track);
+  const rawDuration = lapSamples.at(-1)!.time / 1000;
   const cleaned = cleanDrawnRoute(samples, track, true);
   samples = cleaned.samples;
   if (samples.length < 12) return { ok: false, message: 'Follow the arrows and draw one complete lap in the circuit direction.', point: input[0] };
-  const rawError = validateGeometry(samples, track);
+  const rawError = validateLap(samples, track).error;
   if (rawError) return rawError;
   const speeds = gestureSpeeds(samples, track.length);
   const connection = joinLap(samples, track);
-  const joinedError = validateGeometry(connection.samples, track); if (joinedError) return joinedError;
+  const joinedError = validateLap(connection.samples, track).error; if (joinedError) return joinedError;
   const smoothed = connection.samples.map((p, i) => {
     if (i === 0 || i === samples.length - 1) return p;
     const blended = mix(p, mix(connection.samples[i - 1], connection.samples[i + 1], 0.5), 0.3);
@@ -139,8 +156,8 @@ export function compileRoute(input: DrawSample[], track: TrackDefinition): Route
     return { ...mix(geometry[index], geometry[index + 1], t), distance: s, desiredSpeed: lerp(filteredSpeeds[index], filteredSpeeds[index + 1], t), curvature: 0 };
   });
   points=annotateRoad(points,track);
-  const error = validateGeometry(points, track);
-  if (error) return error;
+  const lap = validateLap(points, track);
+  if (lap.error) return lap.error;
   for (let i = 0; i < count; i++) {
     const a = points[modulo(i - 6, count)], b = points[i], c = points[(i + 6) % count];
     const ab = distance(a, b), bc = distance(b, c), ac = distance(a, c);
@@ -149,9 +166,11 @@ export function compileRoute(input: DrawSample[], track: TrackDefinition): Route
   points[count].curvature = points[0].curvature;
   const seamSpeed = (points[0].desiredSpeed + points[count].desiredSpeed) / 2;
   points[0].desiredSpeed = points[count].desiredSpeed = seamSpeed;
-  const support = validateSupports(points, track); if (!support.ok) return support;
-  const shortcuts = validateHopShortcuts(points, track); if (!shortcuts.ok) return shortcuts;
-  return { ok: true, drawing: { leadIn: trimmed.leadIn, tail: trimmed.tail, joined: connection.joined }, route: { version: COMPILER_VERSION, trackId: track.id, trackVersion: track.version, points, length: smoothLength, drawingDuration: rawDuration, ...(support.jumps.length ? { jumps: support.jumps } : {}), ...(shortcuts.traversals.length ? { hopShortcuts: shortcuts.traversals } : {}), ...(cleaned.removedPoints ? { cleanup: { removedPoints: cleaned.removedPoints, removedSeconds: cleaned.removedSeconds } } : {}) } };
+  // Accept the line as drawn. Stretches the car cannot drive become hazards: it crashes or
+  // falls there and is reset just past them (see RaceSimulation.recover).
+  const support = assessSupports(points, track), shortcuts = assessHopShortcuts(points, track);
+  const hazards = hazardSpans(points, routeContacts(points, track, shortcuts.obstacles), support.unsupported, lap.course, track, smoothLength);
+  return { ok: true, drawing: { leadIn: trimmed.leadIn, tail: trimmed.tail, joined: connection.joined }, route: { version: COMPILER_VERSION, trackId: track.id, trackVersion: track.version, points, length: smoothLength, drawingDuration: rawDuration, ...(support.jumps.length ? { jumps: support.jumps } : {}), ...(shortcuts.traversals.length ? { hopShortcuts: shortcuts.traversals } : {}), ...(hazards.length ? { hazards } : {}), ...(cleaned.removedPoints ? { cleanup: { removedPoints: cleaned.removedPoints, removedSeconds: cleaned.removedSeconds } } : {}) } };
 }
 
 export function sampleRoute(route: CompiledRoute, value: number) {

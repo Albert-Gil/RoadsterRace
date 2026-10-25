@@ -56,12 +56,17 @@ test('both visits to the crossing retain their own height and support',()=>{
  expect(vehicleContact({...body,elevation:13},{...body,elevation:0},track)).toBeNull();expect(vehicleContact({...body,elevation:0},{...body,elevation:0},track)).not.toBeNull();
 });
 
-test('wrong-level samples, skipped progression and unsupported cuts are rejected',()=>{
+test('skipped progression and reversal are rejected; wrong-level and unsupported cuts are raced as hazards',()=>{
  const raw=createPracticeSamples(track,7);
- expect(compileRoute(raw.map(p=>p.sectionId==='air-crossing'?{...p,y:0,sectionId:'lower-crossing'}:p),track).ok).toBe(false);
  expect(compileRoute([...raw.slice(0,150),...raw.slice(350)],track).ok).toBe(false);
- expect(compileRoute(raw.map((p,i)=>i>100&&i<120?{...p,z:p.z+35}:p),track).ok).toBe(false);
  expect(compileRoute([raw[0],...raw.slice(1).reverse()],track).ok).toBe(false);
+ const cut=raw.map((p,i)=>i>100&&i<120?{...p,z:p.z+35*Math.sin(Math.PI*(i-100)/20)}:p);
+ for(const drawn of [raw.map(p=>p.sectionId==='air-crossing'?{...p,y:0,sectionId:'lower-crossing'}:p),cut]){
+  const r=compileRoute(drawn,track);if(!r.ok)throw Error(r.message);
+  if(drawn===cut)expect(r.route.hazards?.some(h=>h.kind==='support')).toBe(true);
+  const sim=new RaceSimulation(r.route,track,1);for(let i=0;i<60*240&&!sim.state.finished;i++)sim.step();
+  expect(sim.state.finished).toBe(true);
+ }
  const route=plan();for(const p of route.points)expect(p.y).toBeCloseTo(roadHeight(track,p.courseProgress!),5);
  expect(minimumRadius(track.hopShortcuts![0].branch)).toBeGreaterThan(8.5);
 });

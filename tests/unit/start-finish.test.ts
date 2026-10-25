@@ -3,7 +3,7 @@ import { circuits } from '../../src/content/circuits';
 import { cityBuildings, buildingFootprint, onCityLand } from '../../src/content/golden-city';
 import { goldenGateTrack as golden } from '../../src/core/tracks/golden-gate';
 import { compileRoute, createPracticeSamples, COMPILER_VERSION } from '../../src/core/route';
-import { canStartDrawing, gateCoordinates, gatePoint, startGate, trimDrawing } from '../../src/core/start-finish';
+import { GATE_RULES, canStartDrawing, gateCoordinates, gatePoint, startGate, trimDrawing } from '../../src/core/start-finish';
 import { blockedRouteSection, insideBarrier, sweepVehicle, barrierContact } from '../../src/core/barriers';
 import { distance } from '../../src/core/geometry';
 import { RaceSimulation } from '../../src/core/simulation';
@@ -28,14 +28,27 @@ for (const { track } of circuits) describe(`${track.id} full-width drawing`, () 
     expect(result.route.version).toBe(COMPILER_VERSION);
     expect(distance(result.route.points[0], gatePoint(track, edge))).toBeLessThan(0.02);
   });
-  test('tolerances are projected to the gate; touchdown beyond the approach is rejected', () => {
-    expect(canStartDrawing(gatePoint(track, track.roadWidth / 2 + 0.5, -12), track)).toBe(true);
+  test('generous start tolerances are projected to the gate; touchdown far from it is rejected', () => {
+    const lateral = track.roadWidth / 2 + GATE_RULES.lateralTolerance;
+    expect(canStartDrawing(gatePoint(track, lateral, -12), track)).toBe(true);
+    expect(canStartDrawing(gatePoint(track, 0, GATE_RULES.startBeyond), track)).toBe(true);
     expect(canStartDrawing(gatePoint(track, 0, -12.01), track)).toBe(false);
-    expect(canStartDrawing(gatePoint(track, track.roadWidth / 2 + 0.51), track)).toBe(false);
-    expect(canStartDrawing(gatePoint(track, 0, 1.01), track)).toBe(false);
-    const input = planned(track); input[0] = { ...gatePoint(track, track.roadWidth / 2 + 0.4, 0.6), time: 0 };
-    const trim = trimDrawing(input, track); expect(trim.ok).toBe(true);
-    if (trim.ok) expect(Math.abs(gateCoordinates(trim.samples[0], track).across)).toBeCloseTo(track.roadWidth / 2, 8);
+    expect(canStartDrawing(gatePoint(track, lateral + 0.01), track)).toBe(false);
+    expect(canStartDrawing(gatePoint(track, 0, GATE_RULES.startBeyond + 0.01), track)).toBe(false);
+    for (const start of [gatePoint(track, track.roadWidth / 2 + 3, 0.6), gatePoint(track, 0, 3)]) {
+      const input = planned(track); input[0] = { ...start, time: 0 };
+      const trim = trimDrawing(input, track); expect(trim.ok).toBe(true);
+      if (trim.ok) { const at = gateCoordinates(trim.samples[0], track); expect(Math.abs(at.across)).toBeLessThanOrEqual(track.roadWidth / 2 + 1e-8); expect(Math.abs(at.along)).toBeLessThan(1e-8); }
+    }
+  });
+  test('lifting shortly before the line, or finishing on the runoff beside it, still completes the lap', () => {
+    const lap = planned(track), early = lap.filter((_, i) => track.length - track.distances[i] > 15);
+    const closed = success(early, track);
+    expect(distance(closed.route.points.at(-1)!, closed.route.points[0])).toBeLessThan(1e-6);
+    const beside = trimDrawing([...lap.slice(0, -1), { ...gatePoint(track, track.roadWidth / 2 + 15, -3), time: lap.at(-1)!.time - 50 }, { ...gatePoint(track, track.roadWidth / 2 + 15, 3), time: lap.at(-1)!.time + 50 }], track);
+    expect(beside.ok).toBe(true);
+    const farAway = lap.filter((_, i) => track.distances[i] < track.length * 0.6);
+    expect(compileRoute(farAway, track).ok).toBe(false);
   });
   test('12 m slow lead-in, pause and backward correction contribute no geometry, pace or duration', () => {
     const lap = planned(track), reference = success(lap, track);
@@ -95,13 +108,16 @@ for (const { track } of circuits) describe(`${track.id} full-width drawing`, () 
   });
 });
 
-test('an otherwise valid retained line is rejected when its lap connection would cross a solid', () => {
+test('a lap connection through a solid is accepted as a barrier hazard the car is reset past', () => {
   const footprint = [[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5]].map(([across, along]) => gatePoint(golden, across, along));
   const blocked = { ...golden, barriers: [...golden.barriers, { id: 'seam-obstacle', height: 1, footprint }] };
   const raw = planned(blocked, -5, 5);
   expect(blockedRouteSection(raw, blocked)).toBeNull();
-  const result = compileRoute(raw, blocked); expect(result.ok).toBe(false);
-  if (!result.ok) expect(result.message).toContain('barrier');
+  const result = success(raw, blocked), hazards = result.route.hazards ?? [];
+  expect(hazards.some(h => h.kind === 'barrier' && (h.from < 10 || h.to > result.route.length - 10))).toBe(true);
+  const sim = new RaceSimulation(result.route, blocked, 2);
+  for (let i = 0; i < 60 * 240 && !sim.state.finished; i++) sim.step();
+  expect(sim.state.finished).toBe(true); expect(sim.state.lapTimes).toHaveLength(2);
 });
 
 describe('authored Golden Gate city and narrow bridge', () => {
@@ -121,11 +137,15 @@ describe('authored Golden Gate city and narrow bridge', () => {
     const area = golden.centerline.slice(1).reduce((sum, p, i) => sum + golden.centerline[i].x * p.z - p.x * golden.centerline[i].z, 0);
     expect(area).toBeLessThan(0);
   });
-  test('bridge excursions fail vehicle-clearance validation before and after smoothing', () => {
-    const route = planned(golden).map(p => ({ ...p, z: p.x > -30 && p.x < 30 && p.z > 40 ? p.z + 8 : p.z }));
-    const result = compileRoute(route, golden); expect(result.ok).toBe(false);
-    if (!result.ok) { expect(result.message).toContain('barrier'); expect(result.section).toBeDefined(); }
+  test('a bridge excursion is accepted as drawn; the car hits the rail, is reset past it and finishes slower', () => {
+    const clean = success(planned(golden), golden), route = planned(golden).map(p => ({ ...p, z: p.x > -30 && p.x < 30 && p.z > 40 ? p.z + 8 : p.z }));
+    const result = success(route, golden);
+    expect(result.route.hazards?.some(h => h.kind === 'barrier')).toBe(true);
     expect(blockedRouteSection([{ x: 0, z: 42 }, { x: 0, z: 60 }], golden)).not.toBeNull();
+    const race = (r: typeof clean) => { const sim = new RaceSimulation(r.route, golden, 1); for (let i = 0; i < 60 * 240 && !sim.state.finished; i++) sim.step(); return sim.state; };
+    const crashed = race(result), reference = race(clean);
+    expect(crashed.finished).toBe(true); expect(crashed.collisionCount + crashed.recoveryCount).toBeGreaterThan(0);
+    expect(crashed.finishTime!).toBeGreaterThan(reference.finishTime!);
   });
   test.each([0, 0.2, 1.4])('high speed rail contact with angle %i cannot tunnel, and glancing motion survives', angle => {
     const heading = -Math.PI / 2 + angle;

@@ -100,7 +100,7 @@ describe('expanded drawing corridor', () => {
     const result = compile(wideLine(start, end));
     const maximum = Math.max(...result.points.map(p => projectToPolyline(p, track.centerline, track.distances).distance));
     expect(maximum).toBeGreaterThan(11);
-    expect(maximum).toBeLessThan((track.roadWidth - track.carWidth) / 2 + track.roadWidth * DRAWING_RULES.runoffRoadWidths);
+    expect(maximum).toBeLessThan(12.5);
     expect(result.cleanup).toBeUndefined();
   });
   test('the wider planned line still uses real sand drag and completes both laps', () => {
@@ -113,9 +113,10 @@ describe('expanded drawing corridor', () => {
     expect(result.length).toBeGreaterThan(track.length * 0.75);
     expect(distance(result.points[0], result.points.at(-1)!)).toBeLessThan(0.001);
   });
-  test('distant excursions and large missing sectors are rejected with a usable explanation', () => {
+  test('distant excursions are kept as drawn; large missing sectors are rejected with a usable explanation', () => {
     const distant = compileRoute(wideLine(8, 80, 65), track);
-    expect(distant.ok).toBe(false); if (!distant.ok) expect(distant.message).toMatch(/far|continuous|circuit/);
+    if (!distant.ok) throw new Error(distant.message);
+    expect(Math.max(...distant.route.points.map(p => projectToPolyline(p, track.centerline, track.distances).distance))).toBeGreaterThan(55);
     const base = track.centerline;
     expect(compileRoute(timed([...base.slice(0, 30), ...base.slice(120)]), track).ok).toBe(false);
   });
