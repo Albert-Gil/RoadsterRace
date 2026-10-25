@@ -1,6 +1,6 @@
 # Forgiving lines, Home everywhere and touch scaling
 
-Compiler v14 and vehicle rules v14.
+Compiler v15 and vehicle rules v14 (compiler v15 relaxed Hop-lane approval; see below).
 
 ## What a player sees
 
@@ -14,7 +14,7 @@ Compiler v14 and vehicle rules v14.
   - runs the wrong way;
   - skips more than about a quarter of the circuit;
   - loses touch contact (two samples more than two road widths apart).
-- Hop lanes and jumps still have to be taken properly to pass their obstacle or gap. Otherwise the car crashes there like anywhere else.
+- Jumps still have to be taken properly to pass their gap. A Hop lane's obstacle can be hopped whenever the line crosses it with the car inside the lane, moving forward; otherwise the car crashes there like anywhere else.
 
 ## Rules
 
@@ -53,7 +53,8 @@ A resting finger (under 1 m of movement) counts as at most 0.4 s (`DRAWING_RULES
 ### Jump approval
 
 - **Ramps and crests:** the line must enter the corridor and leave beyond the landing inside it, moving forward. Wobble over the gap is ignored, since the car flies ballistically there.
-- **Hop lanes:** still need a complete corridor traversal.
+- **Hop lanes (compiler v15):** a line whose car footprint meets the lane's named obstacle heading forward along the lane (within 60°), with the whole car inside the lane (0.15 m clearance) for one car length either side of the obstacle, is approved. The approved stretch is the part of the line around that crossing whose centre stays in the lane, so the line may join or leave the lane anywhere, wander and cut its corners. A complete gate-to-gate pass is still recorded exactly as before. Reversed crossings and crossings half over a protected end wing are not approved. In the race the obstacle is passable only during a manual Hop with the whole car inside the lane; the end wings and every other wall stay solid.
+  - Compiler v14 required the complete gate-to-gate pass with the whole car inside the lane throughout. Simulated hand-drawn lines with 4–6 m of wander failed it on all three Hop circuits, so their obstacle stayed solid at any height (`tests/unit/hop-lane-commit.test.ts` fails 12 of 15 cases against v14 and passes all under v15).
 
 ### Off-road excursions
 

@@ -1,12 +1,12 @@
 # LA nights
 
-Sixth circuit (`la-nights`, track version 1): a fictional LA street course with 734 metres of dry asphalt and 16-metre roads. The main route remains flat and uses existing handling. Current vehicle rules are v14 and route compiler v14. New Full Tours include all six venues; existing saved schedules are never rewritten.
+Sixth circuit (`la-nights`, track version 1): a fictional LA street course with 734 metres of dry asphalt and 16-metre roads. The main route remains flat and uses existing handling. Current vehicle rules are v14 and route compiler v15. New Full Tours include all six venues; existing saved schedules are never rewritten.
 
 ## Racing choices
 
 - Main route: downtown boulevard, channel detour, arts-district sweeper and studio return. Large protected blocks prevent excessive cuts while preserving normal runoff.
 - Automatic channel jump: complete forward branch through an 8 m ramp, 1.2 m lip, 10 m water opening and at least 60 m of receiving straight. Existing launch tuning and guidance apply. Slow or disrupted attempts can splash and recover; no automatic rescue.
-- Hidden backlot alley: a 16 m service lane with a 2.5 m solid divider and protected end wings. Only a compiled complete traversal permits manual Hop to clear that named obstacle. Human players activate Hop; computer drivers use the main route here. No shortcut signs, activation paint or preview badges.
+- Hidden backlot alley: a 16 m service lane with a 2.5 m solid divider and protected end wings. Only a compiled traversal (the line crosses the divider moving forward with the whole car inside the lane) permits manual Hop to clear that named obstacle. Human players activate Hop; computer drivers use the main route here. No shortcut signs, activation paint or preview badges.
 - CPU ramp choices follow the existing difficulty strategy: Easy bypasses, Normal sends one opponent over the ramp and Hard sends two. All cars retain normal physics, legal ability commands and three-second starting ghosting.
 
 ## Original night artwork

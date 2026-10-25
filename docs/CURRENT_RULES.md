@@ -9,7 +9,7 @@ Conventions: SI units; horizontal plane (x, z) with y up; heading 0 points along
 | Item | Version |
 |---|---:|
 | Vehicle rules (`RULES.version`) | 14 |
-| Route compiler (`COMPILER_VERSION`) | 14 |
+| Route compiler (`COMPILER_VERSION`) | 15 |
 | Coastal Launch track (`coastal-launch`) | 3 |
 | Launchsite track (`orbital-launchyard`) | 3 |
 | Golden Gate track (`golden-gate`) | 3 |
@@ -139,6 +139,7 @@ Derived: level-ground manual hop peak 8.028 m and airtime 0.944 s. Santa Monica 
 | `clearance` | 0.15 | m | Required vehicle clearance inside a hop corridor |
 | `sampleSpacing` | 0.35 | m | Validation sample spacing along a hop corridor |
 | `backwardTolerance` | 0.5 | m | Backward movement tolerated inside a hop corridor |
+| `commitAlignment` | 0.5 | — | Minimum cosine between the line and the hop lane where the line meets the named obstacle (0.5 = within 60°) |
 
 ## AI_TUNING
 

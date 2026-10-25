@@ -45,12 +45,14 @@ export class VehicleShowcase {
   /** Photographic studio reflections (CC0 HDRI) on capable tiers; the small procedural studio otherwise. */
   setSkyLighting(enabled: boolean) {
     if (enabled && !this.photoFailed) {
-      // Turn the brightest softbox behind the car, opposite the camera, so the hood and glass reflect it.
-      this.photoStudio ??= loadSky(this.scene, showcaseSky.file, this.camera.position.normalizeToNew().multiplyByFloats(1, -1, 1), () => { this.photoFailed = true; this.setSkyLighting(false); });
+      // Turn the brightest softbox to the side of the car: the flanks and roof edges catch a streak
+      // of it, while the roof and hood (which mirror the sky behind the car) stay paint-coloured.
+      const azimuth = Math.atan2(this.camera.position.x, this.camera.position.z) + showcaseSky.keyLightAngle * Math.PI / 180;
+      this.photoStudio ??= loadSky(this.scene, showcaseSky.file, new Vector3(-Math.sin(azimuth), -1, -Math.cos(azimuth)), () => { this.photoFailed = true; this.setSkyLighting(false); });
       this.scene.environmentTexture = this.photoStudio; this.scene.environmentIntensity = showcaseSky.intensity;
       // A satin metal plinth would mirror the softbox; keep it a dark, mostly diffuse stage.
-      this.podium.metallic = 0.12; this.podium.roughness = 0.62;
-    } else { this.scene.environmentTexture = this.studio; this.scene.environmentIntensity = 1.3; this.podium.metallic = 0.5; this.podium.roughness = 0.36; }
+      this.podium.metallic = 0.05; this.podium.roughness = 0.7; this.podium.environmentIntensity = showcaseSky.plinthReflection;
+    } else { this.scene.environmentTexture = this.studio; this.scene.environmentIntensity = 1.3; this.podium.metallic = 0.5; this.podium.roughness = 0.36; this.podium.environmentIntensity = 1; }
   }
   get projectionMetrics() {
     const engine = this.scene.getEngine(), canvas = engine.getRenderingCanvas()!, rect = canvas.getBoundingClientRect(), viewport = this.camera.viewport;

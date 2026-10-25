@@ -38,9 +38,11 @@ test('missing hop impacts the actual divider',()=>{
  s.distance=r.points.reduce((best,p)=>distance(p,s.position)<distance(sampleRoute(r,best),s.position)?p.distance:best,0);
  for(let i=0;i<90;i++)sim.step();expect(s.collisionCount).toBeGreaterThan(0);
 });
-test('partial/reverse alleys and unauthorized water crossings receive no exemption',()=>{
+test('reverse or wing-edge alleys and unauthorized water crossings receive no exemption',()=>{
  const b=track.hopShortcuts![0].branch;
- expect(assessHopShortcuts(b.slice(35),track).obstacles).toEqual([]);expect(assessHopShortcuts([...b].reverse(),track).obstacles).toEqual([]);
+ expect(assessHopShortcuts([...b].reverse(),track).obstacles).toEqual([]);expect(assessHopShortcuts(b.map(p=>({x:p.x-7,z:p.z})),track).obstacles).toEqual([]);
+ // Compiler v15: joining the alley part-way still commits once the whole car crosses the divider inside it.
+ expect(assessHopShortcuts(b.slice(35),track).obstacles).toEqual(['backlot-service-divider']);
  const water=Array.from({length:15},(_,i)=>({x:60+i,z:4})),assessed=assessSupports(water,track);
  expect(assessed.jumps).toEqual([]);expect(assessed.unsupported.some(Boolean)).toBe(true);
 });

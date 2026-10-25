@@ -119,7 +119,12 @@ export const venueSkies = {
   canyon: { file: 'dawn', intensity: 0.85, waterReflection: 0.6 },
   'night-city': { file: 'night', intensity: 0.7, waterReflection: 1 },
 } satisfies Record<keyof typeof sceneryLighting, { file: string; intensity: number; waterReflection: number }>;
-export const showcaseSky = { file: 'studio', intensity: 1.35 };
+/**
+ * Menu car studio (photographic HDRI). `keyLightAngle` places the brightest softbox around the car,
+ * in degrees from the camera's side (180 = straight behind the car, where the roof and hood mirror
+ * it as a white sheet). `plinthReflection` scales the stage's own environment light.
+ */
+export const showcaseSky = { file: 'studio', intensity: 0.75, keyLightAngle: 145, plinthReflection: 0.45 };
 
 /**
  * World-space surface detail by material role (scenery-specific roles override the shared ones).

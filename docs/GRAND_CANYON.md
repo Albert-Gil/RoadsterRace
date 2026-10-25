@@ -25,7 +25,7 @@ At 20 / 30 / 42 m/s, an aligned car travels approximately 24 / 39 / 60 m horizon
 
 Hills alter height and pitch without adding slope acceleration or changing horizontal course-distance conventions. Outside the supported packed lane, normal loose-terrain grip/response/drag apply. Lane dust is restrained, and granular sound is quieter than full off-road feedback. Supplied sound files and menu music are retained.
 
-The unmarked eastern service trail has tangent, 12 m-radius joins and a neutral rock obstruction with protected ends. Only a complete forward compiled traversal permits actual-height clearance over its named obstacle. Other protected rocks and same-level rails remain solid during Hop. CPUs use the normal trail and plan at least 22 m/s through the mandatory crest approach, using the same physics and legal abilities as humans.
+The unmarked eastern service trail has tangent, 12 m-radius joins and a neutral rock obstruction with protected ends. Only a compiled forward traversal permits actual-height clearance over its named obstacle. Other protected rocks and same-level rails remain solid during Hop. CPUs use the normal trail and plan at least 22 m/s through the mandatory crest approach, using the same physics and legal abilities as humans.
 
 ## Architecture
 
@@ -39,7 +39,7 @@ Legitimate vertically separated traffic has no contact; overlapping vehicle-heig
 
 ## Sessions and compatibility
 
-Grand Canyon is available in Solo Race, Multiplayer and Time Trial, with 1–6 laps. New Full Tours include it as round five; Custom Tours can select it. Saved schedules are never rewritten. Track v2, compiler v14 and vehicle rules v14 reject incompatible tours/records while retaining ordinary driver names, paints and lap preferences.
+Grand Canyon is available in Solo Race, Multiplayer and Time Trial, with 1–6 laps. New Full Tours include it as round five; Custom Tours can select it. Saved schedules are never rewritten. Track v2, compiler v15 and vehicle rules v14 reject incompatible tours/records while retaining ordinary driver names, paints and lap preferences.
 
 Run locally with `pnpm dev`, then open `http://localhost:5173/?circuit=grand-canyon`. The production build supports `/RoadsterRace/?circuit=grand-canyon`; publication uses the verified-main GitHub Pages workflow.
 
