@@ -57,7 +57,10 @@ async function fixture(circuit, count = 1, options = phone, jump = false) {
     await page.goto(`${devURL}?circuit=${circuit}`, { waitUntil: 'domcontentloaded', timeout: 90000 });
     await page.getByRole('button', { name: count === 1 ? "Time Trial" : 'Multiplayer' }).click();
     if (count > 1) await page.getByRole('button', { name: `${count} players`, exact: true }).click();
-    await page.getByRole('button', { name: count === 1 ? 'Draw racing line' : 'Plan your lines' }).click();
+    // Software WebGL can keep the animated setup panel moving for several frames.
+    // A forced pointer click still exercises the real button and is followed by
+    // the drawing/render assertions below.
+    await page.getByRole('button', { name: count === 1 ? 'Draw racing line' : 'Plan your lines' }).click({ force: true });
     await page.waitForFunction(() => window.__roadster.getGraphics().renderReady && window.__roadster.getGraphics().roadVisible);
     await page.evaluate(() => document.fonts.ready);
     const variants = await page.evaluate(() => {
@@ -202,8 +205,8 @@ try {
       if (circuit === 'santa-monica' || circuit === 'launchsite' || circuit === 'la-nights') {
         // Reuse the same compiled/rendered scene; exercise the shortcut in the
         // shipped build using actual input, without any production inspector.
-        await page.getByRole('button', { name: fullRaces ? 'Race setup' : 'Home', exact: true }).click();
-        if (!fullRaces) await page.getByRole('button', { name: "Time Trial" }).click();
+        await page.getByRole('button', { name: 'Home', exact: true }).click();
+        await page.getByRole('button', { name: "Time Trial" }).click();
         await page.getByRole('button', { name: 'Draw racing line' }).click();
         await draw(page, context, await fixture(circuit, 1, phone, true));
         await page.getByRole('button', { name: 'Race this line' }).click(); await racing(page);

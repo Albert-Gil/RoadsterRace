@@ -253,7 +253,8 @@ export class GameScene {
     for(const j of this.track.jumps??[])if(j.kind==='crest'){const v=j.launchBoost!+RULES.maxSpeed*j.launchSlope!,at=RULES.maxSpeed*v/FLIGHT_RULES.gravity;fitted.push(new Vector3(j.from.x+j.forward.x*at,j.takeoffElevation!+v*v/(2*FLIGHT_RULES.gravity)+FLIGHT_RULES.carHeight+.3,j.from.z+j.forward.z*at));}
     const courseCenter = new Vector3((Math.min(...fitted.map(p=>p.x))+Math.max(...fitted.map(p=>p.x)))/2,0,(Math.min(...fitted.map(p=>p.z))+Math.max(...fitted.map(p=>p.z)))/2);
     const cx = (left-rightInset)/w, cy=(bottom-top)/h;
-    const rx=Math.max(0.2,(w-left-rightInset-2*sceneTuning.camera.clearancePixels)/w),ry=Math.max(0.2,(h-top-bottom-2*sceneTuning.camera.clearancePixels)/h);
+    const clearance = Math.min(w,h) <= 500 ? sceneTuning.camera.phoneRunoffClearancePixels : sceneTuning.camera.clearancePixels;
+    const rx=Math.max(0.2,(w-left-rightInset-2*clearance)/w),ry=Math.max(0.2,(h-top-bottom-2*clearance)/h);
     const candidate = (degrees:number)=>{
       const yaw=degrees*Math.PI/180;
       const away=new Vector3(Math.sin(yaw)*Math.cos(elevation),Math.sin(elevation),-Math.cos(yaw)*Math.cos(elevation));

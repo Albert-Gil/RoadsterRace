@@ -54,8 +54,11 @@ describe('panel markup', () => {
     const standings = [{ player: 1, rank: 1, progress: 0, finished: true, finishTime: 40.001 }, { player: 0, rank: 1, progress: 0, finished: true, finishTime: 40.004 }, { player: 2, rank: 3, progress: 0, finished: true, finishTime: 41 }];
     const html = raceResultsPanel({ standings, lapTimes: [[20, 20.004], [20, 20.001], [20.5, 20.5]], playerName: i => `D${i}`, cpuTag: () => '' });
     expect(html).toContain('A shared victory.'); expect((html.match(/<td>1=<\/td>/g) ?? []).length).toBe(2); expect(html).toContain(formatTime(41));
+    expect(['retry', 'redraw-all', 'home'].map(action => html.includes(`data-action="${action}"`))).toEqual([true, true, true]);
+    expect(html).not.toContain('data-action="configure-race"');
     const state = { lapTimes: [21.5, 20.25], finishTime: 41.75, thrustCount: 1 } as RaceState;
     const tt = timeTrialResultsPanel({ state, lapCount: 2, driver: 'Ann', personalBest: 20.25 });
+    expect(['retry', 'redraw', 'home'].map(action => tt.includes(`data-action="${action}"`))).toEqual([true, true, true]);
     expect(tt).toContain('Personal best lap.'); expect(tt).toContain(`<div class="finish-time">${formatTime(20.25)}</div>`); expect(tt).toContain('1 thrust burst');
     expect(timeTrialResultsPanel({ state, lapCount: 2, driver: 'Ann', personalBest: 19 })).toContain('Time trial complete.');
   });

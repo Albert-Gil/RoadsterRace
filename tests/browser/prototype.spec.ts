@@ -85,7 +85,7 @@ test('two-lap race, held thrust, pause/resume, results and retry', async ({ page
   await expect(page.locator('.finish-time')).toHaveText(formatTime(Math.min(...result.race.lapTimes)));
   await expect(page.locator('.result-detail span')).toHaveText(result.race.lapTimes.map((lap: number, i: number) => `Lap ${i + 1} ${formatTime(lap)}`));
   await page.screenshot({ path: 'artifacts/race-results.png' });
-  await page.getByRole('button', { name: 'Race again' }).click();
+  await page.getByRole('button', { name: 'Restart' }).click();
   const retry = await state(page); expect(retry.phase).toBe('countdown'); expect(retry.race.time).toBe(0); expect(retry.race.thrustCount).toBe(0); expect(retry.route).toEqual(result.route);
 });
 

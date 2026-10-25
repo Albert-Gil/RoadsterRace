@@ -10,13 +10,13 @@ const at=(p:Point)=>projectToPolyline(p,path,distances).progress;
 const approach=at({x:-79,z:0}),lip=at({x:-9,z:0}),landing=at({x:9,z:0}),mesa=at({x:89,z:0});
 const descent=at({x:30,z:52}),floor=at({x:0,z:18});
 const sections:RoadSection[]=[
- {id:'western-floor',from:0,to:approach,heights:[[0,0],[24,0],[approach-8,6.4],[approach,6.4]],supportWidth:28},
- {id:'upper-approach',from:approach,to:lip,heights:[[0,6.4],[lip-approach-8,6.4],[lip-approach,8]],supportWidth:28},
+ {id:'western-floor',from:0,to:approach,heights:[[0,0],[24,0],[approach-8,6.4],[approach,6.4]],supportWidth:30},
+ {id:'upper-approach',from:approach,to:lip,heights:[[0,6.4],[lip-approach-8,6.4],[lip-approach,8]],supportWidth:36},
  {id:'air-crossing',from:lip,to:landing,heights:[[0,8],[landing-lip,6]],supportWidth:16,flight:true},
  {id:'receiving-ledge',from:landing,to:mesa,heights:[[0,6],[mesa-landing,6]],supportWidth:16},
- {id:'eastern-mesa',from:mesa,to:descent,heights:[[0,6],[descent-mesa,6]],supportWidth:28},
- {id:'descent',from:descent,to:floor,heights:[[0,6],[floor-descent,0]],supportWidth:28},
- {id:'lower-crossing',from:floor,to:length,heights:[[0,0],[length-floor,0]],supportWidth:28},
+ {id:'eastern-mesa',from:mesa,to:descent,heights:[[0,6],[descent-mesa,6]],supportWidth:30},
+ {id:'descent',from:descent,to:floor,heights:[[0,6],[floor-descent,0]],supportWidth:30},
+ {id:'lower-crossing',from:floor,to:length,heights:[[0,0],[length-floor,0]],supportWidth:30},
 ];
 const rect=(x:number,z:number,w:number,d:number):Point[]=>[{x,z},{x:x+w,z},{x:x+w,z:z+d},{x,z:z+d}];
 const circular=(x:number,z:number,from:number,to:number)=>{const n=Math.ceil((to-from)*Math.PI/180*12/1.1);return Array.from({length:n+1},(_,i)=>{const a=(from+(to-from)*i/n)*Math.PI/180;return {x:x+12*Math.cos(a),z:z+12*Math.sin(a)};});};
@@ -36,7 +36,7 @@ const barriers:TrackBarrier[]=[
 for(const side of [-1,1])barriers.push({id:`receiving-rail-${side}`,kind:'cliff-rail',baseHeight:6,sectionId:'receiving-ledge',height:.8,footprint:rect(10,side*7.9-.18,79,.36)});
 barriers.push({id:'upper-cliff-face',kind:'cliff-face',baseHeight:-2.6,height:10.6,sectionId:'upper-approach',footprint:rect(-9.2,-14,.2,28)});
 barriers.push({id:'receiving-face',kind:'cliff-face',baseHeight:0,height:6,sectionId:'receiving-ledge',footprint:rect(8.8,-8,.2,16)});
-const track:TrackDefinition={id:'grand-canyon',version:1,name:'Grand Canyon',centerline:path,distances,length,roadWidth:16,carWidth:2.2,carLength:5.2,start:path[0],startFinish:createStartFinish(path[0],path[1],16),surface:'packed-dirt',sections,barriers,
+const track:TrackDefinition={id:'grand-canyon',version:2,name:'Grand Canyon',centerline:path,distances,length,roadWidth:16,carWidth:2.2,carLength:5.2,start:path[0],startFinish:createStartFinish(path[0],path[1],16),surface:'packed-dirt',sections,barriers,
  jumps:[{id:'canyon-crest',kind:'crest',from:{x:-9,z:0},forward:{x:1,z:0},width:16,rampLength:0,lipHeight:8,takeoffElevation:8,landingElevation:6,launchBoost:16,launchSlope:.2,gap:18,runout:80,corridorLength:98,branch:[{x:-79,z:0},{x:-9,z:0},{x:9,z:0},{x:89,z:0}],entryProgress:approach,exitProgress:mesa}],
  hopShortcuts:[{id:'mesa-service-trail',branch,width:16,obstacleId:'canyon-hop-rock',entryProgress:at(branch[0]),exitProgress:at(branch.at(-1)!)}],
 };

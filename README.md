@@ -2,9 +2,11 @@
 
 A browser racing game with Solo Race against three computer drivers, local Multiplayer for two to four people, and Time Trial with a personal-best ghost: draw a line and its pace, race one to six laps, and time your rechargeable thrust and hop. Visuals are replaceable through shared settings and assets. No account, backend, or external service is required to play.
 
-Five venues are available: Coastal Launch, Launchsite, Golden Gate, Santa Monica and **Grand Canyon**. Grand Canyon adds a 568.8 m packed-dirt figure-eight with elevated trails, an automatic crest jump over the lower road, and an unmarked manual-hop alternate trail. Newly created Full Tours end at Grand Canyon. See [canyon layout, flight and surface tuning](docs/GRAND_CANYON.md) and [local verification](docs/GRAND_CANYON_VERIFICATION.md). The new circuit remains local until separately published.
+Six venues are available: Coastal Launch, Launchsite, Golden Gate, Santa Monica, Grand Canyon and LA nights. Grand Canyon adds a 568.8 m packed-dirt figure-eight with elevated trails and an automatic crest jump; LA nights adds a channel jump and a hidden Hop alley. Newly created Full Tours include all six. See the [Grand Canyon guide](docs/GRAND_CANYON.md) and [LA nights guide](docs/LA_NIGHTS.md).
 
 All roads are now **16 metres wide**, including Golden Gate's bridge and Santa Monica's pier/jump surfaces. The fixed camera fits the actual road tightly, with a phone-friendly orientation and compact controls. See [phone framing, computer drivers and lap ghosts](docs/PHONE_AND_MODES.md).
+
+Drawn racing lines may run up to 2.5 road widths beyond asphalt on flat supported terrain and can cut bends through open sand. Grand Canyon permits cuts only across its authored dirt shoulders; cliffs and the airborne crossing remain constrained. Hop can be used on open-terrain cuts, while protected barriers still require a complete authored Hop corridor. Water gaps and unsafe solid crossings remain invalid, and off-road grip/drag penalties still apply. Single-race results offer Restart, Draw new lines and Home. This uses compiler v13 and Grand Canyon track v2, so earlier route records and unfinished championships cannot resume; driver names, paints and lap preferences remain saved.
 
 Solo Race provides Easy/Normal/Hard opponents, with three slightly different CPU drivers using the same physics and thrust rules as you. Only you draw a line. Time Trial measures your **fastest lap**, with an optional translucent best-lap replay; its records save on this browser. Older championships cannot resume after the road-layout changes, while names, paints and lap preferences remain.
 
@@ -38,7 +40,7 @@ The supplied desktop runtime also provides pnpm at `C:\Users\alber\.cache\codex-
 ## Controls
 
 1. Select **Solo Race** or **Time Trial**, choose 1–6 laps, enter your driver name and select a paint finish. Choose **Draw racing line** to continue.
-2. Start anywhere across the highlighted start/finish strip, or up to 12 metres behind it, and draw one complete lap following the arrows. Draw slowly for deliberate corners and faster for straights. Once you cross the finish, lift anywhere; all later drawing is ignored.
+2. Start anywhere across the highlighted start/finish strip, or up to 12 metres behind it, and draw one complete lap following the arrows. You can draw well outside the road on supported runoff, but solid barriers, cliffs and unauthorized water still block the line. Draw slowly for deliberate corners and faster for straights. Once you cross the finish, lift anywhere; all later drawing is ignored.
 3. Inspect the route and choose **Race this line**. Explanations and a practice example are reserved for a future tutorial.
 4. Tap **THRUST** (desktop **Space**) for a 0.7-second burst, recharging in five seconds. Tap **HOP** (**H**) for about one second of lift, recharging independently in seven seconds. Both can activate together. Holding does not repeat.
 5. Use **Escape** or Pause to pause. App/tab interruption also pauses the race. Resume includes a countdown.
@@ -65,7 +67,7 @@ The separate **Touch test** screen remains available for the 50-cycle input diag
 
 ### Tournaments and six circuits
 
-Choose **Tournament** in Solo Race or Multiplayer setup. **Full Tour** races Coastal Launch, Launchsite, Golden Gate, Santa Monica and Grand Canyon in that order. **Custom Tour** supports 2–12 races, repeated venues and up/down reordering. The selected 1–6 laps apply throughout; each round begins with fresh private drawing turns.
+Choose **Tournament** in Solo Race or Multiplayer setup. **Full Tour** races Coastal Launch, Launchsite, Golden Gate, Santa Monica, Grand Canyon and LA nights in that order. **Custom Tour** supports 2–12 races, repeated venues and up/down reordering. The selected 1–6 laps apply throughout; each round begins with fresh private drawing turns.
 
 First/second/third/fourth receive **10/6/4/0 points**. Race ties share place points and skip following ranks; equal championship totals share the title. Completed points save locally. **Resume tournament** preserves earlier results and restarts the unfinished round with fresh lines. Drivers and schedule lock at tournament start.
 

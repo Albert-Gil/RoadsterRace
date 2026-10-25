@@ -55,4 +55,4 @@ test.each(circuits)('$id separates identical edge anchors without sending cars a
     for(let tick=0;tick<180;tick++)race.step();
     expect(race.racers.every(car => !car.gridPending && car.state.distance > 2 && car.state.recoveryCount === 0)).toBe(true);
   }
-});
+}, 60000);

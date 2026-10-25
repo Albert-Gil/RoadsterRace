@@ -1,6 +1,6 @@
 # LA nights
 
-Sixth circuit (`la-nights`, track version 1): a fictional LA street course with 734 metres of dry asphalt and 16-metre roads. The main route remains flat and uses existing handling. Physics v13 and compiler v11 remain unchanged; older tracks and saved championship schedules are preserved. New Full Tours include all six venues.
+Sixth circuit (`la-nights`, track version 1): a fictional LA street course with 734 metres of dry asphalt and 16-metre roads. The main route remains flat and uses existing handling. Current vehicle rules are v13 and route compiler v13. New Full Tours include all six venues; existing saved schedules are never rewritten.
 
 ## Racing choices
 

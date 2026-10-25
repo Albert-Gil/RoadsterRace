@@ -4,7 +4,7 @@ Local milestone, 2026-10-24. No commit, push or deployment is included.
 
 ## Driving and tuning
 
-The fifth venue is an original 568.8 m figure-eight-style dirt course, difficulty 3/5. The road is 16 m wide. Start/finish has a flat straight with at least 24 m clear on each side and retains the full-width gate, 12 m drawing approach and discarded finish overshoot.
+The fifth venue is an original 568.8 m figure-eight-style dirt course, difficulty 3/5. The road is 16 m wide. Track version 2 widens supported dirt shoulders to 30 m through bends and 36 m on the straight upper approach, allowing more off-road drawing without folded inside terrain. The receiving ledge and flight corridor retain their narrow physical limits. Start/finish has a flat straight with at least 24 m clear on each side and retains the full-width gate, 12 m drawing approach and discarded finish overshoot.
 
 Follow the western sweepers up to the ledge. The natural crest automatically launches over the lower return road. The receiving mesa leads around the eastern turns and back down to the crossing. There is no road or bridge across the upper opening. The flat lower road remains independently driveable/drawable on the later visit.
 
@@ -39,7 +39,7 @@ Legitimate vertically separated traffic has no contact; overlapping vehicle-heig
 
 ## Sessions and compatibility
 
-Grand Canyon is available in Solo Race, Multiplayer and Time Trial, with 1–6 laps. New Full Tours append it as round five; Custom Tours can select it. Saved schedules are never rewritten. Rules v13 / compiler v11 reject incompatible tours/records while retaining ordinary driver names, paints and lap preferences. The original four course versions and geometry remain unchanged.
+Grand Canyon is available in Solo Race, Multiplayer and Time Trial, with 1–6 laps. New Full Tours include it as round five; Custom Tours can select it. Saved schedules are never rewritten. Track v2 and compiler v13 reject incompatible tours/records while retaining ordinary driver names, paints and lap preferences. Vehicle rules remain v13.
 
 Run locally with `pnpm dev`, then open `http://localhost:5173/?circuit=grand-canyon`. The production build supports `/RoadsterRace/?circuit=grand-canyon`; publication uses the verified-main GitHub Pages workflow.
 

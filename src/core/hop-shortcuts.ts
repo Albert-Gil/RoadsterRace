@@ -1,4 +1,5 @@
 import { angleDelta, clamp, cumulative, distance, lerp, mix, modulo, projectToPolyline } from './geometry';
+import { blockedRouteSection } from './barriers';
 import type { CompiledRoute, HopShortcut, HopTraversal, Point, RaceState, TrackDefinition } from './types';
 
 export const SHORTCUT_RULES = Object.freeze({ clearance: 0.15, sampleSpacing: 0.35, backwardTolerance: 0.5 });
@@ -27,6 +28,21 @@ function insideCorridor(p: Point, heading: number, shortcut: HopShortcut, track:
   return q.distance + radius <= shortcut.width / 2 + 1e-6;
 }
 
+function meetsObstacle(points: Point[], track: TrackDefinition, obstacle: TrackDefinition['barriers'][number]) {
+  const margin = track.carLength / 2 + track.carWidth / 2 + SHORTCUT_RULES.clearance;
+  const minX = Math.min(...obstacle.footprint.map(p => p.x)) - margin;
+  const maxX = Math.max(...obstacle.footprint.map(p => p.x)) + margin;
+  const minZ = Math.min(...obstacle.footprint.map(p => p.z)) - margin;
+  const maxZ = Math.max(...obstacle.footprint.map(p => p.z)) + margin;
+  const physical = { ...track, barriers: [obstacle] };
+  for (let i = 1; i < points.length; i++) {
+    const a = points[i - 1], b = points[i];
+    if (Math.max(a.x, b.x) < minX || Math.min(a.x, b.x) > maxX || Math.max(a.z, b.z) < minZ || Math.min(a.z, b.z) > maxZ) continue;
+    if (blockedRouteSection([a, b], physical)) return true;
+  }
+  return false;
+}
+
 /** Recognition precedes obstacle exemptions. Both retained and smoothed routes must pass. */
 export function validateHopShortcuts(points: Point[], track: TrackDefinition): { ok: true; traversals: HopTraversal[]; obstacles: string[] } | { ok: false; point: Point; message: string } {
   const traversals: HopTraversal[] = [], obstacles: string[] = [];
@@ -37,12 +53,10 @@ export function validateHopShortcuts(points: Point[], track: TrackDefinition): {
     if (!obstacle) return { ok:false, point:shortcut.branch[0], message:'This hop lane has no physical obstacle.' };
     const center = { x: obstacle.footprint.reduce((v,p)=>v+p.x,0)/obstacle.footprint.length, z:obstacle.footprint.reduce((v,p)=>v+p.z,0)/obstacle.footprint.length };
     const obstacleAt = shortcutProjection(center,shortcut).progress;
-    const touches = points.some(p => {
-      const q = shortcutProjection(p, shortcut), main = projectToPolyline(p, track.centerline, track.distances);
-      // The fork overlaps the safe road: ordinary inside lines must not become hop plans.
-      return main.distance > (track.roadWidth - track.carWidth) / 2 && Math.abs(q.progress - obstacleAt) < track.carLength * 2.5 && q.distance < shortcut.width / 2 + 0.1 && q.distance < main.distance - 1;
-    });
-    if (!touches) continue;
+    // A nearby sand cut is an ordinary line unless its full vehicle footprint
+    // actually meets this named obstacle. Proximity to the optional lane alone
+    // must not force the player to follow the entire authored branch.
+    if (!meetsObstacle(points, track, obstacle)) continue;
     const failure = (point: Point) => ({ ok: false as const, point, message: 'The line cuts outside the service lane. Follow it through and leave room for the car.' });
     let entry: { index: number; point: Point; at: number } | undefined, exit: typeof entry;
     for (let i = 1; i < points.length; i++) {

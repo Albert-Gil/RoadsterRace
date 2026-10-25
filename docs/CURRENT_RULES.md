@@ -9,12 +9,12 @@ Conventions: SI units; horizontal plane (x, z) with y up; heading 0 points along
 | Item | Version |
 |---|---:|
 | Vehicle rules (`RULES.version`) | 13 |
-| Route compiler (`COMPILER_VERSION`) | 11 |
+| Route compiler (`COMPILER_VERSION`) | 13 |
 | Coastal Launch track (`coastal-launch`) | 3 |
 | Launchsite track (`orbital-launchyard`) | 3 |
 | Golden Gate track (`golden-gate`) | 3 |
 | Santa Monica track (`santa-monica`) | 2 |
-| Grand Canyon track (`grand-canyon`) | 1 |
+| Grand Canyon track (`grand-canyon`) | 2 |
 | LA nights track (`la-nights`) | 1 |
 
 Records, ghosts, session bests and championships are scoped by these versions. Change a version whenever a value below changes race results.
@@ -27,7 +27,7 @@ Records, ghosts, session bests and championships are scoped by these versions. C
 | Launchsite | `orbital-launchyard` | 3 | 16 | 460.6 | 7 | hop lane `service-hop` |
 | Golden Gate | `golden-gate` | 3 | 16 | 496.4 | 25 | bridge `golden-span` |
 | Santa Monica | `santa-monica` | 2 | 16 | 660.7 | 104 | ramp `pacific-hop` |
-| Grand Canyon | `grand-canyon` | 1 | 16 | 568.8 | 9 | crest `canyon-crest`, hop lane `mesa-service-trail` |
+| Grand Canyon | `grand-canyon` | 2 | 16 | 568.8 | 9 | crest `canyon-crest`, hop lane `mesa-service-trail` |
 | LA nights | `la-nights` | 1 | 16 | 734.0 | 11 | ramp `channel-crossing`, hop lane `backlot-alley` |
 
 Vehicle envelope: 2.2 m × 5.2 m. Race distance: 1–6 laps (default 2). Championship points by place: 10 / 6 / 4 / 0.
@@ -106,7 +106,9 @@ Derived: level-ground manual hop peak 8.028 m and airtime 0.944 s. Santa Monica 
 
 | Key | Value | Unit | Meaning |
 |---|---:|---|---|
-| `runoffRoadWidths` | 1 | road widths | Permitted drawing beyond the asphalt on each side |
+| `runoffRoadWidths` | 2.5 | road widths | Permitted drawing beyond the asphalt on each side |
+| `minimumLapProgress` | 0.72 | fraction | Minimum forward course progress for a completed lap with a safe cut |
+| `minimumPhysicalLap` | 0.45 | fraction of centerline length | Minimum actual drawing travel before finish can be counted |
 | `backwardTolerance` | 0.08 | m | Backward course movement tolerated before cleanup |
 | `localLoopRoadWidths` | 2.5 | road widths | Course window searched for loops and spurs |
 

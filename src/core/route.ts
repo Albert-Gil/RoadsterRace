@@ -7,7 +7,7 @@ import { validateSupports, branchProjection } from './support';
 import { validateHopShortcuts } from './hop-shortcuts';
 import { annotateRoad } from './elevation';
 
-export const COMPILER_VERSION = 11;
+export const COMPILER_VERSION = 13;
 export const PACE_RANGE = Object.freeze({ min: 9, max: 30 });
 export const PACE_FILTER = Object.freeze({ gestureRadius: 5, compiledRadius: 8 });
 
@@ -21,16 +21,17 @@ function validateGeometry(points: Point[], track: TrackDefinition): RouteResult 
   const shortcuts = validateHopShortcuts(points, track); if (!shortcuts.ok) return shortcuts;
   const blocked = blockedRouteSection(points, track, shortcuts.obstacles);
   if (blocked) return { ok: false, message: 'Your line crosses an inner barrier. Leave room for the car and redraw this section.', ...blocked };
-  let unwrapped = 0, backwards = 0, previous = projectCourse(points[0], track), nextCheckpoint = 1;
+  let unwrapped = 0, backwards = 0, previous = projectCourse(points[0], track);
+  let visitedSectors = 1;
   const roadLimit = (track.roadWidth - track.carWidth) / 2 + track.roadWidth * DRAWING_RULES.runoffRoadWidths;
+  const drawnDistances = cumulative(points), drawnLength = drawnDistances.at(-1)!;
   for (let i = 0; i < points.length; i++) {
-    const p = points[i], projection = projectCourse(p, track, i ? { point: points[i - 1], progress: previous.progress } : undefined);
+    const p = points[i], projection = projectCourse(p, track, i ? { point: points[i - 1], progress: previous.progress } : undefined, drawnDistances[i] / drawnLength * track.length);
     if (Math.min(projectToPolyline(p, track.centerline, track.distances).distance, branchProjection(p, track)?.distance ?? Infinity) > roadLimit) return { ok: false, message: 'That line goes too far from the circuit. Stay closer to the road and surrounding sand.', point: p };
     const delta = i ? projection.progress - previous.progress : 0;
     if (delta < 0) backwards -= delta;
     unwrapped += delta;
-    if (unwrapped >= nextCheckpoint * track.length / 8 - 3) nextCheckpoint++;
-    if (i > 0 && distance(points[i - 1], p) > track.roadWidth * 1.8) return { ok: false, message: 'Part of your line is missing. Draw one continuous lap.', point: p };
+    if (unwrapped >= 0 && unwrapped < track.length) visitedSectors |= 1 << Math.min(3, Math.floor(unwrapped * 4 / track.length));
     if (i > 0) {
       const steps = Math.ceil(distance(points[i - 1], p) / 2);
       for (let j = 1; j < steps; j++) {
@@ -41,7 +42,8 @@ function validateGeometry(points: Point[], track: TrackDefinition): RouteResult 
     previous = projection;
   }
   if (backwards > track.length * 0.02) return { ok: false, message: 'Follow the arrows around the circuit. Try drawing the other way.', point: points[0] };
-  if (unwrapped < track.length * 0.94 || nextCheckpoint < 8) return { ok: false, message: 'Complete the whole circuit and return to the start.', point: points[points.length - 1] };
+  const sectors = [0, 1, 2, 3].filter(i => visitedSectors & (1 << i)).length;
+  if (unwrapped < track.length * DRAWING_RULES.minimumLapProgress || sectors < 3) return { ok: false, message: 'Continue around the circuit before crossing the finish line.', point: points[points.length - 1] };
   if (unwrapped > track.length * 1.08) return { ok: false, message: 'Draw just one lap, then lift near the start.', point: points[points.length - 1] };
   return null;
 }
@@ -71,6 +73,7 @@ export function compileRoute(input: DrawSample[], track: TrackDefinition): Route
     if (distance(p, last) > 0.08) samples.push(p);
   }
   if (samples.length < 12) return { ok: false, message: 'Draw all the way around the circuit.' };
+  if (samples.some((p, i) => i > 0 && distance(samples[i - 1], p) > track.roadWidth * 4)) return { ok: false, message: 'Part of your line is missing. Draw one continuous lap.', point: samples[0] };
   if(track.sections) {const rawSupport=validateSupports(samples,track);if(!rawSupport.ok)return rawSupport;samples=annotateRoad(samples,track);}
   const rawDuration = trimmed.samples.at(-1)!.time / 1000;
   const retainedShortcuts = validateHopShortcuts(samples, track); if (!retainedShortcuts.ok) return retainedShortcuts;

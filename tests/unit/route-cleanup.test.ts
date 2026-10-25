@@ -114,7 +114,7 @@ describe('expanded drawing corridor', () => {
     expect(distance(result.points[0], result.points.at(-1)!)).toBeLessThan(0.001);
   });
   test('distant excursions and large missing sectors are rejected with a usable explanation', () => {
-    const distant = compileRoute(wideLine(8, 80, 35), track);
+    const distant = compileRoute(wideLine(8, 80, 65), track);
     expect(distant.ok).toBe(false); if (!distant.ok) expect(distant.message).toMatch(/far|continuous|circuit/);
     const base = track.centerline;
     expect(compileRoute(timed([...base.slice(0, 30), ...base.slice(120)]), track).ok).toBe(false);

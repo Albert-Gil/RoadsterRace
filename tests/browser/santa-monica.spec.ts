@@ -67,7 +67,7 @@ test('jump race renders elevation, pauses safely, completes, and retry resets fl
   await page.screenshot({ path: 'artifacts/santa-monica/airborne-paused.png' }); await page.getByRole('button', { name: 'Resume', exact: true }).click();
   await waitForPhase(page, 'results', 90000);
   const completed = await state(page); expect(completed.race.lapTimes).toHaveLength(1); expect(completed.race.elevation).toBe(0);
-  await page.getByRole('button', { name: 'Race again', exact: false }).click();
+  await page.getByRole('button', { name: 'Restart', exact: false }).click();
   expect((await state(page)).race.movement).toBe('grounded'); expect((await state(page)).race.elevation).toBe(0); expect((await state(page)).race.recoveryCount).toBe(0);
   expect(errors).toEqual([]);
 });
@@ -86,6 +86,6 @@ test('four players race mixed branches with bounded draw calls and a clean remat
   await waitForPhase(page, 'results', 120000);
   const finished = await state(page); expect(finished.players.every((p: any) => p.finished)).toBe(true); expect(Math.max(...calls)).toBeLessThanOrEqual(150);
   writeFileSync('artifacts/santa-monica/multiplayer-report.json', JSON.stringify({ maxDrawCalls: Math.max(...calls), players: finished.players, standings: finished.standings }, null, 2));
-  await page.screenshot({ path: 'artifacts/santa-monica/multiplayer-results.png' }); await page.getByRole('button', { name: 'Rematch', exact: true }).click();
+  await page.screenshot({ path: 'artifacts/santa-monica/multiplayer-results.png' }); await page.getByRole('button', { name: 'Restart', exact: false }).click();
   expect((await state(page)).readyPlayers).toEqual([false, false, false, false]);
 });

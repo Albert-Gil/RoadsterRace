@@ -49,7 +49,7 @@ test('four-player ghost start uses race time, survives pause and resets on remat
   const rows = await resultRows(page);
   expect(rows.map(r => r.time)).toEqual(result.standings.map((s: any) => formatTime(s.finishTime)));
   expect(rows.map(r => r.place.replace('=', ''))).toEqual(result.standings.map((s: any) => String(s.rank)));
-  await page.getByRole('button', { name: 'Rematch', exact: false }).click();
+  await page.getByRole('button', { name: 'Restart', exact: false }).click();
   for (const key of ['KeyA', 'KeyL', 'KeyQ', 'KeyP']) await page.keyboard.press(key);
   await page.waitForFunction(() => { const s = (window as any).__roadster.getState(); return s.phase === 'racing' && s.race.time > 0.1; });
   expect((await state(page)).ghostStartRemaining).toBeGreaterThan(2);
@@ -81,7 +81,7 @@ test('two-player handoff, ready check, independent thrust, finish order and fres
   expect(finished.standings[0].player).toBe(0); expect(finished.best).toBeNull();
   await expect(page.locator('.standings tbody tr')).toHaveCount(2);
   await page.screenshot({ path: 'artifacts/multiplayer-results.png' });
-  await page.getByRole('button', { name: 'Rematch' }).click();
+  await page.getByRole('button', { name: 'Restart' }).click();
   expect((await state(page)).phase).toBe('ready'); expect((await state(page)).readyPlayers).toEqual([false, false]);
   await page.keyboard.press('KeyA'); await page.keyboard.press('KeyL');
   const fresh = await state(page); expect(fresh.players.map((p: any) => p.time)).toEqual([0, 0]); expect(fresh.players.map((p: any) => p.thrustCount)).toEqual([0, 0]);

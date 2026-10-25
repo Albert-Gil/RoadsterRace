@@ -3,10 +3,10 @@ import type { DrawSample, Point, TrackDefinition } from './types';
 import { branchProjection } from './support';
 import { locateRoad } from './elevation';
 
-export const DRAWING_RULES = Object.freeze({ runoffRoadWidths: 1, backwardTolerance: 0.08, localLoopRoadWidths: 2.5 });
+export const DRAWING_RULES = Object.freeze({ runoffRoadWidths: 2.5, minimumLapProgress: 0.72, minimumPhysicalLap: 0.45, backwardTolerance: 0.08, localLoopRoadWidths: 2.5 });
 
 /** Keep course association continuous when a wide line passes near another part of a hairpin. */
-export function projectCourse(point: Point, track: TrackDefinition, previous?: { point: Point; progress: number }) {
+export function projectCourse(point: Point, track: TrackDefinition, previous?: { point: Point; progress: number }, expectedProgress?: number) {
   if(track.sections){const r=locateRoad(point,track,previous?.progress,previous?Math.max(12,distance(point,previous.point)*1.75+2):12);return {distance:r.distance,progress:r.progress,score:r.score};}
   let best = { distance: Infinity, progress: 0, score: Infinity };
   const movement = previous ? distance(point, previous.point) : 0;
@@ -14,20 +14,29 @@ export function projectCourse(point: Point, track: TrackDefinition, previous?: {
     const a = track.centerline[i], b = track.centerline[i + 1], dx = b.x - a.x, dz = b.z - a.z;
     const t = clamp(((point.x - a.x) * dx + (point.z - a.z) * dz) / (dx * dx + dz * dz || 1), 0, 1);
     const gap = distance(point, mix(a, b, t));
-    let progress = lerp(track.distances[i], track.distances[i + 1], t);
-    if (previous) progress += Math.round((previous.progress - progress) / track.length) * track.length;
-    const jump = previous ? Math.max(0, Math.abs(progress - previous.progress) - movement * 1.75 - 2) : 0;
-    const score = gap + jump * 0.65;
-    if (score < best.score) best = { distance: gap, progress, score };
+    const baseProgress = lerp(track.distances[i], track.distances[i + 1], t);
+    const nearestLap = previous ? Math.round((previous.progress - baseProgress) / track.length) : 0;
+    for (let shift = 0, variants = previous ? 2 : 1; shift < variants; shift++) {
+      const progress = baseProgress + (nearestLap + shift) * track.length;
+      const delta = previous ? progress - previous.progress : 0;
+      const forwardJump = previous ? Math.max(0, delta - movement * 1.75 - 2) : 0;
+      const backwardJump = previous ? Math.max(0, -delta - Math.max(3, movement * 0.4)) : 0;
+      const score = gap + forwardJump * 0.65 + backwardJump * 20 + (expectedProgress === undefined ? 0 : Math.abs(progress - expectedProgress) * 0.8);
+      if (score < best.score) best = { distance: gap, progress, score };
+    }
   }
   const branch = branchProjection(point, track);
   // Near a fork, a normal inside line belongs to the safe road, not the manual branch.
   if (branch && (!branch.manualHop || best.distance > (track.roadWidth - track.carWidth) / 2)) {
-    let progress = branch.progress;
-    if (previous) progress += Math.round((previous.progress - progress) / track.length) * track.length;
-    const jump = previous ? Math.max(0, Math.abs(progress - previous.progress) - movement * 1.75 - 2) : 0;
-    const score = branch.distance + jump * 0.65;
-    if (score < best.score) best = { distance: branch.distance, progress, score };
+    const nearestLap = previous ? Math.round((previous.progress - branch.progress) / track.length) : 0;
+    for (let shift = 0, variants = previous ? 2 : 1; shift < variants; shift++) {
+      const progress = branch.progress + (nearestLap + shift) * track.length;
+      const delta = previous ? progress - previous.progress : 0;
+      const forwardJump = previous ? Math.max(0, delta - movement * 1.75 - 2) : 0;
+      const backwardJump = previous ? Math.max(0, -delta - Math.max(3, movement * 0.4)) : 0;
+      const score = branch.distance + forwardJump * 0.65 + backwardJump * 20 + (expectedProgress === undefined ? 0 : Math.abs(progress - expectedProgress) * 0.8);
+      if (score < best.score) best = { distance: branch.distance, progress, score };
+    }
   }
   return best;
 }
@@ -49,7 +58,7 @@ export function cleanDrawnRoute(samples: DrawSample[], track: TrackDefinition, g
   let previous = { point: samples[0], progress: first.progress }, repairs = 0;
   const rawDistances = cumulative(samples), loopWindow = track.roadWidth * DRAWING_RULES.localLoopRoadWidths;
   for (let index = 1; index < samples.length; index++) {
-    const point = samples[index], projection = projectCourse(point, track, previous);
+    const point = samples[index], projection = projectCourse(point, track, previous, rawDistances[index] / rawDistances.at(-1)! * track.length);
     previous = { point, progress: projection.progress };
     const progress = projection.progress - first.progress;
     // Returning to a point also catches a radial out-and-back spur (collinear segments).

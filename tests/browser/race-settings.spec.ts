@@ -34,7 +34,8 @@ test('solo preferences persist, one lap finishes cleanly, and six-lap bests stay
   expect(await page.locator('#panel b').allTextContents()).not.toContain('Taylor');
   await expect(page.locator('#panel')).not.toContainText(/drifts|Carry less|clean line|well-timed/i);
   await page.screenshot({ path: 'artifacts/race-settings/one-lap-results.png' });
-  await page.getByRole('button', { name: 'Race setup', exact: true }).click();
+  await page.getByRole('button', { name: 'Home', exact: true }).click();
+  await page.getByRole('button', { name: 'Time Trial', exact: true }).click();
   await page.getByRole('button', { name: '6 laps', exact: true }).click();
   await page.getByRole('button', { name: 'Draw racing line' }).click();
   await page.evaluate(() => (window as any).__roadster.usePracticeLine());
@@ -70,7 +71,7 @@ test('custom names and paints survive a six-lap local race, results and rematch'
   await expect(page.locator('.standings')).toContainText('Ana & Max'); await expect(page.locator('.standings')).toContainText('Lee');
   await expect(page.locator('.standing-laps').first()).toContainText('L6');
   await page.screenshot({ path: 'artifacts/race-settings/six-lap-results.png' });
-  await page.getByRole('button', { name: 'Rematch', exact: true }).click();
+  await page.getByRole('button', { name: 'Restart', exact: false }).click();
   const rematch = await page.evaluate(() => (window as any).__roadster.getState());
   expect(rematch.phase).toBe('ready'); expect(rematch.lapCount).toBe(6); expect(rematch.drivers).toEqual(result.drivers);
   expect(errors).toEqual([]);

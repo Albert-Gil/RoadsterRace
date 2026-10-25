@@ -37,7 +37,9 @@ test('course switching clears plans, retains drivers and distance, scopes bests 
   await page.getByRole('button', { name: 'Race this line' }).click();
   await waitForPhase(page, 'results');
   expect((await state(page)).best).toBeGreaterThan(0);
-  await page.getByRole('button', { name: 'Race setup', exact: true }).click();
+  await page.getByRole('button', { name: 'Home', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Time Trial', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Time Trial', exact: true }).click();
   await page.getByRole('button', { name: 'Launchsite circuit', exact: true }).click();
   await page.getByRole('button', { name: 'Draw racing line' }).click();
   expect((await state(page)).best).toBeNull(); expect(errors).toEqual([]);
@@ -117,6 +119,6 @@ for (const count of [2, 3, 4]) test(`Orbital ${count}-player race finishes with 
   expect(Math.max(...calls)).toBeLessThanOrEqual(150); expect(errors).toEqual([]);
   await page.screenshot({ path: `artifacts/orbital/${count}-player-results.png` });
   writeFileSync(`artifacts/orbital/${count}-player-report.json`, JSON.stringify({ maxDrawCalls: Math.max(...calls), players: finished.players, errors }, null, 2));
-  await page.getByRole('button', { name: 'Rematch', exact: true }).click();
+  await page.getByRole('button', { name: 'Restart', exact: false }).click();
   const fresh = await state(page); expect(fresh.circuitId).toBe('orbital-launchyard'); expect(fresh.readyPlayers).toEqual(Array(count).fill(false)); expect(fresh.confirmedCount).toBe(count);
 });

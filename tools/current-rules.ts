@@ -64,6 +64,8 @@ const documentation: Record<string, Record<string, Unit>> = {
   PACE_FILTER: { gestureRadius: ['m', 'Half-window for measuring drawing speed'], compiledRadius: ['m', 'Half-window of the compiled pace filter'] },
   DRAWING_RULES: {
     runoffRoadWidths: ['road widths', 'Permitted drawing beyond the asphalt on each side'],
+    minimumLapProgress: ['fraction', 'Minimum forward course progress for a completed lap with a safe cut'],
+    minimumPhysicalLap: ['fraction of centerline length', 'Minimum actual drawing travel before finish can be counted'],
     backwardTolerance: ['m', 'Backward course movement tolerated before cleanup'],
     localLoopRoadWidths: ['road widths', 'Course window searched for loops and spurs'],
   },
