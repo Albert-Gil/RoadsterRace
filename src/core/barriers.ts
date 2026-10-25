@@ -107,3 +107,17 @@ export function blockedRouteSection(points: Point[], track: TrackDefinition, per
   }
   return null;
 }
+
+/**
+ * Per-point vehicle contact along a drawn line (capsule at the point, heading along the line,
+ * no extra clearance). Used to mark hazards; the line itself is never rejected for them.
+ */
+export function routeContacts(points: Point[], track: TrackDefinition, permitted: readonly string[] = []): boolean[] {
+  const physical = permitted.length ? { ...track, barriers: track.barriers.filter(b => !permitted.includes(b.id)) } : track;
+  const crossingPhysical = track.sections ? { ...physical, barriers: physical.barriers.filter(b => b.kind !== 'cliff-face') } : physical;
+  return points.map((p, i) => {
+    const a = points[Math.max(0, i - 1)], b = points[Math.min(points.length - 1, i + 1)], heading = Math.atan2(b.x - a.x, b.z - a.z);
+    const approvedCrossing = track.sections && track.jumps?.some(j => j.kind === 'crest' && p.courseProgress !== undefined && p.courseProgress >= j.entryProgress && p.courseProgress <= j.exitProgress && Math.abs((p.x - j.from.x) * j.forward.z - (p.z - j.from.z) * j.forward.x) <= (j.width - track.carWidth) / 2);
+    return !!barrierContact(p, heading, approvedCrossing ? crossingPhysical : physical, 0, track.sections ? p.y ?? 0 : 0);
+  });
+}

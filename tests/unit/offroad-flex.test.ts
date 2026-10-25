@@ -41,10 +41,16 @@ test.each(circuits)('$id accepts a substantially wider off-road racing line and 
   expect(race.state.lapTimes).toHaveLength(1);
 }, 120000);
 
-test('the extra drawing allowance still has a finite limit', () => {
+test('a line far off the circuit is accepted as drawn and the car drives it through the sand', () => {
   const track = circuits[0].track;
-  const samples = excursion(track, 35, -1, 65);
-  expect(compileRoute(samples, track).ok).toBe(false);
+  const drawn = excursion(track, 35, -1, 40), result = compileRoute(drawn, track);
+  if (!result.ok) throw new Error(result.message);
+  // The compiled line keeps the excursion: every drawn sample stays on it.
+  const line = result.route.points, along = cumulative(line);
+  expect(Math.max(...drawn.map(p => projectToPolyline(p, line, along).distance))).toBeLessThan(2);
+  const race = new RaceSimulation(result.route, track, 1); let sand = 0;
+  for (let i = 0; i < 60 * 240 && !race.state.finished; i++) { race.step(); sand += race.state.sandAmount / 60; }
+  expect(race.state.finished).toBe(true); expect(sand).toBeGreaterThan(2);
 });
 
 test('widened canyon shoulders do not fold inward around bends', () => {

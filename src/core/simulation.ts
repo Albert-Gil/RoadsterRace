@@ -31,6 +31,7 @@ export class RaceSimulation {
   private collisionNearbyUntil = -1;
   private progressAnchor = 0;
   private invalidFlight = false;
+  private lastRecoveryDistance = -Infinity;
   gridPending = false;
   markContact(now: number) { this.collisionNearbyUntil = now + 3; }
   constructor(readonly route: CompiledRoute, readonly track: TrackDefinition, readonly lapCount: number = DEFAULT_LAPS) {
@@ -52,18 +53,61 @@ export class RaceSimulation {
   }
   clearCommands() { this.queuedThrust = false; this.queuedHop = false; }
   drainEvents() { return this.events.splice(0); }
+  /** A drawn hazard at or just ahead of this route distance, with its reset distance on the same lap. */
+  private hazardAhead(distanceOnRoute: number) {
+    const length = this.route.length, lap = Math.floor(distanceOnRoute / length) * length;
+    for (const hazard of this.route.hazards ?? []) for (const shift of [lap - length, lap, lap + length]) {
+      if (distanceOnRoute >= hazard.from + shift - RULES.hazardApproach && distanceOnRoute <= hazard.to + shift) return { reset: hazard.to + shift, penalty: hazard.course / RULES.hazardPenaltySpeed };
+    }
+    return null;
+  }
+  /** First route distance past `from` where the car fits on support, clear of barriers. */
+  private clearAhead(from: number) {
+    const window = this.track.carLength + 3;
+    for (let d = from; d < from + this.route.length; d += 1) {
+      let clear = true;
+      for (let k = 0; k <= window && clear; k += 1) {
+        const p = sampleRoute(this.route, d + k), at = this.track.sections ? roadPoint({ x: p.x, z: p.z }, this.track, p.courseProgress) : { x: p.x, z: p.z };
+        clear = vehicleSupported(at, p.heading, this.track) && !barrierContact(at, p.heading, this.track, 0.3, this.track.sections ? at.y ?? 0 : 0);
+      }
+      if (clear) return d + window / 2;
+    }
+    return null;
+  }
+  /**
+   * Crash and reset. A line drawn through a wall or off the road is accepted, so the car
+   * crashes there; it is reset just past that stretch, held for a penalty matching the
+   * circuit it skipped. A second failure at the same place also resets forward, so no line
+   * can trap a car. Anywhere else the car returns to its last safe position.
+   */
   private recover(now: number) {
     const s = this.state;
+    const hazard = this.hazardAhead(s.distance);
+    const repeated = !hazard && Math.abs(s.distance - this.lastRecoveryDistance) < RULES.repeatRecoveryWindow ? this.clearAhead(s.distance + 2) : null;
+    this.lastRecoveryDistance = s.distance;
+    if (hazard || repeated !== null) {
+      const target = hazard ? hazard.reset : repeated!, penalty = hazard ? hazard.penalty : Math.max(0, target - s.distance) / RULES.hazardPenaltySpeed;
+      const safe = sampleRoute(this.route, target);
+      s.position = this.track.sections ? roadPoint({x:safe.x,z:safe.z},this.track,safe.courseProgress) : { x: safe.x, z: safe.z }; s.heading = safe.heading; s.distance = Math.max(s.distance, target);
+      this.settleAfterRecovery(now, RULES.recoveryHold + penalty);
+      s.checkpoint = Math.floor(s.distance / (this.route.length / 8)) + 1;
+      this.lastSafeDistance = this.progressAnchor = s.distance;
+      this.events.push({ type: 'recovery', time: now, penalty });
+      return;
+    }
       const back = Math.min(s.distance, this.lastSafeDistance), safe = sampleRoute(this.route, back);
       s.position = this.track.sections ? roadPoint({x:safe.x,z:safe.z},this.track,safe.courseProgress) : { x: safe.x, z: safe.z }; s.heading = safe.heading; s.distance = back;
-      s.velocity = { x: 0, z: 0 }; s.speed = 0; s.acceleration = 0; s.steeringRate = 0;
-      s.elevation = groundHeight(s.position, this.track); if(this.track.sections)s.supportSectionId=s.position.sectionId; s.verticalVelocity = 0; s.movement = 'grounded'; s.activeJump = null; s.flightOrigin = null; s.flightStartedAt = -1; this.invalidFlight = false; this.clearCommands();
-      s.thrustUntil = now; s.recoveringUntil = now + 1; s.recoveryCount++; s.drifting = false;
-      s.recoveryWaiting = false;
+      this.settleAfterRecovery(now, RULES.recoveryHold);
       s.checkpoint = Math.min(s.checkpoint, Math.floor(back / (this.route.length / 8)) + 1);
-      this.stuckTicks = 0; this.progressAnchor = back;
+      this.progressAnchor = back;
       this.events.push({ type: 'recovery', time: now });
-    this.gridPending = false;
+  }
+  private settleAfterRecovery(now: number, hold: number) {
+    const s = this.state;
+    s.velocity = { x: 0, z: 0 }; s.speed = 0; s.acceleration = 0; s.steeringRate = 0;
+    s.elevation = groundHeight(s.position, this.track); if(this.track.sections)s.supportSectionId=s.position.sectionId; s.verticalVelocity = 0; s.movement = 'grounded'; s.activeJump = null; s.flightOrigin = null; s.flightStartedAt = -1; this.invalidFlight = false; this.clearCommands();
+    s.thrustUntil = now; s.recoveringUntil = now + hold; s.recoveryCount++; s.drifting = false;
+    s.recoveryWaiting = false; this.stuckTicks = 0; this.gridPending = false;
   }
   /** Search only the next portion of the route, so a nearby hairpin cannot teleport progress. */
   private projectNear(position: Point) {
@@ -298,7 +342,8 @@ export class RaceSimulation {
     s.time = now + dt;
     const boundary = s.lap * this.route.length;
     if (s.distance >= boundary) {
-      const crossing = now + (boundary - previous) / Math.max(1e-9, movement) * dt;
+      // A crash reset can carry the car past the line; the lap then counts when it drives on.
+      const crossing = previous >= boundary ? now : now + (boundary - previous) / Math.max(1e-9, movement) * dt;
       s.lapTimes.push(crossing - s.lapStartedAt);
       s.lapStartedAt = crossing;
       if (s.lap === this.lapCount) {

@@ -62,7 +62,7 @@ async function touchLine(page: Page, shape: 'blocked' | 'wide') {
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [], timestamp: epoch + points.at(-1)!.time }); await cdp.detach();
 }
 
-test('Orbital phone touch drawing rejects protected cuts and races a wide outer-sand line', async ({ browser }) => {
+test('Orbital phone touch drawing accepts a protected cut with a crash note and races a wide outer-sand line', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
   const page = await context.newPage(), errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
   await page.addInitScript(() => {
@@ -74,9 +74,10 @@ test('Orbital phone touch drawing rejects protected cuts and races a wide outer-
   });
   await page.goto('/?circuit=orbital-launchyard'); await page.getByRole('button', { name: "Time Trial" }).click();
   await page.getByRole('button', { name: '1 lap', exact: true }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
-  await touchLine(page, 'blocked'); await expect(page.locator('.instruction')).toContainText('inner barrier');
-  await expect(page.getByRole('button', { name: 'Race this line' })).toHaveCount(0);
+  await touchLine(page, 'blocked'); await expect(page.locator('.planning-note')).toContainText('crash');
+  await expect(page.getByRole('button', { name: 'Race this line' })).toBeVisible();
   await page.screenshot({ path: 'artifacts/orbital/blocked-touch.png' });
+  await page.getByRole('button', { name: 'Redraw', exact: true }).click();
   await touchLine(page, 'wide'); await expect(page.getByRole('button', { name: 'Race this line' })).toBeVisible();
   expect(await page.evaluate(() => (window as any).__roadster.getProjectionError())).toBeLessThan(0.01);
   await page.screenshot({ path: 'artifacts/orbital/wide-touch.png' });

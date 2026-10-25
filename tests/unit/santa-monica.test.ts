@@ -10,7 +10,7 @@ import { createTournament, finalizeRound } from '../../src/core/tournament';
 import { circuits } from '../../src/content/circuits';
 import { defaultPreferences } from '../../src/presentation/race-settings';
 import { distance } from '../../src/core/geometry';
-import { jumpPoint, validateSupports, vehicleSupported, supported, inFootprint } from '../../src/core/support';
+import { jumpPoint, assessSupports, vehicleSupported, supported, inFootprint } from '../../src/core/support';
 import { santaMonicaBuildings } from '../../src/content/santa-monica-art';
 
 const jumpSamples = (seconds = 7) => createPracticeSamples(track, seconds, true);
@@ -33,8 +33,10 @@ test.each([20, 30, 42])('aligned %i m/s takeoff lands on the physical receiving 
   for (let i = 0; i < 240; i++) { sim.step(); for (const event of sim.drainEvents()) { flew ||= event.type === 'takeoff'; landed ||= event.type === 'landing'; } if (landed) break; }
   expect(flew).toBe(true); expect(landed).toBe(true); expect(s.recoveryCount).toBe(0); expect(vehicleSupported(s.position, s.heading, track)).toBe(true);
 });
-test('unauthorized water crossings fail clearance validation', () => {
-  expect(validateSupports([{ x: 40, z: -30 }, { x: 70, z: -30 }], track).ok).toBe(false);
+test('unauthorized water crossings are marked unsupported, never authorized as a jump', () => {
+  const across = Array.from({ length: 31 }, (_, i) => ({ x: 40 + i, z: -30 }));
+  const assessed = assessSupports(across, track);
+  expect(assessed.jumps).toEqual([]); expect(assessed.unsupported.some(Boolean)).toBe(true);
 });
 test('every building and amusement foundation has authored support', () => {
   for (const b of santaMonicaBuildings) for (const side of [-1, 1]) for (const end of [-1, 1]) {

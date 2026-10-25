@@ -633,7 +633,7 @@ p { font-size: 14px; line-height: 1.5; }
 .playground[data-phase="paused"] [data-action="home"] { min-height:48px; }
 
 /* Two independent abilities stay inside the existing course rails. Pad sizes are defined once here. */
-.playground { --thrust-size:64px; --hop-size:44px; --ability-gap:6px; --ability-rail:calc(var(--thrust-size) + 4px); }
+.playground { --thrust-size:calc(64px * var(--ui-scale, 1)); --hop-size:calc(44px * var(--ui-scale, 1)); --ability-gap:calc(6px * var(--ui-scale, 1)); --ability-rail:calc(var(--thrust-size) + 4px); }
 .playground .ability-cluster { position:absolute;z-index:8;display:flex;flex-direction:column-reverse;align-items:center;gap:var(--ability-gap);width:var(--thrust-size);pointer-events:none;right:calc(env(safe-area-inset-right,0px) + 2px);bottom:calc(env(safe-area-inset-bottom,0px) + 4px); }
 .playground .ability-cluster .ability-control { position:relative;inset:auto;flex:none;margin:0;pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none; }
 .playground .ability-cluster .thrust-control { width:var(--thrust-size);height:var(--thrust-size);padding:3px; }
@@ -704,3 +704,37 @@ p { font-size: 14px; line-height: 1.5; }
   .playground[data-phase="welcome"] .panel-actions .text-button { padding: 9px 7px; }
   .playground[data-phase="welcome"] .panel-actions .primary-button { gap: 14px; padding-left: 14px; padding-right: 14px; }
 }
+
+/* Home is always one tap away: in the header on setup/handoff/tour intro, in the planning rail while drawing,
+   on the ready and result screens, and in the Pause menu during a race. */
+.home-link { display:none;align-items:center;gap:6px; }
+.home-link svg { width:16px;height:16px; }
+/* Results, the tutorial intro, ready, pause and the planning rail carry their own Home button. */
+.playground:is([data-phase="setup"],[data-phase="handoff"],[data-phase="tour-intro"]) .home-link { display:inline-flex; }
+.playground:is([data-phase="drawing"],[data-phase="preview"]) .planning-note { border-left-color:#e3b341; }
+.home-link span { padding-left:0; }
+
+/* Large touch screens (iPad): scale race and planning controls with the screen.
+   --ui-scale is 1 on phones and mouse layouts (src/app/ui-scale.ts), so these rules only apply above it. */
+.playground[data-scaled="true"] { --u:var(--ui-scale, 1); }
+.playground[data-scaled="true"] .pod-title, .playground[data-scaled="true"] .pod-status { font-size:calc(9px * var(--u)); }
+.playground[data-scaled="true"] .thrust-inner svg { width:calc(18px * var(--u));height:calc(18px * var(--u)); }
+.playground[data-scaled="true"] .hop-inner svg { width:calc(13px * var(--u));height:calc(13px * var(--u)); }
+.playground[data-scaled="true"] .hop-inner strong { font-size:calc(9px * var(--u)); }
+.playground[data-scaled="true"] .hop-status { font-size:calc(8px * var(--u)); }
+.playground[data-scaled="true"]:is([data-phase="drawing"],[data-phase="preview"]) .topbar { width:calc(48px * var(--u)); }
+.playground[data-scaled="true"]:is([data-phase="drawing"],[data-phase="preview"]) :is(.sound-control,.planning-button) { width:calc(48px * var(--u));min-height:calc(48px * var(--u)); }
+.playground[data-scaled="true"]:is([data-phase="drawing"],[data-phase="preview"]) .panel { width:calc(48px * var(--u));top:calc(env(safe-area-inset-top,0px) + 14px + 48px * var(--u)); }
+.playground[data-scaled="true"]:is([data-phase="drawing"],[data-phase="preview"]) .panel-actions { gap:calc(6px * var(--u)); }
+.playground[data-scaled="true"] .planning-button svg { width:calc(24px * var(--u));height:calc(24px * var(--u)); }
+.playground[data-scaled="true"]:is([data-phase="drawing"],[data-phase="preview"]) .planning-button span { font-size:calc(9px * var(--u)); }
+.playground[data-scaled="true"]:is([data-phase="drawing"],[data-phase="preview"]) .planning-error { font-size:calc(12px * var(--u));max-width:min(calc(420px * var(--u)),calc(100vw - 2 * var(--ability-rail) - 24px)); }
+.playground[data-scaled="true"][data-phase] .pause-button { width:calc(48px * var(--u));min-height:calc(48px * var(--u));font-size:calc(16px * var(--u)); }
+.playground[data-scaled="true"]:is([data-phase="racing"],[data-phase="countdown"],[data-phase="ready"],[data-phase="paused"]) .topbar { width:calc(48px * var(--u));top:calc(50% + 12px * var(--u)); }
+.playground[data-scaled="true"]:is([data-phase="racing"],[data-phase="countdown"],[data-phase="ready"],[data-phase="paused"]) .sound-control { width:calc(48px * var(--u));min-height:calc(48px * var(--u)); }
+.playground[data-scaled="true"]:is([data-phase="racing"],[data-phase="countdown"],[data-phase="paused"]) .race-hud { width:calc(54px * var(--u));padding:calc(6px * var(--u)) 2px; }
+.playground[data-scaled="true"] .race-hud strong { font-size:calc(13px * var(--u)); }
+.playground[data-scaled="true"] .race-hud small { font-size:calc(8px * var(--u)); }
+.playground[data-scaled="true"] .tutorial-coach { font-size:calc(12px * var(--u)); }
+.playground[data-scaled="true"] .tutorial-coach .coach-title { font-size:calc(18px * var(--u)); }
+.playground[data-scaled="true"] .race-notice { font-size:calc(11px * var(--u)); }

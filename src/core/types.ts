@@ -44,6 +44,12 @@ export interface RoutePoint extends Point {
   desiredSpeed: number;
   curvature: number;
 }
+/**
+ * A stretch of the drawn line the car cannot physically drive (through a solid barrier or
+ * off support). Route distances in metres; `to` is the clear reset point beyond it and may
+ * pass the lap end. `course` is the circuit distance the reset skips, which sets its penalty.
+ */
+export interface RouteHazard { from: number; to: number; course: number; kind: 'barrier' | 'support' }
 export interface CompiledRoute {
   version: number;
   trackId: string;
@@ -54,11 +60,12 @@ export interface CompiledRoute {
   cleanup?: { removedPoints: number; removedSeconds: number };
   jumps?: string[];
   hopShortcuts?: HopTraversal[];
+  hazards?: RouteHazard[];
 }
 export interface DrawingTrim { leadIn: DrawSample[]; tail: DrawSample[]; joined: boolean }
 export type RouteResult = { ok: true; route: CompiledRoute; drawing?: DrawingTrim } | { ok: false; message: string; point?: Point; section?: Point[] };
 export type Ability = 'thrust' | 'hop';
-export type RaceEvent = { type: 'thrust' | 'hop' | 'drift' | 'lap' | 'finish' | 'collision' | 'car-impact' | 'scrape' | 'recovery' | 'takeoff' | 'landing' | 'splash'; time: number; point?: Point; intensity?: number; otherPlayer?: number };
+export type RaceEvent = { type: 'thrust' | 'hop' | 'drift' | 'lap' | 'finish' | 'collision' | 'car-impact' | 'scrape' | 'recovery' | 'takeoff' | 'landing' | 'splash'; time: number; point?: Point; intensity?: number; otherPlayer?: number; /** Extra reset hold (s) after crashing into a hazard. */ penalty?: number };
 export interface RaceState {
   tick: number;
   time: number;

@@ -39,7 +39,7 @@ Legitimate vertically separated traffic has no contact; overlapping vehicle-heig
 
 ## Sessions and compatibility
 
-Grand Canyon is available in Solo Race, Multiplayer and Time Trial, with 1–6 laps. New Full Tours include it as round five; Custom Tours can select it. Saved schedules are never rewritten. Track v2 and compiler v13 reject incompatible tours/records while retaining ordinary driver names, paints and lap preferences. Vehicle rules remain v13.
+Grand Canyon is available in Solo Race, Multiplayer and Time Trial, with 1–6 laps. New Full Tours include it as round five; Custom Tours can select it. Saved schedules are never rewritten. Track v2, compiler v14 and vehicle rules v14 reject incompatible tours/records while retaining ordinary driver names, paints and lap preferences.
 
 Run locally with `pnpm dev`, then open `http://localhost:5173/?circuit=grand-canyon`. The production build supports `/RoadsterRace/?circuit=grand-canyon`; publication uses the verified-main GitHub Pages workflow.
 

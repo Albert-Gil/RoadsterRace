@@ -22,6 +22,7 @@ import { InputRouter } from './input/router';
 import { appShellMarkup } from './app/shell';
 import { modeLabel, phaseLayout, type Phase } from './app/phases';
 import { installDevApi } from './app/dev-api';
+import { uiScale } from './app/ui-scale';
 import { formatTime } from './ui/format';
 import { renderHud } from './ui/hud';
 import { abilityControlsMarkup } from './ui/controls';
@@ -44,6 +45,10 @@ applyTheme(theme);
 app.innerHTML = appShellMarkup();
 
 const playground = app.querySelector<HTMLElement>('.playground')!;
+const coarsePointer = matchMedia('(pointer: coarse)');
+/** Larger touch screens get proportionally larger controls; the course rectangle follows via CSS. */
+function applyUiScale() { const scale = uiScale(innerWidth, innerHeight, coarsePointer.matches); playground.style.setProperty('--ui-scale', String(scale)); playground.dataset.scaled = String(scale > 1); }
+applyUiScale();
 const canvas = document.querySelector<HTMLCanvasElement>('#race-canvas')!;
 const panel = document.querySelector<HTMLElement>('#panel')!, hud = document.querySelector<HTMLElement>('.race-hud')!;
 const countdownElement = document.querySelector<HTMLElement>('.countdown')!, controls = document.querySelector<HTMLElement>('#race-controls')!;
@@ -83,6 +88,8 @@ let drawingTrim: DrawingTrim | undefined;
 let stroke: DrawSample[] = [], drawingPointer: number | null = null;
 let countdownRemaining = 0, resuming = false, best: number | null = null, previousPoses: { x: number; z: number; heading: number; y: number }[] = [], noticeUntil = 0, lastFrame = performance.now();
 let pauseReason='';
+/** Preview heads-up about stretches of the line the car cannot drive (it crashes there and is reset). */
+let planningNote: string | undefined;
 let countdownBeat = 3, rechargeAnnounced: boolean[] = [];
 let world: GameScene;
 let previewGrid: { routes: CompiledRoute[]; track: typeof activeTrack; rotation: number; poses: ReturnType<typeof startingGrid> } | null = null;
@@ -239,7 +246,7 @@ function panelMarkup(message?: string): string | null {
     case 'tour-replace': return tourReplacePanel();
     case 'tour-resume': return tourDiscardPanel();
     case 'handoff': return handoffPanel({ confirmedCount: confirmedRoutes.length, playerCount, turn, playerName });
-    case 'drawing': case 'preview': return planningPanel({ preview: phase === 'preview', playerCount, turn, playerName, humans, inTour: !!activeTour, tutorial: sessionOptions.mode === 'tutorial', message });
+    case 'drawing': case 'preview': return planningPanel({ preview: phase === 'preview', playerCount, turn, playerName, humans, inTour: !!activeTour, tutorial: sessionOptions.mode === 'tutorial', message, note: phase === 'preview' ? planningNote : undefined });
     case 'ready': return readyPanel({ playerCount, lapCount, readyPlayers, ghostSeconds: CONTACT_RULES.ghostStartSeconds });
     case 'paused': return pausedPanel();
     case 'results':
@@ -263,15 +270,27 @@ function beginDrawing() {
   clearRaceInput(); race = null; route = null; drawingTrim = undefined; stroke = []; drawingPointer = null;
   world.setPlanningPlayer(playerCount > 1 ? turn : null); world.showVehicles(-1, playerCount);
   world.vehicles.forEach(vehicle => vehicle.clearEffects());
-  world.drawLine(null); world.showError(); world.vehicles[turn].update(startPose()); notice.textContent = ''; setPhase('drawing');
+  planningNote = undefined; world.drawLine(null); world.showError(); world.vehicles[turn].update(startPose()); notice.textContent = ''; setPhase('drawing');
 }
 function usePractice(jumpBranch: boolean | string = false) {
   if (phase !== 'drawing') return;
   const result = compileRoute(createPracticeSamples(activeTrack, 7, jumpBranch), activeTrack);
-  if (result.ok) { route = result.route; drawingTrim = result.drawing; world.drawLine(route, drawingTrim); world.showError(); setPhase('preview'); }
+  if (result.ok) showPreview(result.route, result.drawing);
+}
+/** The accepted line, with any crash stretches marked. Nothing here blocks racing it. */
+function showPreview(compiled: CompiledRoute, trim?: DrawingTrim) {
+  route = compiled; drawingTrim = trim; world.drawLine(route, drawingTrim);
+  const hazards = compiled.hazards ?? [];
+  if (hazards.length) {
+    const first = hazards[0], section = compiled.points.filter(p => p.distance >= first.from && p.distance <= Math.min(first.to, compiled.length));
+    world.showError(sampleRoute(compiled, first.from), section.length > 1 ? section : undefined);
+    planningNote = `Your line hits a wall or leaves the road in ${hazards.length === 1 ? 'one place' : `${hazards.length} places`}. The car will crash there and restart just past it.`;
+  } else { world.showError(); planningNote = undefined; }
+  setPhase('preview');
 }
 function confirmRoute() {
   if (!route) return;
+  world.showError();
   confirmedRoutes[turn] = route;
   if (humans()===1) { if(sessionOptions.mode==='solo-race'){try{confirmedRoutes=[route,...[0,1,2].map(i=>computerRoute(activeTrack,sessionOptions.difficulty,i,sessionOptions.seed+roundIndex))];}catch(error){renderPanel(error instanceof Error?error.message:'Computer plans could not start.');return;}} startRace(); return; }
   route = null; stroke = []; world.drawLine(null); notice.textContent = '';
@@ -437,7 +456,7 @@ canvas.addEventListener('pointerup', e => {
   if (drawingPointer !== e.pointerId || phase !== 'drawing') return;
   appendSample(e); drawingPointer = null; if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
   const result = compileRoute(stroke, activeTrack);
-  if (result.ok) { route = result.route; drawingTrim = result.drawing; world.drawLine(route, drawingTrim); world.showError(); setPhase('preview'); } else { world.showError(result.point, result.section); renderPanel(result.message); }
+  if (result.ok) showPreview(result.route, result.drawing); else { world.showError(result.point, result.section); renderPanel(result.message); }
 });
 function cancelStroke() { if (drawingPointer === null) return; drawingPointer = null; stroke = []; world.drawLine(null); if (phase === 'drawing') renderPanel('That drawing was interrupted. Start a fresh lap at the start line.'); }
 canvas.addEventListener('pointercancel', cancelStroke); canvas.addEventListener('lostpointercapture', cancelStroke);
@@ -447,7 +466,8 @@ function interrupt() {
 }
 window.addEventListener('blur', interrupt); document.addEventListener('visibilitychange', () => { if (document.hidden) interrupt(); });
 let previousLandscape = innerWidth >= innerHeight;
-window.addEventListener('resize', () => { const landscape=innerWidth>=innerHeight;if(landscape!==previousLandscape)interrupt();previousLandscape=landscape;world?.resize(); });
+window.addEventListener('resize', () => { const landscape=innerWidth>=innerHeight;if(landscape!==previousLandscape)interrupt();previousLandscape=landscape;applyUiScale();world?.resize(); });
+coarsePointer.addEventListener?.('change', () => { applyUiScale(); world?.resize(); });
 function updateDiagnostics() {
   document.querySelectorAll<HTMLButtonElement>('.diagnostic-pad').forEach((pad, i) => {
     pad.dataset.active = String(ownership.active(i) > 0); pad.querySelector('.pad-status')!.textContent = ownership.active(i) ? `${ownership.active(i)} TOUCH${ownership.active(i) > 1 ? 'ES' : ''} HELD` : 'READY';
@@ -487,7 +507,7 @@ try {
         if (event.type === 'landing') world.vehicles[event.player].impact(event.time, true);
         if (event.type === 'car-impact') { world.vehicles[event.player].impact(event.time); world.vehicles[event.otherPlayer!].impact(event.time); }
         if (event.type === 'collision') { world.vehicles[event.player].impact(event.time); showNotice(`${prefix}Barrier contact`); }
-        if (event.type === 'recovery') { previousPoses[event.player] = { ...session.racers[event.player].state.position, heading: session.racers[event.player].state.heading, y: session.racers[event.player].state.elevation }; showNotice(`${prefix}Recovering`); }
+        if (event.type === 'recovery') { previousPoses[event.player] = { ...session.racers[event.player].state.position, heading: session.racers[event.player].state.heading, y: session.racers[event.player].state.elevation }; showNotice(event.penalty ? `${prefix}Crashed · +${event.penalty.toFixed(1)} s` : `${prefix}Recovering`); }
         if (event.type === 'lap') showNotice(`${prefix}${session.racers[event.player].state.lap === lapCount ? 'Final lap' : `Lap ${session.racers[event.player].state.lap} / ${lapCount}`}`);
         if (event.type === 'finish' && playerCount > 1) showNotice(`${driverName(event.player)} finished · ${formatTime(event.time)}`);
       }

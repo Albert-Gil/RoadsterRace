@@ -3,9 +3,9 @@ import { laNightsTrack as track } from '../../src/core/tracks/la-nights';
 import { compileRoute, createPracticeSamples, sampleRoute } from '../../src/core/route';
 import { RaceSimulation } from '../../src/core/simulation';
 import { distance } from '../../src/core/geometry';
-import { jumpPoint, supported, validateSupports } from '../../src/core/support';
+import { jumpPoint, supported, assessSupports } from '../../src/core/support';
 import { insideBarrier } from '../../src/core/barriers';
-import { validateHopShortcuts } from '../../src/core/hop-shortcuts';
+import { assessHopShortcuts } from '../../src/core/hop-shortcuts';
 import { laBuildings } from '../../src/content/la-night-art';
 import { circuits } from '../../src/content/circuits';
 import { createTournament } from '../../src/core/tournament';
@@ -38,10 +38,11 @@ test('missing hop impacts the actual divider',()=>{
  s.distance=r.points.reduce((best,p)=>distance(p,s.position)<distance(sampleRoute(r,best),s.position)?p.distance:best,0);
  for(let i=0;i<90;i++)sim.step();expect(s.collisionCount).toBeGreaterThan(0);
 });
-test('partial/reverse alleys and unauthorized water crossings are rejected',()=>{
+test('partial/reverse alleys and unauthorized water crossings receive no exemption',()=>{
  const b=track.hopShortcuts![0].branch;
- expect(validateHopShortcuts(b.slice(35),track).ok).toBe(false);expect(validateHopShortcuts([...b].reverse(),track).ok).toBe(false);
- expect(validateSupports([{x:60,z:4},{x:74,z:4}],track).ok).toBe(false);
+ expect(assessHopShortcuts(b.slice(35),track).obstacles).toEqual([]);expect(assessHopShortcuts([...b].reverse(),track).obstacles).toEqual([]);
+ const water=Array.from({length:15},(_,i)=>({x:60+i,z:4})),assessed=assessSupports(water,track);
+ expect(assessed.jumps).toEqual([]);expect(assessed.unsupported.some(Boolean)).toBe(true);
 });
 test('every building footprint is supported and inside a protected block',()=>{
  for(const b of laBuildings)for(const x of [-1,1])for(const z of [-1,1]){

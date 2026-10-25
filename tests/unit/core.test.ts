@@ -31,16 +31,28 @@ describe('timed route compilation', () => {
     expect(fast.points[50].desiredSpeed).toBeGreaterThan(slow.points[50].desiredSpeed + 5);
     expect(paceToSpeed(0, coastalTrack.length)).toBe(9);
   });
-  test('rejects incomplete, reversed, off-road, skipped-sector and invalid-time traces', () => {
+  test('rejects incomplete, reversed, skipped-sector, broken and backwards-in-time traces', () => {
     const samples = createPracticeSamples(coastalTrack);
     expect(compileRoute(samples.slice(0, 90), coastalTrack).ok).toBe(false);
     const reverse = [...samples].reverse().map((p, i) => ({ ...p, time: i * 25 }));
     expect(compileRoute(reverse, coastalTrack).ok).toBe(false);
     const bad = samples.map(p => ({ ...p })); bad[80].x += 100;
     expect(compileRoute(bad, coastalTrack).ok).toBe(false);
-    expect(compileRoute([...samples.slice(0, Math.floor(samples.length*0.1)), ...samples.slice(Math.floor(samples.length*0.45))], coastalTrack).ok).toBe(false);
-    const gap = samples.map((p, i) => ({ ...p, time: p.time + (i > 60 ? 4000 : 0) }));
-    expect(compileRoute(gap, coastalTrack).ok).toBe(false);
+    // Drawn continuously straight across the island, past most of the circuit: not a lap.
+    const a = Math.floor(samples.length * 0.1), b = Math.floor(samples.length * 0.75), from = samples[a - 1], to = samples[b];
+    const across = Array.from({ length: 40 }, (_, i) => ({ x: from.x + (to.x - from.x) * (i + 1) / 41, z: from.z + (to.z - from.z) * (i + 1) / 41, time: from.time + 30 * (i + 1) }));
+    const skipped = [...samples.slice(0, a), ...across, ...samples.slice(b).map(p => ({ ...p, time: p.time - to.time + from.time + 1230 }))];
+    const rejected = compileRoute(skipped, coastalTrack); expect(rejected.ok).toBe(false);
+    if (!rejected.ok) expect(rejected.message).toContain('Continue around the circuit');
+    const backwards = samples.map((p, i) => ({ ...p, time: i === 61 ? p.time - 500 : p.time }));
+    expect(compileRoute(backwards, coastalTrack).ok).toBe(false);
+  });
+  test('a hesitation mid-lap is accepted and does not count as drawing time', () => {
+    const samples = createPracticeSamples(coastalTrack), reference = compileRoute(samples, coastalTrack);
+    const paused = samples.flatMap((p, i) => i === 60 ? [p, { ...p, x: p.x + 0.2, time: p.time + 4000 }] : [{ ...p, time: p.time + (i > 60 ? 4000 : 0) }]);
+    const result = compileRoute(paused, coastalTrack);
+    if (!result.ok || !reference.ok) throw new Error('both drawings should compile');
+    expect(result.route.drawingDuration).toBeLessThan(reference.route.drawingDuration + 0.5);
   });
 });
 

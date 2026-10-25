@@ -8,8 +8,8 @@ Conventions: SI units; horizontal plane (x, z) with y up; heading 0 points along
 
 | Item | Version |
 |---|---:|
-| Vehicle rules (`RULES.version`) | 13 |
-| Route compiler (`COMPILER_VERSION`) | 13 |
+| Vehicle rules (`RULES.version`) | 14 |
+| Route compiler (`COMPILER_VERSION`) | 14 |
 | Coastal Launch track (`coastal-launch`) | 3 |
 | Launchsite track (`orbital-launchyard`) | 3 |
 | Golden Gate track (`golden-gate`) | 3 |
@@ -36,7 +36,7 @@ Vehicle envelope: 2.2 m × 5.2 m. Race distance: 1–6 laps (default 2). Champio
 
 | Key | Value | Unit | Meaning |
 |---|---:|---|---|
-| `version` | 13 | — | Vehicle rules version; stored with records and championships |
+| `version` | 14 | — | Vehicle rules version; stored with records and championships |
 | `dt` | 0.0166667 | s | Fixed simulation step (two equal substeps per step) |
 | `laps` | 2 | laps | Default race distance |
 | `acceleration` | 6 | m/s² | Maximum pace-following acceleration |
@@ -66,6 +66,10 @@ Vehicle envelope: 2.2 m × 5.2 m. Race distance: 1–6 laps (default 2). Champio
 | `surfaceTransition` | 1.2 | m | Distance over which asphalt blends to sand |
 | `driftStartAngle` | 0.17 (9.74028°) | rad | Slip angle that starts a drift |
 | `driftEndAngle` | 0.09 (5.15662°) | rad | Slip angle below which a drift ends |
+| `recoveryHold` | 1 | s | Time a reset car waits before driving on |
+| `hazardApproach` | 12 | m | A crash this far before a drawn hazard resets the car past it |
+| `hazardPenaltySpeed` | 20 | m/s | Extra reset wait is the skipped circuit distance divided by this |
+| `repeatRecoveryWindow` | 15 | m | A second reset within this route distance also moves the car forward |
 
 Derived: level-ground manual hop peak 8.028 m and airtime 0.944 s. Santa Monica ramp launch upward velocity is `rampLaunchBoost + max(0, forward speed) × lipHeight / rampLength`. Grand Canyon uses its authored natural crest: `16 + max(0, forward speed) × 0.20` from 8 m to the 6 m receiving surface, across an 18 m unsupported opening. Grounded elevation changes do not add slope acceleration.
 
@@ -106,11 +110,15 @@ Derived: level-ground manual hop peak 8.028 m and airtime 0.944 s. Santa Monica 
 
 | Key | Value | Unit | Meaning |
 |---|---:|---|---|
-| `runoffRoadWidths` | 2.5 | road widths | Permitted drawing beyond the asphalt on each side |
-| `minimumLapProgress` | 0.72 | fraction | Minimum forward course progress for a completed lap with a safe cut |
+| `minimumLapProgress` | 0.72 | fraction | Minimum forward course progress, and share of covered stretches, for a completed lap |
 | `minimumPhysicalLap` | 0.45 | fraction of centerline length | Minimum actual drawing travel before finish can be counted |
 | `backwardTolerance` | 0.08 | m | Backward course movement tolerated before cleanup |
+| `backwardShare` | 0.25 | fraction of centerline length | Total backward course movement that marks a wrong-way lap |
 | `localLoopRoadWidths` | 2.5 | road widths | Course window searched for loops and spurs |
+| `longestPause` | 0.4 | s | Longest pause counted in a drawing; longer hesitations are shortened to this |
+| `coverageBins` | 40 | — | Evenly spaced circuit stations checked for lap coverage |
+| `coverageRoadWidths` | 0.75 | road widths | A station counts as covered when the line passes within this distance beyond the asphalt |
+| `longestStepRoadWidths` | 2 | road widths | Longer jumps between touch samples mean the stroke lost contact |
 
 ## GATE_RULES
 
@@ -118,7 +126,10 @@ Derived: level-ground manual hop peak 8.028 m and airtime 0.944 s. Santa Monica 
 |---|---:|---|---|
 | `leadIn` | 12 | m | Drawing may start this far before the start/finish line |
 | `longitudinalTolerance` | 1 | m | Along-track tolerance at the line |
-| `lateralTolerance` | 0.5 | m | Across-track tolerance beyond the gate width |
+| `lateralTolerance` | 4 | m | Start tolerance beyond each end of the gate |
+| `startBeyond` | 4 | m | Drawing may also start this far past the line |
+| `finishLateral` | 24 | m | A finish crossing counts this far beyond each end of the gate |
+| `closeDistance` | 40 | m | Lifting up to this far before the line still closes the lap onto it |
 | `blendDistance` | 20 | m | Length blended at each end of the lap |
 
 ## SHORTCUT_RULES

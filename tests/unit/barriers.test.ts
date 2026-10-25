@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest';
 import { barrierContact, blockedRouteSection, sweepVehicle } from '../../src/core/barriers';
 import { compileRoute, createPracticeSamples, gestureSpeeds } from '../../src/core/route';
 import { coastalTrack } from '../../src/core/track';
-import { RaceSimulation } from '../../src/core/simulation';
+import { RaceSimulation, RULES } from '../../src/core/simulation';
 import { cumulative, distance, mix, projectToPolyline } from '../../src/core/geometry';
 import { buildRoadsterGeometry } from '../../src/presentation/roadster-geometry.js';
 import type { TrackDefinition } from '../../src/core/types';
@@ -41,11 +41,22 @@ describe('solid track boundaries', () => {
       expect(min, `${barrier.id} runoff: ${min.toFixed(2)}m`).toBeGreaterThanOrEqual(5);
     }
   });
-  test('solid crossings are rejected while the normal complete route is accepted', () => {
-    const normal = createPracticeSamples(coastalTrack); expect(compileRoute(normal, coastalTrack).ok).toBe(true);
+  test('a line through a solid is accepted; the car crashes, is reset just past it with a penalty and finishes', () => {
+    const normal = createPracticeSamples(coastalTrack), clean = compileRoute(normal, coastalTrack); if (!clean.ok) throw new Error(clean.message);
+    expect(clean.route.hazards).toBeUndefined();
     const blockedTrack = { ...coastalTrack, barriers: [{ id: 'blocking-fixture', height: 1, footprint: [{ x: -5, z: -40 }, { x: 0, z: -40 }, { x: 0, z: -20 }, { x: -5, z: -20 }] }] };
-    const result = compileRoute(normal, blockedTrack); expect(result.ok).toBe(false);
-    if (!result.ok) { expect(result.message).toContain('barrier'); expect(result.section).toHaveLength(2); }
+    const result = compileRoute(normal, blockedTrack); if (!result.ok) throw new Error(result.message);
+    const [hazard] = result.route.hazards ?? [];
+    expect(hazard?.kind).toBe('barrier'); expect(hazard.to).toBeGreaterThan(hazard.from);
+    const sim = new RaceSimulation(result.route, blockedTrack, 1), events: { type: string; penalty?: number }[] = [];
+    let resetAt = -1;
+    for (let i = 0; i < 60 * 240 && !sim.state.finished; i++) { sim.step(); for (const e of sim.drainEvents()) { events.push(e); if (e.type === 'recovery' && resetAt < 0) resetAt = sim.state.distance; } }
+    expect(sim.state.finished).toBe(true);
+    const recovery = events.find(e => e.type === 'recovery');
+    expect(recovery?.penalty).toBeCloseTo(hazard.course / RULES.hazardPenaltySpeed, 6);
+    expect(resetAt).toBeCloseTo(hazard.to, 6);
+    const reference = new RaceSimulation(clean.route, coastalTrack, 1); for (let i = 0; i < 60 * 240 && !reference.state.finished; i++) reference.step();
+    expect(sim.state.finishTime!).toBeGreaterThan(reference.state.finishTime!);
   });
   test('track versions prevent accidentally racing obsolete geometry', () => {
     const r = compileRoute(createPracticeSamples(coastalTrack), coastalTrack); if (!r.ok) throw new Error(r.message);

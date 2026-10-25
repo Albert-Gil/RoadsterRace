@@ -1,6 +1,6 @@
 import { clamp, cumulative, distance, lerp, mix, projectToPolyline } from './geometry';
 import { insideBarrier } from './barriers';
-import { annotateRoad, locateRoad, roadHeight, roadSupported } from './elevation';
+import { annotateRoad, locateRoad, roadHeight, roadSupported, sectionAt } from './elevation';
 import type { Point, RaceState, TrackDefinition, TrackJump } from './types';
 
 export const FLIGHT_RULES = Object.freeze({ gravity: 36, hopGravity: 72, rampLaunchBoost: 8, carHeight: 1.05, waterHeight: -2.4 });
@@ -51,51 +51,56 @@ export function takeoffCrossing(a: Point, b: Point, track: TrackDefinition) {
   }
   return null;
 }
-/** Water is legal only through a complete, forward authored ramp-to-landing traversal. */
-export function validateSupports(points: Point[], track: TrackDefinition): { ok: true; jumps: string[] } | { ok: false; point: Point; message: string } {
-  if(track.sections){
-    const located=annotateRoad(points,track),traversals=new Set<string>();
-    for(let i=0;i<located.length;i++){
-      const p=located[i],r=locateRoad(p,track);
-      if(points[i].sectionId && points[i].sectionId!==p.sectionId && Math.abs((points[i].y??r.height)-r.height)>.75)return {ok:false,point:p,message:'The line switches to a different road level.'};
-      if(r.section?.flight){const j=track.jumps!.find(j=>j.kind==='crest')!,c=jumpCoordinates(p,j);if(Math.abs(c.across)>(j.width-track.carWidth)/2-.12 || i&&p.courseProgress!<located[i-1].courseProgress!-.1)return {ok:false,point:p,message:'Keep the crossing straight and leave room for the car.'};traversals.add(j.id);}
-      else {
-        const a=located[Math.max(0,i-1)],b=located[Math.min(located.length-1,i+1)],heading=Math.atan2(b.x-a.x,b.z-a.z);
-        for(const f of [-1,1])for(const side of [-1,1]){
-          const probe={...p,x:p.x+Math.sin(heading)*(track.carLength/2-.1)*f+Math.cos(heading)*track.carWidth/2*side,z:p.z+Math.cos(heading)*(track.carLength/2-.1)*f-Math.sin(heading)*track.carWidth/2*side};
-          const q=locateRoad(probe,track),edgeFlight=q.section?.flight&&Math.abs(jumpCoordinates(probe,track.jumps![0]).across)<=(track.roadWidth-track.carWidth)/2;
-          if(!(q.section&&!q.section.flight&&q.distance<=q.supportWidth/2+1e-6)&&!edgeFlight)return {ok:false,point:p,message:'Leave room for the car on the supported canyon trail.'};
-        }
+/** Heading along a point list at index i, from its neighbours. */
+const headingAt = (points: Point[], i: number) => { const a = points[Math.max(0, i - 1)], b = points[Math.min(points.length - 1, i + 1)]; return Math.atan2(b.x - a.x, b.z - a.z); };
+
+/** A forward pass from the ramp entry to beyond the landing, inside the corridor at both ends. */
+function rampTraversal(points: Point[], jump: TrackJump, track: TrackDefinition) {
+  const half = (jump.width - track.carWidth) / 2, c = points.map(p => jumpCoordinates(p, jump));
+  const entry = c.findIndex((p, i) => i > 0 && c[i - 1].along <= 0 && p.along > 0 && Math.abs(p.across) <= half);
+  if (entry < 0) return false;
+  const exit = c.findIndex((p, i) => i > entry && p.along >= jump.rampLength + jump.gap + track.carLength / 2 && Math.abs(p.across) <= half);
+  return exit > 0 && c.slice(entry, exit + 1).every((p, i, all) => i === 0 || p.along >= all[i - 1].along - 0.5);
+}
+/** The natural crest: enter and leave the flight section inside its corridor, moving forward. */
+function crestTraversal(located: Point[], track: TrackDefinition) {
+  const jump = track.jumps?.find(j => j.kind === 'crest'); if (!jump) return false;
+  const half = (jump.width - track.carWidth) / 2, flight = located.map(p => !!sectionAt(track, p.courseProgress ?? 0)?.flight);
+  const first = flight.indexOf(true), last = flight.lastIndexOf(true);
+  if (first < 0) return false;
+  const inside = (p: Point) => Math.abs(jumpCoordinates(p, jump).across) <= half;
+  return inside(located[first]) && inside(located[last]) && located.slice(first, last + 1).every((p, i, all) => i === 0 || p.courseProgress! >= all[i - 1].courseProgress! - 0.5);
+}
+
+/**
+ * Where the drawn line leaves physical support. Nothing here rejects a line: unsupported
+ * points become hazards (the car falls and is reset past them). Authored jumps the line
+ * takes forward inside their corridor are approved and excused over their gap.
+ */
+export function assessSupports(points: Point[], track: TrackDefinition): { jumps: string[]; unsupported: boolean[] } {
+  if (track.sections) {
+    const located = annotateRoad(points, track), crest = crestTraversal(located, track), jump = track.jumps?.find(j => j.kind === 'crest');
+    const unsupported = located.map((p, i) => {
+      const r = locateRoad(p, track);
+      if (points[i].sectionId && points[i].sectionId !== p.sectionId && Math.abs((points[i].y ?? r.height) - r.height) > .75) return true;
+      if (r.section?.flight) return !crest;
+      const heading = headingAt(located, i);
+      for (const f of [-1, 1]) for (const side of [-1, 1]) {
+        const probe = { ...p, x: p.x + Math.sin(heading) * (track.carLength / 2 - .1) * f + Math.cos(heading) * track.carWidth / 2 * side, z: p.z + Math.cos(heading) * (track.carLength / 2 - .1) * f - Math.sin(heading) * track.carWidth / 2 * side };
+        const q = locateRoad(probe, track), edgeFlight = q.section?.flight && jump && Math.abs(jumpCoordinates(probe, jump).across) <= (track.roadWidth - track.carWidth) / 2;
+        if (!(q.section && !q.section.flight && q.distance <= q.supportWidth / 2 + 1e-6) && !edgeFlight) return true;
       }
-    }
-    return {ok:true,jumps:[...traversals]};
+      return false;
+    });
+    return { jumps: crest && jump ? [jump.id] : [], unsupported };
   }
-  if (!track.supports) return { ok: true, jumps: [] };
-  const traversals = new Set<string>();
-  for (let i = 1; i < points.length; i++) {
-    const a = points[i - 1], b = points[i], heading = Math.atan2(b.x - a.x, b.z - a.z);
-    const steps = Math.max(1, Math.ceil(distance(a, b) / 0.4));
-    for (let n = 0; n <= steps; n++) {
-      const p = mix(a, b, n / steps);
-      const corridor = track.jumps?.find(j => {
-        const c = jumpCoordinates(p, j);
-        return c.along >= -track.carLength && c.along <= j.corridorLength && Math.abs(c.across) <= (j.width - track.carWidth) / 2 - 0.12;
-      });
-      if (!vehicleSupported(p, heading, track)) {
-        if (!corridor || (b.x - a.x) * corridor.forward.x + (b.z - a.z) * corridor.forward.z <= 0) return { ok: false, point: p, message: 'The line crosses unsupported water. Stay on the pier or enter the ramp straight.' };
-        traversals.add(corridor.id);
-      }
-    }
-  }
-  for (const id of traversals) {
-    const j = track.jumps!.find(j => j.id === id)!;
-    const entry = points.findIndex((p, i) => i > 0 && jumpCoordinates(points[i - 1], j).along <= 0 && jumpCoordinates(p, j).along > 0 && Math.abs(jumpCoordinates(p, j).across) <= (j.width - track.carWidth) / 2);
-    const exit = points.findIndex((p, i) => i > entry && jumpCoordinates(p, j).along >= j.rampLength + j.gap + track.carLength / 2 && Math.abs(jumpCoordinates(p, j).across) <= (j.width - track.carWidth) / 2);
-    if (entry < 0 || exit < 0 || points.slice(entry, exit + 1).some((p, i, all) => {
-      const c = jumpCoordinates(p, j); return Math.abs(c.across) > (j.width - track.carWidth) / 2 - 0.12 || i > 0 && c.along < jumpCoordinates(all[i - 1], j).along - 0.01;
-    })) return { ok: false, point: j.from, message: 'Enter the ramp straight and leave room for the car on the landing deck.' };
-  }
-  return { ok: true, jumps: [...traversals] };
+  if (!track.supports) return { jumps: [], unsupported: points.map(() => false) };
+  const approved = (track.jumps ?? []).filter(j => rampTraversal(points, j, track));
+  const unsupported = points.map((p, i) => {
+    if (vehicleSupported(p, headingAt(points, i), track)) return false;
+    return !approved.some(j => { const c = jumpCoordinates(p, j); return c.along >= -track.carLength && c.along <= j.corridorLength && Math.abs(c.across) <= (j.width - track.carWidth) / 2; });
+  });
+  return { jumps: approved.map(j => j.id), unsupported };
 }
 
 /** Both branches share the same entry/exit distance for checkpoints and standings. */

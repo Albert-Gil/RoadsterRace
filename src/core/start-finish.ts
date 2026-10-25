@@ -2,7 +2,7 @@ import { clamp, cumulative, distance, lerp, mix } from './geometry';
 import { DRAWING_RULES } from './route-cleanup';
 import type { DrawSample, Point, StartFinishGate, TrackDefinition } from './types';
 
-export const GATE_RULES = Object.freeze({ leadIn: 12, longitudinalTolerance: 1, lateralTolerance: 0.5, blendDistance: 20 });
+export const GATE_RULES = Object.freeze({ leadIn: 12, longitudinalTolerance: 1, lateralTolerance: 4, startBeyond: 4, finishLateral: 24, closeDistance: 40, blendDistance: 20 });
 export function createStartFinish(center: Point, next: Point, width: number): StartFinishGate {
   const length = distance(center, next) || 1;
   return { center: { ...center }, forward: { x: (next.x - center.x) / length, z: (next.z - center.z) / length }, width, leadIn: GATE_RULES.leadIn };
@@ -18,16 +18,17 @@ export function gatePoint(track: TrackDefinition, across: number, along = 0): Po
 }
 export function canStartDrawing(point: Point, track: TrackDefinition) {
   const p = gateCoordinates(point, track), g = startGate(track);
-  return p.along >= -g.leadIn - 0.001 && p.along <= GATE_RULES.longitudinalTolerance + 0.001 && Math.abs(p.across) <= g.width / 2 + GATE_RULES.lateralTolerance + 0.001;
+  return p.along >= -g.leadIn - 0.001 && p.along <= GATE_RULES.startBeyond + 0.001 && Math.abs(p.across) <= g.width / 2 + GATE_RULES.lateralTolerance + 0.001;
 }
 function projectSample(p: DrawSample, track: TrackDefinition): DrawSample {
   return { ...gatePoint(track, clamp(gateCoordinates(p, track).across, -startGate(track).width / 2, startGate(track).width / 2)), time: p.time };
 }
-function crossing(a: DrawSample, b: DrawSample, track: TrackDefinition) {
+/** Forward crossing of the gate line. The finish also counts a crossing on the runoff beside the road. */
+function crossing(a: DrawSample, b: DrawSample, track: TrackDefinition, lateral: number = GATE_RULES.lateralTolerance) {
   const aa = gateCoordinates(a, track), bb = gateCoordinates(b, track);
   if (aa.along > 1e-7 || bb.along < -1e-7 || bb.along - aa.along <= 1e-7) return null;
   const t = clamp(-aa.along / (bb.along - aa.along), 0, 1), point = { ...mix(a, b, t), time: lerp(a.time, b.time, t) };
-  if (Math.abs(gateCoordinates(point, track).across) > startGate(track).width / 2 + GATE_RULES.lateralTolerance) return null;
+  if (Math.abs(gateCoordinates(point, track).across) > startGate(track).width / 2 + lateral) return null;
   return projectSample(point, track);
 }
 /** Shared by live coloring and compilation: no pre-gate timing enters the counted stroke. */
@@ -47,7 +48,7 @@ export function trimDrawing(samples: DrawSample[], track: TrackDefinition) {
   let travelled = 0, ended = false;
   for (let i = start.next; i < samples.length; i++) {
     const p = samples[i];
-    const before = lap.at(-1)!, hit = crossing(before, p, track);
+    const before = lap.at(-1)!, hit = crossing(before, p, track, GATE_RULES.finishLateral);
     travelled += distance(before, p);
     if (travelled >= track.length * DRAWING_RULES.minimumPhysicalLap && hit) {
       lap.push(hit); tail = [hit, ...samples.slice(i)]; ended = true; break;
@@ -55,9 +56,16 @@ export function trimDrawing(samples: DrawSample[], track: TrackDefinition) {
     if (distance(before, p) > 0.001) lap.push(p);
   }
   if (!ended) {
+    // Lifting a little before the line still finishes: the lap closes straight onto the gate
+    // at the pace of the last few metres. Lap coverage is validated afterwards.
     const last = lap.at(-1)!, at = gateCoordinates(last, track);
-    if (travelled < track.length * DRAWING_RULES.minimumPhysicalLap || Math.abs(at.along) > GATE_RULES.longitudinalTolerance || Math.abs(at.across) > startGate(track).width / 2 + GATE_RULES.lateralTolerance) return { ok: false as const, message: 'Complete one lap and finish anywhere across the start/finish line.', point: last };
-    lap[lap.length - 1] = projectSample(last, track);
+    if (travelled < track.length * DRAWING_RULES.minimumPhysicalLap || at.along < -GATE_RULES.closeDistance || at.along > GATE_RULES.longitudinalTolerance || Math.abs(at.across) > startGate(track).width / 2 + GATE_RULES.finishLateral) return { ok: false as const, message: 'Complete one lap and finish anywhere across the start/finish line.', point: last };
+    if (at.along >= -GATE_RULES.longitudinalTolerance) lap[lap.length - 1] = projectSample(last, track);
+    else {
+      let k = lap.length - 1; while (k > 0 && distance(lap[k], last) < 10) k--;
+      const pace = distance(lap[k], last) / Math.max(1, last.time - lap[k].time), end = projectSample(last, track);
+      lap.push({ ...end, time: last.time + distance(last, end) / Math.max(0.004, pace) });
+    }
   }
   // The first forward finish crossing ends the lap. Any later movement is display-only,
   // including a long detour, pause, reversal or another lap before the pointer is lifted.
