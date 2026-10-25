@@ -250,7 +250,7 @@ kbd { font: inherit; font-size: 8px; border: 1px solid var(--border); border-rad
 
 /* Motorsport presentation. Shared semantic tokens keep future restyling independent. */
 .scene-vignette, [data-theme="graphite"] .scene-vignette { background: linear-gradient(180deg, #101820d9, #10182000 18%, #10182000 72%, #101820b3); }
-[data-phase="welcome"] .scene-vignette, [data-phase="results"] .scene-vignette { background: linear-gradient(90deg, #080e16f5, #101820d4 34%, #1018203d 68%, #1018204d), linear-gradient(0deg, #080e16e0, transparent 50%, #080e16a6); }
+[data-phase="welcome"] .scene-vignette, [data-phase="tutorial-intro"] .scene-vignette, [data-phase="results"] .scene-vignette { background: linear-gradient(90deg, #080e16f5, #101820d4 34%, #1018203d 68%, #1018204d), linear-gradient(0deg, #080e16e0, transparent 50%, #080e16a6); }
 .topbar { top: max(20px, env(safe-area-inset-top)); }
 .brand-mark { border-radius: 0; box-shadow: none; width: 46px; height: 36px; }
 .brand-name { font-family: var(--font-display); font-style: italic; font-size: 24px; letter-spacing: .035em; }
@@ -354,7 +354,7 @@ p { font-size: 14px; line-height: 1.5; }
   .finish-time { font-size: 60px; }
   .race-hud strong { font-size: 28px; }
 }
-[data-phase="welcome"] .scene-vignette, [data-phase="results"] .scene-vignette { background: linear-gradient(90deg, #080e16e8, #101820a6 32%, transparent 64%), linear-gradient(0deg, #080e16ad, transparent 36%, transparent 78%, #080e1680); }
+[data-phase="welcome"] .scene-vignette, [data-phase="tutorial-intro"] .scene-vignette, [data-phase="results"] .scene-vignette { background: linear-gradient(90deg, #080e16e8, #101820a6 32%, transparent 64%), linear-gradient(0deg, #080e16ad, transparent 36%, transparent 78%, #080e1680); }
 .brand { min-height: 44px; }
 .standing-laps { display: block; margin-top: 4px; font-size: 10px; font-weight: 400; color: var(--muted); white-space: nowrap; }
 @media (max-height: 650px) { .standing-laps { font-size: 9px; } .pod-lap { font-size: 8px; } }
@@ -675,4 +675,32 @@ p { font-size: 14px; line-height: 1.5; }
 }
 @media (orientation:portrait) and (max-width:360px) {
  .playground:is([data-players="3"],[data-players="4"]) .race-hud > div:last-child { display:none; }
+}
+
+/* Tutorial coach: a compact card over the course corner. It never takes pointer input, so drawing continues beneath it. */
+.tutorial-coach { position:absolute;z-index:9;left:calc(env(safe-area-inset-left,0px) + 12px);top:calc(env(safe-area-inset-top,0px) + 12px);max-width:min(360px,calc(100vw - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px) - 2 * var(--ability-rail) - 24px));display:flex;flex-direction:column;gap:4px;padding:10px 14px;background:var(--surface);color:var(--text);border-left:3px solid var(--accent);box-shadow:0 3px 14px #0004;pointer-events:none;font:500 12px/1.4 var(--font-body); }
+.tutorial-coach[hidden] { display:none; }
+.tutorial-coach .coach-eyebrow { font:600 9px/1 var(--font-body);letter-spacing:.14em;color:var(--muted); }
+.tutorial-coach .coach-title { font:italic 700 18px/1.1 var(--font-display); }
+.tutorial-coach .coach-action { margin-top:2px;font-weight:650;color:var(--accent); }
+.playground[data-coaching="true"] .tutorial-coach { max-width:min(400px,calc(100vw - env(safe-area-inset-left,0px) - env(safe-area-inset-right,0px) - 2 * var(--ability-rail) - 24px));left:calc(env(safe-area-inset-left,0px) + var(--ability-rail) + 8px);padding:14px 18px; }
+.playground[data-coaching="true"] .tutorial-coach .coach-title { font-size:24px; }
+.playground[data-coaching="true"] .scene-vignette { background:#0c142440; }
+.playground .ability-control[data-coach="true"] { outline:3px solid var(--accent);outline-offset:3px;animation:coach-pulse 1.1s ease-in-out infinite; }
+@keyframes coach-pulse { 50% { transform:scale(1.08); } }
+@media (max-height: 650px) and (orientation: landscape) {
+  .tutorial-coach { font-size:10px;padding:8px 11px;max-width:min(300px,calc(100vw - 2 * var(--ability-rail) - 24px)); }
+  .tutorial-coach .coach-title { font-size:15px; }
+  .playground[data-coaching="true"] .tutorial-coach { padding:10px 13px; }
+  .playground[data-coaching="true"] .tutorial-coach .coach-title { font-size:19px; }
+}
+@media (orientation:portrait) and (max-width:650px) {
+  .tutorial-coach, .playground[data-coaching="true"] .tutorial-coach { left:calc(env(safe-area-inset-left,0px) + 8px);right:calc(env(safe-area-inset-right,0px) + 8px);max-width:none;font-size:11px; }
+  .playground:is([data-phase="countdown"],[data-coaching="true"]) .tutorial-coach { top:calc(env(safe-area-inset-top,0px) + 50px); }
+}
+/* Four welcome choices stay on one row on short landscape phones, keeping the panel clear of the brand. */
+@media (max-height: 650px) and (orientation: landscape) {
+  .playground[data-phase="welcome"] .panel-actions { gap: 6px; }
+  .playground[data-phase="welcome"] .panel-actions .text-button { padding: 9px 7px; }
+  .playground[data-phase="welcome"] .panel-actions .primary-button { gap: 14px; padding-left: 14px; padding-right: 14px; }
 }

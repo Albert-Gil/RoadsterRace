@@ -4,7 +4,7 @@ import type { Page } from '@playwright/test';
  * Production-safe helpers: they read only the rendered interface, never the development
  * inspector (`window.__roadster`), so the same checks work against built Pages releases.
  */
-export type UiPhase = 'welcome' | 'setup' | 'handoff' | 'drawing' | 'preview' | 'ready' | 'countdown' | 'racing' | 'paused' | 'results' | 'diagnostics' | 'error' | 'tour-intro' | 'tour-resume' | 'tour-exit' | 'tour-replace';
+export type UiPhase = 'welcome' | 'setup' | 'handoff' | 'drawing' | 'preview' | 'ready' | 'countdown' | 'racing' | 'paused' | 'results' | 'diagnostics' | 'error' | 'tour-intro' | 'tour-resume' | 'tour-exit' | 'tour-replace' | 'tutorial-intro';
 
 export const currentPhase = (page: Page) => page.locator('.playground').getAttribute('data-phase') as Promise<UiPhase>;
 export function waitForPhase(page: Page, phase: UiPhase, timeout?: number) {

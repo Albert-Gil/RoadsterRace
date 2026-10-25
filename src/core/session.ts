@@ -1,4 +1,5 @@
-export type GameMode = 'solo-race' | 'multiplayer' | 'time-trial';
+/** `tutorial` is a guided single-car lap; it never creates records or tournaments. */
+export type GameMode = 'solo-race' | 'multiplayer' | 'time-trial' | 'tutorial';
 export type Difficulty = 'easy' | 'normal' | 'hard';
 export type DriverController = 'human' | 'computer';
 export interface SessionOptions { mode: GameMode; difficulty: Difficulty; seed: number }

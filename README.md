@@ -1,6 +1,6 @@
 # Roadster Race
 
-A browser racing game with Solo Race against three computer drivers, local Multiplayer for two to four people, and Time Trial with a personal-best ghost: draw a line and its pace, race one to six laps, and time your rechargeable thrust and hop. Visuals are replaceable through shared settings and assets. No account, backend, or external service is required to play.
+A browser racing game with Solo Race against three computer drivers, local Multiplayer for two to four people, Time Trial with a personal-best ghost, and a guided Tutorial: draw a line and its pace, race one to six laps, and time your rechargeable thrust and hop. Visuals are replaceable through shared settings and assets. No account, backend, or external service is required to play.
 
 Six venues are available: Coastal Launch, Launchsite, Golden Gate, Santa Monica, Grand Canyon and LA nights. Grand Canyon adds a 568.8 m packed-dirt figure-eight with elevated trails and an automatic crest jump; LA nights adds a channel jump and a hidden Hop alley. Newly created Full Tours include all six. See the [Grand Canyon guide](docs/GRAND_CANYON.md) and [LA nights guide](docs/LA_NIGHTS.md).
 
@@ -41,10 +41,12 @@ The supplied desktop runtime also provides pnpm at `C:\Users\alber\.cache\codex-
 
 1. Select **Solo Race** or **Time Trial**, choose 1–6 laps, enter your driver name and select a paint finish. Choose **Draw racing line** to continue.
 2. Start anywhere across the highlighted start/finish strip, or up to 12 metres behind it, and draw one complete lap following the arrows. You can draw well outside the road on supported runoff, but solid barriers, cliffs and unauthorized water still block the line. Draw slowly for deliberate corners and faster for straights. Once you cross the finish, lift anywhere; all later drawing is ignored.
-3. Inspect the route and choose **Race this line**. Explanations and a practice example are reserved for a future tutorial.
+3. Inspect the route and choose **Race this line**.
 4. Tap **THRUST** (desktop **Space**) for a 0.7-second burst, recharging in five seconds. Tap **HOP** (**H**) for about one second of lift, recharging independently in seven seconds. Both can activate together. Holding does not repeat.
 5. Use **Escape** or Pause to pause. App/tab interruption also pauses the race. Resume includes a countdown.
 6. Retry the same line or draw a new one. Time Trial saves your fastest lap and replay locally, with an in-memory fallback when storage is unavailable.
+
+New players can choose **Tutorial** on the home screen: one guided lap on Coastal Launch that explains drawing and pace (with an optional **Example** line), then pauses the race once for **Thrust** and once for **Hop** until you press each. It saves no records and leaves your chosen circuit and lap count unchanged. See [the tutorial guide](docs/TUTORIAL.md).
 
 ### Race with friends
 
