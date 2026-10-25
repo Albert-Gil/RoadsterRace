@@ -16,7 +16,7 @@ export const appShellMarkup = () => `
     <section class="race-hud" aria-label="Race timing" hidden><div><small>TIME</small><strong id="race-time">00:00.00</strong></div><span class="hud-divider"></span><div><small id="lap-label">LAP</small><strong id="race-lap">1 <i>/ 2</i></strong></div><span class="hud-divider"></span><div><small id="pace-label">PACE</small><strong id="race-speed">0 <i>km/h</i></strong></div></section>
     <section id="panel" class="panel" aria-live="polite"></section>
     <div class="countdown" hidden><span id="countdown-value">3</span><small id="countdown-label">YOUR LINE. YOUR MOMENT.</small></div>
-    <div class="race-notice" role="status"></div><div id="race-controls"></div>
+    <div class="tutorial-coach" role="status" aria-live="polite" hidden></div><div class="race-notice" role="status"></div><div id="race-controls"></div>
     <button class="pause-button icon-button" data-action="pause" aria-label="Pause race" hidden>Ⅱ</button>
     <div class="race-progress" hidden><span></span></div>
     <div class="rotate-note"><span aria-hidden="true">↻</span> Turn your device sideways for the best line.</div>
