@@ -1,6 +1,6 @@
 export interface Point { x: number; z: number; y?: number; sectionId?: string; courseProgress?: number }
 export interface DrawSample extends Point { time: number }
-export interface TrackBarrier { id: string; footprint: Point[]; height: number; baseHeight?: number; sectionId?: string; kind?: 'infield' | 'bridge-rail' | 'bridge-support' | 'pier-rail' | 'service-barrier' | 'cliff-rail' | 'cliff-face'; bridgeId?: string }
+export interface TrackBarrier { id: string; footprint: Point[]; height: number; baseHeight?: number; sectionId?: string; kind?: 'infield' | 'bridge-rail' | 'bridge-support' | 'pier-rail' | 'service-barrier' | 'cliff-rail' | 'cliff-face' | 'rock'; bridgeId?: string }
 export interface RoadSection { id: string; from: number; to: number; heights: [number, number][]; supportWidth: number; flight?: boolean }
 export interface SupportSurface { id: string; footprint: Point[] }
 export interface TrackJump {

@@ -11,5 +11,5 @@
     "esModuleInterop": true,
     "types": ["vite/client"]
   },
-  "include": ["src", "tests/unit", "vite.config.ts", "capacitor.config.ts", "tools/env-bake", "tools/props-preview"]
+  "include": ["src", "tests/unit", "vite.config.ts", "capacitor.config.ts", "tools/env-bake", "tools/props-preview", "tools/landscape-preview"]
 }

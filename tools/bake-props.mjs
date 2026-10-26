@@ -1,21 +1,27 @@
-// Bake selected CC0 Kenney models (kenney.nl) into one compact, vertex-coloured geometry file.
+// Bake selected CC0 models (Kenney packs and Poly Haven scans) into one compact, vertex-coloured
+// geometry file per venue.
 //
-//   node tools/bake-props.mjs [sourceDir]      (default: asset-sources/kenney, git-ignored)
+//   node tools/bake-props.mjs [sourceDir]      (default: asset-sources, git-ignored)
 //
 // Sources are the official Kenney packs, each zip unzipped into its own folder:
 // asset-sources/kenney/kenney_{watercraft,pirate,suburban,racing,nature}/ (the zips themselves are
 // kept in asset-sources/kenney/zips/; provenance, versions and hashes in docs/ASSET_RIGHTS.md).
 // Each model's colour atlas is sampled once per vertex, so every prop shares one plain material
-// and a whole venue batches into one draw call.
+// and a whole venue batches into one draw call. Photo-scanned rocks (asset-sources/polyhaven/<id>/,
+// unpacked from polyhaven-rocks.pack) are welded, coloured from their photo texture and simplified
+// with meshoptimizer to a phone-friendly triangle budget.
 // Output: public/assets/models/<venue>-props.bin — [u32 header bytes][JSON header][binary body].
 import { inflateSync } from 'node:zlib';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import jpeg from 'jpeg-js';
+import { MeshoptSimplifier } from 'meshoptimizer';
 
-const source = process.argv[2] ?? 'asset-sources/kenney';
+const root = process.argv[2] ?? 'asset-sources', source = join(root, 'kenney');
 const glb = (pack, file) => join(source, pack, 'Models', 'GLB format', `${file}.glb`);
-const nature = file => join(source, 'kenney_nature', 'Models', 'GLTF format', `${file}.glb`);
 const suburbanVariation = name => join(source, 'kenney_suburban', 'Models', 'Textures', `variation-${name}.png`);
+/** A Poly Haven scan, simplified to about `triangles` triangles (a variant suffix names extra levels of detail). */
+const scan = (id, triangles, variant = '') => ({ key: `scan-${id.replaceAll('_', '-')}${variant ? `-${variant}` : ''}`, path: join(root, 'polyhaven', id, `${id}_1k.gltf`), triangles });
 
 /**
  * One file per venue, so a venue only downloads its own props. Keys are stable roles used by the
@@ -30,6 +36,13 @@ export const CATALOGS = {
     ...['a', 'b', 'c', 'd', 'e', 'g', 'h', 'n', 's', 'u'].map(type => ({ key: `house-${type}`, path: glb('kenney_suburban', `building-type-${type}`), texture: suburbanVariation('c') })),
     ...['b', 'd', 'n'].map(type => ({ key: `house-${type}-blue`, path: glb('kenney_suburban', `building-type-${type}`), texture: suburbanVariation('a') })),
     ...['tree-large', 'tree-small'].map(file => ({ key: `suburban-${file}`, path: glb('kenney_suburban', file) })),
+  ],
+  // Hero boulders sit in the solid formations; cliff faces are open reliefs set into tors and ledges;
+  // the "-lo" levels are loose rocks scattered by the hundred.
+  launchsite: [
+    ...['02', '03', '04', '05'].map(n => scan(`namaqualand_boulder_${n}`, 700)),
+    scan('namaqualand_cliff_01', 2600), scan('rock_face_01', 1600),
+    ...['02', '03', '05'].map(n => scan(`namaqualand_boulder_${n}`, 220, 'lo')), scan('rock_07', 120, 'lo'), scan('rock_09', 120, 'lo'),
   ],
 };
 
@@ -59,13 +72,17 @@ function decodePng(buffer) {
   } };
 }
 
-// ---- GLB reading ----
+// ---- glTF reading (.glb, or .gltf with one external buffer) ----
 function readGlb(path) {
-  const buffer = readFileSync(path); let offset = 12, json = null, bin = null;
-  while (offset < buffer.length) {
-    const length = buffer.readUInt32LE(offset), type = buffer.readUInt32LE(offset + 4), chunk = buffer.subarray(offset + 8, offset + 8 + length);
-    if (type === 0x4e4f534a) json = JSON.parse(chunk.toString('utf8')); else if (type === 0x004e4942) bin = chunk;
-    offset += 8 + length;
+  let json = null, bin = null;
+  if (path.endsWith('.gltf')) { json = JSON.parse(readFileSync(path, 'utf8')); bin = readFileSync(join(dirname(path), json.buffers[0].uri)); }
+  else {
+    const buffer = readFileSync(path); let offset = 12;
+    while (offset < buffer.length) {
+      const length = buffer.readUInt32LE(offset), type = buffer.readUInt32LE(offset + 4), chunk = buffer.subarray(offset + 8, offset + 8 + length);
+      if (type === 0x4e4f534a) json = JSON.parse(chunk.toString('utf8')); else if (type === 0x004e4942) bin = chunk;
+      offset += 8 + length;
+    }
   }
   const accessor = index => {
     const a = json.accessors[index], view = json.bufferViews[a.bufferView], size = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4 }[a.type];
@@ -85,9 +102,23 @@ function localMatrix(node) {
 }
 const toSrgb = v => Math.round(255 * (v <= 0.0031308 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - 0.055));
 const textures = new Map();
-function texture(path) { if (!textures.has(path)) textures.set(path, decodePng(readFileSync(path))); return textures.get(path); }
+function texture(path) {
+  if (!textures.has(path)) {
+    if (/\.jpe?g$/i.test(path)) { const { width, height, data } = jpeg.decode(readFileSync(path), { useTArray: true, maxMemoryUsageInMB: 1024 }); textures.set(path, { width, height, pixel: (x, y) => { const i = (y * width + x) * 4; return [data[i], data[i + 1], data[i + 2], 255]; } }); }
+    else textures.set(path, decodePng(readFileSync(path)));
+  }
+  return textures.get(path);
+}
+/** Mean colour of a square around a texel: a scan's colour seen from the game camera, not its grain. */
+function blurred(atlas, u, v, radius) {
+  const cx = Math.floor((u - Math.floor(u)) * atlas.width), cy = Math.floor((v - Math.floor(v)) * atlas.height), sum = [0, 0, 0]; let n = 0;
+  for (let y = cy - radius; y <= cy + radius; y += 2) for (let x = cx - radius; x <= cx + radius; x += 2) {
+    const px = atlas.pixel(Math.min(atlas.width - 1, Math.max(0, x)), Math.min(atlas.height - 1, Math.max(0, y))); sum[0] += px[0]; sum[1] += px[1]; sum[2] += px[2]; n++;
+  }
+  return sum.map(c => Math.round(c / n));
+}
 
-function bake({ path, texture: override }) {
+function bake({ path, texture: override, triangles }) {
   const { json, accessor, dir } = readGlb(path), positions = [], normals = [], colors = [], indices = [];
   const visit = (index, parent) => {
     const node = json.nodes[index], matrix = multiply(parent, localMatrix(node));
@@ -103,7 +134,7 @@ function bake({ path, texture: override }) {
         const tx = matrix[0] * nx + matrix[4] * ny + matrix[8] * nz, ty = matrix[1] * nx + matrix[5] * ny + matrix[9] * nz, tz = matrix[2] * nx + matrix[6] * ny + matrix[10] * nz, l = Math.hypot(tx, ty, tz) || 1;
         normals.push(Math.round(tx / l * 127), Math.round(ty / l * 127), Math.round(tz / l * 127));
         let rgb = factor.slice(0, 3).map(toSrgb);
-        if (atlas) { const [u, v] = uv[i], px = atlas.pixel(Math.min(atlas.width - 1, Math.max(0, Math.floor((u - Math.floor(u)) * atlas.width))), Math.min(atlas.height - 1, Math.max(0, Math.floor((v - Math.floor(v)) * atlas.height)))); rgb = rgb.map((c, k) => Math.round(c * px[k] / 255)); }
+        if (atlas) { const [u, v] = uv[i], px = triangles ? blurred(atlas, u, v, 6) : atlas.pixel(Math.min(atlas.width - 1, Math.max(0, Math.floor((u - Math.floor(u)) * atlas.width))), Math.min(atlas.height - 1, Math.max(0, Math.floor((v - Math.floor(v)) * atlas.height)))); rgb = rgb.map((c, k) => Math.round(c * px[k] / 255)); }
         if (vertexColor) rgb = rgb.map((c, k) => Math.round(c * vertexColor[i][k]));
         colors.push(...rgb);
       }
@@ -117,7 +148,8 @@ function bake({ path, texture: override }) {
   // into the clockwise front faces Babylon expects, so indices keep their order. (Newer Kenney packs
   // draw outlines with an inverted shell, which only works with the correct front faces.)
   const mirror = [-1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
-  for (const root of json.scenes[json.scene ?? 0].nodes) visit(root, mirror);
+  for (const node of json.scenes[json.scene ?? 0].nodes) visit(node, mirror);
+  if (triangles) return simplifyScan(path, positions, colors, indices, triangles);
   // Drop UV seams: merge vertices that share position, normal and colour.
   const unique = new Map(), remap = [], out = { positions: [], normals: [], colors: [] };
   for (let i = 0; i < positions.length / 3; i++) {
@@ -129,10 +161,47 @@ function bake({ path, texture: override }) {
   return { ...out, indices: indices.map(i => remap[i]) };
 }
 
+/**
+ * Photo scans: weld by position (averaging colours across UV seams), simplify with colour as an
+ * attribute so lichen and stains keep their place, then rebuild smooth normals and stand the
+ * rock on y = 0, centred on x/z.
+ */
+function simplifyScan(path, positions, colors, indices, triangles) {
+  const weld = new Map(), remap = new Uint32Array(positions.length / 3), welded = [], sums = [];
+  for (let i = 0; i < positions.length / 3; i++) {
+    const key = `${positions[i * 3].toFixed(4)},${positions[i * 3 + 1].toFixed(4)},${positions[i * 3 + 2].toFixed(4)}`;
+    let w = weld.get(key); if (w === undefined) { w = welded.length / 3; weld.set(key, w); welded.push(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]); sums.push(0, 0, 0, 0); }
+    remap[i] = w; sums[w * 4] += colors[i * 3]; sums[w * 4 + 1] += colors[i * 3 + 1]; sums[w * 4 + 2] += colors[i * 3 + 2]; sums[w * 4 + 3]++;
+  }
+  const vertexCount = welded.length / 3, colour = new Float32Array(vertexCount * 3);
+  for (let w = 0; w < vertexCount; w++) for (let k = 0; k < 3; k++) colour[w * 3 + k] = sums[w * 4 + k] / sums[w * 4 + 3] / 255;
+  const source = new Uint32Array(indices.map(i => remap[i])), pos = new Float32Array(welded);
+  const [simplified] = MeshoptSimplifier.simplifyWithAttributes(source, pos, 3, colour, 3, [0.5, 0.5, 0.5], null, triangles * 3, 0.05, []);
+  const used = new Map(), out = { positions: [], colors: [], indices: [] };
+  for (const i of simplified) { if (!used.has(i)) { used.set(i, used.size); out.positions.push(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]); out.colors.push(...[0, 1, 2].map(k => Math.round(colour[i * 3 + k] * 255))); } out.indices.push(used.get(i)); }
+  const n = out.positions.length / 3, min = [0, 1, 2].map(k => Math.min(...out.positions.filter((_, i) => i % 3 === k))), max = [0, 1, 2].map(k => Math.max(...out.positions.filter((_, i) => i % 3 === k)));
+  for (let i = 0; i < n; i++) { out.positions[i * 3] -= (min[0] + max[0]) / 2; out.positions[i * 3 + 1] -= min[1]; out.positions[i * 3 + 2] -= (min[2] + max[2]) / 2; }
+  const acc = new Float32Array(n * 3);
+  for (let t = 0; t < out.indices.length; t += 3) {
+    const [a, b, c] = [out.indices[t], out.indices[t + 1], out.indices[t + 2]], P = i => out.positions.slice(i * 3, i * 3 + 3), pa = P(a), pb = P(b), pc = P(c);
+    const u = [pb[0] - pa[0], pb[1] - pa[1], pb[2] - pa[2]], v = [pc[0] - pa[0], pc[1] - pa[1], pc[2] - pa[2]];
+    // Clockwise front faces after the mirror: the face normal is v × u.
+    const f = [v[1] * u[2] - v[2] * u[1], v[2] * u[0] - v[0] * u[2], v[0] * u[1] - v[1] * u[0]];
+    for (const i of [a, b, c]) for (let k = 0; k < 3; k++) acc[i * 3 + k] += f[k];
+  }
+  const normals = [];
+  for (let i = 0; i < n; i++) { const l = Math.hypot(acc[i * 3], acc[i * 3 + 1], acc[i * 3 + 2]) || 1; normals.push(...[0, 1, 2].map(k => Math.round(acc[i * 3 + k] / l * 127))); }
+  if (n > 65535) throw new Error(`${path}: too many vertices`);
+  return { positions: out.positions, normals, colors: out.colors, indices: out.indices };
+}
+
 // Positions are quantised to 16 bits within each model's bounds (sub-millimetre at game scale).
 mkdirSync('public/assets/models', { recursive: true });
+await MeshoptSimplifier.ready;
+const only = process.env.VENUE;
 for (const [venue, catalog] of Object.entries(CATALOGS)) {
-  const header = { version: 1, source: 'Kenney (kenney.nl), CC0 1.0', models: {} }, parts = { positions: [], normals: [], colors: [], indices: [] };
+  if (only && only !== venue) continue;
+  const header = { version: 1, source: 'Kenney (kenney.nl) and Poly Haven (polyhaven.com), CC0 1.0', models: {} }, parts = { positions: [], normals: [], colors: [], indices: [] };
   let vertexCount = 0, indexCount = 0;
   for (const entry of catalog) {
     const m = bake(entry), count = m.positions.length / 3;

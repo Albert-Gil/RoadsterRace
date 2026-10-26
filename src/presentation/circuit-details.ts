@@ -27,7 +27,7 @@ export function buildCircuitDetails(scene: Scene, track: TrackDefinition, theme:
     const sign = MeshBuilder.CreatePlane(name, { width, height }, scene); sign.position.set(p.x, y, p.z); sign.rotation.y = angle; sign.material = m; return sign;
   };
   for (const barrier of track.barriers) {
-    if (barrier.id === 'gantry-support' || barrier.id === 'grandstand') continue; // These authored structures are rendered separately.
+    if (barrier.id === 'gantry-support' || barrier.id === 'grandstand' || barrier.kind === 'rock') continue; // Rendered separately (rock formations: landscape/).
     if (barrier.kind === 'bridge-rail' || barrier.kind === 'bridge-support' || barrier.kind === 'pier-rail' || barrier.kind === 'service-barrier') {
       const p = barrier.footprint, positions: number[] = [], indices: number[] = [];
       const quad = (a: number[], b: number[], c: number[], d: number[]) => { const base = positions.length / 3; positions.push(...a, ...b, ...c, ...d); indices.push(base, base + 1, base + 2, base, base + 2, base + 3); };

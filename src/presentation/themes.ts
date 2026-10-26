@@ -180,6 +180,9 @@ export const surfaceFinishes: Record<string, SurfaceFinish> = {
   rock: { kind: 'rock', scale: 9, normal: 0.7, variation: 0.14, walls: true },
   'mesa-cap': { kind: 'rock', scale: 14, normal: 0.6, variation: 0.12, walls: true },
   'sandstone-*': { kind: 'rock', scale: 16, normal: 0.6, variation: 0.1, walls: true },
+  // Procedural landscape (landscape/): colour lives in the vertices, the finish adds grain and relief.
+  'landscape-rock': { kind: 'rock', scale: 5, normal: 0.55, variation: 0.08, walls: true },
+  'landscape-plants': { kind: 'grass', scale: 1.6, normal: 0.8, variation: 0.14, walls: true },
   foliage: { kind: 'grass', scale: 2.5, normal: 0.9, variation: 0.22, walls: true },
   foliageLight: { kind: 'grass', scale: 2.5, normal: 0.9, variation: 0.22, walls: true },
   trunk: { kind: 'rock', scale: 1.5, normal: 0.6, variation: 0.12, walls: true },
@@ -195,6 +198,8 @@ export const surfaceFinishes: Record<string, SurfaceFinish> = {
 };
 export const sceneryFinishes: Partial<Record<keyof typeof sceneryLighting, Record<string, SurfaceFinish>>> = {
   bay: { terrain: { kind: 'grass', scale: 16, normal: 0.55, variation: 0.18 } },
+  // Launchsite paints its own ground; its sand keeps fine, low ripples so the paint reads.
+  spaceport: { terrain: { kind: 'sand', scale: 11, normal: 0.4, variation: 0.1 } },
   canyon: { terrain: { kind: 'dirt', scale: 22, normal: 0.7, variation: 0.18 }, asphalt: { kind: 'dirt', scale: 12, normal: 0.55, variation: 0.14 }, shoulder: { kind: 'dirt', scale: 16, normal: 0.6, variation: 0.16 } },
   'night-city': { terrain: { kind: 'concrete', scale: 12, normal: 0.3, variation: 0.12 }, asphalt: { kind: 'asphalt', scale: 10, normal: 0.35, variation: 0.08, reflection: 0.3, roughness: 0.3, specular: 0.25, gloss: 60 } },
 };

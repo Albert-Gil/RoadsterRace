@@ -5,9 +5,8 @@ import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture';
 import type { Scene } from '@babylonjs/core/scene';
 import type { TrackDefinition } from '../core/types';
-import { projectToPolyline } from '../core/geometry';
 import type { PresentationTheme } from './themes';
-import { surfaceTexture } from './textures';
+import { buildLaunchsiteLandscape } from './launchsite';
 
 /** Original, lightweight launchyard scenery. All substantial structures occupy protected footprints. */
 export function buildSpaceport(scene: Scene, track: TrackDefinition, theme: PresentationTheme, materials: Map<string, StandardMaterial>) {
@@ -16,12 +15,10 @@ export function buildSpaceport(scene: Scene, track: TrackDefinition, theme: Pres
     const m = new StandardMaterial(role, scene); m.diffuseColor = Color3.FromHexString(color); m.specularColor.setAll(0.1); m.backFaceCulling = false;
     materials.set(role, m); if (casts) casters.add(m); return m;
   };
-  const sand = mat('terrain', theme.scene.terrain, false), concrete = mat('embankment', theme.scene.embankment, false);
-  const sandTexture = surfaceTexture(scene, 'sand'); sandTexture.uScale = sandTexture.vScale = 14; sand.diffuseTexture = sandTexture;
-  const ground = MeshBuilder.CreateGround('launchyard-terrain', { width: 2000, height: 2000 }, scene); ground.position.y = -0.035; ground.material = sand;
+  mat('terrain', theme.scene.terrain, false); const concrete = mat('embankment', theme.scene.embankment, false);
   const white = mat('architecture', theme.scene.curb), steel = mat('architecture-trim', theme.scene.structure), glass = mat('architecture-glass', theme.scene.glass);
-  const red = mat('architecture-accent', theme.venue.accent), metal = mat('orbital-metal', theme.venue.metal), rock = mat('rock', theme.scene.rock);
-  const leaves = mat('foliage', theme.scene.foliage), lightLeaves = mat('foliageLight', theme.scene.foliageLight); mat('trunk', theme.scene.trunk);
+  const red = mat('architecture-accent', theme.venue.accent), metal = mat('orbital-metal', theme.venue.metal); mat('rock', theme.scene.rock);
+  mat('foliage', theme.scene.foliage); mat('foliageLight', theme.scene.foliageLight); mat('trunk', theme.scene.trunk);
   glass.reflectionTexture = scene.environmentTexture; glass.specularColor.setAll(0.8); metal.specularColor.setAll(0.65); metal.specularPower = 96;
   const box = (name: string, x: number, y: number, z: number, w: number, h: number, d: number, material: StandardMaterial) => {
     const m = MeshBuilder.CreateBox(name, { width: w, height: h, depth: d }, scene); m.position.set(x, y, z); m.material = material; return m;
@@ -79,12 +76,7 @@ export function buildSpaceport(scene: Scene, track: TrackDefinition, theme: Pres
     const brace = box('tower-brace', 102.5, level + 1.4, 22.9, 0.14, 4, 0.14, steel); brace.rotation.z = -0.7;
   }
   box('service-arm', 98.5, 19.5, 24.5, 8, 0.45, 0.6, white);
-  // Sparse scrub/stone clusters stay beyond the complete planning corridor.
-  for (let i = 0; i < 85; i++) {
-    const a = i * 2.39996, p = { x: Math.cos(a) * (80 + i % 20), z: Math.sin(a) * (60 + i % 20) };
-    if (projectToPolyline(p, track.centerline, track.distances).distance < 22 || p.x > 80 && p.z > 0 && p.z < 40) continue;
-    const bush = MeshBuilder.CreateSphere('launchyard-scrub', { diameter: 1.4 + i % 3 * 0.5, segments: 4 }, scene); bush.position.set(p.x, 0.5, p.z); bush.scaling.set(1.5, 0.65, 1); bush.material = i % 3 ? leaves : lightLeaves;
-    if (i % 4 === 0) { const stone = MeshBuilder.CreateSphere('launchyard-limestone', { diameter: 2.6, segments: 4 }, scene); stone.position.set(p.x + 1.5, 0.5, p.z); stone.scaling.set(1.6, 0.6, 1); stone.material = rock; }
-  }
-  return { shadowCasterMaterials: casters, update: (_time: number, _reduced: boolean) => {} };
+  // Desert landscape: terrain and painted ground, plants, and the solid rock formations (landscape/).
+  const landscape = buildLaunchsiteLandscape(scene, track, materials);
+  return { shadowCasterMaterials: casters, lateShadowCasters: landscape.shadowCasters, update: (_time: number, _reduced: boolean) => {} };
 }

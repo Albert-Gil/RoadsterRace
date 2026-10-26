@@ -73,3 +73,22 @@ Coastal Launch is renamed **Newport** and dressed as a fictional Newport Beach-i
 - `pnpm bake:props` (`tools/bake-props.mjs`) converts only the models listed in its `CATALOGS` into `public/assets/models/<venue>-props.bin`. That is the only shipped form: geometry converted to the game's left-handed axes, colour atlases sampled into vertex colours (houses use the pack's own "variation C" and "variation A" palettes), and positions quantised.
 - Newport uses Watercraft (boats, buoys), Pirate (palms) and City Kit Suburban (houses, trees). The Racing and Nature kits are downloaded for later circuits and not used yet.
 - No Newport Beach, Balboa or other real-world branding, logos or photography is included.
+
+## Launchsite desert rock (CC0 Poly Haven scans) — 2026-10-25
+
+Launchsite's rock formations, terrain, painted ground, loose stones and plants are original procedural code (`src/presentation/landscape/`, `src/presentation/launchsite*.ts`). The only external art is eight photo-scanned rocks from Poly Haven, used for the granite boulders, the boulder-cliff faces set into two tors, a layered rock face set into a sandstone ledge and part of the loose stones.
+
+| Model | Source page | Licence |
+|---|---|---|
+| Namaqualand Boulder 02 | https://polyhaven.com/a/namaqualand_boulder_02 | CC0 1.0 |
+| Namaqualand Boulder 03 | https://polyhaven.com/a/namaqualand_boulder_03 | CC0 1.0 |
+| Namaqualand Boulder 04 | https://polyhaven.com/a/namaqualand_boulder_04 | CC0 1.0 |
+| Namaqualand Boulder 05 | https://polyhaven.com/a/namaqualand_boulder_05 | CC0 1.0 |
+| Namaqualand Cliff 01 | https://polyhaven.com/a/namaqualand_cliff_01 | CC0 1.0 |
+| Rock Face 01 | https://polyhaven.com/a/rock_face_01 | CC0 1.0 |
+| Rock 07 | https://polyhaven.com/a/rock_07 | CC0 1.0 |
+| Rock 09 | https://polyhaven.com/a/rock_09 | CC0 1.0 |
+
+- All Poly Haven assets are published under CC0 (https://polyhaven.com/license); no attribution is required. Downloaded on 2026-10-25 (Pacific time) at the user's request from `dl.polyhaven.org` (1k glTF, its geometry `.bin` and the 1k diffuse JPEG only), recorded in `asset-sources/polyhaven/manifest.json` with every URL and size, and packed as `polyhaven-rocks.pack` (SHA-256 `8ce48cd8f47e775fd32fe71cb445846214771fb9ab0d739a2c03afb482b3f64d`). Sources stay in git-ignored `asset-sources/polyhaven/` and are not shipped.
+- `pnpm bake:props` decimates each scan (meshoptimizer, dev-only, MIT) to 120–2,600 triangles, samples the photo texture into blurred vertex colours (jpeg-js, dev-only, BSD-3-Clause) and writes `public/assets/models/launchsite-props.bin` (about 100 KB), the only shipped form. In the game some scans are tinted toward the venue's rock palette.
+

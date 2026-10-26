@@ -76,9 +76,20 @@ and `sceneryFinishes` in `themes.ts`.
 
 ### Scenery props (CC0 models)
 
-Venues can use third-party CC0 models (see `docs/ASSET_RIGHTS.md`). `pnpm bake:props` turns the selected models into one compact vertex-coloured file per venue (`public/assets/models/<venue>-props.bin`, ~430 KB for Newport). At load, `src/presentation/props.ts` merges every placement of a venue into **one mesh with one plain material**, so a whole harbour costs one draw call (plus one per moving boat). The file is fetched like the sky; the scene reports ready only after it arrives. `tools/props-preview/index.html?venue=newport` on the dev server shows every baked prop.
+Venues can use third-party CC0 models (see `docs/ASSET_RIGHTS.md`). `pnpm bake:props` turns the selected models into one compact vertex-coloured file per venue (`public/assets/models/<venue>-props.bin`, ~430 KB for Newport, ~100 KB of decimated rock scans for Launchsite). At load, `src/presentation/props.ts` merges every placement of a venue into **one mesh with one plain material**, so a whole harbour costs one draw call (plus one per moving boat). The file is fetched like the sky; the scene reports ready only after it arrives. `tools/props-preview/index.html?venue=newport` on the dev server shows every baked prop.
 
 Newport's harbour (`src/presentation/newport.ts`, settings `newportHarbour` in `themes.ts`) sits entirely in the water beyond the island's shore: marina piers with berthed boats, a mooring field in the shallows, four Lido-style islets with beach houses and private docks, buoys and three boats under way (frozen with reduced motion). The sea is a calm harbour level just below the beach. Nothing new stands on the island's sand, and the circuit layout, collision footprints and track version are unchanged. As before, Newport's sea has no physics (a line drawn far into it is driven as sand), so the harbour props there have no collision either; they sit at least 12 m beyond the road edge, mostly at the edges of the fixed camera.
+
+### Procedural landscape (Launchsite)
+
+Launchsite's desert is generated in code from the track data (`src/presentation/launchsite.ts`, generators in `src/presentation/landscape/`), deterministically, on every tier:
+
+- **Terrain** (`landscape/terrain.ts`): one heightfield (3 m cells over 480 × 370 m, plus a flat skirt to the horizon) on the venue's `terrain` material. It is exactly level across the planning corridor and rises beyond it into wind-shaped dunes, bajadas toward the buttes and two dry washes. Vertex tints carry broad colour (compacted run-off, desert pavement, iron-stained ground near rock, pale wash sand).
+- **Painted ground** (`landscape/paint.ts`): a 2048 px canvas over the same extent (about 0.23 m per texel) used as the terrain's diffuse map: run-off wear, slide marks on the outside of corners, gravel traps, graded service roads and a fading two-track, wash beds with cobbles, ripples, launch-pad soot, pebbles and contact shadows under every rock and plant.
+- **Rock** (`landscape/rocks.ts`): each `'rock'` barrier becomes a formation inside its footprint — layered sandstone buttes and mesas (crisp beds and ledges, jointed walls, alcoves, varnish streaks, talus with fallen blocks, a hoodoo spire), granite tors and boulder fields built from the Poly Haven scans, broken sandstone ledges — plus about 1,000 loose stones beyond the corridor. One mesh, one material (`landscape-rock`).
+- **Plants** (`landscape/plants.ts`): about 1,150 creosote, bursage, bunch grass, cholla, deadwood and Joshua trees, gathered along the washes and at the feet of rock. One mesh, one material (`landscape-plants`).
+
+Rock and plants add two draw calls (Launchsite Medium: 45 → 47). The terrain and its tints are built with the scene; the painted map, rock and plants follow a step per frame after it (the scene reports ready when they are in), from a lazily loaded chunk. On this project's sandbox the main-thread work is about 0.2 s before the first frame and about 0.5 s spread over the following frames; added geometry is about 40 k (terrain), 150 k (rock) and 55 k (plants) triangles. `tools/landscape-preview/index.html?x=&z=&radius=&alpha=&beta=` on the dev server shows the landscape from any angle.
 
 ### Post-processing
 
