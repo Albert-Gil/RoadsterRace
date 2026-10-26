@@ -8,7 +8,7 @@ for (const viewport of [{ width: 844, height: 390 }, { width: 390, height: 844 }
     await page.getByRole('button', { name: 'Time Trial', exact: true }).click();
     await expect(page.locator('.circuit-card')).toHaveCount(6);
     await expect(page.locator('.circuit-card small,.circuit-description')).toHaveCount(0);
-    for (const name of ['Coastal Launch', 'Launchsite', 'Golden Gate', 'Santa Monica', 'Grand Canyon']) {
+    for (const name of ['Newport', 'Launchsite', 'Golden Gate', 'Santa Monica', 'Grand Canyon']) {
       const card = page.getByRole('button', { name: `${name} circuit`, exact: true });
       await expect(card.locator('strong')).toHaveText(name); await expect(card.locator('svg')).toHaveCount(1);
       await expect(card.locator('.circuit-length')).toContainText('m');

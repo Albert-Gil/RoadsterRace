@@ -206,6 +206,7 @@ export class GameScene {
         if (this.sceneryRuntime.shadowCasterMaterials.has(material) || material === white || material === accent) this.castShadow(merged);
       }
     }
+    void this.sceneryRuntime.lateShadowCasters?.then(meshes => { for (const mesh of meshes) if (!mesh.isDisposed()) this.castShadow(mesh); });
     this.lapGhost = new LapGhost(this.scene);
     if(scenery==='night-city'){
       const glow=new GlowLayer('night-architecture-glow',this.scene,{mainTextureFixedSize:nightAppearance.glowTextureSize,blurKernelSize:nightAppearance.glowKernel});

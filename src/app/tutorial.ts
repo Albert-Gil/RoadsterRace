@@ -3,7 +3,7 @@ import { RULES } from '../core/rules';
 import type { Ability, CompiledRoute, RaceState } from '../core/types';
 
 /**
- * Guided tutorial: one car, one lap on Coastal Launch. The race freezes twice so the player
+ * Guided tutorial: one car, one lap on Newport. The race freezes twice so the player
  * can try Thrust and then Hop. Pure decisions only; main.ts owns phases, input and rendering.
  */
 export const TUTORIAL_CIRCUIT = 'coastal-launch';

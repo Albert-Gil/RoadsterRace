@@ -2,7 +2,7 @@
 
 A browser racing game with Solo Race against three computer drivers, local Multiplayer for two to four people, Time Trial with a personal-best ghost, and a guided Tutorial: draw a line and its pace, race one to six laps, and time your rechargeable thrust and hop. Visuals are replaceable through shared settings and assets. No account, backend, or external service is required to play.
 
-Six venues are available: Coastal Launch, Launchsite, Golden Gate, Santa Monica, Grand Canyon and LA nights. Grand Canyon adds a 568.8 m packed-dirt figure-eight with elevated trails and an automatic crest jump; LA nights adds a channel jump and a hidden Hop alley. Newly created Full Tours include all six. See the [Grand Canyon guide](docs/GRAND_CANYON.md) and [LA nights guide](docs/LA_NIGHTS.md).
+Six venues are available: Newport (formerly Coastal Launch), Launchsite, Golden Gate, Santa Monica, Grand Canyon and LA nights. Grand Canyon adds a 568.8 m packed-dirt figure-eight with elevated trails and an automatic crest jump; LA nights adds a channel jump and a hidden Hop alley. Newly created Full Tours include all six. See the [Grand Canyon guide](docs/GRAND_CANYON.md) and [LA nights guide](docs/LA_NIGHTS.md).
 
 All roads are now **16 metres wide**, including Golden Gate's bridge and Santa Monica's pier/jump surfaces. The fixed camera fits the actual road tightly, with a phone-friendly orientation and compact controls. See [phone framing, computer drivers and lap ghosts](docs/PHONE_AND_MODES.md).
 
@@ -48,7 +48,7 @@ The supplied desktop runtime also provides pnpm at `C:\Users\alber\.cache\codex-
 5. Use **Escape** or Pause to pause. App/tab interruption also pauses the race. Resume includes a countdown.
 6. Retry the same line or draw a new one. Time Trial saves your fastest lap and replay locally, with an in-memory fallback when storage is unavailable.
 
-New players can choose **Tutorial** on the home screen: one guided lap on Coastal Launch that explains drawing and pace (with an optional **Example** line), then pauses the race once for **Thrust** and once for **Hop** until you press each. It saves no records and leaves your chosen circuit and lap count unchanged. See [the tutorial guide](docs/TUTORIAL.md).
+New players can choose **Tutorial** on the home screen: one guided lap on Newport that explains drawing and pace (with an optional **Example** line), then pauses the race once for **Thrust** and once for **Hop** until you press each. It saves no records and leaves your chosen circuit and lap count unchanged. See [the tutorial guide](docs/TUTORIAL.md).
 
 ### Race with friends
 
@@ -71,7 +71,7 @@ The separate **Touch test** screen remains available for the 50-cycle input diag
 
 ### Tournaments and six circuits
 
-Choose **Tournament** in Solo Race or Multiplayer setup. **Full Tour** races Coastal Launch, Launchsite, Golden Gate, Santa Monica, Grand Canyon and LA nights in that order. **Custom Tour** supports 2–12 races, repeated venues and up/down reordering. The selected 1–6 laps apply throughout; each round begins with fresh private drawing turns.
+Choose **Tournament** in Solo Race or Multiplayer setup. **Full Tour** races Newport, Launchsite, Golden Gate, Santa Monica, Grand Canyon and LA nights in that order. **Custom Tour** supports 2–12 races, repeated venues and up/down reordering. The selected 1–6 laps apply throughout; each round begins with fresh private drawing turns.
 
 First/second/third/fourth receive **10/6/4/0 points**. Race ties share place points and skip following ranks; equal championship totals share the title. Completed points save locally. **Resume tournament** preserves earlier results and restarts the unfinished round with fresh lines. Drivers and schedule lock at tournament start.
 
@@ -156,7 +156,7 @@ Coastal Launch, Launchsite, Golden Gate and Santa Monica are playable. Alpine Re
 
 ## Select a circuit
 
-In race setup, choose **Coastal Launch**, **Launchsite**, **Golden Gate** or **Santa Monica** before drawing. The cards show actual layouts, approximate centerline lengths and course character. Launchsite combines a long straight and technical return with original spaceport scenery. Golden Gate combines a city boulevard, technical waterfront streets and an 88 m red suspension bridge with a 16 m deck and solid edge rails. Santa Monica adds a beachfront boulevard, supported amusement pier and optional jump with a flat bypass. Both newer environments remain original procedural art passes ready for further refinement.
+In race setup, choose **Newport**, **Launchsite**, **Golden Gate** or **Santa Monica** before drawing. The cards show actual layouts, approximate centerline lengths and course character. Launchsite combines a long straight and technical return with original spaceport scenery. Golden Gate combines a city boulevard, technical waterfront streets and an 88 m red suspension bridge with a 16 m deck and solid edge rails. Santa Monica adds a beachfront boulevard, supported amusement pier and optional jump with a flat bypass. Both newer environments remain original procedural art passes ready for further refinement.
 
 The selected circuit is remembered with names, paint and lap count. A deliberate circuit change discards every previous plan, ready state and race; names, paint and distance remain. Race session bests remain separate by circuit/version/lap count; Time Trial lap records are independent of lap count. Old one-circuit saved preferences migrate to Coastal Launch. A direct local link is `http://localhost:5173/?circuit=orbital-launchyard`.
 

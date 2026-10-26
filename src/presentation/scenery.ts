@@ -1,5 +1,6 @@
 import type { Scene } from '@babylonjs/core/scene';
 import type { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
+import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh';
 import type { TrackDefinition } from '../core/types';
 import type { SceneryId } from '../content/circuits';
 import type { PresentationTheme } from './themes';
@@ -15,6 +16,8 @@ import { buildLANights } from './la-nights';
 
 export interface SceneryRuntime {
   shadowCasterMaterials: Set<StandardMaterial>;
+  /** Scenery that arrives after the static batch (loaded props); registered as shadow casters when ready. */
+  lateShadowCasters?: Promise<AbstractMesh[]>;
   update(time: number, reducedMotion: boolean): void;
 }
 export function buildScenery(id: SceneryId, scene: Scene, track: TrackDefinition, theme: PresentationTheme, materials: Map<string, StandardMaterial>): SceneryRuntime {
@@ -26,9 +29,10 @@ export function buildScenery(id: SceneryId, scene: Scene, track: TrackDefinition
   else if (id === 'spaceport') runtime = buildSpaceport(scene, track, theme, materials);
   else {
     const result = buildCoast(scene, track, theme, materials);
-    runtime = { shadowCasterMaterials: result.shadowCasterMaterials, update(time, reduced) {
+    runtime = { shadowCasterMaterials: result.shadowCasterMaterials, lateShadowCasters: result.harbour.shadowCasters, update(time, reduced) {
       result.waterTexture.uOffset = reduced ? 0 : time * 0.003;
       result.foamMaterial.alpha = reduced ? 0.65 : 0.62 + Math.sin(time * 0.8) * 0.12;
+      result.harbour.update(time, reduced);
     } };
   }
   buildCircuitDetails(scene, track, theme, materials, runtime.shadowCasterMaterials, id === 'coastal');

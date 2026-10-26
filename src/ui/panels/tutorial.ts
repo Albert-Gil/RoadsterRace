@@ -13,7 +13,7 @@ export type CoachStep = 'draw' | 'preview' | 'countdown' | 'thrust' | 'hop';
 /** Every player-facing tutorial sentence, kept together so tests can review the wording. */
 export const TUTORIAL_COPY = {
   intro: {
-    eyebrow: 'TUTORIAL · COASTAL LAUNCH · 1 LAP',
+    eyebrow: 'TUTORIAL · NEWPORT · 1 LAP',
     title: 'Learn to race in one lap.',
     body: 'Draw a racing line, then watch your car drive it. Along the way you will try your two abilities, Thrust and Hop. No rivals and no clock to beat.',
   },

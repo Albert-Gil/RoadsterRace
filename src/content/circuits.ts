@@ -19,8 +19,8 @@ export interface CircuitDefinition {
 }
 export const circuits: readonly CircuitDefinition[] = [
   { id: coastalTrack.id, number: '01', scenery: 'coastal', track: coastalTrack, difficulty: 'CLUB / 2',
-    tagline: 'One circuit. Endless possibilities.', description: 'Open sweepers, a tight inner turn and generous coastal runoff.',
-    features: ['Coastal sweepers', 'Sand runoff', `${Math.round(coastalTrack.length)} m`] },
+    tagline: 'One circuit. Endless possibilities.', description: 'Open harbour sweepers, a tight inner turn and generous sand runoff.',
+    features: ['Harbour sweepers', 'Sand runoff', `${Math.round(coastalTrack.length)} m`] },
   { id: orbitalTrack.id, number: '02', scenery: 'spaceport', track: orbitalTrack, difficulty: 'SPORT / 3',
     tagline: 'Launch straight. Precision return.', description: 'A long thrust straight and a linked technical return through a spaceport.',
     features: ['Launch straight', 'Hop shortcut', `${Math.round(orbitalTrack.length)} m`] },
@@ -38,7 +38,9 @@ export const circuits: readonly CircuitDefinition[] = [
     features: [`${Math.round(laNightsTrack.length)} m`] },
 ];
 export const defaultCircuit = circuits[0];
-export const findCircuit = (id: unknown) => circuits.find(circuit => circuit.id === (id === 'launchsite' ? 'orbital-launchyard' : id)) ?? defaultCircuit;
+/** Player-facing names that differ from the legacy IDs kept for saved preferences and links. */
+const circuitAliases: Record<string, string> = { launchsite: 'orbital-launchyard', newport: 'coastal-launch' };
+export const findCircuit = (id: unknown) => circuits.find(circuit => circuit.id === (typeof id === 'string' && circuitAliases[id] || id)) ?? defaultCircuit;
 
 /** Original selection-card silhouette drawn from the actual physical centerline. */
 export function circuitMapPath(track: TrackDefinition) {
