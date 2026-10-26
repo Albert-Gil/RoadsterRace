@@ -17,6 +17,10 @@ const config: CapacitorConfig = {
     backgroundColor: '#111820',
     preferredContentMode: 'mobile',
   },
+  plugins: {
+    // Built-in Capacitor 8 plugin: hides the status bar and lets the home indicator fade while playing.
+    SystemBars: { hidden: true },
+  },
 };
 
 export default config;

@@ -10,9 +10,11 @@ Control Centre.
 This page covers testing on your own iPhone/iPad **for free** from a Windows PC. Nothing here
 needs a Mac, an Apple Developer Program membership ($99/year), certificates or GitHub secrets.
 
-> Status: the build pipeline and project are prepared and verified up to the web bundle and
-> Capacitor sync. The first macOS build and a physical-device install have **not** been
-> performed yet; record the results here once you have run them.
+> Status: the first GitHub macOS build (run 2, Xcode 26.6, iOS 26.5 SDK) synced and compiled
+> Capacitor but failed compiling `SceneDelegate.swift`: Capacitor 8 declares
+> `prefersHomeIndicatorAutoHidden` as public (not open), so the app cannot override it. The home
+> indicator is now hidden through the SystemBars plugin config instead. A green build and a
+> physical-device install have **not** been confirmed yet; record the results here.
 
 ## 1. Get the unsigned app (.ipa)
 
@@ -81,8 +83,11 @@ run it directly on a connected device with a free Apple ID (Signing & Capabiliti
 
 ## Project notes
 
-- `ios/App/App/SceneDelegate.swift` holds `GameViewController` (home indicator and edge-gesture
-  behaviour). `Info.plist` hides the status bar and requires full screen on iPad.
+- `ios/App/App/SceneDelegate.swift` holds `GameViewController` (edge swipes need a second
+  swipe). `Info.plist` hides the status bar and requires full screen on iPad. The home indicator
+  fades through Capacitor's built-in SystemBars plugin (`plugins.SystemBars.hidden` in
+  `capacitor.config.ts`); Capacitor 8 does not let a subclass override
+  `prefersHomeIndicatorAutoHidden`.
 - `cap sync` regenerates `ios/App/CapApp-SPM/Package.swift` (Swift Package Manager; no
   CocoaPods). `ios/App/App/public` and `capacitor.config.json` are generated and ignored by git.
 - App icon and launch images come from `public/assets/mark.svg` via
