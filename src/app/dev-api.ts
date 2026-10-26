@@ -46,6 +46,8 @@ function devApi({ phase, pauseReason, sessionOptions, humans, playerCount, perso
       abilityInputs: { thrust: [0,1,2,3].map(i => raceTouches.active(i, 'thrust')), hop: [0,1,2,3].map(i => raceTouches.active(i, 'hop')) },
       inputs: { activations: [...ownership.activations], cancellations: [...ownership.cancellations], active: [0, 1, 2, 3].map(i => ownership.active(i)) } }),
     getAudio: () => audio.getStatus(),
+    /** Development inspection of the live Babylon scene (graphics tuning only). */
+    getWorld: () => world,
     getShowcaseProjection: () => world.showcaseProjection,
     inspectVehicle: (view: 'front' | 'side' | 'rear') => world.inspectVehicle(view),
     getGraphics: () => ({ circuitId: activeCircuit.id, engineScenes: world.engine.scenes.length, ...world.depthFeatures, roadVisible: !!world.scene.getMeshByName('asphalt') && world.scene.getActiveMeshes().contains(world.scene.getMeshByName('asphalt')!), vaporParticles: world.vehicles.map(v => v.vapor.liveCount), meshes: world.scene.meshes.length, activeMeshes: world.scene.getActiveMeshes().length, drawCalls: world.drawCalls, fps: world.engine.getFps(), textures: world.scene.textures.length, hardwareScaling: world.engine.getHardwareScalingLevel() }),

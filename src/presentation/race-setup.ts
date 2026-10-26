@@ -3,11 +3,23 @@ import { tournamentSetupMarkup, type TourSetup } from './tournament-ui';
 import type { RacePreferences } from './race-settings';
 import { cleanDriverName, escapeHtml, finishFor, paintFinishes } from './race-settings';
 import { circuits, circuitMapPath, findCircuit } from '../content/circuits';
+import { graphicsChoices, type GraphicsChoice, type RendererChoice } from './graphics';
+import { graphicsTiers, type GraphicsLevel } from './themes';
+
+export interface GraphicsView { choice: GraphicsChoice; level: GraphicsLevel; renderer?: RendererChoice; activeRenderer?: RendererChoice }
+const graphicsName = (choice: GraphicsChoice) => choice === 'auto' ? 'Auto' : graphicsTiers[choice].label;
+const rendererNote = (renderer: RendererChoice, active: RendererChoice) => renderer === 'webgpu' && active !== 'webgpu' ? 'WebGPU unavailable here · using WebGL 2' : renderer === 'webgpu' ? 'Experimental · reloads the game' : 'Default · reloads the game';
+export function graphicsSetupMarkup({ choice, level, renderer = 'webgl2', activeRenderer = 'webgl2' }: GraphicsView) {
+  return `<div class="setup-section-label"><span>05 / GRAPHICS</span><span>${choice === 'auto' ? `Auto · ${graphicsTiers[level].label} on this device` : 'Fixed for this device'}</span></div>
+    <div class="graphics-options" role="group" aria-label="Graphics quality">${graphicsChoices.map(option => `<button class="secondary-button" data-action="graphics" data-graphics="${option}" aria-pressed="${choice === option}">${graphicsName(option)}</button>`).join('')}</div>
+    <div class="setup-section-label renderer-label"><span>RENDERER</span><span>${rendererNote(renderer, activeRenderer)}</span></div>
+    <div class="renderer-options" role="group" aria-label="Renderer">${(['webgl2', 'webgpu'] as const).map(option => `<button class="secondary-button" data-action="renderer" data-renderer="${option}" aria-pressed="${renderer === option}">${option === 'webgl2' ? 'WebGL 2' : 'WebGPU (beta)'}</button>`).join('')}</div>`;
+}
 
 const corners = ['Bottom left', 'Bottom right', 'Top left', 'Top right'];
 const keys = ['A', 'L', 'Q', 'P'], hopKeys = ['Z', 'K', 'W', 'O'];
 
-export function raceSetupMarkup(preferences: RacePreferences, count: number, tour?: TourSetup, options: SessionOptions = {mode: 'multiplayer', difficulty: 'normal', seed: 1}, ghost = true) {
+export function raceSetupMarkup(preferences: RacePreferences, count: number, tour?: TourSetup, options: SessionOptions = {mode: 'multiplayer', difficulty: 'normal', seed: 1}, ghost = true, graphics?: GraphicsView) {
   const selected = findCircuit(preferences.circuitId);
   return `<div class="setup-scroll"><div class="setup-heading"><span class="eyebrow">${escapeHtml(selected.track.name.toUpperCase())} / RACE CONFIGURATION</span><h2>Make it your race.</h2></div>
     <div class="setup-section-label"><span>01 / CIRCUIT</span><span>Choose your venue</span></div>
@@ -28,6 +40,6 @@ export function raceSetupMarkup(preferences: RacePreferences, count: number, tou
         <div class="paint-options" role="group" aria-label="Driver ${index + 1} paint">${paintFinishes.map(paint => `<button class="paint-swatch" data-action="driver-paint" data-driver="${index}" data-paint="${paint.id}" aria-label="${paint.name}" title="${paint.name}" aria-pressed="${driver.paint === paint.id}" style="--swatch:${paint.color}"><span></span></button>`).join('')}</div>
         <div class="paint-caption"><span>${escapeHtml(finish.name)}</span><span>ROADSTER</span></div>
       </section>`;
-    }).join('')}</div></div>
+    }).join('')}</div>${graphics ? graphicsSetupMarkup(graphics) : ''}</div>
     <div class="setup-footer"><span>${count === 1 ? 'SOLO' : `${count} DRIVERS`} <b> / </b> ${preferences.laps} ${preferences.laps === 1 ? 'LAP' : 'LAPS'}<small class="build-id">TEST BUILD ${escapeHtml(__BUILD_ID__)}</small></span><div class="panel-actions"><button class="text-button" data-action="home">Back</button><button class="primary-button" data-action="start-session">${options.mode!=='time-trial' && tour?.enabled ? 'Start tournament' : count === 1 ? 'Draw racing line' : 'Plan your lines'} <span aria-hidden="true">↗</span></button></div></div>`;
 }

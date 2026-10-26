@@ -24,10 +24,12 @@ test.each([-6,-4,4,6])('the safe bypass retains its normal %i m lateral road lin
   const result=compileRoute(raw.map((p,i)=>({...p,...edge[i]})),track);
   expect(result.ok,JSON.stringify(result)).toBe(true);if(result.ok)expect(result.route.hopShortcuts).toBeUndefined();
 });
-test('partial, reversed and obstacle-end cuts never receive a barrier exemption', () => {
+test('reversed and obstacle-end cuts never receive a barrier exemption', () => {
   const branch = track.hopShortcuts![0].branch;
-  for (const points of [branch.slice(15), [...branch].reverse(), branch.map(p => ({x:p.x+7,z:p.z}))])
+  for (const points of [[...branch].reverse(), branch.map(p => ({x:p.x+7,z:p.z}))])
     expect(assessHopShortcuts(points, track).obstacles).toEqual([]);
+  // Compiler v15: joining the lane part-way still commits once the whole car crosses the barrier inside it.
+  expect(assessHopShortcuts(branch.slice(15), track).obstacles).toEqual(['service-hop-barrier']);
 });
 test.each([20,25,30])('a manual hop at %i m/s clears the full obstacle footprint', speed => {
   const route=plan(), sim=new RaceSimulation(route,track,1), s=sim.state;

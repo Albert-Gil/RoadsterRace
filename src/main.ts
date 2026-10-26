@@ -23,6 +23,7 @@ import { appShellMarkup } from './app/shell';
 import { modeLabel, phaseLayout, type Phase } from './app/phases';
 import { installDevApi } from './app/dev-api';
 import { uiScale } from './app/ui-scale';
+import { installZoomGuard } from './app/zoom-guard';
 import { formatTime } from './ui/format';
 import { renderHud } from './ui/hud';
 import { abilityControlsMarkup } from './ui/controls';
@@ -38,6 +39,8 @@ import { GameScene } from './presentation/scene';
 import { applyPlayerColors, applyTheme, themes, hopEffects } from './presentation/themes';
 import { cleanDriverName, escapeHtml, finishFor, loadPreferences, savePreferences } from './presentation/race-settings';
 import { raceSetupMarkup } from './presentation/race-setup';
+import { isGraphicsChoice, isRendererChoice, loadGraphicsPreference, saveGraphicsPreference, type RendererChoice } from './presentation/graphics';
+import { createEngine } from './presentation/engine';
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
 let theme = new URLSearchParams(location.search).get('theme') === 'graphite' ? themes.graphite : themes.coastal;
@@ -48,7 +51,7 @@ const playground = app.querySelector<HTMLElement>('.playground')!;
 const coarsePointer = matchMedia('(pointer: coarse)');
 /** Larger touch screens get proportionally larger controls; the course rectangle follows via CSS. */
 function applyUiScale() { const scale = uiScale(innerWidth, innerHeight, coarsePointer.matches); playground.style.setProperty('--ui-scale', String(scale)); playground.dataset.scaled = String(scale > 1); }
-applyUiScale();
+applyUiScale(); installZoomGuard();
 const canvas = document.querySelector<HTMLCanvasElement>('#race-canvas')!;
 const panel = document.querySelector<HTMLElement>('#panel')!, hud = document.querySelector<HTMLElement>('.race-hud')!;
 const countdownElement = document.querySelector<HTMLElement>('.countdown')!, controls = document.querySelector<HTMLElement>('#race-controls')!;
@@ -65,6 +68,10 @@ let ownership = new PointerOwnership();
 let phase: Phase = 'welcome', returnPhase: Phase = 'welcome', route: CompiledRoute | null = null, race: LocalRace | null = null;
 let playerCount = 1, setupCount = 2, turn = 0, confirmedRoutes: CompiledRoute[] = [], readyPlayers: boolean[] = [];
 const preferences = loadPreferences();
+const graphicsPreference = loadGraphicsPreference();
+let graphicsChoice = graphicsPreference.choice;
+/** The backend actually running (WebGPU falls back to WebGL 2 when unavailable). */
+let activeRenderer: RendererChoice = 'webgl2';
 const sessionOptions:SessionOptions={mode:'solo-race',difficulty:'normal',seed:1};
 const humans=()=>humanCount(sessionOptions.mode,playerCount);
 let recorder:LapRecorder|null=null, personalLap:LapRecord|null=null, activeGhost:LapRecord|null=null;
@@ -117,6 +124,8 @@ function applyDriverPresentation() {
   labels.forEach((label,i)=>{label.removeAttribute('title');label.textContent=String(i+1);});
 }
 function saveSettings() { preferences.laps = lapCount; savePreferences(preferences); }
+/** The automatic tier stepped down after slow frames: keep an open setup screen truthful. */
+function onGraphicsChange() { if (phase === 'setup') refreshSetup(); }
 function refreshSetup(focus?: string) {
   const scroll = panel.querySelector('.setup-scroll')?.scrollTop ?? 0;
   renderPanel(); const content = panel.querySelector('.setup-scroll'); if (content) content.scrollTop = scroll;
@@ -138,7 +147,7 @@ function loadCircuit(id: string, persist = true) {
   const engine = world.engine; world.dispose(false);
   activeCircuit = next; activeTrack = next.track;
   audio.setVenue(next.scenery);
-  world = new GameScene(canvas, activeTrack, theme, activeCircuit.scenery, engine);
+  world = new GameScene(canvas, activeTrack, theme, activeCircuit.scenery, engine, graphicsChoice); world.onGraphicsChange = onGraphicsChange;
   applyDriverPresentation(); renderControls(); notice.textContent = ''; lastFrame = performance.now();
   best = bestTimes.get(bestKey()) ?? null;
   if (persist) {
@@ -240,7 +249,7 @@ function panelMarkup(message?: string): string | null {
   switch (phase) {
     case 'tutorial-intro': return tutorialIntroPanel();
     case 'welcome': return welcomePanel({ tagline: theme.branding.tagline, savedTour: savedTour ? { completed: savedTour.state.results.length, total: savedTour.state.rounds.length } : null, incompatibleTour: incompatibleTournament() });
-    case 'setup': return raceSetupMarkup(preferences, setupCount, tourSetup,sessionOptions,preferences.ghost!==false);
+    case 'setup': return raceSetupMarkup(preferences, setupCount, tourSetup,sessionOptions,preferences.ghost!==false,{ choice: graphicsChoice, level: world.graphicsLevel, renderer: graphicsPreference.renderer, activeRenderer });
     case 'tour-intro': return activeTour ? tourIntroPanel({ roundIndex, roundNames: activeTour.state.rounds.map(r => findCircuit(r.circuitId).track.name), trackName: activeTrack.name, playerCount, lapCount, saveFailed: tourSaveFailed }) : null;
     case 'tour-exit': return tourExitPanel();
     case 'tour-replace': return tourReplacePanel();
@@ -375,6 +384,9 @@ app.addEventListener('click', e => {
   if (action === 'circuit' && phase === 'setup') selectCircuit(target!.dataset.circuit!);
   if(action==='difficulty'&&phase==='setup'){sessionOptions.difficulty=target!.dataset.difficulty as SessionOptions['difficulty'];refreshSetup();}
   if(action==='ghost-toggle'&&phase==='setup'){preferences.ghost=preferences.ghost===false;saveSettings();refreshSetup();}
+  if(action==='graphics'&&phase==='setup'&&isGraphicsChoice(target!.dataset.graphics)){graphicsChoice=target!.dataset.graphics;graphicsPreference.choice=graphicsChoice;saveGraphicsPreference(graphicsPreference);world.setGraphics(graphicsChoice);refreshSetup(`[data-graphics="${graphicsChoice}"]`);}
+  // A different backend needs a new engine: save and reload (setup only, so no race is lost).
+  if(action==='renderer'&&phase==='setup'&&isRendererChoice(target!.dataset.renderer)&&target!.dataset.renderer!==graphicsPreference.renderer){graphicsPreference.renderer=target!.dataset.renderer;saveGraphicsPreference(graphicsPreference);const url=new URL(location.href);url.searchParams.delete('renderer');location.replace(url);}
   if (action === 'format-single') { tourSetup.enabled = false; refreshSetup(); }
   if (action === 'format-tournament') { tourSetup.enabled = true; refreshSetup(); }
   if (action === 'tour-full' || action === 'tour-custom') { tourSetup.custom = action === 'tour-custom'; refreshSetup(); }
@@ -479,8 +491,10 @@ document.querySelectorAll<HTMLButtonElement>('.diagnostic-pad').forEach(pad => {
   for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) pad.addEventListener(name, e => { ownership.up((e as PointerEvent).pointerId, name !== 'pointerup'); updateDiagnostics(); });
 });
 
+async function start() {
 try {
-  world = new GameScene(canvas, activeTrack, theme, activeCircuit.scenery); applyDriverPresentation(); renderControls(); refreshLap(); setPhase('welcome');
+  const created = await createEngine(canvas, graphicsPreference.renderer); activeRenderer = created.renderer;
+  world = new GameScene(canvas, activeTrack, theme, activeCircuit.scenery, created.engine, graphicsChoice); world.onGraphicsChange = onGraphicsChange; applyDriverPresentation(); renderControls(); refreshLap(); setPhase('welcome');
   canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); pauseRace(); showNotice('The graphics were interrupted. Reload if the circuit does not recover.', 10); });
   world.engine.runRenderLoop(() => {
     const now = performance.now(), elapsed = (now - lastFrame) / 1000; lastFrame = now;
@@ -526,3 +540,5 @@ try {
   });
   if (import.meta.env.DEV) installDevApi(() => ({ phase, pauseReason, sessionOptions, humans, playerCount, personalLap, preferences, activeTour, roundIndex, race, activeCircuit, theme, lapCount, turn, confirmedRoutes, readyPlayers, world, route, drawingTrim, best, stroke, activeTrack, raceTouches: input.touches, ownership, audio, usePractice, driverName, driverPaint, tutorial }));
 } catch (error) { console.error(error); canvas.hidden = true; setPhase('error'); renderPanel(error instanceof Error ? error.message : undefined); }
+}
+void start();

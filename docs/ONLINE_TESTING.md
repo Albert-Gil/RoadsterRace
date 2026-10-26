@@ -36,10 +36,10 @@ Clear VITE_BASE_PATH/ROADSTER_BUILD_ID afterward to return to ordinary root buil
 
 1. Open the testing URL in Safari over cellular with the development computer off.
 2. Check landscape and portrait; rotate while drawing and during a paused race.
-3. Safari Share → Add to Home Screen → enable Open as Web App if offered → Add. Open the new icon and confirm browser chrome is absent and safe areas work.
+3. Safari Share → Add to Home Screen → enable Open as Web App if offered → Add. Open the new icon and confirm browser chrome is absent and safe areas work. (Alternatively install the real app build: see [IOS_APP.md](IOS_APP.md).)
 4. Enable sound by tapping the speaker, draw a lap, confirm, use thrust, and finish a race.
 5. Check app switching/pause/resume, local multiplayer corner ownership, and a tournament.
-6. Record exact device, iOS/Safari version, build label and sustained performance.
+6. Record exact device, iOS/Safari version, build label and sustained performance, and the Graphics tier Auto settles on (Race setup → 05 / Graphics). Double-tap and pinch must not zoom.
 
 Browser touch emulation supplements these checks; it does not certify physical Safari. There is no service worker or offline mode, so the link needs internet and cannot keep serving an old cached application shell. Ordinary browser/HTTP caching still applies; reload after a deployment when checking a new build label.
 

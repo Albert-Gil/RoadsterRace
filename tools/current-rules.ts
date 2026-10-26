@@ -90,6 +90,7 @@ const documentation: Record<string, Record<string, Unit>> = {
     clearance: ['m', 'Required vehicle clearance inside a hop corridor'],
     sampleSpacing: ['m', 'Validation sample spacing along a hop corridor'],
     backwardTolerance: ['m', 'Backward movement tolerated inside a hop corridor'],
+    commitAlignment: ['—', 'Minimum cosine between the line and the hop lane where the line meets the named obstacle (0.5 = within 60°)'],
   },
   AI_TUNING: { easy: ['—', 'Fraction of the safe pace profile'], normal: ['—', 'Fraction of the safe pace profile'], hard: ['—', 'Fraction of the safe pace profile'] },
 };

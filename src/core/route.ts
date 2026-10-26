@@ -8,7 +8,7 @@ import { assessHopShortcuts } from './hop-shortcuts';
 import { annotateRoad } from './elevation';
 import { hazardSpans } from './hazards';
 
-export const COMPILER_VERSION = 14;
+export const COMPILER_VERSION = 15;
 export const PACE_RANGE = Object.freeze({ min: 9, max: 30 });
 export const PACE_FILTER = Object.freeze({ gestureRadius: 5, compiledRadius: 8 });
 
