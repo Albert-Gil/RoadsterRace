@@ -2,6 +2,7 @@ import { roundedCircuit } from '../road-geometry';
 import { cumulative, projectToPolyline } from '../geometry';
 import { annotateRoad } from '../elevation';
 import { createStartFinish } from '../start-finish';
+import { outcrop } from './outcrop';
 import type { Point, RoadSection, TrackBarrier, TrackDefinition } from '../types';
 
 const path=roundedCircuit([[-55,-52],[-95,-52],[-95,0],[106,0],[106,52],[0,52],[0,-52]].map(([x,z])=>({x,z})),16);
@@ -36,7 +37,26 @@ const barriers:TrackBarrier[]=[
 for(const side of [-1,1])barriers.push({id:`receiving-rail-${side}`,kind:'cliff-rail',baseHeight:6,sectionId:'receiving-ledge',height:.8,footprint:rect(10,side*7.9-.18,79,.36)});
 barriers.push({id:'upper-cliff-face',kind:'cliff-face',baseHeight:-2.6,height:10.6,sectionId:'upper-approach',footprint:rect(-9.2,-14,.2,28)});
 barriers.push({id:'receiving-face',kind:'cliff-face',baseHeight:0,height:6,sectionId:'receiving-ledge',footprint:rect(8.8,-8,.2,16)});
-const track:TrackDefinition={id:'grand-canyon',version:2,name:'Grand Canyon',centerline:path,distances,length,roadWidth:16,carWidth:2.2,carLength:5.2,start:path[0],startFinish:createStartFinish(path[0],path[1],16),surface:'packed-dirt',sections,barriers,
+/**
+ * Solid canyon rock (v3): floor buttes and mesas, low ledges and tall walls stand on the canyon floor
+ * (-2.6 m) well clear of the supported trails; three boulder piles sit on the outer rim of the lower
+ * crossing, at least 5 m beyond its road edge. Rendered inside these footprints (presentation).
+ */
+const canyonFloor=-2.6;
+const rock=(id:string,x:number,z:number,rx:number,rz:number,rotation:number,height:number,seed:number):TrackBarrier=>({id:`canyon-${id}`,kind:'rock',baseHeight:canyonFloor,height,footprint:outcrop(x,z,rx,rz,rotation,seed)});
+const canyonRock:TrackBarrier[]=[
+ rock('west-butte',-138,32,9,12,.2,12,1.1),rock('south-mesa',52,-32,11,7,-.1,7,2.2),rock('east-butte',152,22,8,12,.1,14,3.3),rock('north-mesa',-52,46,14,9,.05,10,4.4),rock('west-spire',-140,-40,5,6,0,15,5.5),
+ rock('south-ledge-1',-150,-86,20,6,.1,9,6.1),rock('south-ledge-2',-60,-88,22,6,-.05,10,6.2),rock('south-ledge-3',40,-86,18,6,.08,9,6.3),rock('south-ledge-4',120,-88,20,6,-.1,10,6.4),
+ rock('north-ledge-1',-130,84,20,6,.08,9,7.1),rock('north-ledge-2',-40,86,22,6,-.06,10,7.2),rock('north-ledge-3',60,86,20,6,.05,9,7.3),rock('north-ledge-4',150,84,18,6,-.1,10,7.4),
+ rock('south-wall-1',-200,-118,30,12,.1,22,8.1),rock('south-wall-2',-120,-116,32,12,-.05,24,8.2),rock('south-wall-3',-35,-120,34,13,.05,24,8.3),rock('south-wall-4',55,-118,30,12,-.08,22,8.4),rock('south-wall-5',140,-116,32,12,.1,24,8.5),
+ rock('north-wall-1',-195,118,30,12,-.08,24,9.1),rock('north-wall-2',-115,120,32,12,.06,26,9.2),rock('north-wall-3',-30,116,34,12,-.04,24,9.3),rock('north-wall-4',60,120,30,13,.08,26,9.4),rock('north-wall-5',145,118,32,12,-.06,24,9.5),
+ rock('west-mesa',-175,15,14,20,.1,22,10.1),rock('east-mesa',165,-25,12,16,-.1,20,10.2),rock('northeast-mesa',178,45,14,20,.15,22,10.3),
+ rock('far-south-1',-150,-178,28,16,.2,36,11.1),rock('far-south-2',-10,-192,32,16,0,40,11.2),rock('far-south-3',130,-182,28,16,-.15,38,11.3),
+ rock('far-north-1',-120,176,28,16,-.1,36,12.1),rock('far-north-2',70,186,32,16,.1,40,12.2),
+ // Rim boulder piles on the lower crossing's outer edge (base on the canyon floor, top 1.7 m above the road).
+ rock('rim-1',15.4,-32,1.8,3,0,4.3,13.1),rock('rim-2',6,-58.4,2.2,1.8,.78,4.3,13.2),rock('rim-3',-20,-67.4,3,1.8,0,4.3,13.3),
+];
+const track:TrackDefinition={id:'grand-canyon',version:3,name:'Grand Canyon',centerline:path,distances,length,roadWidth:16,carWidth:2.2,carLength:5.2,start:path[0],startFinish:createStartFinish(path[0],path[1],16),surface:'packed-dirt',sections,barriers:[...barriers,...canyonRock],
  jumps:[{id:'canyon-crest',kind:'crest',from:{x:-9,z:0},forward:{x:1,z:0},width:16,rampLength:0,lipHeight:8,takeoffElevation:8,landingElevation:6,launchBoost:16,launchSlope:.2,gap:18,runout:80,corridorLength:98,branch:[{x:-79,z:0},{x:-9,z:0},{x:9,z:0},{x:89,z:0}],entryProgress:approach,exitProgress:mesa}],
  hopShortcuts:[{id:'mesa-service-trail',branch,width:16,obstacleId:'canyon-hop-rock',entryProgress:at(branch[0]),exitProgress:at(branch.at(-1)!)}],
 };

@@ -14,6 +14,7 @@ import type { TrackDefinition } from '../core/types';
 import { visualAssets } from './assets';
 import { assetUrl } from './urls';
 import { buildNewportHarbour } from './newport';
+import { buildNewportLandscape } from './newport-landscape';
 import type { PropPlacement } from './props';
 import { newportHarbour } from './themes';
 
@@ -98,12 +99,7 @@ export function buildCoast(scene: Scene, track: TrackDefinition, theme: Presenta
   for (const [i, [x, z]] of [[-77, -13], [-77, 8], [-50, 46], [-32, 54], [-10, 55], [12, 55], [48, 33], [72, 11], [78, -19], [48, -50], [-17, -54], [-46, -49], [-28, 3], [-21, 8], [-13, 4]].entries()) {
     if (!(x > -30 && x < 7 && z > 48) && projectToPolyline({ x, z }, track.centerline, track.distances).distance > track.roadWidth * 1.5 + 3) palm(x, z, 5.2 + i % 3 * 0.6, i * 1.7);
   }
-  for (let i = 0; i < 20; i++) {
-    const a = i / 20 * Math.PI * 2 + 0.12 + Math.sin(i * 7) * 0.08, r = 0.98 + (i % 3) * 0.012;
-    if (newportHarbour.piers.some(pier => Math.abs(Math.atan2(Math.sin(a - pier.angle), Math.cos(a - pier.angle))) < 0.12)) continue; // keep pier roots clear
-    const rock = MeshBuilder.CreateSphere('shore-rock', { diameter: 2.8 + i % 4, segments: 5 }, scene);
-    rock.position.set(Math.cos(a) * 85 * r, -0.45, Math.sin(a) * 62 * r); rock.scaling.set(1.6, 0.65 + i % 4 * 0.18, 1.15); rock.rotation.y = i * 2.2; rock.material = rockMaterial; rock.convertToFlatShadedMesh(); shadow(rock.position.x, rock.position.z, 7, 5);
-  }
+  // Shore boulders, the jetty, beach plants and the island's painted sand: newport-landscape.ts.
   const white = material('architecture', theme.scene.curb), trim = material('architecture-trim', theme.scene.structure), glass = material('architecture-glass', theme.scene.glass), accent = material('architecture-accent', theme.players[0]);
   glass.specularColor.setAll(0.85); glass.specularPower = 96; glass.reflectionTexture = scene.environmentTexture; glass.roughness = 0.15;
   const box = (name: string, x: number, y: number, z: number, w: number, h: number, d: number, mat: StandardMaterial) => {
@@ -134,6 +130,7 @@ export function buildCoast(scene: Scene, track: TrackDefinition, theme: Presenta
   const standRoof = box('grandstand-canopy', -14, 7, 57.5, 30, 0.25, 11, white); standRoof.rotation.x = -0.06;
   box('grandstand-fascia', -14, 6.8, 52, 30, 0.55, 0.16, accent);
   const harbour = buildNewportHarbour(scene, materials, palms, COAST_WATER);
+  const landscape = buildNewportLandscape(scene, track, materials, newportHarbour.piers.map(p => p.angle));
   const shadowCasterMaterials = new Set(['embankment', 'foliage', 'foliageLight', 'trunk', 'rock', 'architecture', 'architecture-trim', 'architecture-glass', 'architecture-accent'].map(role => materials.get(role)!));
-  return { waterTexture: waterGrain, foamMaterial: foam, shadowCasterMaterials, harbour };
+  return { waterTexture: waterGrain, foamMaterial: foam, shadowCasterMaterials, harbour, landscape };
 }

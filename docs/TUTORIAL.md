@@ -1,6 +1,6 @@
 # Tutorial
 
-The **Tutorial** button on the home screen starts one guided lap on Newport with a single car and no rivals. It teaches the basic loop and the two abilities. Advanced techniques are deliberately left for players to discover through play.
+The **Tutorial** button on the home screen starts one guided lap on Newport Island with a single car and no rivals. It teaches the basic loop and the two abilities. Advanced techniques are deliberately left for players to discover through play.
 
 ## Flow
 
@@ -29,7 +29,7 @@ The wording lives in `TUTORIAL_COPY` (`src/ui/panels/tutorial.ts`) and takes its
 
 ## Isolation
 
-- The tutorial borrows Newport and a 1-lap distance without saving them. Leaving through *Home* or *Solo Race* restores the previous circuit and lap count.
+- The tutorial borrows Newport Island and a 1-lap distance without saving them. Leaving through *Home* or *Solo Race* restores the previous circuit and lap count.
 - It creates no lap records, ghosts, session bests or tournaments.
 - Race physics and route compilation are unchanged; prompts only freeze the fixed-step clock and issue the normal ability command.
 

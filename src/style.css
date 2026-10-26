@@ -443,7 +443,8 @@ p { font-size: 14px; line-height: 1.5; }
 .circuit-card[aria-pressed="true"] .circuit-map-line { stroke: var(--accent); }
 .circuit-card strong { display: block; font: italic 700 26px/1 var(--font-display); text-transform: uppercase; }
 .circuit-card small { display: block; margin-top: 7px; padding-right: 34px; font-size: 9px; line-height: 1.4; color: var(--muted); }
-.circuit-length { position: absolute; right: 12px; bottom: 15px; color: var(--muted); font-size: 9px; }
+/* Length sits on the meta row, so long names (Newport Island) keep the card's full width. */
+.circuit-length { position: absolute; right: 12px; top: 13px; line-height: 1.4; color: var(--muted); font-size: 9px; }
 .cpu-opponents { font-size: 11px; color: var(--muted); margin: 10px 0 20px; }
 @media (orientation: portrait) and (max-width: 800px) {
   .circuit-card { padding: 10px; }

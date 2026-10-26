@@ -108,6 +108,8 @@ export function buildNewportHarbour(scene: Scene, materials: Map<string, Standar
       const mesh = MeshBuilder.CreateRibbon(name, { pathArray: [ring(inner, y1), ring(outer, y2)], sideOrientation: Mesh.FRONTSIDE }, scene); mesh.material = material;
       mesh.setVerticesData(VertexBuffer.NormalKind, Array.from({ length: 98 }, () => [0, 1, 0]).flat());
       if (fade) { mesh.setVerticesData(VertexBuffer.ColorKind, [0.95, 0].flatMap(alpha => Array.from({ length: 49 }, () => [1, 1, 1, alpha]).flat())); mesh.hasVertexAlpha = true; }
+      // Islet sand shares the island's painted map: world UVs fall outside it and clamp to plain sand.
+      if (material === terrain) { const p = mesh.getVerticesData(VertexBuffer.PositionKind)!, uvs: number[] = []; for (let k = 0; k < p.length; k += 3) uvs.push(p[k] / 180 + 0.5, p[k + 2] / 135 + 0.5); mesh.setVerticesData(VertexBuffer.UVKind, uvs); }
     };
     band('islet-shelf', 1.0, 1.45, water + 0.2, water + 0.04, shallows, true);
     band('islet-wet-sand', 0.88, 1.02, islet.top - 0.02, water + 0.18, wetSand);

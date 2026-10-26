@@ -4,9 +4,10 @@ import { escapeHtml } from './race-settings';
 import type { SavedTournament } from './tournament-storage';
 
 export interface TourSetup { enabled: boolean; custom: boolean; schedule: string[] }
-export function tournamentSetupMarkup(setup: TourSetup, count: number) {
+/** Single race or tournament (with its schedule); `label` numbers the section in the setup screen. */
+export function tournamentSetupMarkup(setup: TourSetup, count: number, label = 'RACE FORMAT') {
   if (count === 1) return '';
-  return `<div class="setup-section-label"><span>RACE FORMAT</span><span>Real contact · every position counts</span></div>
+  return `<div class="setup-section-label"><span>${label}</span><span>Real contact · every position counts</span></div>
     <div class="format-options" role="group" aria-label="Race format"><button class="secondary-button" data-action="format-single" aria-pressed="${!setup.enabled}">Single race</button><button class="secondary-button" data-action="format-tournament" aria-pressed="${setup.enabled}">Tournament</button></div>
     ${!setup.enabled ? '' : `<div class="tour-editor"><div class="format-options" role="group" aria-label="Tournament schedule"><button class="secondary-button" data-action="tour-full" aria-pressed="${!setup.custom}">Full Tour</button><button class="secondary-button" data-action="tour-custom" aria-pressed="${setup.custom}">Custom Tour</button></div>
     <p class="tour-scoring">1ST <b>10</b> · 2ND <b>6</b> · 3RD <b>4</b> · 4TH <b>0</b> POINTS<br>Shared places share points. Fresh lines every round.</p>

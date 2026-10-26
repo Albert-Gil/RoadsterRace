@@ -14,7 +14,7 @@ async function until(page: Page, done: (s: any) => boolean, label: string) {
   throw new Error(`Timed out waiting for ${label}: ${JSON.stringify((await state(page)).tutorial)}`);
 }
 
-test('Tutorial coaches drawing, Thrust and Hop on Newport, then restores the chosen circuit', async ({ page }) => {
+test('Tutorial coaches drawing, Thrust and Hop on Newport Island, then restores the chosen circuit', async ({ page }) => {
   test.setTimeout(420000);
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
   await page.goto('/?circuit=santa-monica');

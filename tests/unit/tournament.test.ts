@@ -44,7 +44,8 @@ describe('local championship', () => {
   });
   test('Launchsite aliases preserve old preferences and Golden Gate has a distinct map and length', () => {
     expect(findCircuit('launchsite').id).toBe('orbital-launchyard'); expect(findCircuit('launchsite').track.name).toBe('Launchsite');
-    expect(findCircuit('newport').id).toBe('coastal-launch'); expect(findCircuit('newport').track.name).toBe('Newport');
+    expect(findCircuit('newport').id).toBe('coastal-launch'); expect(findCircuit('newport').track.name).toBe('Newport Island');
+    expect(findCircuit('newport-island').id).toBe('coastal-launch');
     const track = findCircuit('golden-gate').track;
     expect(track.name).toBe('Golden Gate'); expect(track.length).toBeGreaterThan(430); expect(track.length).toBeLessThan(520);
   });

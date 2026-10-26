@@ -25,6 +25,8 @@ export interface RockPalette {
   lichen: Rgb;
   /** Ground (sand) colour, for dusting the feet of rocks. */
   dust: Rgb;
+  /** How far scanned rock is pulled toward granite[0] (0..1); desert venues keep the scans' own colour. */
+  scanTint?: number;
 }
 
 /** One global stratigraphy: the same layer sits at the same height in every butte of a venue. */
@@ -258,9 +260,14 @@ export function placeGeometry(g: Geometry, part: Geometry, t: Transform) { g.ins
 // Formations
 // ---------------------------------------------------------------------------------------------
 
-export type FormationStyle = 'butte' | 'mesa' | 'tor' | 'boulders' | 'ledge';
+/** 'riprap': quarried blocks heaped over a low core (a groyne or breakwater). */
+export type FormationStyle = 'butte' | 'mesa' | 'tor' | 'boulders' | 'ledge' | 'riprap';
 export interface FormationSpec {
   id: string; footprint: readonly Point[]; height: number; style: FormationStyle; seed: number;
+  /** Ground level the formation stands on (m); its height counts from here. */
+  base?: number;
+  /** Level of detail: 1 near, 2 far (coarser walls and thicker beds). */
+  lod?: number;
   /** Buttes: a second, narrower tier above a bench. */
   tiers?: 1 | 2;
   /** Mesas: a detached hoodoo spire at the +long-axis end. */
@@ -280,7 +287,7 @@ const segmentsFor = (footprint: readonly Point[], spacing: number) => {
 };
 
 /** Ring stack of a layered sandstone butte (talus apron, near-vertical beds with ledges that come and go, a caprock rim). */
-function butteRings(h: number, rand: () => number, tiers: 1 | 2, wall: number): Ring[] {
+function butteRings(h: number, rand: () => number, tiers: 1 | 2, wall: number, lod = 1): Ring[] {
   const rings: Ring[] = [{ y: -1.8, s: 1, kind: 'base' }];
   const talusTop = h * (0.22 + 0.07 * rand());
   for (let k = 0; k <= 5; k++) { const t = k / 5; rings.push({ y: talusTop * t ** 0.85, s: wall + 0.025 + (0.985 - wall - 0.025) * (1 - t) ** 1.8, kind: 'talus', crease: k === 5 }); }
@@ -294,7 +301,7 @@ function butteRings(h: number, rand: () => number, tiers: 1 | 2, wall: number): 
       rings.push({ y: y + 0.06, s: s0, kind: 'top', crease: true }, { y: y + 0.16, s: upper + 0.08, kind: 'top' }, { y: y + 0.5, s: upper + 0.04, kind: 'talus' }, { y: y + 1.2, s: upper + 0.012, kind: 'talus', crease: true });
       y += 1.2; benchDone = true; continue;
     }
-    const massive = hard && rand() < 0.4, thick = massive ? 2.4 + rand() * 2.6 : hard ? 0.7 + rand() * 1.2 : 1.2 + rand() * 2.4;
+    const massive = hard && rand() < 0.4, thick = lod * (massive ? 2.4 + rand() * 2.6 : hard ? 0.7 + rand() * 1.2 : 1.2 + rand() * 2.4);
     const top = Math.min(capBase, y + thick, !benchDone && bench < Infinity ? Math.max(bench, y + 0.5) : Infinity);
     const s = base(y), kind: RingKind = hard ? 'hard' : 'soft', ledge = massive ? 0.03 : hard ? 0.016 : -0.014;
     rings.push({ y: y + 0.05, s, kind, crease: true, ledge }, { y: top, s, kind, crease: true, ledge });
@@ -355,7 +362,13 @@ function moundRings(h: number): Ring[] {
   return [{ y: -0.5, s: 1, kind: 'base' }, { y: 0, s: 0.975, kind: 'mound' }, { y: h * 0.2, s: 0.93, kind: 'mound' }, { y: h * 0.42, s: 0.84, kind: 'mound' }, { y: h * 0.62, s: 0.72, kind: 'mound' }, { y: h * 0.82, s: 0.57, kind: 'mound' }, { y: h, s: 0.4, kind: 'mound' }];
 }
 
+/** A formation standing on its base level (spec.base, default 0). */
 export function buildFormation(spec: FormationSpec, palette: RockPalette, library: PropLibrary | null): Formation {
+  const base = spec.base ?? 0, formation = formationAtGround(spec, palette, library);
+  if (base) { const p = formation.geometry.positions; for (let i = 1; i < p.length; i += 3) p[i] += base; for (const ledge of formation.ledges) ledge.y += base; }
+  return formation;
+}
+function formationAtGround(spec: FormationSpec, palette: RockPalette, library: PropLibrary | null): Formation {
   const rand = random(spec.seed * 104729 + 7), g = new Geometry(), ledges: Formation['ledges'] = [];
   const c = centroid(spec.footprint), h = spec.height;
   const add = (col: Column) => { g.append(col.geometry); return col; };
@@ -377,7 +390,7 @@ export function buildFormation(spec: FormationSpec, palette: RockPalette, librar
     const extent = Math.max(model.max[0] - model.min[0], model.max[2] - model.min[2]), height = model.max[1] - model.min[1];
     const s = Math.min(target / extent, maxHeight / height), t: Transform = { x: at.x, y: y - 0.06 * s, z: at.z, heading: rand() * Math.PI * 2, scale: s };
     if (!modelFits(model.positions, t, spec.footprint, inset, 2)) return false;
-    appendModel(g, model, t, col => mix(col, palette.granite[0], 0.18)); scans++; return true;
+    appendModel(g, model, t, col => mix(col, palette.granite[0], palette.scanTint ?? 0.18)); scans++; return true;
   };
   const inside = (radius: number, from = c) => { for (let i = 0; i < 30; i++) { const a = rand() * Math.PI * 2, r = Math.sqrt(rand()) * radius, p = { x: from.x + Math.cos(a) * r, z: from.z + Math.sin(a) * r }; if (insidePolygon(p, spec.footprint)) return p; } return from; };
   const meanRadius = Array.from({ length: 12 }, (_, i) => rayToEdge(c, i / 12 * Math.PI * 2, spec.footprint)).reduce((s, r) => s + r, 0) / 12;
@@ -386,7 +399,7 @@ export function buildFormation(spec: FormationSpec, palette: RockPalette, librar
     // A scanned face set into the formation: its open back sinks into the rock behind it.
     const model = library.get(spec.relief.key)!, hd = spec.relief.heading, depth = (model.max[2] - model.min[2]) * spec.relief.scale, sandstone = spec.style !== 'tor' && spec.style !== 'boulders';
     const tint = (col: Rgb, y: number) => {
-      if (!sandstone) return mix(col, palette.granite[0], 0.25);
+      if (!sandstone) return mix(col, palette.granite[0], palette.scanTint ?? 0.25);
       const lum = (0.3 * col[0] + 0.59 * col[1] + 0.11 * col[2]) / 0.45;
       return mix(scale(stratumColour(palette, y), Math.min(1.25, lum)), col, 0.25);
     };
@@ -414,10 +427,10 @@ export function buildFormation(spec: FormationSpec, palette: RockPalette, librar
       // A low rubble saddle joins the two at ground level.
       for (let i = 0; i < 9; i++) { const t = 0.25 + i / 9 * 0.45, p = { x: c.x + ax * reach * t + (rand() - 0.5) * 2, z: c.z + az * reach * t + (rand() - 0.5) * 2 }; fitBoulder([1.4 + rand() * 1.6, 0.9 + rand() * 1.2, 1.3 + rand() * 1.4], spec.seed * 31 + i, p, -0.15, 0.25, 2.2, 1); }
     }
-    const rings = butteRings(h, rand, spec.tiers ?? 1, wall);
-    const body = add(column({ centre, footprint: spec.footprint, margin: 0.35, limit, rings, segments: segmentsFor(spec.footprint, 1.3), seed: spec.seed, gully: 0.03, jitter: 0.035, facet: 7, notches: 1.8, dip: [(rand() - 0.5) * 0.03, (rand() - 0.5) * 0.03], cap: { dome: 0.04, roughness: 0.025 }, colour: sandstoneColour(palette, spec.seed, h) }));
+    const lod = spec.lod ?? 1, rings = butteRings(h, rand, spec.tiers ?? 1, wall, lod);
+    const body = add(column({ centre, footprint: spec.footprint, margin: 0.35, limit, rings, segments: segmentsFor(spec.footprint, 1.3 * lod), seed: spec.seed, gully: 0.03, jitter: 0.035, facet: 7, notches: 1.8, dip: [(rand() - 0.5) * 0.03, (rand() - 0.5) * 0.03], cap: { dome: 0.04, roughness: 0.025 }, colour: sandstoneColour(palette, spec.seed, h) }));
     // Fallen blocks on the talus apron, and seed points for plants on the top.
-    for (let i = 0, placed = 0; i < 400 && placed < Math.round(meanRadius * 3.5); i++) {
+    for (let i = 0, placed = 0; i < 400 && placed < Math.round(meanRadius * 3.5 / lod); i++) {
       const a = rand() * Math.PI * 2, edge = rayToEdge(centre, a, spec.footprint), f = 0.74 + rand() * 0.22, p = { x: centre.x + Math.cos(a) * edge * f, z: centre.z + Math.sin(a) * edge * f };
       const y = body.heightAt(p); if (y === null) continue;
       const s = 0.6 + rand() * rand() * 2.8;
@@ -451,8 +464,21 @@ export function buildFormation(spec: FormationSpec, palette: RockPalette, librar
     return { geometry: g, ledges };
   }
 
+  if (spec.style === 'riprap') {
+    // A low core under angular blocks packed over the whole footprint, the crest reaching its height.
+    const coreHeight = h * 0.42, core = add(column({ centre: c, footprint: spec.footprint, margin: 0.45, rings: moundRings(coreHeight), segments: segmentsFor(spec.footprint, 0.6), seed: spec.seed, gully: 0.06, jitter: 0.22, notches: 0, cap: { dome: 0.35, roughness: 0.2 }, colour: (x, y, z) => mix(granite(spec.seed + 5)(x, y, z, 0.8, coreHeight), palette.dust, smoothstep(0.4, 0.0, y) * 0.4) }));
+    const xs = spec.footprint.map(p => p.x), zs = spec.footprint.map(p => p.z);
+    for (let x = Math.min(...xs); x <= Math.max(...xs); x += 1.15) for (let z = Math.min(...zs); z <= Math.max(...zs); z += 1.15) {
+      const p = { x: x + (rand() - 0.5) * 0.7, z: z + (rand() - 0.5) * 0.7 }; if (!insidePolygon(p, spec.footprint)) continue;
+      const ground = core.heightAt(p) ?? 0, s = Math.min((h - ground + 0.1) / 0.6, 1.2 + rand() * 0.9); if (s < 0.4) continue;
+      fitBoulder([s * (1.15 + rand() * 0.35), s * (0.62 + rand() * 0.15), s], spec.seed * 131 + Math.round(x * 7 + z * 13), p, ground - s * 0.14, 0.08, 3.2 + rand() * 1.2, 0);
+    }
+    return { geometry: g, ledges };
+  }
+
   // Granite: a whaleback mound carrying boulders (and, for tors, stacked blocks and a scanned face).
-  const moundHeight = spec.style === 'tor' ? Math.min(h * 0.22, 1.5) : Math.min(h * 0.38, 1.3);
+  // Small footprints (rim piles) are mostly mound, so they still fill their whole height.
+  const small = meanRadius < 3.5, moundHeight = spec.style === 'tor' ? Math.min(h * 0.22, 1.5) : small ? h * 0.4 : Math.min(h * 0.38, 1.3);
   const mound = add(column({ centre: c, footprint: spec.footprint, margin: 0.25, rings: moundRings(moundHeight), segments: segmentsFor(spec.footprint, 0.6), seed: spec.seed, gully: 0.12, jitter: 0.18, notches: 1, cap: { dome: 0.2, roughness: 0.18 }, colour: (x, y, z) => { const col = granite(spec.seed + 5)(x, y, z, 0.8, moundHeight); return mix(col, palette.dust, smoothstep(0.5, 0.05, y) * 0.35); } }));
   const surface = (p: Point) => mound.heightAt(p) ?? 0;
   const tiers = spec.style === 'tor' ? [{ count: 6, size: [0.42, 0.62] as const }, { count: 3, size: [0.32, 0.45] as const }, { count: 1, size: [0.26, 0.32] as const }] : [];
@@ -470,6 +496,14 @@ export function buildFormation(spec: FormationSpec, palette: RockPalette, librar
     }
     level += rise;
   }
+  if (small) {
+    // A small pile: boulders stacked on the mound until they reach the footprint's height.
+    let top = moundHeight - 0.25;
+    for (let i = 0; i < 40 && top < h - 0.6; i++) {
+      const p = inside(meanRadius * 0.35), size = Math.min(h - top + 0.3, meanRadius * (0.9 + rand() * 0.4));
+      if (fitScan(size * 1.5, p, top - 0.15, 0.05, size) || fitBoulder([size * 1.2, size, size], spec.seed * 61 + i, p, top - 0.2, 0.05, 2.6, 1)) top += size * 0.62;
+    }
+  }
   // Boulders over the mound: big first, near the middle; scans for the larger ones.
   const count = Math.round(4 + meanRadius * (spec.style === 'tor' ? 1.4 : 2.2));
   for (let i = 0, placed = 0; i < count * 6 && placed < count; i++) {
@@ -486,8 +520,9 @@ export function buildFormation(spec: FormationSpec, palette: RockPalette, librar
 // Loose rocks (visual only, beyond the planning corridor)
 // ---------------------------------------------------------------------------------------------
 
-export interface LooseRock { x: number; y: number; z: number; size: number; heading: number; seed: number; kind: 'pebble' | 'boulder' | 'slab' }
-const looseTemplates = new WeakMap<RockPalette, { pebbles: Geometry[]; cobbles: Geometry[]; slabs: Geometry[] }>();
+/** 'block': an angular, low-poly quarried block (riprap). */
+export interface LooseRock { x: number; y: number; z: number; size: number; heading: number; seed: number; kind: 'pebble' | 'boulder' | 'slab' | 'block' }
+const looseTemplates = new WeakMap<RockPalette, { pebbles: Geometry[]; cobbles: Geometry[]; slabs: Geometry[]; blocks: Geometry[] }>();
 /** Unit-size loose rock templates, made once per palette. */
 function looseTemplatesFor(palette: RockPalette) {
   let t = looseTemplates.get(palette);
@@ -497,6 +532,7 @@ function looseTemplatesFor(palette: RockPalette) {
       pebbles: make(14, i => boulder({ size: [1 + (i % 3) * 0.2, 0.6 + (i % 4) * 0.1, 1], seed: 900 + i, roundness: 2.2 + (i % 5) * 0.3, detail: 0, roughness: 0.16, colour: graniteColour(palette, 900 + i) })),
       cobbles: make(8, i => boulder({ size: [1.2, 0.7 + (i % 3) * 0.12, 1], seed: 950 + i, roundness: 2.4 + (i % 4) * 0.35, detail: 1, roughness: 0.16, colour: graniteColour(palette, 950 + i) })),
       slabs: make(10, i => boulder({ size: [1.5, 0.4, 1], seed: 990 + i, roundness: 4.5, detail: i % 2, roughness: 0.12, colour: slabColour(palette, 990 + i, 12) })),
+      blocks: make(10, i => boulder({ size: [1.3 + (i % 3) * 0.15, 0.62 + (i % 4) * 0.08, 1], seed: 1030 + i, roundness: 3.4 + (i % 3) * 0.5, detail: 0, roughness: 0.2, colour: graniteColour(palette, 1030 + i) })),
     };
     looseTemplates.set(palette, t);
   }
@@ -505,14 +541,16 @@ function looseTemplatesFor(palette: RockPalette) {
 /** Merges scattered rocks: small ones from procedural templates, larger ones from the low-detail scans when present. */
 export function looseRocks(rocks: readonly LooseRock[], palette: RockPalette, library: PropLibrary | null): Geometry {
   const g = new Geometry(), scans = library ? [...library.keys()].filter(k => /^scan-.*-lo$/.test(k)) : [], templates = looseTemplatesFor(palette);
+  const tall = scans.filter(k => { const m = library!.get(k)!; return (m.max[1] - m.min[1]) / Math.max(m.max[0] - m.min[0], m.max[2] - m.min[2]) >= 0.3; }), bulky = tall.length ? tall : scans;
   for (const r of rocks) {
     const rand = random(r.seed * 7 + 3);
     if (r.kind === 'boulder' && r.size > 1.1 && scans.length) {
-      const model = library!.get(scans[r.seed % scans.length])!, extent = Math.max(model.max[0] - model.min[0], model.max[1] - model.min[1], model.max[2] - model.min[2]);
-      appendModel(g, model, { x: r.x, y: r.y - 0.08 * r.size, z: r.z, heading: r.heading, scale: r.size / extent }, c => mix(c, palette.granite[0], 0.2));
+      // Big boulders skip the flattest scans, which read as shards at that size.
+      const pool = r.size > 1.6 ? bulky : scans, model = library!.get(pool[r.seed % pool.length])!, extent = Math.max(model.max[0] - model.min[0], model.max[1] - model.min[1], model.max[2] - model.min[2]);
+      appendModel(g, model, { x: r.x, y: r.y - 0.08 * r.size, z: r.z, heading: r.heading, scale: r.size / extent }, c => mix(c, palette.granite[0], palette.scanTint ?? 0.2));
       continue;
     }
-    const list = r.kind === 'slab' ? templates.slabs : r.size > 0.9 ? templates.cobbles : templates.pebbles, s = r.size;
+    const list = r.kind === 'block' ? templates.blocks : r.kind === 'slab' ? templates.slabs : r.size > 0.9 ? templates.cobbles : templates.pebbles, s = r.size;
     g.instance(list[r.seed % list.length], { x: r.x, y: r.y - 0.12 * s, z: r.z, heading: r.heading, scale: [s * (0.85 + rand() * 0.3), s * (0.8 + rand() * 0.4), s * (0.85 + rand() * 0.3)], tilt: [(rand() - 0.5) * 0.4, (rand() - 0.5) * 0.4] });
   }
   return g;

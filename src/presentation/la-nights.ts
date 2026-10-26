@@ -13,6 +13,7 @@ import { surfaceTexture } from './textures';
 import { projectToPolyline } from '../core/geometry';
 import { jumpPoint } from '../core/support';
 import { StaticBoxes } from './static-boxes';
+import { buildLALandscape, LA, laLayout } from './la-landscape';
 
 /** Night lighting is baked into batched emissive architecture and soft light pools.
  * No per-window lights, transparent skyscrapers, extra collision rules or shortcut signage.
@@ -20,8 +21,8 @@ import { StaticBoxes } from './static-boxes';
 export function buildLANights(scene:Scene,track:TrackDefinition,theme:PresentationTheme,materials:Map<string,StandardMaterial>){
  const casters=new Set<StandardMaterial>();
  const mat=(name:string,color:string,casts=false,emissive=false)=>{const m=new StandardMaterial(name,scene);m.diffuseColor=Color3.FromHexString(color);m.specularColor.setAll(.12);m.backFaceCulling=false;if(emissive){m.disableLighting=true;m.emissiveColor=m.diffuseColor.clone();}if(casts)casters.add(m);materials.set(name,m);return m;};
- const ground=mat('terrain',theme.scene.terrain),concrete=mat('embankment',theme.scene.embankment);
- ground.diffuseTexture=surfaceTexture(scene,'concrete');concrete.diffuseTexture=surfaceTexture(scene,'concrete');
+ mat('terrain',theme.scene.terrain);const concrete=mat('embankment',theme.scene.embankment);
+ concrete.diffuseTexture=surfaceTexture(scene,'concrete');
  const white=mat('architecture',theme.scene.curb,true),dark=mat('architecture-trim',theme.scene.structure,true),glass=mat('architecture-glass',theme.scene.glass);
  glass.reflectionTexture=scene.environmentTexture;glass.specularColor.setAll(.55);
  const facades=art.facades.map((c,i)=>mat(`la-facade-${i}`,c,true));
@@ -32,8 +33,12 @@ export function buildLANights(scene:Scene,track:TrackDefinition,theme:Presentati
  const box=(_name:string,x:number,y:number,z:number,w:number,h:number,d:number,m:StandardMaterial)=>boxes.add(x,y,z,w,h,d,m);
  const patch=(name:string,x:number,z:number,w:number,d:number,m:StandardMaterial,y=-.035)=>{const mesh=MeshBuilder.CreateGround(name,{width:w,height:d},scene);mesh.position.set(x,y,z);mesh.material=m;return mesh;};
  // Four pieces leave the authoritative open channel uncovered.
- patch('west-city-land',-219,0,562,1000,ground);patch('east-city-land',286,0,428,1000,ground);
- patch('north-channel-land',67,-263.5,10,473,ground);patch('south-channel-land',67,255,10,490,ground);
+ // The city ground carries a painted map of streets and lots (la-landscape.ts): world UVs over LA.map.
+ // Its own material (not the theme's 'terrain'): the map is painted in full colour on a white base.
+ const cityGround=mat('la-ground',theme.scene.terrain);
+ const cityLand=(name:string,x:number,z:number,w:number,d:number)=>{const mesh=patch(name,x,z,w,d,cityGround),p=mesh.getVerticesData(VertexBuffer.PositionKind)!,uvs:number[]=[],e=LA.map;for(let k=0;k<p.length;k+=3)uvs.push((p[k]+x-e.minX)/(e.maxX-e.minX),(p[k+2]+z-e.minZ)/(e.maxZ-e.minZ));mesh.setVerticesData(VertexBuffer.UVKind,uvs);};
+ cityLand('west-city-land',-219,0,562,1000);cityLand('east-city-land',286,0,428,1000);
+ cityLand('north-channel-land',67,-263.5,10,473);cityLand('south-channel-land',67,255,10,490);
  const water=mat('water',theme.scene.water);water.diffuseTexture=surfaceTexture(scene,'water');water.specularColor.setAll(.5);
  patch('storm-water',67,-8.5,10,37,water,-2.4);
  box('west-channel-face',61.85,-1.2,-8.5,.3,2.4,37,concrete);box('east-channel-face',72.15,-1.2,-8.5,.3,2.4,37,concrete);
@@ -120,6 +125,24 @@ export function buildLANights(scene:Scene,track:TrackDefinition,theme:Presentati
   const road=projectToPolyline({x,z},track.centerline,track.distances).point;
   if(Math.hypot(road.x-67,road.z+8)>24)patch('la-road-light-spill',road.x,road.z,18,18,pools[2],.126);
  }
+ // Parked cars in the lots and along the avenues beyond the corridor (batched with the architecture).
+ const city=laLayout(track);
+ for(const car of city.scatter().cars){
+  const ux=Math.sin(car.heading),uz=Math.cos(car.heading),along=Math.abs(uz)>.5,w=along?1.9:4.5,d=along?4.5:1.9,paint=facades[car.colour%facades.length];
+  box('la-street-car',car.x,.55,car.z,w,.75,d,car.colour<3?paint:white);box('la-street-car-glass',car.x-ux*.15,1.1,car.z-uz*.15,along?1.6:2.2,.55,along?2.2:1.6,glass);
+  for(const axle of [-1,1])for(const side of [-1,1])box('la-street-car-wheel',car.x+ux*axle*1.45+(along?side*.9:0),.3,car.z+uz*axle*1.45+(along?0:side*.9),along?.22:.6,.6,along?.6:.22,dark);
+ }
+ // Street lamps along the avenues: a pole, a lamp head among the batched emissive architecture and a warm pool.
+ for(const street of LA.streets.filter(st=>st.width>=16)){
+  const len=Math.hypot(street.to.x-street.from.x,street.to.z-street.from.z);
+  for(let t=14,k=0;t<len;t+=30,k++){
+   const side=k%2?1:-1,pole=city.along(street,t,side*(street.width/2+1)),pool=city.along(street,t,side*(street.width/2-3));
+   if(!city.visible(pole)||!city.clear(pole,LA.corridor+4)||LA.streets.some(o=>o!==street&&city.onStreet(o,pole,4)))continue;
+   box('la-avenue-lamp',pole.x,3,pole.z,.14,6,.14,dark);box('la-avenue-lamp-head',(pole.x+pool.x)/2,6,(pole.z+pool.z)/2,1,.16,1,windows);
+   patch('la-avenue-light-pool',pool.x,pool.z,13,13,pools[2],.06);
+  }
+ }
  boxes.build(scene,'la-architecture');
- return {shadowCasterMaterials:casters,update(_time:number,_reduced:boolean){}};
+ const landscape=buildLALandscape(scene,track,materials,cityGround,theme.scene.terrain,city);
+ return {shadowCasterMaterials:casters,lateShadowCasters:landscape.shadowCasters,update(_time:number,_reduced:boolean){}};
 }

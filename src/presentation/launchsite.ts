@@ -1,12 +1,10 @@
 import type { Scene } from '@babylonjs/core/scene';
 import type { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
-import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh';
-import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import type { Point, TrackBarrier, TrackDefinition } from '../core/types';
-import { loadProps, propMaterial, type PropLibrary } from './props';
+import { runLandscape, stopwatch } from './landscape/runtime';
 import { buildTerrain, courseDistance, distanceField, polygonField, type Extent } from './landscape/terrain';
 import { fbm2, noise2, random, ridged2, smoothstep } from './landscape/noise';
-import { Geometry, centroid, hex, mix, rayToEdge, scale, type Rgb } from './landscape/mesh';
+import { centroid, hex, mix, rayToEdge, scale, type Rgb } from './landscape/mesh';
 import type { FormationSpec, LooseRock, RockPalette } from './landscape/rocks';
 import type { Plant, PlantKind, PlantPalette } from './landscape/plants';
 import { offsetPath, smoothPath } from './landscape/paths';
@@ -190,48 +188,12 @@ export type LaunchsiteLayout = ReturnType<typeof launchsiteLayout>;
  * as one late mesh once the scanned rocks have loaded. Returns the late shadow casters.
  */
 export function buildLaunchsiteLandscape(scene: Scene, track: TrackDefinition, materials: Map<string, StandardMaterial>) {
-  // Main-thread time per step (ms), for development checks.
-  const timings: Record<string, number> = {}, timed = <T>(name: string, step: () => T) => { const t = performance.now(), result = step(); timings[name] = (timings[name] ?? 0) + Math.round(performance.now() - t); return result; };
-  const L = LAUNCHSITE, layout = timed('layout', () => launchsiteLayout(track)), terrainMaterial = materials.get('terrain')!;
+  const { timings, timed } = stopwatch(), L = LAUNCHSITE, layout = timed('layout', () => launchsiteLayout(track)), terrainMaterial = materials.get('terrain')!;
   const terrain = timed('terrain', () => buildTerrain('launchsite-terrain', scene, { extent: L.extent, cell: L.terrainCell, height: (x, z) => layout.height(x, z) - 0.035, color: (x, z, h, slope) => layout.tint(x, z, h, slope) }, terrainMaterial));
-  const plantMaterial = propMaterial(scene, 'landscape-plants'); plantMaterial.backFaceCulling = false; plantMaterial.specularColor.setAll(0.03);
-  const rockMaterial = propMaterial(scene, 'landscape-rock'); rockMaterial.specularColor.setAll(0.05);
-  materials.set('landscape-plants', plantMaterial); materials.set('landscape-rock', rockMaterial);
-  // The painted ground, rock and plants follow after the first frame, a step at a time, so loading
-  // never stalls; the scene stays "not ready" (pending data) until they are in.
-  let resolve: (meshes: AbstractMesh[]) => void = () => {};
-  const shadowCasters = new Promise<AbstractMesh[]>(r => { resolve = r; });
-  const pending = { landscape: 'launchsite' }; scene.addPendingData(pending);
-  const yieldFrame = () => new Promise<void>(r => setTimeout(r, 0));
-  const build = async (library: PropLibrary | null) => {
-    // Rock, plant and paint generators load as their own chunk, only for this venue.
-    const { buildFormation, looseRocks, plantGeometry, paintGround } = await import('./launchsite-detail');
-    if (scene.isDisposed) return resolve([]);
-    const { loose, plants: scattered } = timed('scatter', () => layout.scatter()); await yieldFrame();
-    if (scene.isDisposed) return resolve([]);
-    const painting = paintGround(scene, track, layout);
-    let step = timed('paint', () => painting.next());
-    while (!step.done) { await yieldFrame(); if (scene.isDisposed) return resolve([]); step = timed('paint', () => painting.next()); }
-    terrainMaterial.diffuseTexture = step.value;
-    const rock = new Geometry(), tops: Plant[] = [], trand = random(515);
-    for (const spec of layout.formations) {
-      if (scene.isDisposed) return resolve([]);
-      const formation = timed('formations', () => buildFormation(spec, L.rock, library)); rock.append(formation.geometry);
-      // Small plants on flat rock tops.
-      for (const p of formation.ledges) if (trand() < 0.6) {
-        const kind: PlantKind = trand() < 0.4 ? 'bursage' : trand() < 0.6 ? 'grass' : 'creosote';
-        tops.push({ kind, ...p, size: kind === 'creosote' ? 0.9 + trand() * 0.8 : 0.5 + trand() * 0.4, heading: trand() * 6.28, seed: 50000 + tops.length * 7, dryness: 0.3 + trand() * 0.4 });
-      }
-      await yieldFrame();
-    }
-    if (scene.isDisposed) return resolve([]);
-    timed('loose', () => rock.append(looseRocks(loose, L.rock, library)));
-    const mesh = new Mesh('launchsite-rock', scene), plants = new Mesh('launchsite-plants', scene);
-    timed('meshes', () => { rock.toVertexData().applyToMesh(mesh); plantGeometry([...scattered, ...tops], L.plants).toVertexData().applyToMesh(plants); });
-    for (const [m, material] of [[mesh, rockMaterial], [plants, plantMaterial]] as const) { m.material = material; m.isPickable = false; m.receiveShadows = true; m.freezeWorldMatrix(); }
-    if (import.meta.env.DEV) Object.assign(window, { __launchsiteTimings: { ...timings, rockTriangles: rock.triangleCount, plantTriangles: plants.getTotalIndices() / 3 } });
-    scene.removePendingData(pending); resolve([mesh, plants]);
-  };
-  void loadProps('launchsite').then(build, () => build(null));
+  // Painted ground, rock and plants follow after the first frame; their generators load as a chunk.
+  const { shadowCasters } = runLandscape(scene, materials, { name: 'launchsite', props: 'launchsite', timings, load: async () => {
+    const detail = await import('./launchsite-detail'), { loose, plants } = timed('scatter', () => layout.scatter());
+    return { generators: detail, paint: detail.paintInto(scene, track, layout, terrainMaterial), formations: layout.formations, rock: L.rock, loose, plants, plantPalette: L.plants, topPlants: ['bursage', 'grass', 'creosote'] };
+  } });
   return { terrain: terrain.mesh, heightAt: terrain.heightAt, shadowCasters };
 }

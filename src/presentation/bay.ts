@@ -8,7 +8,7 @@ import type { Scene } from '@babylonjs/core/scene';
 import type { TrackDefinition } from '../core/types';
 import { cityBuildings, cityLand } from '../content/golden-city';
 import { cityAppearance, type PresentationTheme } from './themes';
-import { surfaceTexture } from './textures';
+import { buildGoldenGateLandscape, GOLDEN } from './golden-gate-landscape';
 
 /** Grounded original city blocks and an 88 m suspension span; collision rails are rendered separately. */
 export function buildBay(scene: Scene, track: TrackDefinition, theme: PresentationTheme, materials: Map<string, StandardMaterial>) {
@@ -17,8 +17,7 @@ export function buildBay(scene: Scene, track: TrackDefinition, theme: Presentati
     const m = new StandardMaterial(role, scene); m.diffuseColor = Color3.FromHexString(color); m.specularColor.setAll(0.08);
     materials.set(role, m); if (casts) casters.add(m); return m;
   };
-  const terrain = mat('terrain', theme.scene.terrain, false), concrete = mat('embankment', theme.scene.embankment, false);
-  const texture = surfaceTexture(scene, 'gravel'); texture.uScale = texture.vScale = 12; terrain.diffuseTexture = texture;
+  mat('terrain', theme.scene.terrain, false); const concrete = mat('embankment', theme.scene.embankment, false);
   const white = mat('architecture', theme.scene.curb), steel = mat('architecture-trim', cityAppearance.roof), glass = mat('architecture-glass', cityAppearance.window);
   const red = mat('bridge-red', cityAppearance.bridge), metal = mat('bay-metal', theme.venue.metal);
   const leaf = mat('foliage', theme.scene.foliage), leafLight = mat('foliageLight', theme.scene.foliageLight);
@@ -29,7 +28,14 @@ export function buildBay(scene: Scene, track: TrackDefinition, theme: Presentati
   const box = (name: string, x: number, y: number, z: number, w: number, h: number, d: number, material: StandardMaterial) => {
     const m = MeshBuilder.CreateBox(name, { width: w, height: h, depth: d }, scene); m.position.set(x, y, z); m.material = material; return m;
   };
-  for (const [i, land] of cityLand.entries()) box(`city-land-${i}`, land.x + land.width / 2, -1.035, land.z + land.depth / 2, land.width, 2, land.depth, terrain);
+  // The land carries a painted map (golden-gate-detail.ts): UVs follow world x/z over the land's extent,
+  // so the seawall faces take the coping's colour from the map's edge.
+  const ground = mat('city-ground', '#7f9a5c', false), e = GOLDEN.land;
+  for (const [i, land] of cityLand.entries()) {
+    const mesh = box(`city-land-${i}`, land.x + land.width / 2, -1.035, land.z + land.depth / 2, land.width, 2, land.depth, ground), p = mesh.getVerticesData(VertexBuffer.PositionKind)!, uvs: number[] = [];
+    for (let k = 0; k < p.length; k += 3) uvs.push((p[k] + mesh.position.x - e.minX) / (e.maxX - e.minX), (p[k + 2] + mesh.position.z - e.minZ) / (e.maxZ - e.minZ));
+    mesh.setVerticesData(VertexBuffer.UVKind, uvs);
+  }
   box('quay-head-retaining-face', 0, -1.05, 23.9, 86, 2, 0.2, concrete);
   for (const x of [-43.1, 43.1]) box('quay-bank-face', x, -1.05, 69.5, 0.2, 2, 91, concrete);
   const water = mat('water', theme.scene.water, false); water.specularColor.setAll(0.45);
@@ -98,8 +104,7 @@ export function buildBay(scene: Scene, track: TrackDefinition, theme: Presentati
       box('bridge-hanger', x, (y + 0.8) / 2, z, 0.055, y - 0.8, 0.055, metal);
     }
   }
-  for (let i = 0; i < 8; i++) {
-    const hill = MeshBuilder.CreateSphere('city-headland', { diameter: 14, segments: 6 }, scene); hill.position.set(-52 - i * 9, 0, 108); hill.scaling.set(1, 0.35, 0.55); hill.material = leaf;
-  }
-  return { shadowCasterMaterials: casters, update: (_time: number, _reduced: boolean) => {} };
+  // Parks, shore, riprap, park boulders and the headlands across the bay.
+  const landscape = buildGoldenGateLandscape(scene, track, materials, ground);
+  return { shadowCasterMaterials: casters, lateShadowCasters: landscape.shadowCasters, update: (_time: number, _reduced: boolean) => {} };
 }

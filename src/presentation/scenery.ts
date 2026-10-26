@@ -29,7 +29,7 @@ export function buildScenery(id: SceneryId, scene: Scene, track: TrackDefinition
   else if (id === 'spaceport') runtime = buildSpaceport(scene, track, theme, materials);
   else {
     const result = buildCoast(scene, track, theme, materials);
-    runtime = { shadowCasterMaterials: result.shadowCasterMaterials, lateShadowCasters: result.harbour.shadowCasters, update(time, reduced) {
+    runtime = { shadowCasterMaterials: result.shadowCasterMaterials, lateShadowCasters: Promise.all([result.harbour.shadowCasters, result.landscape.shadowCasters]).then(lists => lists.flat()), update(time, reduced) {
       result.waterTexture.uOffset = reduced ? 0 : time * 0.003;
       result.foamMaterial.alpha = reduced ? 0.65 : 0.62 + Math.sin(time * 0.8) * 0.12;
       result.harbour.update(time, reduced);
