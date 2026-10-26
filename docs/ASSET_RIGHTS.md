@@ -55,3 +55,21 @@ The fictional street layout, channel, buildings, lit-window grids, rooftop detai
 ## Graphics upgrade — 2026-10-25
 
 Graphics tiers, world-space surface detail (asphalt, sand, dirt, concrete, grass, rock and water tiles generated in code by `src/presentation/surface-maps.ts`), screen-space effects and colour grading are original code using Babylon.js features. The only new external art is the CC0 sky lighting listed in the ledger above. The iOS app wrapper uses Capacitor (MIT) packages; its icon and launch images are rasterised from the original R mark by `tools/generate-app-icons.mjs`. Development-only packages `three` (MIT) and `@pmndrs/assets` (CC0) are not shipped in the game bundle.
+
+## Newport harbour props (CC0 Kenney models) — 2026-10-25
+
+Coastal Launch is renamed **Newport** and dressed as a fictional Newport Beach-inspired harbour. Its boats, beach houses, palms and buoys are third-party models; the piers, pilings, islets and shoreline are original code geometry.
+
+| Pack (version) | Source | Licence | Zip SHA-256 |
+|---|---|---|---|
+| Watercraft Kit (2.1) | https://kenney.nl/assets/watercraft-kit | CC0 1.0 | `cd1470c1cf441c7f46d0944ae6d0d897242365dc97677c5079b3238965d659f3` |
+| Pirate Kit (2.1) | https://kenney.nl/assets/pirate-kit | CC0 1.0 | `667ed2caf92954ddb98f7b7cede831fe99ab75063c26b25e23d32715bee9c943` |
+| City Kit (Suburban) (2.0) | https://kenney.nl/assets/city-kit-suburban | CC0 1.0 | `5869c35cf30b1c87bdb2d197b6d325eebadd2ef08ea27f04797e8e08d77a9a39` |
+| Racing Kit (2.0) | https://kenney.nl/assets/racing-kit | CC0 1.0 | `8a71ea16219315a01d00d5a90c4f6b5c090faddbc56d80ecf727e2b3b853c6c0` |
+| Nature Kit (2.1) | https://kenney.nl/assets/nature-kit | CC0 1.0 | `fa7974a0d342bfe63c38664ba9f8ec1a4aab8ea25f099bdc56870e33588c4d9d` |
+
+- Created and distributed by Kenney (www.kenney.nl). Each pack's `License.txt` states Creative Commons Zero (CC0); credit is appreciated but not required. Downloaded from the official kenney.nl links on 2026-10-25 (Pacific time), at the user's request.
+- The source zips are kept locally in `asset-sources/kenney/` (git-ignored) and are not shipped.
+- `pnpm bake:props` (`tools/bake-props.mjs`) converts only the models listed in its `CATALOGS` into `public/assets/models/<venue>-props.bin`. That is the only shipped form: geometry converted to the game's left-handed axes, colour atlases sampled into vertex colours (houses use the pack's own "variation C" and "variation A" palettes), and positions quantised.
+- Newport uses Watercraft (boats, buoys), Pirate (palms) and City Kit Suburban (houses, trees). The Racing and Nature kits are downloaded for later circuits and not used yet.
+- No Newport Beach, Balboa or other real-world branding, logos or photography is included.

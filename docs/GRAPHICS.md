@@ -74,6 +74,12 @@ Tiles are generated in code (`surface-maps.ts`) on a Web Worker; a neutral tile 
 few frames before it arrives. Finishes per role (and per-venue overrides) are `surfaceFinishes`
 and `sceneryFinishes` in `themes.ts`.
 
+### Scenery props (CC0 models)
+
+Venues can use third-party CC0 models (see `docs/ASSET_RIGHTS.md`). `pnpm bake:props` turns the selected models into one compact vertex-coloured file per venue (`public/assets/models/<venue>-props.bin`, ~430 KB for Newport). At load, `src/presentation/props.ts` merges every placement of a venue into **one mesh with one plain material**, so a whole harbour costs one draw call (plus one per moving boat). The file is fetched like the sky; the scene reports ready only after it arrives. `tools/props-preview/index.html?venue=newport` on the dev server shows every baked prop.
+
+Newport's harbour (`src/presentation/newport.ts`, settings `newportHarbour` in `themes.ts`) sits entirely in the water beyond the island's shore: marina piers with berthed boats, a mooring field in the shallows, four Lido-style islets with beach houses and private docks, buoys and three boats under way (frozen with reduced motion). The sea is a calm harbour level just below the beach. Nothing new stands on the island's sand, and the circuit layout, collision footprints and track version are unchanged. As before, Newport's sea has no physics (a line drawn far into it is driven as sand), so the harbour props there have no collision either; they sit at least 12 m beyond the road edge, mostly at the edges of the fixed camera.
+
 ### Post-processing
 
 `PostEffects` (`post-processing.ts`) runs in LDR: materials still apply tone mapping and

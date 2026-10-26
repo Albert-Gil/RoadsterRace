@@ -33,7 +33,7 @@ function guidedLap(seconds = 7) {
 }
 
 describe('tutorial session', () => {
-  test('is a single human car on Coastal Launch for one lap', () => {
+  test('is a single human car on Newport for one lap', () => {
     expect(TUTORIAL_CIRCUIT).toBe('coastal-launch'); expect(TUTORIAL_LAPS).toBe(1);
     expect([humanCount('tutorial', 1), racerCount('tutorial', 1), controllerFor('tutorial', 0)]).toEqual([1, 1, 'human']);
     expect(modeLabel('tutorial', 1)).toBe('TUTORIAL');

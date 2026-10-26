@@ -101,7 +101,7 @@ export function buildCircuitDetails(scene: Scene, track: TrackDefinition, theme:
   // Gantry spans the full runoff; its inner support is inside the protected island.
   for (const z of [-12, -48]) box('gantry-column', { x: -18, z }, 3.5, 0.7, 7, 0.7, dark);
   box('start-gantry', { x: -18, z: -30 }, 6.8, 0.8, 0.65, 36.5, dark);
-  label('start-gantry-sign', 'COASTAL  LAUNCH', 12, 1.3, { x: -18.45, z: -30 }, 6.6, Math.PI / 2);
+  label('start-gantry-sign', 'NEWPORT', 12, 1.3, { x: -18.45, z: -30 }, 6.6, Math.PI / 2);
   for (let i = 0; i < 5; i++) box('start-light', { x: -18.5, z: -27 + i * 1.2 }, 5.6, 0.18, 0.38, 0.38, red);
   // Tire stacks and braking markers on the inside of the wall, not in usable runoff.
   for (let i = 0; i < 12; i++) {

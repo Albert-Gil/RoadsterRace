@@ -13,15 +13,21 @@ import { projectToPolyline } from '../core/geometry';
 import type { TrackDefinition } from '../core/types';
 import { visualAssets } from './assets';
 import { assetUrl } from './urls';
+import { buildNewportHarbour } from './newport';
+import type { PropPlacement } from './props';
+import { newportHarbour } from './themes';
 
-/** Decorative geometry only. The broad sand apron stays clear around the circuit. */
+/** Harbour water level: a calm sea just below the beach, so boats and piers float in the visible water. */
+export const COAST_WATER = -0.46;
+
+/** Decorative geometry only. The broad sand apron stays clear around the circuit. Newport's harbour (boats, islets, palms) is in newport.ts. */
 export function buildCoast(scene: Scene, track: TrackDefinition, theme: PresentationTheme, materials: Map<string, StandardMaterial>) {
   const material = (role: string, color: string, unlit = false) => {
     const m = new StandardMaterial(role, scene); m.diffuseColor = Color3.FromHexString(color); m.specularColor.setAll(0.03); m.disableLighting = unlit; if (unlit) m.emissiveColor = m.diffuseColor.clone(); m.backFaceCulling = false; materials.set(role, m); return m;
   };
   const waterMaterial = material('water', theme.scene.water, true), shallow = material('shallows', theme.scene.shallows, true);
   const waterGrain = surfaceTexture(scene, 'water'); waterGrain.uScale = waterGrain.vScale = 200; waterMaterial.diffuseTexture = waterGrain;
-  const water = MeshBuilder.CreateGround('open-water', { width: 2000, height: 2000 }, scene); water.position.y = -3; water.material = waterMaterial;
+  const water = MeshBuilder.CreateGround('open-water', { width: 2000, height: 2000 }, scene); water.position.y = COAST_WATER; water.material = waterMaterial;
   const sand = material('terrain', theme.scene.terrain), sandGrain = surfaceTexture(scene, 'sand'); sandGrain.uScale = sandGrain.vScale = 8; sand.diffuseTexture = sandGrain; sand.emissiveColor = Color3.FromHexString(theme.scene.terrain).scale(0.04);
   const wetSand = material('wet-sand', theme.scene.shoulder), foam = material('foam', theme.scene.foam, true);
   const ring = (scale: number, y: number) => Array.from({ length: 129 }, (_, i) => {
@@ -33,8 +39,8 @@ export function buildCoast(scene: Scene, track: TrackDefinition, theme: Presenta
     mesh.setVerticesData(VertexBuffer.NormalKind, Array.from({ length: 258 }, () => [0, 1, 0]).flat());
     if (name === 'lagoon-shelf') { mesh.setVerticesData(VertexBuffer.ColorKind, [0.98, 0].flatMap(alpha => Array.from({ length: 129 }, () => [1, 1, 1, alpha]).flat())); mesh.hasVertexAlpha = true; }
   };
-  band('lagoon-shelf', 0.99, 1.25, -0.15, -2.94, shallow);
-  band('shore-break', 1.035, 1.048, -0.65, -0.82, foam);
+  band('lagoon-shelf', 0.99, 1.25, -0.16, COAST_WATER + 0.05, shallow);
+  band('shore-break', 1.035, 1.048, -0.185, -0.2, foam);
   band('wet-sand-rim', 0.965, 1.037, -0.07, -0.68, wetSand);
   const perimeter = ring(0.975, -0.035), land = new Mesh('sandy-island', scene), data = new VertexData();
   const positions = [0, -0.035, 0], normals = [0, 1, 0], uvs = [0.5, 0.5], indices: number[] = [];
@@ -74,28 +80,19 @@ export function buildCoast(scene: Scene, track: TrackDefinition, theme: Presenta
   for (let i = 0; i < 40; i++) {
     const a = i * 2.39996, r = 1.3 + (i % 5) * 0.09;
     const streak = MeshBuilder.CreateBox('sea-glint', { width: 1.5 + i % 4, height: 0.015, depth: 0.12 }, scene);
-    streak.position.set(Math.cos(a) * 85 * r, -2.9, Math.sin(a) * 64 * r); streak.rotation.y = -0.25; streak.material = glint;
+    streak.position.set(Math.cos(a) * 85 * r, COAST_WATER + 0.03, Math.sin(a) * 64 * r); streak.rotation.y = -0.25; streak.material = glint;
   }
   const shade = material('scenery-shadow', '#ffffff', true); shade.diffuseTexture = softShadowTexture(scene); shade.useAlphaFromDiffuseTexture = true; shade.alpha = 0.28;
   shade.emissiveColor.setAll(1);
   const shadow = (x: number, z: number, w: number, d: number) => {
     const mesh = MeshBuilder.CreateGround('scenery-contact', { width: w, height: d }, scene); mesh.position.set(x + 0.7, 0.01, z - 0.5); mesh.material = shade;
   };
-  const leaf = material('foliage', theme.scene.foliage), leafLight = material('foliageLight', theme.scene.foliageLight), trunk = material('trunk', theme.scene.trunk);
+  material('foliage', theme.scene.foliage); material('foliageLight', theme.scene.foliageLight); material('trunk', theme.scene.trunk);
+  // Palms are CC0 models batched with the harbour props; only their contact shadows are built here.
+  const palms: PropPlacement[] = [];
   const palm = (x: number, z: number, height: number, heading: number) => {
     const elevation = groundHeight(x, z);
-    const stem = MeshBuilder.CreateCylinder('palm-trunk', { height, diameterTop: 0.24, diameterBottom: 0.48, tessellation: 7 }, scene);
-    stem.position.set(x, elevation + height / 2, z); stem.rotation.z = 0.12; stem.material = trunk;
-    const crownX = x - height * 0.06;
-    for (let i = 0; i < 11; i++) {
-      const a = heading + i / 11 * Math.PI * 2;
-      const frond = MeshBuilder.CreateRibbon('palm-frond', { pathArray: [-1, 1].map(side => Array.from({ length: 9 }, (_, j) => {
-        const t = j / 8, reach = (3.8 + Math.sin(i * 3) * 0.5) * t, width = Math.sin(t * Math.PI) * 0.42;
-        return new Vector3(crownX + Math.sin(a) * reach + Math.cos(a) * side * width, elevation + height + Math.sin(t * Math.PI) * 0.8 - t * t * 1.4, z + Math.cos(a) * reach - Math.sin(a) * side * width);
-      })), sideOrientation: Mesh.FRONTSIDE }, scene);
-      const normals = frond.getVerticesData(VertexBuffer.NormalKind)!; for (let n = 1; n < normals.length; n += 3) normals[n] = Math.abs(normals[n]); frond.setVerticesData(VertexBuffer.NormalKind, normals);
-      frond.material = i % 2 ? leaf : leafLight;
-    }
+    palms.push({ key: heading % 2 < 1 ? 'palm-detailed-bend' : 'palm-detailed-straight', x, y: elevation, z, heading, scale: height / 4.25 * 1.25 });
     if (elevation < 0.1) shadow(x, z, 7, 6);
   };
   for (const [i, [x, z]] of [[-77, -13], [-77, 8], [-50, 46], [-32, 54], [-10, 55], [12, 55], [48, 33], [72, 11], [78, -19], [48, -50], [-17, -54], [-46, -49], [-28, 3], [-21, 8], [-13, 4]].entries()) {
@@ -103,8 +100,9 @@ export function buildCoast(scene: Scene, track: TrackDefinition, theme: Presenta
   }
   for (let i = 0; i < 20; i++) {
     const a = i / 20 * Math.PI * 2 + 0.12 + Math.sin(i * 7) * 0.08, r = 0.98 + (i % 3) * 0.012;
+    if (newportHarbour.piers.some(pier => Math.abs(Math.atan2(Math.sin(a - pier.angle), Math.cos(a - pier.angle))) < 0.12)) continue; // keep pier roots clear
     const rock = MeshBuilder.CreateSphere('shore-rock', { diameter: 2.8 + i % 4, segments: 5 }, scene);
-    rock.position.set(Math.cos(a) * 85 * r, -0.6, Math.sin(a) * 62 * r); rock.scaling.set(1.6, 0.65 + i % 4 * 0.18, 1.15); rock.rotation.y = i * 2.2; rock.material = rockMaterial; rock.convertToFlatShadedMesh(); shadow(rock.position.x, rock.position.z, 7, 5);
+    rock.position.set(Math.cos(a) * 85 * r, -0.45, Math.sin(a) * 62 * r); rock.scaling.set(1.6, 0.65 + i % 4 * 0.18, 1.15); rock.rotation.y = i * 2.2; rock.material = rockMaterial; rock.convertToFlatShadedMesh(); shadow(rock.position.x, rock.position.z, 7, 5);
   }
   const white = material('architecture', theme.scene.curb), trim = material('architecture-trim', theme.scene.structure), glass = material('architecture-glass', theme.scene.glass), accent = material('architecture-accent', theme.players[0]);
   glass.specularColor.setAll(0.85); glass.specularPower = 96; glass.reflectionTexture = scene.environmentTexture; glass.roughness = 0.15;
@@ -135,10 +133,7 @@ export function buildCoast(scene: Scene, track: TrackDefinition, theme: Presenta
   for (const x of [-27, -1]) for (const z of [54, 61]) box('grandstand-column', x, 3.4, z, 0.28, 6.8, 0.28, trim);
   const standRoof = box('grandstand-canopy', -14, 7, 57.5, 30, 0.25, 11, white); standRoof.rotation.x = -0.06;
   box('grandstand-fascia', -14, 6.8, 52, 30, 0.55, 0.16, accent);
-  // A small offshore sailing boat adds scale, far outside the driving apron.
-  const hull = MeshBuilder.CreateSphere('sailboat-hull', { diameter: 1, segments: 8 }, scene); hull.scaling.set(2.6, 0.9, 7); hull.position.set(97, -2.65, 22); hull.rotation.y = -0.4; hull.material = white;
-  const sail = new Mesh('sail', scene), sailData = new VertexData();
-  sailData.positions = [96, -2.1, 22, 96, 6, 22, 96, -1.5, 27]; sailData.indices = [0, 1, 2]; sailData.normals = [1, 0, 0, 1, 0, 0, 1, 0, 0]; sailData.uvs = [0, 0, 0, 1, 1, 0]; sailData.applyToMesh(sail); sail.material = white;
+  const harbour = buildNewportHarbour(scene, materials, palms, COAST_WATER);
   const shadowCasterMaterials = new Set(['embankment', 'foliage', 'foliageLight', 'trunk', 'rock', 'architecture', 'architecture-trim', 'architecture-glass', 'architecture-accent'].map(role => materials.get(role)!));
-  return { waterTexture: waterGrain, foamMaterial: foam, shadowCasterMaterials };
+  return { waterTexture: waterGrain, foamMaterial: foam, shadowCasterMaterials, harbour };
 }

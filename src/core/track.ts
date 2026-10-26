@@ -12,7 +12,7 @@ const centerline = roundedCircuit([
 const distances = cumulative(centerline);
 const length = distances[distances.length - 1];
 export const coastalTrack: TrackDefinition = {
-  id: 'coastal-launch', version: 3, name: 'Coastal Launch', centerline, distances, length,
+  id: 'coastal-launch', version: 3, name: 'Newport', centerline, distances, length,
   roadWidth: 16, carWidth: 2.2, carLength: 5.2, start: centerline[0], startFinish: createStartFinish(centerline[0], centerline[1], 16),
   // Authored infield islands: all faces are also used by the visible retaining walls.
   barriers: [

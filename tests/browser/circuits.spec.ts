@@ -17,7 +17,7 @@ test('course switching clears plans, retains drivers and distance, scopes bests 
   }
   expect((await state(page)).confirmedCount).toBe(2);
   await page.getByRole('button', { name: 'Race setup', exact: true }).click();
-  for (const name of ['Launchsite', 'Coastal Launch', 'Launchsite', 'Coastal Launch', 'Launchsite']) {
+  for (const name of ['Launchsite', 'Newport', 'Launchsite', 'Newport', 'Launchsite']) {
     await page.getByRole('button', { name: `${name} circuit`, exact: true }).click();
     await page.waitForFunction(() => (window as any).__roadster.getGraphics().renderReady);
     const current = await state(page);
@@ -30,8 +30,8 @@ test('course switching clears plans, retains drivers and distance, scopes bests 
   await page.reload(); await page.getByRole('button', { name: "Time Trial" }).click();
   await expect(page.getByRole('button', { name: 'Launchsite circuit', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('textbox', { name: 'Driver 1 name' })).toHaveValue('Avery');
-  // Establish a one-lap Coastal best, then make sure Orbital starts without inheriting it.
-  await page.getByRole('button', { name: 'Coastal Launch circuit', exact: true }).click();
+  // Establish a one-lap Newport best, then make sure Orbital starts without inheriting it.
+  await page.getByRole('button', { name: 'Newport circuit', exact: true }).click();
   await page.getByRole('button', { name: '1 lap', exact: true }).click();
   await page.getByRole('button', { name: 'Draw racing line' }).click(); await page.evaluate(() => (window as any).__roadster.usePracticeLine());
   await page.getByRole('button', { name: 'Race this line' }).click();

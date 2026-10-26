@@ -16,6 +16,7 @@
     "report:size": "node tools/size-report.mjs",
     "docs:rules": "node tools/write-current-rules.mjs",
     "bake:env": "node tools/bake-environments.mjs",
+    "bake:props": "node tools/bake-props.mjs",
     "build:app": "tsc --noEmit && vite build --mode app",
     "ios:sync": "pnpm build:app && cap sync ios",
     "test:legacy": "node --experimental-vm-modules tools/check-legacy-handling.mjs"

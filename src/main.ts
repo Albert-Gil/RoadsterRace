@@ -139,7 +139,7 @@ function selectCircuit(id: string) {
   const next = findCircuit(id); if (next.id === activeCircuit.id) return;
   loadCircuit(next.id); setPhase('setup'); panel.querySelector<HTMLElement>(`[data-circuit="${next.id}"]`)?.focus({ preventScroll: true });
 }
-/** Swaps the active course and scene. `persist` stores it as the preferred circuit (the tutorial borrows Coastal Launch without doing so). */
+/** Swaps the active course and scene. `persist` stores it as the preferred circuit (the tutorial borrows Newport without doing so). */
 function loadCircuit(id: string, persist = true) {
   const next = findCircuit(id);
   cancelStroke(); clearRaceInput();

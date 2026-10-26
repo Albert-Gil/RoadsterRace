@@ -3,7 +3,7 @@ import { assetUrl } from '../presentation/urls';
 /** Static application frame. Phase content is rendered into #panel, #race-controls and the canvas. */
 export const appShellMarkup = () => `
   <main class="playground" data-phase="welcome" data-players="1">
-    <canvas id="race-canvas" aria-label="Coastal racing circuit. Draw your line with a finger or mouse." tabindex="0"></canvas>
+    <canvas id="race-canvas" aria-label="Racing circuit. Draw your line with a finger or mouse." tabindex="0"></canvas>
     <div id="course-space" aria-hidden="true"></div>
     <div class="scene-vignette" aria-hidden="true"></div>
     <div id="vehicle-labels" aria-hidden="true">${[0, 1, 2, 3].map(i => `<span class="vehicle-label" data-car="${i}" hidden>${i + 1}</span>`).join('')}</div>
@@ -12,7 +12,7 @@ export const appShellMarkup = () => `
       <div class="topbar-center"><span class="live-dot"></span><span id="mode-label">SOLO PLAYGROUND</span></div>
       <div class="header-actions"><button class="quiet-button home-link" data-action="home" aria-label="Home"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m3 11 9-8 9 8M5 9v12h5v-7h4v7h5V9" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Home</span></button><button class="icon-button sound-control sound-on" id="sound-button" aria-label="Turn sound off" aria-pressed="true" title="Sound"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4V9Z" fill="currentColor"/><path class="sound-waves" d="M16 8c2 2 2 6 0 8m3-11c4 4 4 10 0 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path class="sound-slash" d="m4 3 17 18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span class="sound-label">Sound on</span></button><button class="quiet-button touch-test-link" data-action="diagnostics">Touch test <span aria-hidden="true">↗</span></button></div>
     </header>
-    <div class="circuit-caption"><span class="caption-line"></span><div>01 / COASTAL LAUNCH<small>One circuit. Endless possibilities.</small></div></div>
+    <div class="circuit-caption"><span class="caption-line"></span><div>01 / NEWPORT<small>One circuit. Endless possibilities.</small></div></div>
     <section class="race-hud" aria-label="Race timing" hidden><div><small>TIME</small><strong id="race-time">00:00.00</strong></div><span class="hud-divider"></span><div><small id="lap-label">LAP</small><strong id="race-lap">1 <i>/ 2</i></strong></div><span class="hud-divider"></span><div><small id="pace-label">PACE</small><strong id="race-speed">0 <i>km/h</i></strong></div></section>
     <section id="panel" class="panel" aria-live="polite"></section>
     <div class="countdown" hidden><span id="countdown-value">3</span><small id="countdown-label">YOUR LINE. YOUR MOMENT.</small></div>

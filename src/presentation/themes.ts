@@ -120,6 +120,39 @@ export const venueSkies = {
   'night-city': { file: 'night', intensity: 0.7, waterReflection: 1 },
 } satisfies Record<keyof typeof sceneryLighting, { file: string; intensity: number; waterReflection: number }>;
 /**
+ * Newport harbour dressing (presentation only; src/presentation/newport.ts). Angles and rings are
+ * relative to the coastal island ellipse (85 × 62 m; ring 1 = shore, 1.25 = outer edge of its
+ * shelf). Scales convert the CC0 Kenney models to metres (boats ~8 m, houses ~10 m).
+ */
+export const newportHarbour = {
+  seed: 7, draft: 0.28, boatScale: 2.3, houseScale: 6, palmScale: 1.5, breeze: 2.3, berthStart: 5, berthGap: 0.9,
+  dock: { length: 6, width: 2.2, deck: '#a8845d', piling: '#5c4636' },
+  /** Marina piers run out from the beach at these ellipse angles (east end, west end, north shore). */
+  piers: [
+    { angle: 0.16, boats: ['boat-speed-a', 'boat-sail-a', 'boat-speed-c', 'boat-house-b'] },
+    { angle: -0.22, boats: ['boat-sail-b', 'boat-speed-g', 'boat-fishing-small'] },
+    { angle: Math.PI - 0.2, boats: ['boat-sail-a', 'boat-speed-i', 'boat-speed-b', 'boat-sail-b'] },
+    { angle: Math.PI + 0.16, boats: ['boat-house-b', 'boat-speed-a', 'boat-speed-c'] },
+    { angle: Math.PI + 0.48, boats: ['boat-fishing-small', 'boat-speed-g'] },
+    { angle: -1.3, boats: ['boat-speed-b', 'boat-sail-a'] },
+  ],
+  islets: [
+    { angle: 0.66, ring: 1.52, length: 34, width: 14, houses: ['house-b', 'house-n-blue', 'house-e'], boats: ['boat-speed-a', 'boat-sail-a', 'boat-speed-g'], palms: [-0.92, 0.9] },
+    { angle: Math.PI - 0.66, ring: 1.52, length: 34, width: 14, houses: ['house-d', 'house-s', 'house-g'], boats: ['boat-sail-b', 'boat-speed-c', 'boat-speed-i'], palms: [-0.9, 0.92] },
+    { angle: -0.62, ring: 1.54, length: 34, width: 14, houses: ['house-u', 'house-a', 'house-d-blue'], boats: ['boat-speed-b', 'boat-house-b', 'boat-speed-a'], palms: [-0.92, 0.9] },
+    { angle: Math.PI + 0.64, ring: 1.54, length: 34, width: 14, houses: ['house-c', 'house-b-blue', 'house-h'], boats: ['boat-fishing-small', 'boat-speed-g', 'boat-sail-a'], palms: [-0.9, 0.92] },
+  ],
+  /** Moored boats in the shallows (rings beyond the shore), clear of piers, islets and the grandstand side. */
+  moorings: { step: 0.15, pierClearance: 0.2, isletClearance: 0.3, avoid: [[1.2, 1.95]] as [number, number][], rings: [1.13, 1.21, 1.17], boats: ['boat-sail-a', 'boat-speed-c', 'boat-sail-b', 'boat-speed-i', 'boat-row-small', 'boat-speed-a', 'boat-sail-a', 'boat-speed-b', 'boat-fishing-small', 'boat-speed-g'] },
+  buoys: { ring: 1.27, step: 0.5, offset: 0.25 },
+  underWay: [
+    { key: 'boat-sail-b', ring: 1.33, speed: 2.4, phase: 0.4 },
+    { key: 'boat-speed-i', ring: 1.34, speed: 4.6, phase: 2.5 },
+    { key: 'boat-fishing-small', ring: 1.33, speed: 3, phase: 4.5 },
+  ],
+};
+
+/**
  * Menu car studio (photographic HDRI). `keyLightAngle` places the brightest softbox around the car,
  * in degrees from the camera's side (180 = straight behind the car, where the roof and hood mirror
  * it as a white sheet). `plinthReflection` scales the stage's own environment light.
