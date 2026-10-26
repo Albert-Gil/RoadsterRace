@@ -5,7 +5,6 @@ import { Vector3, Matrix } from '@babylonjs/core/Maths/math.vector';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
-import { VertexBuffer } from '@babylonjs/core/Buffers/buffer';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture';
@@ -15,19 +14,22 @@ import { sunsetAppearance as art, type PresentationTheme } from './themes';
 import { surfaceTexture } from './textures';
 import { santaMonicaAuthoredBuildings as santaMonicaBuildings } from '../content/santa-monica-art';
 import { reflectSantaVenue } from '../core/tracks/santa-monica';
+import { buildSantaMonicaLandscape } from './santa-monica-landscape';
 
 /** Original procedural seaside venue. Every pier slab uses a physical support footprint. */
 export function buildSantaMonica(scene: Scene, track: TrackDefinition, theme: PresentationTheme, materials: Map<string, StandardMaterial>) {
   // Props remain in a single documented authoring space. Reflect their shared
   // parent into the clockwise physical venue; static batching bakes that transform.
+  // The landscape (santa-monica-landscape.ts) is built in world space, after the reflection.
+  const worldTrack = track;
   track = reflectSantaVenue(track);
   const before = new Set(scene.meshes), venueRoot = new TransformNode('clockwise-santa-artwork', scene); venueRoot.scaling.z = -1;
   const casters = new Set<StandardMaterial>();
   const mat = (role: string, color: string, casts = true) => { const m = new StandardMaterial(role, scene); m.diffuseColor = Color3.FromHexString(color); m.specularColor.setAll(0.08); m.backFaceCulling = false; materials.set(role, m); if (casts) casters.add(m); return m; };
   const sand = mat('terrain', theme.scene.terrain, false), edge = mat('embankment', theme.scene.embankment, false);
   const wood = mat('pier-timber', art.deck), dark = mat('architecture-trim', art.steel), white = mat('architecture', art.ivory), glass = mat('architecture-glass', art.glass);
-  const coral = mat('sunset-coral', art.coral), gold = mat('sunset-gold', art.gold), leaf = mat('foliage', theme.scene.foliage), lightLeaf = mat('foliageLight', theme.scene.foliageLight);
-  const trunk = mat('trunk', theme.scene.trunk); mat('rock', theme.scene.rock);
+  const coral = mat('sunset-coral', art.coral), gold = mat('sunset-gold', art.gold); mat('foliage', theme.scene.foliage); mat('foliageLight', theme.scene.foliageLight);
+  mat('trunk', theme.scene.trunk); mat('rock', theme.scene.rock);
   const water = mat('water', theme.scene.water, false); water.specularColor.setAll(0.65); water.specularPower = 90;
   water.disableLighting = true; water.emissiveColor = Color3.FromHexString(theme.scene.water);
   const waterTexture = surfaceTexture(scene, 'water'); waterTexture.uScale = waterTexture.vScale = 120; water.diffuseTexture = waterTexture;
@@ -44,17 +46,9 @@ export function buildSantaMonica(scene: Scene, track: TrackDefinition, theme: Pr
     const m = new Mesh(name, scene); data.applyToMesh(m); material.backFaceCulling = false; m.material = material; return m;
   };
   const sea = MeshBuilder.CreateGround('pacific-ocean', { width: 2000, height: 2000 }, scene); sea.position.y = -2.4; sea.material = water;
-  for (const s of track.supports!) slab(`supported-${s.id}`, s.footprint, s.id === 'beach-land' ? sand : wood, s.id === 'beach-land' ? -0.04 : 0.025, s.id === 'beach-land' ? -2.5 : -0.6);
-  // Warm shoreline, entirely land-backed. No sand or shoulder spans the water gap.
-  const shore = track.supports![0].footprint.slice(1, -1);
-  const foam = mat('foam', theme.scene.foam, false); foam.emissiveColor = Color3.FromHexString(theme.scene.foam).scale(0.25);
-  const band = (name: string, offsets: number[], heights: number[], material: StandardMaterial) => {
-    const m = MeshBuilder.CreateRibbon(name, { pathArray: offsets.map((offset, i) => shore.map(p => new Vector3(p.x + offset, heights[i], p.z))), sideOrientation: Mesh.DOUBLESIDE }, scene); m.material = material;
-    m.setVerticesData(VertexBuffer.NormalKind, Array.from({ length: m.getTotalVertices() }, () => [0, 1, 0]).flat());
-  };
-  band('wet-sand-shore', [0, 2.5], [-0.05, -0.7], edge);
-  band('soft-pacific-shore-break', [2.5, 3], [-0.72, -0.85], foam);
-  band('submerged-sand-bank', [3, 7], [-0.85, -2.4], sand);
+  // Pier decks are slabs over their supports; the beach support is the landscape's terrain (level
+  // across the corridor, the same shoreline, its wet slope, foam and sand bank into the Pacific).
+  for (const s of track.supports!) if (s.id !== 'beach-land') slab(`supported-${s.id}`, s.footprint, wood, 0.025, -0.6);
   for (let i = 0; i < 22; i++) {
     const glint = box('sunset-water-glint', 43 + i % 6 * 22, -2.37, -45 + Math.floor(i / 6) * 32, 6 + i % 4 * 2, 0.01, 0.12, gold); glint.rotation.y = -0.15;
   }
@@ -91,14 +85,7 @@ export function buildSantaMonica(scene: Scene, track: TrackDefinition, theme: Pr
       for (let j = 0; j < 3; j++) box('upper-shop-window', x - 1.5 + j * 1.5, 3.4, z + side * 3.55, 0.9, 1.1, 0.08, glass);
     }
   }
-  const palm = (x: number, z: number, h: number) => {
-    tube('palm-trunk', [new Vector3(x, 0, z), new Vector3(x + 0.5, h * 0.6, z), new Vector3(x + 0.8, h, z + 0.2)], 0.24, trunk);
-    for (let i = 0; i < 7; i++) {
-      const a = i / 7 * Math.PI * 2, frond = MeshBuilder.CreateSphere('palm-frond', { diameter: 1, segments: 4 }, scene);
-      frond.scaling.set(3.8, 0.15, 0.75); frond.rotation.y = a; frond.rotation.z = -0.2; frond.position.set(x + 0.8 + Math.cos(a) * 1.25, h - 0.25, z + Math.sin(a) * 1.25); frond.material = i % 2 ? leaf : lightLeaf;
-    }
-  };
-  for (const [x, z] of [[-30, -21], [-14, -21], [0, -21], [-73, -35], [-74, -12], [-73, 12], [-64, 45], [-40, 52], [-14, 50], [5, 66], [20, -65], [-92, -45], [-92, -24], [-91, 0], [-88, 25]]) palm(x, z, 5 + Math.abs(x) % 3);
+  // The venue's palms are landscape plants now (SANTA.palms keeps their authored places).
   // Land-backed hotel frontage and promenade, outside the usable runoff.
   for (const { x, z, height: h, color } of santaMonicaBuildings.filter(b => b.kind === 'hotel')) {
     box('beachfront-city-foundation', x, 0.1, z, 11, 0.3, 9, edge); box('beachfront-hotel', x, h / 2 + 0.3, z, 10, h, 8, facade[color]);
@@ -159,7 +146,8 @@ export function buildSantaMonica(scene: Scene, track: TrackDefinition, theme: Pr
   }
 
   for (const mesh of scene.meshes) if (!before.has(mesh) && !mesh.parent) mesh.parent = venueRoot;
-  return { shadowCasterMaterials: casters, update(time: number, reduced: boolean) {
+  const landscape = buildSantaMonicaLandscape(scene, worldTrack, materials);
+  return { shadowCasterMaterials: casters, lateShadowCasters: landscape.shadowCasters, update(time: number, reduced: boolean) {
     waterTexture.uOffset = reduced ? 0 : time * 0.002;
     wheel.rotation.z = reduced ? 0 : time * 0.11;
     const index = reduced ? 0 : time * 7 % 96, i = Math.floor(index), a = coasterPath[i], b = coasterPath[i + 1];

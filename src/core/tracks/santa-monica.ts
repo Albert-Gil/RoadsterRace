@@ -2,6 +2,7 @@ import { roundedCircuit } from '../road-geometry';
 import { closedSpline, cumulative, distance, projectToPolyline } from '../geometry';
 import { createStartFinish } from '../start-finish';
 import type { Point, SupportSurface, TrackBarrier, TrackDefinition, TrackJump } from '../types';
+import { outcrop } from './outcrop';
 
 export const rectangle = (x: number, z: number, width: number, depth: number): Point[] => [{ x, z }, { x: x + width, z }, { x: x + width, z: z + depth }, { x, z: z + depth }];
 export function strip(a: Point, b: Point, width: number): Point[] {
@@ -51,8 +52,10 @@ for (const [name, path, side] of [
 for (const side of [-1, 1]) barriers.push({ id: `jump-rail-${side}`, kind: 'pier-rail', height: 0.8, footprint: rectangle(114, -12 + side * 7.825 - 0.175, 19, 0.35) });
 barriers.push({ id: 'inbound-inner-rail', kind: 'pier-rail', height: 0.85, footprint: rectangle(84, 42, 32, 0.35) });
 barriers.push({ id: 'landing-edge', kind: 'pier-rail', baseHeight: -2.4, height: 2.4, footprint: rectangle(71.8, -20, 0.2, 16) });
+// v3: the rock groyne's root on the sand beside the hotel row, 12-13 m beyond the road edge (its seaward arm is scenery).
+barriers.push({ id: 'beach-groyne', kind: 'rock', height: 2, footprint: outcrop(24.5, -84, 8.5, 2.8, 0, 2.3) });
 const authoredTrack: TrackDefinition = {
-  id: 'santa-monica', version: 2, name: 'Santa Monica', centerline, distances, length,
+  id: 'santa-monica', version: 3, name: 'Santa Monica', centerline, distances, length,
   roadWidth: 16, carWidth: 2.2, carLength: 5.2, start: centerline[0], startFinish: createStartFinish(centerline[0], centerline[1], 16),
   supports, waterOpenings: [{ id: 'pacific-gap', footprint: rectangle(62, -20, 10, 16) }], jumps: [jump], barriers,
 };

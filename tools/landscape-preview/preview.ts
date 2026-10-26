@@ -14,6 +14,8 @@ import { Color3, Color4 } from '@babylonjs/core/Maths/math.color';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { orbitalTrack } from '../../src/core/tracks/orbital';
+import { grandCanyonTrack } from '../../src/core/tracks/grand-canyon';
+import { buildCanyonLandscape } from '../../src/presentation/canyon-landscape';
 import { buildLaunchsiteLandscape } from '../../src/presentation/launchsite';
 import { sceneryPalettes, sceneryLighting } from '../../src/presentation/themes';
 
@@ -29,9 +31,11 @@ sun.position = target.add(new Vector3(-55, 100, -45)); sun.shadowMinZ = 1; sun.s
 const shadows = new ShadowGenerator(2048, sun); shadows.usePercentageCloserFiltering = true; sun.shadowFrustumSize = Math.max(80, num('radius', 60) * 2.2); sun.autoUpdateExtends = false;
 const materials = new Map<string, StandardMaterial>(), terrain = new StandardMaterial('terrain', scene);
 terrain.diffuseColor = Color3.FromHexString(sceneryPalettes.spaceport.terrain); terrain.specularColor.setAll(0.04); materials.set('terrain', terrain);
-if (params.has('race')) { const road = MeshBuilder.CreateTube('road', { path: orbitalTrack.centerline.map(p => new Vector3(p.x, 0.05, p.z)), radius: 0.4 }, scene); road.material = new StandardMaterial('road', scene); }
-const landscape = buildLaunchsiteLandscape(scene, orbitalTrack, materials);
+
+const venue = params.get('venue') ?? 'launchsite', track = venue === 'canyon' ? grandCanyonTrack : orbitalTrack;
+const landscape = venue === 'canyon' ? buildCanyonLandscape(scene, grandCanyonTrack, materials) : buildLaunchsiteLandscape(scene, orbitalTrack, materials);
 landscape.terrain.receiveShadows = true;
+if (params.has('race')) { const road = MeshBuilder.CreateTube('road', { path: track.centerline.map(p => new Vector3(p.x, (p.y ?? 0) + 0.05, p.z)), radius: 0.4 }, scene); road.material = new StandardMaterial('road', scene); }
 let ready = false;
 void landscape.shadowCasters.then(meshes => { for (const m of meshes) shadows.addShadowCaster(m); ready = true; });
 Object.assign(window, { previewReady: () => ready && scene.isReady() });

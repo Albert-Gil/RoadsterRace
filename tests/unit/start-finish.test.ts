@@ -5,7 +5,7 @@ import { goldenGateTrack as golden } from '../../src/core/tracks/golden-gate';
 import { compileRoute, createPracticeSamples, COMPILER_VERSION } from '../../src/core/route';
 import { GATE_RULES, canStartDrawing, gateCoordinates, gatePoint, startGate, trimDrawing } from '../../src/core/start-finish';
 import { blockedRouteSection, insideBarrier, sweepVehicle, barrierContact } from '../../src/core/barriers';
-import { distance } from '../../src/core/geometry';
+import { distance, projectToPolyline } from '../../src/core/geometry';
 import { RaceSimulation } from '../../src/core/simulation';
 import type { DrawSample, TrackDefinition } from '../../src/core/types';
 
@@ -128,7 +128,7 @@ describe('authored Golden Gate city and narrow bridge', () => {
     }
   });
   test('the widened city course has an 88 m by 16 m deck and 15.3 m between straight rails', () => {
-    expect(golden.version).toBe(3); expect(golden.length).toBeGreaterThan(430); expect(golden.length).toBeLessThan(520);
+    expect(golden.version).toBe(4); expect(golden.length).toBeGreaterThan(430); expect(golden.length).toBeLessThan(520);
     const b = golden.bridges![0]; expect(distance(b.from, b.to)).toBe(88); expect(b.width).toBe(16);
     const straightRails = golden.barriers.filter(b => b.id.endsWith('-3') && b.kind === 'bridge-rail');
     expect(straightRails).toHaveLength(2);
@@ -136,6 +136,18 @@ describe('authored Golden Gate city and narrow bridge', () => {
     expect(Math.min(...edges[1]) - Math.max(...edges[0])).toBeCloseTo(15.3, 5);
     const area = golden.centerline.slice(1).reduce((sum, p, i) => sum + golden.centerline[i].x * p.z - p.x * golden.centerline[i].z, 0);
     expect(area).toBeLessThan(0);
+  });
+  test('v4 park boulders stand on land, 12-14 m beyond the road edge, outside every city block', () => {
+    const boulders = golden.barriers.filter(b => b.kind === 'rock');
+    expect(boulders.map(b => b.id)).toEqual(['park-boulders-northwest', 'park-boulders-northeast', 'park-boulders-southwest', 'park-boulders-east']);
+    const loop = [...golden.centerline, golden.centerline[0]], distances = [...golden.distances, golden.length];
+    for (const b of boulders) {
+      expect(b.height).toBeGreaterThan(1.5); expect(b.height).toBeLessThan(2);
+      for (const p of b.footprint) expect(onCityLand(p), b.id).toBe(true);
+      const edge = Math.min(...b.footprint.map(p => projectToPolyline(p, loop, distances).distance)) - golden.roadWidth / 2;
+      expect(edge, b.id).toBeGreaterThan(12); expect(edge, b.id).toBeLessThan(14.5);
+      expect(golden.barriers.some(w => w.kind === 'infield' && b.footprint.some(p => insideBarrier(p, w))), b.id).toBe(false);
+    }
   });
   test('a bridge excursion is accepted as drawn; the car hits the rail, is reset past it and finishes slower', () => {
     const clean = success(planned(golden), golden), route = planned(golden).map(p => ({ ...p, z: p.x > -30 && p.x < 30 && p.z > 40 ? p.z + 8 : p.z }));

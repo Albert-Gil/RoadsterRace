@@ -2,6 +2,7 @@ import { roundedCircuit } from '../road-geometry';
 import { createStartFinish } from '../start-finish';
 import { cumulative, projectToPolyline } from '../geometry';
 import type { HopShortcut, Point, TrackDefinition } from '../types';
+import { outcrop } from './outcrop';
 
 const centerline = roundedCircuit([
   { x: -38, z: -40 }, { x: -4, z: -40 }, { x: 48, z: -40 },
@@ -22,12 +23,6 @@ const serviceHop: HopShortcut = { id: 'service-hop', branch, width: 16, obstacle
   entryProgress: projectToPolyline(branch[0], centerline, distances).progress,
   exitProgress: projectToPolyline(branch.at(-1)!, centerline, distances).progress };
 const rect = (x: number, z: number, w: number, d: number) => [{ x, z }, { x: x + w, z }, { x: x + w, z: z + d }, { x, z: z + d }];
-/** A natural rock formation's footprint: an irregular, star-shaped polygon (deterministic). */
-const outcrop = (x: number, z: number, rx: number, rz: number, rotation: number, seed: number): Point[] => Array.from({ length: 14 }, (_, i) => {
-  const a = i / 14 * Math.PI * 2, r = 1 + 0.16 * Math.sin(3 * a + seed) + 0.09 * Math.sin(5 * a + 2.3 * seed) + 0.05 * Math.sin(7 * a + 0.7 * seed);
-  const px = Math.cos(a) * rx * r, pz = Math.sin(a) * rz * r;
-  return { x: x + px * Math.cos(rotation) - pz * Math.sin(rotation), z: z + px * Math.sin(rotation) + pz * Math.cos(rotation) };
-});
 /**
  * Solid desert rock formations (v4). Each keeps at least 13 m from the centerline (5 m of run-off
  * beyond the road edge) and its rendered rock stays inside its footprint, so what you see is what

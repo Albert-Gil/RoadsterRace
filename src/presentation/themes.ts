@@ -197,11 +197,15 @@ export const surfaceFinishes: Record<string, SurfaceFinish> = {
   'bay-metal': { kind: 'concrete', scale: 40, normal: 0, variation: 0, reflection: 0.3, roughness: 0.35 },
 };
 export const sceneryFinishes: Partial<Record<keyof typeof sceneryLighting, Record<string, SurfaceFinish>>> = {
-  bay: { terrain: { kind: 'grass', scale: 16, normal: 0.55, variation: 0.18 } },
+  // Golden Gate paints its land in full colour; the finish adds only fine grain. The shore carries vertex colour.
+  bay: { terrain: { kind: 'grass', scale: 16, normal: 0.55, variation: 0.18 }, 'city-ground': { kind: 'dirt', scale: 6, normal: 0.3, variation: 0.05 }, 'golden-shore': { kind: 'dirt', scale: 14, normal: 0.5, variation: 0.1 } },
   // Launchsite paints its own ground; its sand keeps fine, low ripples so the paint reads.
   spaceport: { terrain: { kind: 'sand', scale: 11, normal: 0.4, variation: 0.1 } },
+  // Newport and Santa Monica paint their beaches; fine, low ripples keep the paint readable.
+  coastal: { terrain: { kind: 'sand', scale: 11, normal: 0.45, variation: 0.1 } },
+  sunset: { terrain: { kind: 'sand', scale: 11, normal: 0.4, variation: 0.1 } },
   canyon: { terrain: { kind: 'dirt', scale: 22, normal: 0.7, variation: 0.18 }, asphalt: { kind: 'dirt', scale: 12, normal: 0.55, variation: 0.14 }, shoulder: { kind: 'dirt', scale: 16, normal: 0.6, variation: 0.16 } },
-  'night-city': { terrain: { kind: 'concrete', scale: 12, normal: 0.3, variation: 0.12 }, asphalt: { kind: 'asphalt', scale: 10, normal: 0.35, variation: 0.08, reflection: 0.3, roughness: 0.3, specular: 0.25, gloss: 60 } },
+  'night-city': { terrain: { kind: 'concrete', scale: 12, normal: 0.3, variation: 0.12 }, 'la-ground': { kind: 'concrete', scale: 12, normal: 0.3, variation: 0.06 }, asphalt: { kind: 'asphalt', scale: 10, normal: 0.35, variation: 0.08, reflection: 0.3, roughness: 0.3, specular: 0.25, gloss: 60 } },
 };
 
 export const canyonAppearance={cliff:['#a85f43','#bc7850','#d39464','#e1ad79'],mesa:'#c6986b',road:'#aa895d',ruts:'#705c42',dryWash:'#d9b891',scrub:'#68724b',guard:'#96745a'};

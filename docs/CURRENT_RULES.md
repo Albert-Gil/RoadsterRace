@@ -12,9 +12,9 @@ Conventions: SI units; horizontal plane (x, z) with y up; heading 0 points along
 | Route compiler (`COMPILER_VERSION`) | 15 |
 | Newport track (`coastal-launch`) | 3 |
 | Launchsite track (`orbital-launchyard`) | 4 |
-| Golden Gate track (`golden-gate`) | 3 |
-| Santa Monica track (`santa-monica`) | 2 |
-| Grand Canyon track (`grand-canyon`) | 2 |
+| Golden Gate track (`golden-gate`) | 4 |
+| Santa Monica track (`santa-monica`) | 3 |
+| Grand Canyon track (`grand-canyon`) | 3 |
 | LA nights track (`la-nights`) | 1 |
 
 Records, ghosts, session bests and championships are scoped by these versions. Change a version whenever a value below changes race results.
@@ -25,9 +25,9 @@ Records, ghosts, session bests and championships are scoped by these versions. C
 |---|---|---:|---:|---:|---:|---|
 | Newport | `coastal-launch` | 3 | 16 | 292.9 | 4 | — |
 | Launchsite | `orbital-launchyard` | 4 | 16 | 460.6 | 20 | hop lane `service-hop` |
-| Golden Gate | `golden-gate` | 3 | 16 | 496.4 | 25 | bridge `golden-span` |
-| Santa Monica | `santa-monica` | 2 | 16 | 660.7 | 104 | ramp `pacific-hop` |
-| Grand Canyon | `grand-canyon` | 2 | 16 | 568.8 | 9 | crest `canyon-crest`, hop lane `mesa-service-trail` |
+| Golden Gate | `golden-gate` | 4 | 16 | 496.4 | 29 | bridge `golden-span` |
+| Santa Monica | `santa-monica` | 3 | 16 | 660.7 | 105 | ramp `pacific-hop` |
+| Grand Canyon | `grand-canyon` | 3 | 16 | 568.8 | 43 | crest `canyon-crest`, hop lane `mesa-service-trail` |
 | LA nights | `la-nights` | 1 | 16 | 734.0 | 11 | ramp `channel-crossing`, hop lane `backlot-alley` |
 
 Vehicle envelope: 2.2 m × 5.2 m. Race distance: 1–6 laps (default 2). Championship points by place: 10 / 6 / 4 / 0.

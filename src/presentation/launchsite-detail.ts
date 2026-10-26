@@ -1,5 +1,6 @@
 import type { Scene } from '@babylonjs/core/scene';
 import type { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture';
+import type { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import type { TrackDefinition } from '../core/types';
 import type { LaunchsiteLayout } from './launchsite';
 import { fbm2, noise2, random, smoothstep } from './landscape/noise';
@@ -104,3 +105,7 @@ export function* paintGround(scene: Scene, track: TrackDefinition, layout: Launc
   return g.finish();
 }
 
+/** Paints the map in steps, then puts it on the terrain material. */
+export function* paintInto(scene: Scene, track: TrackDefinition, layout: LaunchsiteLayout, material: StandardMaterial): Generator<void, void> {
+  material.diffuseTexture = yield* paintGround(scene, track, layout);
+}
