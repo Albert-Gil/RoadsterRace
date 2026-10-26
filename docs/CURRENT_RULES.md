@@ -10,7 +10,7 @@ Conventions: SI units; horizontal plane (x, z) with y up; heading 0 points along
 |---|---:|
 | Vehicle rules (`RULES.version`) | 14 |
 | Route compiler (`COMPILER_VERSION`) | 15 |
-| Newport track (`coastal-launch`) | 3 |
+| Newport Island track (`coastal-launch`) | 3 |
 | Launchsite track (`orbital-launchyard`) | 4 |
 | Golden Gate track (`golden-gate`) | 4 |
 | Santa Monica track (`santa-monica`) | 3 |
@@ -23,7 +23,7 @@ Records, ghosts, session bests and championships are scoped by these versions. C
 
 | Circuit | ID | Track version | Road width (m) | Centerline (m) | Barriers | Branches |
 |---|---|---:|---:|---:|---:|---|
-| Newport | `coastal-launch` | 3 | 16 | 292.9 | 4 | — |
+| Newport Island | `coastal-launch` | 3 | 16 | 292.9 | 4 | — |
 | Launchsite | `orbital-launchyard` | 4 | 16 | 460.6 | 20 | hop lane `service-hop` |
 | Golden Gate | `golden-gate` | 4 | 16 | 496.4 | 29 | bridge `golden-span` |
 | Santa Monica | `santa-monica` | 3 | 16 | 660.7 | 105 | ramp `pacific-hop` |

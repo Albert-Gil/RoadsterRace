@@ -39,7 +39,7 @@ export const circuits: readonly CircuitDefinition[] = [
 ];
 export const defaultCircuit = circuits[0];
 /** Player-facing names that differ from the legacy IDs kept for saved preferences and links. */
-const circuitAliases: Record<string, string> = { launchsite: 'orbital-launchyard', newport: 'coastal-launch' };
+const circuitAliases: Record<string, string> = { launchsite: 'orbital-launchyard', newport: 'coastal-launch', 'newport-island': 'coastal-launch' };
 export const findCircuit = (id: unknown) => circuits.find(circuit => circuit.id === (typeof id === 'string' && circuitAliases[id] || id)) ?? defaultCircuit;
 
 /** Original selection-card silhouette drawn from the actual physical centerline. */
