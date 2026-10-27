@@ -16,8 +16,10 @@ for (const viewport of [{ width: 844, height: 390 }, { width: 390, height: 844 }
     await waitForPhase(page, 'racing');
     const pad = await page.locator('#thrust-button').boundingBox();
     expect(pad!.width).toBe(64); expect(pad!.height).toBe(64);
-    const sound = await page.locator('#sound-button').boundingBox();
-    expect(pad!.x + pad!.width <= sound!.x || sound!.x + sound!.width <= pad!.x || pad!.y + pad!.height <= sound!.y || sound!.y + sound!.height <= pad!.y).toBe(true);
+    // Sound moved to Settings and the Pause menu; the race keeps only Pause beside the pads.
+    await expect(page.locator('#sound-button')).toBeHidden();
+    const pause = await page.locator('.pause-button').boundingBox();
+    expect(pad!.x + pad!.width <= pause!.x || pause!.x + pause!.width <= pad!.x || pad!.y + pad!.height <= pause!.y || pause!.y + pause!.height <= pad!.y).toBe(true);
     if (viewport.height > viewport.width) {
       const hud = await page.locator('.race-hud').boundingBox(); expect(hud!.y + hud!.height).toBeLessThan(56);
     }

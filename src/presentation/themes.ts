@@ -13,7 +13,12 @@ export interface PresentationTheme {
   id: 'coastal' | 'graphite';
   branding: { title: string; tagline: string; logo: string };
   typography: { body: string; display: string };
-  ui: { surface: string; text: string; muted: string; accent: string; accentText: string; border: string; radius: string };
+  /**
+   * Interface tokens (CSS custom properties, kebab-cased by applyTheme). `fill` is the solid button colour and
+   * `accentText` its label; `accent` marks selection and focus; `highlight` is small accent text (eyebrows);
+   * `glass` is the translucent panel colour over the 3D scene or key art.
+   */
+  ui: { surface: string; glass: string; text: string; muted: string; accent: string; fill: string; accentText: string; highlight: string; border: string; radius: string };
   scene: { water: string; shallows: string; foam: string; terrain: string; embankment: string; asphalt: string; structure: string; shoulder: string; curb: string; paint: string; glass: string; foliage: string; foliageLight: string; rock: string; trunk: string; route: string; paceFast: string; sky: string; sunlight: number };
   players: string[];
   venue: { concrete: string; metal: string; accent: string; rubber: string; marking: string; repair: string };
@@ -25,7 +30,7 @@ export const themes: Record<string, PresentationTheme> = {
     id: 'coastal',
     branding: { title: 'ROADSTER RACE', tagline: 'Your line. Your race.', logo: assetUrl('assets/mark.svg') },
     typography: { body: 'Barlow, system-ui, -apple-system, sans-serif', display: '"Barlow Condensed", Impact, sans-serif' },
-    ui: { surface: '#111820', text: '#f4f5f6', muted: '#b6c0c9', accent: '#f0444b', accentText: '#ffffff', border: '#39434d', radius: '3px' },
+    ui: { surface: '#111820', glass: 'rgb(12 17 24 / 86%)', text: '#f4f5f6', muted: '#a9b4be', accent: '#f0444b', fill: '#d9303a', accentText: '#ffffff', highlight: '#ff7a7f', border: 'rgb(255 255 255 / 12%)', radius: '14px' },
     scene: { water: '#216574', shallows: '#5a9e9c', foam: '#d1e5da', terrain: '#c7b78d', embankment: '#a7ae8a', asphalt: '#b0b6ba', structure: '#26313b', shoulder: '#9a9586', curb: '#ede9de', paint: '#d51f35', glass: '#13212c', foliage: '#344d36', foliageLight: '#687349', rock: '#b7b5a5', trunk: '#786b53', route: '#ff4c48', paceFast: '#4ce879', sky: '#a4b8c1', sunlight: 1.0 },
     players: ['#4caaff', '#ffac4c', '#ba91ff', '#56e0d2'],
     venue: { concrete: '#c6c8be', metal: '#7e8a8d', accent: '#bd303b', rubber: '#222c31', marking: '#e8e5d8', repair: '#41494a' },
@@ -35,7 +40,7 @@ export const themes: Record<string, PresentationTheme> = {
     id: 'graphite',
     branding: { title: 'ROADSTER / RACE', tagline: 'Find your flow.', logo: assetUrl('assets/mark-graphite.svg') },
     typography: { body: 'Barlow, system-ui, -apple-system, sans-serif', display: 'Barlow, system-ui, sans-serif' },
-    ui: { surface: '#172022', text: '#f1f5e8', muted: '#b8c6bd', accent: '#d7f877', accentText: '#18291e', border: '#47554e', radius: '3px' },
+    ui: { surface: '#172022', glass: 'rgb(20 31 32 / 88%)', text: '#f1f5e8', muted: '#b8c6bd', accent: '#d7f877', fill: '#d7f877', accentText: '#18291e', highlight: '#e3fba6', border: 'rgb(241 245 232 / 14%)', radius: '14px' },
     scene: { water: '#234d60', shallows: '#4a8e91', foam: '#b1dace', terrain: '#b8b69b', embankment: '#b7c5b1', asphalt: '#b3c0c7', structure: '#263b40', shoulder: '#919b86', curb: '#e4dfcb', paint: '#d7f877', glass: '#182e35', foliage: '#3a6357', foliageLight: '#839b73', rock: '#b1bdb4', trunk: '#81765f', route: '#dcf896', paceFast: '#f3aa6c', sky: '#739597', sunlight: 0.85 },
     players: ['#d7f877', '#f3aa6c', '#bea3e9', '#ec9cbe'],
     venue: { concrete: '#b8c1b6', metal: '#74898a', accent: '#bd303b', rubber: '#182b2e', marking: '#e7ecd9', repair: '#3b4b4c' },
@@ -153,11 +158,17 @@ export const newportHarbour = {
 };
 
 /**
- * Menu car studio (photographic HDRI). `keyLightAngle` places the brightest softbox around the car,
- * in degrees from the camera's side (180 = straight behind the car, where the roof and hood mirror
- * it as a white sheet). `plinthReflection` scales the stage's own environment light.
+ * Home key art (public/assets/hero/<id>-wide.webp and -tall.webp; provenance in docs/ASSET_RIGHTS.md).
+ * One picture is chosen at random each time the player arrives on Home. `wide`/`tall` are CSS
+ * object-position focus points that keep the cars in frame when a screen crops the picture.
  */
-export const showcaseSky = { file: 'studio', intensity: 0.75, keyLightAngle: 145, plinthReflection: 0.45 };
+export const heroImages = [
+  { id: 'thruster-hop', wide: '78% 50%', tall: '50% 28%' },
+  { id: 'drivers-grid', wide: '66% 60%', tall: '62% 58%' },
+  { id: 'door-to-door', wide: '70% 50%', tall: '45% 50%' },
+  { id: 'water-jump', wide: '45% 66%', tall: '68% 44%' },
+  { id: 'canyon-jump', wide: '58% 30%', tall: '40% 50%' },
+] as const;
 
 /**
  * World-space surface detail by material role (scenery-specific roles override the shared ones).

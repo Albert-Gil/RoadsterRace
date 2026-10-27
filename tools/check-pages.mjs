@@ -184,7 +184,11 @@ try {
       assert.equal(await page.locator('meta[name=robots]').getAttribute('content'), 'noindex,nofollow');
       assert.equal(await page.locator('.brand').getAttribute('href'), base);
       assert.equal(await page.locator('.brand img').evaluate(img => img.complete && img.naturalWidth > 0), true);
-      if (await page.getByRole('button', { name: 'Turn sound on' }).count()) await page.getByRole('button', { name: 'Turn sound on' }).click();
+      // Sound lives in Settings (Home and race setup): make sure it is on.
+      await page.getByRole('button', { name: 'Settings', exact: true }).click();
+      const sound = page.getByRole('button', { name: 'Sound', exact: true });
+      if (await sound.getAttribute('aria-pressed') === 'false') await sound.click();
+      await page.getByRole('button', { name: 'Close settings', exact: true }).click();
       await page.getByRole('button', { name: "Time Trial" }).click();
       const build = await page.locator('.build-id').textContent();
       assert.ok(build.startsWith('TEST BUILD '));

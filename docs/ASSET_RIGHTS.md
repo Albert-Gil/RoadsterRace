@@ -9,7 +9,7 @@
 | Asphalt, sand, water grain and contact shadows | Original code-generated seeded/grayscale canvas textures | `textures.ts` | No downloaded or generated third-party bitmap assets |
 | Asphalt and grassy limestone photo-surface materials | Newly generated original images using the built-in image-generation tool | PNG masters in `artifacts/generated/`; WebP versions in `public/assets/textures/` | Exact prompts, provenance and export details in `docs/ART_DIRECTION.md`; source-game screenshots were not supplied to the generator or included as game assets |
 | Reflection sky (Low tier and fallback), raised terrain and spectator stand | Original procedural texture/geometry | `environment.ts`, `coast.ts` | Used on the Low graphics tier and whenever a sky file fails to load |
-| Real-sky lighting files (Medium/High/Ultra) | CC0 1.0 HDRIs from the `@pmndrs/assets` 1.7.0 npm package (described by the package as a selection of Poly Haven HDRIs, resized and DWAB-compressed) | `public/assets/env/{sky,sunset,dawn,night,studio}.env`, baked by `tools/bake-environments.mjs` (`pnpm bake:env`) | Derived files: decoded with three.js `EXRLoader` (MIT, dev-only), highlights clamped, prefiltered by Babylon into 128 px cube `.env`. CC0 requires no attribution; the source package does not name the individual Poly Haven titles, so none are claimed here. |
+| Real-sky lighting files (Medium/High/Ultra) | CC0 1.0 HDRIs from the `@pmndrs/assets` 1.7.0 npm package (described by the package as a selection of Poly Haven HDRIs, resized and DWAB-compressed) | `public/assets/env/{sky,sunset,dawn,night}.env`, baked by `tools/bake-environments.mjs` (`pnpm bake:env`) | Derived files: decoded with three.js `EXRLoader` (MIT, dev-only), highlights clamped, prefiltered by Babylon into 128 px cube `.env`. CC0 requires no attribution; the source package does not name the individual Poly Haven titles, so none are claimed here. |
 | Synthesized audio fallbacks | Original oscillator/noise synthesis | Remaining unset cue roles; `artifacts/sound-preview.wav` is a synthesized cue preview | Retained alongside the supplied recordings below |
 | Barlow Regular/Semibold and Barlow Condensed Bold Italic | Jeremy Tribby / Barlow project, SIL OFL 1.1 | `public/assets/fonts/`; `public/licenses/Barlow.txt` | Unmodified files from the official Google Fonts repository, `ofl/barlow` and `ofl/barlowcondensed`. Retain OFL. System fallbacks remain |
 | Babylon.js and tools | Package dependencies | Locked package manifests | Retain upstream package license files; review notices if redistributing publicly |
@@ -96,3 +96,18 @@ Launchsite's rock formations, terrain, painted ground, loose stones and plants a
 
 Grand Canyon, Golden Gate, Santa Monica, Newport and LA nights now carry the same kind of procedural landscape as Launchsite: terrain, painted ground maps, solid rock from 'rock' barriers, loose rocks, plants, tennis and volleyball courts, streets, parked cars and lamps are original procedural code (`src/presentation/landscape/` and each venue's `*-landscape.ts` / `*-detail.ts`). The only external art they use is the same eight CC0 Poly Haven rock scans already shipped in `public/assets/models/launchsite-props.bin` (tinted toward each venue's rock palette); nothing new was downloaded and no new asset file is shipped.
 
+## Home key art (AI-generated, supplied by the project owner) — 2026-10-27
+
+The five Home pictures in `public/assets/hero/` (`thruster-hop`, `drivers-grid`, `door-to-door`, `water-jump`, `canyon-jump`, each as `-wide` 1672×941 and `-tall` 941×1672 WebP at quality 74) are AI-generated images that the project owner created and supplied on 2026-10-26 in the folder `RoadsterRace_Key_Art_v10_Water_Fix`, from prompts written for this project. They depict the game's own fictional roadster and drivers: no Tesla, SpaceX or other real brand, logo or car is intended. Hidden Hop shortcuts are not shown.
+
+| Picture | Source PNG (not shipped) | SHA-256 (first 16 hex) |
+|---|---|---|
+| thruster-hop wide / tall | `01_thruster_hop_16x9.png` / `01_thruster_hop_9x16.png` | `1359a420d2dc7a16` / `cf3576fc8b5df71d` |
+| drivers-grid wide / tall | `02_drivers_grid_16x9.png` / `02_drivers_grid_9x16.png` | `8427c056b966cc5d` / `c248780101043a94` |
+| door-to-door wide / tall | `03_door_to_door_night_16x9.png` / `03_door_to_door_night_9x16.png` | `1861e9c10ffad091` / `2d63179866d2ecf1` |
+| water-jump wide / tall | `04_jump_over_water_16x9.png` / `04_jump_over_water_9x16.png` | `56f3a0b375a7a5b1` / `89c3123f8c869c1e` |
+| canyon-jump wide / tall | `05_canyon_jump_16x9.png` / `05_canyon_jump_9x16.png` | `e9158746b69ae5ab` / `84bde5597be96395` |
+
+- The PNG masters stay with the owner and are not committed; only the WebP conversions ship.
+- **Pending:** the image-generation service used and its terms (commercial use, attribution) have not been recorded yet. Record them here before any public release beyond the testing site.
+- The studio sky (`studio.env`) used by the former menu turntable car was removed with that car.

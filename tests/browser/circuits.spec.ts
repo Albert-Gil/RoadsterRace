@@ -23,8 +23,8 @@ test('course switching clears plans, retains drivers and distance, scopes bests 
     const current = await state(page);
     expect(current.phase).toBe('setup'); expect(current.confirmedCount).toBe(0); expect(current.route).toBeNull(); expect(current.race).toBeNull();
     expect(current.lapCount).toBe(3); expect(current.drivers[0]).toMatchObject({ name: 'Avery', paint: 'cobalt' });
-    expect(await page.evaluate(() => (window as any).__roadster.getGraphics().engineScenes)).toBe(2);
-    await expect(page.locator('.setup-heading')).toContainText(name.toUpperCase());
+    expect(await page.evaluate(() => (window as any).__roadster.getGraphics().engineScenes)).toBe(1);
+    await expect(page.locator('.setup-summary')).toContainText(name.toUpperCase());
     await expect(page.locator('#mode-label')).toHaveText('2 PLAYER LOCAL RACE');
   }
   await page.reload(); await page.getByRole('button', { name: "Time Trial" }).click();

@@ -28,14 +28,14 @@ for (const spec of cases) test(`edge-to-edge ${spec.circuit} ${spec.width}x${spe
   await page.waitForFunction(() => (window as any).__roadster.getGraphics().roadVisible);
   await expect(page.getByRole('button', { name: 'Try a practice line' })).toHaveCount(0);
   await expect(page.locator('#panel p, .drawing-legend, .route-stats, .instruction')).toHaveCount(0);
-  await expect(page.locator('.brand')).toBeHidden(); await expect(page.locator('.touch-test-link')).toBeHidden();
+  await expect(page.locator('.brand')).toBeHidden(); await expect(page.locator('.topbar')).toBeHidden();
   const plan = await page.evaluate(() => {
     const game = (window as any).__roadster, t = game.getTrack();
     const points = t.centerline.map((p: any, i: number) => ({ ...game.project(p), time: t.distances[i] / t.length * 7 }));
     const g = t.startFinish;
     const gate = [-1, 1].flatMap(side => [0, -12].map(along => game.project({ x: g.center.x + g.forward.x * along + g.forward.z * g.width / 2 * side, z: g.center.z + g.forward.z * along - g.forward.x * g.width / 2 * side })));
     const blocked = [...points, ...gate].filter(p => p.x < 0 || p.x > innerWidth || p.y < 0 || p.y > innerHeight || document.elementFromPoint(p.x, p.y)?.id !== 'race-canvas');
-    const controls = [...document.querySelectorAll<HTMLButtonElement>('#panel button, #sound-button')].map(b => { const r = b.getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, height: r.height }; });
+    const controls = [...document.querySelectorAll<HTMLButtonElement>('#panel button')].map(b => { const r = b.getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, height: r.height }; });
     return { points, blocked, controls, projectionError: game.getProjectionError(), scroll: document.documentElement.scrollWidth > innerWidth || document.documentElement.scrollHeight > innerHeight + 1 };
   });
   expect(plan.blocked).toEqual([]); expect(plan.projectionError).toBeLessThan(0.01); expect(plan.scroll).toBe(false);
@@ -73,7 +73,7 @@ test('compact portrait multiplayer controls keep player identity and private han
     expect(await page.evaluate(() => (window as any).__roadster.getState().visibleRouteCount)).toBe(0);
     await expect(page.getByRole('button', { name: 'Try a practice line' })).toHaveCount(0);
     await page.evaluate(() => (window as any).__roadster.usePracticeLine());
-    const boxes = await page.locator('#panel button, #sound-button').evaluateAll(nodes => nodes.map(n => { const r = n.getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, height: r.height }; }));
+    const boxes = await page.locator('#panel button').evaluateAll(nodes => nodes.map(n => { const r = n.getBoundingClientRect(); return { x: r.x, y: r.y, width: r.width, height: r.height }; }));
     for (const box of boxes) { expect(box.width).toBeGreaterThanOrEqual(44); expect(box.height).toBeGreaterThanOrEqual(44); expect(box.x + box.width).toBeLessThanOrEqual(320); expect(box.y + box.height).toBeLessThanOrEqual(568); }
     await page.getByRole('button', { name: 'Lock in my line', exact: true }).click();
     if (i < 3) expect(await page.evaluate(() => (window as any).__roadster.getState().visibleRouteCount)).toBe(0);

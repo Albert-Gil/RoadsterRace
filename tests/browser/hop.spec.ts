@@ -22,7 +22,7 @@ for (const viewport of [{ width: 844, height: 390 }, { width: 390, height: 844 }
     const layout = await page.evaluate(() => {
       const rect = (e: Element) => { const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, right: r.right, bottom: r.bottom, width: r.width, height: r.height }; };
       const pads = [...document.querySelectorAll('.ability-control')].map(e => ({ ability: (e as HTMLElement).dataset.ability, ...rect(e) }));
-      return { pads, course: rect(document.querySelector('#course-space')!), hud: rect(document.querySelector('.race-hud')!), others: [...document.querySelectorAll('.pause-button,#sound-button')].map(rect) };
+      return { pads, course: rect(document.querySelector('#course-space')!), hud: rect(document.querySelector('.race-hud')!), others: [...document.querySelectorAll('.pause-button')].map(rect) };
     });
     const overlaps = (a: any, b: any) => a.x < b.right && a.right > b.x && a.y < b.bottom && a.bottom > b.y;
     expect(layout.pads).toHaveLength(8);

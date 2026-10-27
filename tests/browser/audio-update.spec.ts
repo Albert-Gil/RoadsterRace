@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { waitForPhase } from './ui';
+import { closeSettings, openSettings, soundToggle, waitForPhase } from './ui';
 
 const state = (page: import('@playwright/test').Page) => page.evaluate(() => (window as any).__roadster.getState());
 
@@ -7,7 +7,7 @@ test('20 short recordings decode, music streams, and each venue selects its own 
   const failed: string[] = [];
   page.on('response', r => { if (r.url().includes('/audio/') && !r.ok()) failed.push(r.url()); });
   await page.goto('/');
-  await expect(page.getByRole('button', { name: 'Turn sound off' })).toHaveAttribute('aria-pressed', 'true');
+  await openSettings(page); await expect(soundToggle(page)).toHaveAttribute('aria-pressed', 'true'); await closeSettings(page);
   await page.getByRole('button', { name: 'Time Trial', exact: true }).click();
   const audio = () => page.evaluate(() => (window as any).__roadster.getAudio());
   await expect.poll(async () => (await audio()).loaded.length).toBe(20);
@@ -29,10 +29,10 @@ test('menu music loops, follows phase changes, mute and interruption without aff
   await page.getByRole('button', { name: 'Time Trial', exact: true }).click();
   await expect.poll(async () => (await audio()).music?.playing).toBe(true);
   await expect.poll(async () => (await audio()).outputRms).toBeGreaterThan(.001);
-  await page.getByRole('button', { name: 'Turn sound off', exact: true }).click();
+  await openSettings(page); await soundToggle(page).click();
   expect((await audio()).music.playing).toBe(false);
   await page.waitForTimeout(400); expect((await audio()).outputRms).toBeLessThan(.0001);
-  await page.getByRole('button', { name: 'Turn sound on', exact: true }).click();
+  await soundToggle(page).click(); await closeSettings(page);
   await expect.poll(async () => (await audio()).music.playing).toBe(true);
   await page.evaluate(() => window.dispatchEvent(new Event('blur')));
   expect((await audio()).music.playing).toBe(false);
@@ -57,7 +57,7 @@ test('streamed music loops and pauses even when an optional recording is unavail
   wav.writeUInt32LE(rate, 24); wav.writeUInt32LE(rate * 2, 28); wav.writeUInt16LE(2, 32); wav.writeUInt16LE(16, 34); wav.write('data', 36); wav.writeUInt32LE(length * 2, 40);
   for (let i = 0; i < length; i++) wav.writeInt16LE(Math.round(Math.sin(i / rate * Math.PI * 400) * 6000), 44 + i * 2);
   await page.route('**/music-check/**', route => route.fulfill(route.request().url().endsWith('loop.wav') ? { status: 200, contentType: 'audio/wav', body: wav } : { status: 404, body: 'missing' }));
-  await page.getByRole('button', { name: 'Turn sound off', exact: true }).click();
+  await openSettings(page); await soundToggle(page).click(); await closeSettings(page);
   await page.evaluate(async () => {
     const { GameAudio } = await import('/src/presentation/audio.ts' as string);
     const candidate = new GameAudio({ cues: {}, loops: {}, music: { url: '/music-check/loop.wav' } });

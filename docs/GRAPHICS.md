@@ -51,10 +51,8 @@ the directional light already provides → Radiance HDR → Babylon prefilter in
 
 At load the sky is turned so its brightest direction (from the file's first-order spherical
 harmonics) lines up with the scene's sun, keeping reflections and shadows consistent. The
-venue → file mapping and intensities are `venueSkies`; the menu car uses `showcaseSky` (a
-photographic studio at 0.75 intensity) with the brightest softbox turned 145° from the camera,
-so it shows as a soft streak on the glass and haunches instead of a white sheet over the roof
-and hood; the plinth takes 0.45 of the studio light so it stays a dark stage.
+venue → file mapping and intensities are `venueSkies`. (The menu turntable car and its studio
+sky were removed in the 2026-10-27 interface redesign; Home now shows key art.)
 
 The sky lights the PBR car directly and is reflected by water, glass and metal roles through
 their Standard materials (Fresnel-weighted, roughness by mip level).

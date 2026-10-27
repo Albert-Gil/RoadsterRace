@@ -101,7 +101,7 @@ test('landscape touch drawing works at a phone viewport and high pixel density',
 });
 
 test('four real browser touch pointers survive 50 overlapping cycles and cancellation', async ({ page }) => {
-  await ready(page); await page.getByRole('button', { name: 'Touch test' }).click();
+  await ready(page); await page.getByRole('button', { name: 'Settings', exact: true }).click(); await page.getByRole('button', { name: 'Touch test' }).click();
   const points = await page.locator('.diagnostic-pad').evaluateAll(pads => pads.map((pad, i) => { const r = pad.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2, id: i + 1 }; }));
   const cdp = await page.context().newCDPSession(page);
   await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 10 });

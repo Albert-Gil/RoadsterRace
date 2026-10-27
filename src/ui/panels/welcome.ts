@@ -1,10 +1,26 @@
 // Pure panel markup. Callers pass already-resolved display data; nothing here touches the DOM or game state.
-import { arrow } from './common';
+import { escapeHtml } from '../../presentation/race-settings';
+import { chevronIcon } from './common';
 
-export interface WelcomeView { tagline: string; savedTour: { completed: number; total: number } | null; incompatibleTour: boolean }
+export interface SavedTourSummary { completed: number; total: number; leader?: { name: string; points: number } }
+export interface WelcomeView { tagline: string; savedTour: SavedTourSummary | null; incompatibleTour: boolean }
+
+const modes = [
+  { action: 'play', name: 'Solo Race', note: 'vs 3 CPU' },
+  { action: 'friends', name: 'Multiplayer', note: '2–4 players' },
+  { action: 'time-trial', name: 'Time Trial', note: 'Best lap' },
+  { action: 'tutorial', name: 'Tutorial', note: '1 guided lap' },
+] as const;
+
+/** Home: the tagline over the key art, four stacked mode bars, and a ticker for a saved tournament. */
 export function welcomePanel({ tagline, savedTour, incompatibleTour }: WelcomeView) {
-  let html = `<span class="eyebrow">A LITTLE PLANNING. A LOT OF RACING.</span><h1>${tagline.replace('. ', '.<br>')}</h1><p>Draw your racing line. Set the pace with your finger.<br class="desktop-break"> Then find the perfect moment to thrust.</p><div class="steps"><span><b>01</b> Draw a line</span><span><b>02</b> Time your thrust</span><span><b>03</b> Race together</span></div><div class="panel-actions"><button class="primary-button" data-action="play">Solo Race ${arrow}</button><button class="text-button" data-action="friends">Multiplayer</button><button class="text-button" data-action="time-trial">Time Trial</button><button class="text-button" data-action="tutorial">Tutorial</button></div><span class="welcome-note">SOLO OR 2–4 PLAYERS · ONE DEVICE · 1–6 LAPS</span>`;
-  if (savedTour) html += `<div class="resume-tour"><span>YOUR TOURNAMENT IS SAVED · ${savedTour.completed}/${savedTour.total} RACES</span><button class="secondary-button" data-action="tour-resume">Resume tournament ↗</button><button class="text-button" data-action="tour-discard">Discard tournament</button></div>`;
-  if (incompatibleTour) html += '<p class="save-status">The circuits have changed. Your previous tournament cannot resume; start a new tour.</p>';
+  const title = tagline.replace(/\. (.+)$/, '.<br><em>$1</em>');
+  let html = `<span class="eyebrow">A LITTLE PLANNING. A LOT OF RACING.</span><h1>${title}</h1>
+    <nav class="mode-menu" aria-label="Game modes">${modes.map((mode, i) => `<button class="mode-bar${i === 0 ? ' primary' : ''}" data-action="${mode.action}" aria-label="${mode.name}" aria-describedby="mode-note-${mode.action}">${mode.name}<small id="mode-note-${mode.action}">${mode.note}</small>${chevronIcon}</button>`).join('')}</nav>
+    <p class="rotate-hint"><span aria-hidden="true">↻</span> Turn your phone sideways for the best line.</p>`;
+  if (savedTour) {
+    const lead = savedTour.leader ? ` · ${escapeHtml(savedTour.leader.name.toUpperCase())} LEADS ON ${savedTour.leader.points} PTS` : '';
+    html += `<div class="resume-tour" role="group" aria-label="Saved tournament"><span class="tag">Saved</span><span class="resume-text">TOURNAMENT · ${savedTour.completed}/${savedTour.total} RACES${lead}</span><button class="text-button" data-action="tour-discard" aria-label="Discard tournament">Discard</button><button class="resume-button" data-action="tour-resume" aria-label="Resume tournament">Resume${chevronIcon}</button></div>`;
+  } else if (incompatibleTour) html += '<p class="resume-tour save-status">The circuits have changed. Your previous tournament cannot resume; start a new tour.</p>';
   return html;
 }

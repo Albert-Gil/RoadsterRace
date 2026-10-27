@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
-import { waitForPhase } from './ui';
+import { closeSettings, openSettings, waitForPhase } from './ui';
 
 const graphics = (page: Page) => page.evaluate(() => (window as any).__roadster.getGraphics());
 const ready = (page: Page) => page.waitForFunction(() => (window as any).__roadster?.getGraphics().renderReady, null, { timeout: 120000 });
@@ -13,7 +13,7 @@ test('automation starts on Low; the Graphics setting switches tiers live, persis
   expect(g.graphicsChoice).toBe('auto'); expect(g.graphicsLevel).toBe('low');
   expect(g.postPasses).toEqual([]); expect(g.sky).toBe('original-coastal-reflection-sky');
   await page.getByRole('button', { name: 'Time Trial', exact: true }).click(); await waitForPhase(page, 'setup');
-  const group = page.getByRole('group', { name: 'Graphics quality' });
+  await openSettings(page); const group = page.getByRole('group', { name: 'Graphics quality' });
   await expect(group.getByRole('button', { name: 'Auto' })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByText('Auto · Low on this device')).toBeVisible();
 
@@ -25,7 +25,7 @@ test('automation starts on Low; the Graphics setting switches tiers live, persis
   expect(JSON.parse(await page.evaluate(() => localStorage.getItem('roadster-race.graphics.v1') ?? '{}'))).toEqual({ choice: 'high', renderer: 'webgl2' });
 
   // The same practice line compiles identically whatever the tier.
-  await page.getByRole('button', { name: 'Draw racing line' }).click(); await waitForPhase(page, 'drawing');
+  await closeSettings(page); await page.getByRole('button', { name: 'Draw racing line' }).click(); await waitForPhase(page, 'drawing');
   await page.evaluate(() => (window as any).__roadster.usePracticeLine()); await waitForPhase(page, 'preview');
   const highRoute = await page.evaluate(() => (window as any).__roadster.getRoute());
   mkdirSync('artifacts/graphics', { recursive: true }); await ready(page); await page.screenshot({ path: 'artifacts/graphics/coastal-high.png' });
@@ -33,9 +33,9 @@ test('automation starts on Low; the Graphics setting switches tiers live, persis
   await page.reload(); await ready(page);
   g = await graphics(page); expect(g.graphicsChoice).toBe('high'); expect(g.graphicsLevel).toBe('high');
   await page.getByRole('button', { name: 'Time Trial', exact: true }).click(); await waitForPhase(page, 'setup');
-  await page.getByRole('group', { name: 'Graphics quality' }).getByRole('button', { name: 'Medium' }).click(); await ready(page);
+  await openSettings(page); await page.getByRole('group', { name: 'Graphics quality' }).getByRole('button', { name: 'Medium' }).click(); await ready(page);
   g = await graphics(page); expect(g.graphicsLevel).toBe('medium'); expect(g.postPasses).toEqual([]); expect(g.sky).toBe('sky-sky');
-  await page.getByRole('button', { name: 'Draw racing line' }).click(); await waitForPhase(page, 'drawing');
+  await closeSettings(page); await page.getByRole('button', { name: 'Draw racing line' }).click(); await waitForPhase(page, 'drawing');
   await page.evaluate(() => (window as any).__roadster.usePracticeLine()); await waitForPhase(page, 'preview');
   const mediumRoute = await page.evaluate(() => (window as any).__roadster.getRoute());
   expect(mediumRoute.points).toEqual(highRoute.points);
@@ -67,13 +67,13 @@ test('the renderer setting reloads into WebGPU when available and always returns
   await page.goto('/?circuit=coastal-launch'); await ready(page);
   expect((await graphics(page)).renderer).toBe('webgl2');
   await page.getByRole('button', { name: 'Time Trial', exact: true }).click(); await waitForPhase(page, 'setup');
-  const renderer = page.getByRole('group', { name: 'Renderer' });
+  await openSettings(page); const renderer = page.getByRole('group', { name: 'Renderer' });
   await expect(renderer.getByRole('button', { name: 'WebGL 2' })).toHaveAttribute('aria-pressed', 'true');
   await Promise.all([page.waitForEvent('load'), renderer.getByRole('button', { name: 'WebGPU (beta)' }).click()]);
   await ready(page);
   const gpu = await graphics(page); // WebGPU where the browser offers an adapter, otherwise the WebGL 2 fallback.
   expect(['webgpu', 'webgl2']).toContain(gpu.renderer);
-  await page.getByRole('button', { name: 'Time Trial', exact: true }).click(); await waitForPhase(page, 'setup');
+  await page.getByRole('button', { name: 'Time Trial', exact: true }).click(); await waitForPhase(page, 'setup'); await openSettings(page);
   if (gpu.renderer === 'webgl2') await expect(page.getByText('WebGPU unavailable here · using WebGL 2')).toBeVisible();
   await Promise.all([page.waitForEvent('load'), page.getByRole('group', { name: 'Renderer' }).getByRole('button', { name: 'WebGL 2' }).click()]);
   await ready(page); expect((await graphics(page)).renderer).toBe('webgl2');

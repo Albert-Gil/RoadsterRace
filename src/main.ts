@@ -10,7 +10,7 @@ import { LocalRace, startingGrid } from './core/local-race';
 import { compileRoute, createPracticeSamples, sampleRoute, COMPILER_VERSION } from './core/route';
 import { createTournament, finalizeRound, championshipStandings } from './core/tournament';
 import { incompatibleTournament, loadTournament, storeTournament, discardTournament, type SavedTournament } from './presentation/tournament-storage';
-import { tournamentResultsMarkup, type TourSetup } from './presentation/tournament-ui';
+import type { TourSetup } from './presentation/tournament-ui';
 import { FixedStepClock, RULES } from './core/simulation';
 import { CONTACT_RULES } from './core/vehicle-contact';
 import { assetUrl } from './presentation/urls';
@@ -21,6 +21,7 @@ import { PointerOwnership } from './input/ownership';
 import { InputRouter } from './input/router';
 import { appShellMarkup } from './app/shell';
 import { modeLabel, phaseLayout, type Phase } from './app/phases';
+import { arrivesHome, nextHero } from './app/hero';
 import { installDevApi } from './app/dev-api';
 import { uiScale } from './app/ui-scale';
 import { installZoomGuard } from './app/zoom-guard';
@@ -28,7 +29,8 @@ import { formatTime } from './ui/format';
 import { renderHud } from './ui/hud';
 import { abilityControlsMarkup } from './ui/controls';
 import { welcomePanel } from './ui/panels/welcome';
-import { tourDiscardPanel, tourExitPanel, tourIntroPanel, tourReplacePanel } from './ui/panels/tournament';
+import { tourDiscardPanel, tourExitPanel, tourIntroPanel, tourReplacePanel, tournamentResultsMarkup } from './ui/panels/tournament';
+import { settingsPanel } from './ui/panels/settings';
 import { handoffPanel, planningPanel } from './ui/panels/planning';
 import { errorPanel, pausedPanel, readyPanel } from './ui/panels/race';
 import { raceResultsPanel, timeTrialResultsPanel } from './ui/panels/results';
@@ -36,7 +38,7 @@ import { TUTORIAL_COPY, tutorialCoach, tutorialCompletePanel, tutorialIntroPanel
 import { TUTORIAL_CIRCUIT, TUTORIAL_LAPS, answerPrompt, duePrompt, freshTutorial, type TutorialProgress } from './app/tutorial';
 import { GameAudio } from './presentation/audio';
 import { GameScene } from './presentation/scene';
-import { applyPlayerColors, applyTheme, themes, hopEffects } from './presentation/themes';
+import { applyPlayerColors, applyTheme, themes, hopEffects, heroImages } from './presentation/themes';
 import { cleanDriverName, escapeHtml, finishFor, loadPreferences, savePreferences } from './presentation/race-settings';
 import { raceSetupMarkup } from './presentation/race-setup';
 import { isGraphicsChoice, isRendererChoice, loadGraphicsPreference, saveGraphicsPreference, type RendererChoice } from './presentation/graphics';
@@ -50,7 +52,7 @@ app.innerHTML = appShellMarkup();
 const playground = app.querySelector<HTMLElement>('.playground')!;
 const coarsePointer = matchMedia('(pointer: coarse)');
 /** Larger touch screens get proportionally larger controls; the course rectangle follows via CSS. */
-function applyUiScale() { const scale = uiScale(innerWidth, innerHeight, coarsePointer.matches); playground.style.setProperty('--ui-scale', String(scale)); playground.dataset.scaled = String(scale > 1); }
+function applyUiScale() { const scale = uiScale(innerWidth, innerHeight, coarsePointer.matches); playground.style.setProperty('--ui-scale', String(scale)); }
 applyUiScale(); installZoomGuard();
 const canvas = document.querySelector<HTMLCanvasElement>('#race-canvas')!;
 const panel = document.querySelector<HTMLElement>('#panel')!, hud = document.querySelector<HTMLElement>('.race-hud')!;
@@ -59,6 +61,8 @@ const pauseButton = document.querySelector<HTMLButtonElement>('.pause-button')!,
 const diagnosticSection = document.querySelector<HTMLElement>('#diagnostics')!, raceProgress = document.querySelector<HTMLElement>('.race-progress')!;
 const labels = [...document.querySelectorAll<HTMLElement>('.vehicle-label')];
 const coach = document.querySelector<HTMLElement>('.tutorial-coach')!;
+const settingsDialog = document.querySelector<HTMLDialogElement>('#settings')!;
+const heroPicture = document.querySelector<HTMLElement>('.home-hero')!, heroImage = heroPicture.querySelector('img')!, heroSource = heroPicture.querySelector('source')!;
 const audio = new GameAudio();
 // Browser autoplay unlock must happen synchronously in a real user gesture.
 for (const event of ['pointerdown', 'keydown'] as const) {
@@ -120,20 +124,54 @@ const playerName = (i: number) => escapeHtml(driverName(i));
 function applyDriverPresentation() {
   const colors = preferences.drivers.map((_,i) => finishFor(driverPaint(i)).color);
   applyPlayerColors(colors); world?.setDriverPaints(colors);
-  if (phase === 'results' && race) world?.setShowcasePaint(colors[race.standings()[0].player]);
   labels.forEach((label,i)=>{label.removeAttribute('title');label.textContent=String(i+1);});
 }
 function saveSettings() { preferences.laps = lapCount; savePreferences(preferences); }
-/** The automatic tier stepped down after slow frames: keep an open setup screen truthful. */
-function onGraphicsChange() { if (phase === 'setup') refreshSetup(); }
+/** The automatic tier stepped down after slow frames: keep the Settings sheet truthful. */
+function onGraphicsChange() { refreshSettings(); }
 function refreshSetup(focus?: string) {
   const scroll = panel.querySelector('.setup-scroll')?.scrollTop ?? 0;
   renderPanel(); const content = panel.querySelector('.setup-scroll'); if (content) content.scrollTop = scroll;
   if (focus) panel.querySelector<HTMLElement>(focus)?.focus({ preventScroll: true });
 }
-function updateCircuitCaption() {
-  document.querySelector('.circuit-caption')!.innerHTML = `<span class="caption-line"></span><div>${activeCircuit.number} / ${escapeHtml(activeTrack.name.toUpperCase())}<small>${escapeHtml(activeCircuit.tagline)}</small></div>`;
-  canvas.setAttribute('aria-label', `${activeTrack.name} racing circuit. Draw your line with a finger or mouse.`);
+function updateCanvasLabel() { canvas.setAttribute('aria-label', `${activeTrack.name} racing circuit. Draw your line with a finger or mouse.`); }
+/** Home key art: a new picture each time the player arrives on Home (never the previous one), fixed while they stay. */
+let heroIndex: number | null = null;
+function showHero() {
+  heroIndex = nextHero(heroImages.length, heroIndex);
+  const hero = heroImages[heroIndex];
+  heroPicture.classList.remove('loaded'); heroPicture.style.setProperty('--hero-wide', hero.wide); heroPicture.style.setProperty('--hero-tall', hero.tall);
+  heroSource.srcset = assetUrl(`assets/hero/${hero.id}-tall.webp`); heroImage.src = assetUrl(`assets/hero/${hero.id}-wide.webp`);
+}
+heroImage.addEventListener('load', () => heroPicture.classList.add('loaded'));
+heroImage.addEventListener('error', () => heroPicture.classList.remove('loaded'));
+/** Settings sheet (a modal dialog): sound, touch test, graphics and renderer. Rendered at start so it is always current. */
+const settingsView = () => ({ soundOn: !audio.muted, graphics: { choice: graphicsChoice, level: world?.graphicsLevel ?? 'low', renderer: graphicsPreference.renderer, activeRenderer }, buildId: __BUILD_ID__ });
+function refreshSettings(focus?: string) {
+  const active = document.activeElement instanceof HTMLElement && settingsDialog.contains(document.activeElement) ? document.activeElement : null;
+  settingsDialog.innerHTML = settingsPanel(settingsView());
+  const keep = focus ?? (active ? ['action', 'graphics', 'renderer'].filter(key => active.dataset[key]).map(key => `[data-${key}="${active.dataset[key]}"]`).join('') : '');
+  if (keep && settingsDialog.open) settingsDialog.querySelector<HTMLElement>(keep)?.focus();
+}
+function openSettings() { refreshSettings(); if (!settingsDialog.open) settingsDialog.showModal(); }
+function closeSettings() { if (settingsDialog.open) settingsDialog.close(); }
+// A tap on the dimmed backdrop (the dialog element itself, outside its content) closes the sheet.
+settingsDialog.addEventListener('click', e => { if (e.target === settingsDialog) closeSettings(); });
+function toggleSound() {
+  audio.toggle();
+  document.querySelectorAll<HTMLButtonElement>('.sound-toggle').forEach(button => button.setAttribute('aria-pressed', String(!audio.muted)));
+  if (!audio.muted) audio.cue('ready'); else if (!audio.getStatus().available) showNotice('Sound is unavailable in this browser. You can still race.');
+}
+function savedTourSummary() {
+  if (!savedTour) return null;
+  const completed = savedTour.state.results.length, leaders = championshipStandings(savedTour.state).filter(row => row.rank === 1);
+  return { completed, total: savedTour.state.rounds.length, leader: completed && leaders.length === 1 ? { name: savedTour.drivers[leaders[0].player].name, points: leaders[0].points } : undefined };
+}
+/** Pause sheet status: the lap (the leader's in Multiplayer) and the race clock. */
+function pauseStatus() {
+  if (!race) return '';
+  const s = race.racers[sessionOptions.mode === 'multiplayer' ? race.standings()[0].player : 0].state;
+  return `LAP ${Math.min(s.lap, lapCount)} / ${lapCount} · ${formatTime(race.time)}`;
 }
 function selectCircuit(id: string) {
   const next = findCircuit(id); if (next.id === activeCircuit.id) return;
@@ -224,6 +262,7 @@ function renderControls() {
 function clearRaceInput() { race?.clearCommands(); input.clear(); clock.reset(); }
 function setPhase(next: Phase) {
   // Coaching is a frozen race: it keeps the racing layout and is marked separately for the coach styles.
+  if (arrivesHome(heroIndex === null ? null : phase, next)) showHero();
   phase = next; playground.dataset.phase = phase === 'coaching' ? 'racing' : phase; playground.dataset.coaching = String(phase === 'coaching'); playground.dataset.players = String(humans()); playground.dataset.mode=sessionOptions.mode; playground.dataset.tournament = String(!!activeTour);
   const layout = phaseLayout(phase);
   if (!layout.ghostAllowed) world?.setGhost(null);
@@ -236,7 +275,7 @@ function setPhase(next: Phase) {
   raceProgress.hidden = !layout.progressVisible; panel.hidden = !layout.panelVisible;
   labels.forEach(label => { label.hidden = playerCount === 1 || Number(label.dataset.car) >= playerCount || !layout.labelsVisible; });
   world?.showStart(layout.startGateVisible); world?.setLayout(layout.sceneLayout);
-  updateCircuitCaption(); renderPanel(); updateHud(); renderCoach();
+  updateCanvasLabel(); renderPanel(); updateHud(); renderCoach();
 }
 /** Writes the phase panel. Phases without a panel of their own keep the previous content (hidden). */
 function renderPanel(message?: string) {
@@ -248,23 +287,23 @@ function renderPanel(message?: string) {
 function panelMarkup(message?: string): string | null {
   switch (phase) {
     case 'tutorial-intro': return tutorialIntroPanel();
-    case 'welcome': return welcomePanel({ tagline: theme.branding.tagline, savedTour: savedTour ? { completed: savedTour.state.results.length, total: savedTour.state.rounds.length } : null, incompatibleTour: incompatibleTournament() });
-    case 'setup': return raceSetupMarkup(preferences, setupCount, tourSetup,sessionOptions,preferences.ghost!==false,{ choice: graphicsChoice, level: world.graphicsLevel, renderer: graphicsPreference.renderer, activeRenderer });
-    case 'tour-intro': return activeTour ? tourIntroPanel({ roundIndex, roundNames: activeTour.state.rounds.map(r => findCircuit(r.circuitId).track.name), trackName: activeTrack.name, playerCount, lapCount, saveFailed: tourSaveFailed }) : null;
+    case 'welcome': return welcomePanel({ tagline: theme.branding.tagline, savedTour: savedTourSummary(), incompatibleTour: incompatibleTournament() });
+    case 'setup': return raceSetupMarkup(preferences, setupCount, tourSetup, sessionOptions, preferences.ghost !== false);
+    case 'tour-intro': return activeTour ? tourIntroPanel({ roundIndex, roundNames: activeTour.state.rounds.map(r => findCircuit(r.circuitId).track.name), trackName: activeTrack.name, tagline: activeCircuit.tagline, playerCount, lapCount, saveFailed: tourSaveFailed }) : null;
     case 'tour-exit': return tourExitPanel();
     case 'tour-replace': return tourReplacePanel();
     case 'tour-resume': return tourDiscardPanel();
     case 'handoff': return handoffPanel({ confirmedCount: confirmedRoutes.length, playerCount, turn, playerName });
     case 'drawing': case 'preview': return planningPanel({ preview: phase === 'preview', playerCount, turn, playerName, humans, inTour: !!activeTour, tutorial: sessionOptions.mode === 'tutorial', message, note: phase === 'preview' ? planningNote : undefined });
-    case 'ready': return readyPanel({ playerCount, lapCount, readyPlayers, ghostSeconds: CONTACT_RULES.ghostStartSeconds });
-    case 'paused': return pausedPanel();
+    case 'ready': return readyPanel({ playerCount, lapCount, readyPlayers, ghostSeconds: CONTACT_RULES.ghostStartSeconds, playerName });
+    case 'paused': return pausedPanel({ soundOn: !audio.muted, status: pauseStatus() });
     case 'results':
-      if (activeTour) { world.setShowcasePaint(finishFor(activeTour.drivers[championshipStandings(activeTour.state)[0].player].paint).color); return tournamentResultsMarkup(activeTour, roundIndex) + (tourSaveFailed ? '<p class="save-status">Progress could not be saved. Keep this page open.</p>' : ''); }
+      if (activeTour) return tournamentResultsMarkup(activeTour, roundIndex) + (tourSaveFailed ? '<p class="save-status">Progress could not be saved. Keep this page open.</p>' : '');
       if (!race) return null;
       if (sessionOptions.mode === 'tutorial') return tutorialCompletePanel(race.racers[0].state.finishTime ?? undefined);
       return playerCount === 1
-        ? timeTrialResultsPanel({ state: race.racers[0].state, lapCount, driver: playerName(0), personalBest: personalLap?.duration })
-        : raceResultsPanel({ standings: race.standings(), lapTimes: race.racers.map(r => r.state.lapTimes), playerName, cpuTag });
+        ? timeTrialResultsPanel({ state: race.racers[0].state, lapCount, driver: playerName(0), trackName: activeTrack.name, personalBest: personalLap?.duration })
+        : raceResultsPanel({ standings: race.standings(), lapTimes: race.racers.map(r => r.state.lapTimes), playerName, cpuTag, trackName: activeTrack.name, lapCount });
     case 'error': return errorPanel(message);
     default: return null;
   }
@@ -384,9 +423,12 @@ app.addEventListener('click', e => {
   if (action === 'circuit' && phase === 'setup') selectCircuit(target!.dataset.circuit!);
   if(action==='difficulty'&&phase==='setup'){sessionOptions.difficulty=target!.dataset.difficulty as SessionOptions['difficulty'];refreshSetup();}
   if(action==='ghost-toggle'&&phase==='setup'){preferences.ghost=preferences.ghost===false;saveSettings();refreshSetup();}
-  if(action==='graphics'&&phase==='setup'&&isGraphicsChoice(target!.dataset.graphics)){graphicsChoice=target!.dataset.graphics;graphicsPreference.choice=graphicsChoice;saveGraphicsPreference(graphicsPreference);world.setGraphics(graphicsChoice);refreshSetup(`[data-graphics="${graphicsChoice}"]`);}
-  // A different backend needs a new engine: save and reload (setup only, so no race is lost).
-  if(action==='renderer'&&phase==='setup'&&isRendererChoice(target!.dataset.renderer)&&target!.dataset.renderer!==graphicsPreference.renderer){graphicsPreference.renderer=target!.dataset.renderer;saveGraphicsPreference(graphicsPreference);const url=new URL(location.href);url.searchParams.delete('renderer');location.replace(url);}
+  if (action === 'settings' && ['welcome', 'setup'].includes(phase)) openSettings();
+  if (action === 'close-settings') closeSettings();
+  if (action === 'sound') toggleSound();
+  if (action === 'graphics' && settingsDialog.open && isGraphicsChoice(target!.dataset.graphics)) { graphicsChoice = target!.dataset.graphics; graphicsPreference.choice = graphicsChoice; saveGraphicsPreference(graphicsPreference); world.setGraphics(graphicsChoice); refreshSettings(`[data-graphics="${graphicsChoice}"]`); }
+  // A different backend needs a new engine: save and reload. Settings opens only on Home and race setup, so no race is lost.
+  if (action === 'renderer' && settingsDialog.open && isRendererChoice(target!.dataset.renderer) && target!.dataset.renderer !== graphicsPreference.renderer) { graphicsPreference.renderer = target!.dataset.renderer; saveGraphicsPreference(graphicsPreference); const url = new URL(location.href); url.searchParams.delete('renderer'); location.replace(url); }
   if (action === 'format-single') { tourSetup.enabled = false; refreshSetup(); }
   if (action === 'format-tournament') { tourSetup.enabled = true; refreshSetup(); }
   if (action === 'tour-full' || action === 'tour-custom') { tourSetup.custom = action === 'tour-custom'; refreshSetup(); }
@@ -410,7 +452,6 @@ app.addEventListener('click', e => {
   if (action === 'driver-paint' && phase === 'setup') {
     const index = Number(target!.dataset.driver); preferences.drivers[index].paint = finishFor(target!.dataset.paint!).id;
     saveSettings(); applyDriverPresentation(); refreshSetup(`[data-driver="${index}"][data-paint="${preferences.drivers[index].paint}"]`);
-    world.setShowcasePaint(finishFor(preferences.drivers[index].paint).color);
   }
   if (action === 'start-session') { preferences.drivers.forEach((driver, i) => driver.name = cleanDriverName(driver.name, i)); saveSettings(); if (sessionOptions.mode!=='time-trial' && tourSetup.enabled) { if (savedTour) setPhase('tour-replace'); else startTournament(); } else newSession(setupCount); }
   if (action === 'take-turn' && phase === 'handoff') beginDrawing();
@@ -421,10 +462,10 @@ app.addEventListener('click', e => {
   if (action === 'confirm' && phase === 'preview') { if (!audio.muted) audio.unlock(); confirmRoute(); }
   if (action === 'retry') { if (!audio.muted) audio.unlock(); if (humans() > 1) enterReady(); else startRace(); }
   if (action === 'pause') pauseRace(); if (action === 'resume') { if (!audio.muted) audio.unlock(); startRace(true); } if (action === 'reload') location.reload();
-  if (action === 'diagnostics') { if (phase === 'racing' || phase === 'countdown') pauseRace(); cancelStroke(); clearRaceInput(); returnPhase = phase; ownership.clear(); setPhase('diagnostics'); updateDiagnostics(); }
+  if (action === 'diagnostics') { closeSettings(); if (phase === 'racing' || phase === 'countdown') pauseRace(); cancelStroke(); clearRaceInput(); returnPhase = phase; ownership.clear(); setPhase('diagnostics'); updateDiagnostics(); }
   if (action === 'exit-diagnostics') { ownership.clear(); setPhase(returnPhase); }
   if (action === 'reset-diagnostics') { ownership.clear(); ownership = new PointerOwnership(); updateDiagnostics(); }
-  if (action && !['pause', 'resume', 'confirm'].includes(action)) {
+  if (action && !['pause', 'resume', 'confirm', 'sound'].includes(action)) {
     const back = ['home', 'redraw', 'redraw-all', 'configure-race', 'exit-diagnostics', 'tour-save-exit', 'tour-back-setup'].includes(action);
     audio.cue(back ? 'ui-back' : ['start-session', 'retry', 'tour-draw', 'tour-next', 'tour-resume', 'take-turn', 'tutorial-draw'].includes(action) ? 'ui-confirm' : 'ui-select');
   }
@@ -443,12 +484,6 @@ panel.addEventListener('change', event => {
   if (phase !== 'setup' || !input.matches('[data-driver-name]')) return;
   const index = Number(input.dataset.driverName);
   input.value = preferences.drivers[index].name = cleanDriverName(input.value, index); saveSettings();
-});
-document.querySelector('#sound-button')!.addEventListener('click', () => {
-  audio.toggle(); const button = document.querySelector<HTMLButtonElement>('#sound-button')!;
-  button.classList.toggle('sound-on', !audio.muted); button.setAttribute('aria-label', `Turn sound ${audio.muted ? 'on' : 'off'}`); button.setAttribute('aria-pressed', String(!audio.muted));
-  button.querySelector('.sound-label')!.textContent = audio.muted ? 'Sound off' : 'Sound on';
-  if (!audio.muted) audio.cue('ready'); else if (!audio.getStatus().available) showNotice('Sound is unavailable in this browser. You can still race.');
 });
 function appendSample(event: PointerEvent) {
   const point = world.groundPoint(event.clientX, event.clientY, stroke.at(-1)); if (!point) return;
@@ -494,7 +529,7 @@ document.querySelectorAll<HTMLButtonElement>('.diagnostic-pad').forEach(pad => {
 async function start() {
 try {
   const created = await createEngine(canvas, graphicsPreference.renderer); activeRenderer = created.renderer;
-  world = new GameScene(canvas, activeTrack, theme, activeCircuit.scenery, created.engine, graphicsChoice); world.onGraphicsChange = onGraphicsChange; applyDriverPresentation(); renderControls(); refreshLap(); setPhase('welcome');
+  world = new GameScene(canvas, activeTrack, theme, activeCircuit.scenery, created.engine, graphicsChoice); world.onGraphicsChange = onGraphicsChange; applyDriverPresentation(); renderControls(); refreshLap(); refreshSettings(); setPhase('welcome');
   canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); pauseRace(); showNotice('The graphics were interrupted. Reload if the circuit does not recover.', 10); });
   world.engine.runRenderLoop(() => {
     const now = performance.now(), elapsed = (now - lastFrame) / 1000; lastFrame = now;
@@ -530,7 +565,7 @@ try {
       const moving = session.racers.map(racer => racer.state).filter(s => !s.finished);
       audio.mix({ active: true, speed: Math.max(0, ...moving.map(s => s.speed)), dirt:activeTrack.surface==='packed-dirt', slip: Math.max(0, ...moving.map(s => s.drifting ? clamp(Math.abs(s.slipAngle) * 2, 0.1, 1) : 0)), sand: Math.max(0, ...moving.map(s => s.sandAmount)) });
       session.racers.forEach((racer, i) => { if (!rechargeAnnounced[i] && !racer.state.finished && racer.state.time >= racer.state.thrustReadyAt) { rechargeAnnounced[i] = true; audio.cue('ready'); } });
-      if (session.finished) { if (activeTour && activeTour.state.results.length === roundIndex) { activeTour.state = finalizeRound(activeTour.state, roundIndex, { circuitId: activeTrack.id, trackVersion: activeTrack.version }, session.standings().map(r => ({ player: r.player, rank: r.rank, finishTime: r.finishTime! }))); persistTour(); } if (playerCount === 1 && sessionOptions.mode !== 'tutorial') { best = Math.min(best ?? Infinity, session.racers[0].state.finishTime!); bestTimes.set(bestKey(), best); } world.setShowcasePaint(finishFor(driverPaint(session.standings()[0].player)).color); notice.textContent = ''; clearRaceInput(); setPhase('results'); }
+      if (session.finished) { if (activeTour && activeTour.state.results.length === roundIndex) { activeTour.state = finalizeRound(activeTour.state, roundIndex, { circuitId: activeTrack.id, trackVersion: activeTrack.version }, session.standings().map(r => ({ player: r.player, rank: r.rank, finishTime: r.finishTime! }))); persistTour(); } if (playerCount === 1 && sessionOptions.mode !== 'tutorial') { best = Math.min(best ?? Infinity, session.racers[0].state.finishTime!); bestTimes.set(bestKey(), best); } notice.textContent = ''; clearRaceInput(); setPhase('results'); }
       else if (tutorial && phase === 'racing') {
         const due = duePrompt(tutorial, session.racers[0].state, confirmedRoutes[0]);
         if (due) { tutorial.awaiting = due; clearRaceInput(); audio.cue('ready'); setPhase('coaching'); }

@@ -1,9 +1,20 @@
 // Pure panel markup. Callers pass already-resolved display data; nothing here touches the DOM or game state.
-import { arrow } from './common';
+import { arrow, drawIcon, homeIcon, playIcon, restartIcon, setupIcon } from './common';
+import { soundToggle } from './settings';
 
-export interface ReadyView { playerCount: number; lapCount: number; readyPlayers: boolean[]; ghostSeconds: number }
-export function readyPanel({ playerCount, lapCount, readyPlayers, ghostSeconds }: ReadyView) {
-  return `<span class="eyebrow">${playerCount} PLAYERS · ${lapCount} ${lapCount === 1 ? 'LAP' : 'LAPS'}</span><h2>Take your corner.</h2><p>Everyone tap their numbered pad to get ready.<br>Cars pass through each other for the first ${ghostSeconds} seconds.<br>Thrust recharges every five seconds. One tap, one burst.</p><div class="ready-summary" aria-live="polite">${readyPlayers.filter(Boolean).length} / ${playerCount} ready</div><div class="ready-actions"><button class="text-button" data-action="redraw-all">Draw new lines</button><button class="text-button" data-action="configure-race">Race setup</button><button class="text-button" data-action="home">Home</button></div>`;
+/** Compact ready bar along the top of the course; the numbered pads below do the readying. */
+export interface ReadyView { playerCount: number; lapCount: number; readyPlayers: boolean[]; ghostSeconds: number; playerName: (player: number) => string }
+export function readyPanel({ playerCount, lapCount, readyPlayers, ghostSeconds, playerName }: ReadyView) {
+  const chips = readyPlayers.map((ready, i) => `<span class="ready-chip" data-car="${i}" data-ready="${ready}" title="${playerName(i)}"><b>${i + 1}</b>${ready ? 'Ready' : 'Waiting'}</span>`).join('');
+  return `<div class="ready-head"><div><span class="eyebrow">${playerCount} PLAYERS · ${lapCount} ${lapCount === 1 ? 'LAP' : 'LAPS'}</span><h2>Take your corner.</h2></div><div class="ready-status"><span class="ready-summary sr-only">${readyPlayers.filter(Boolean).length} / ${playerCount} ready</span>${chips}</div></div>
+    <div class="ready-foot"><p>Tap your numbered pad. Cars pass through each other for the first ${ghostSeconds} s.</p><div class="ready-actions"><button class="text-button" data-action="redraw-all" aria-label="Draw new lines">${drawIcon}New lines</button><button class="text-button" data-action="configure-race" aria-label="Race setup">${setupIcon}Setup</button><button class="text-button" data-action="home" aria-label="Home">${homeIcon}Home</button></div></div>`;
 }
-export const pausedPanel = () => `<span class="eyebrow">RACE PAUSED</span><h2>Back in a moment.</h2><div class="panel-actions"><button class="primary-button" data-action="resume">Resume ${arrow}</button><button class="secondary-button" data-action="home" aria-label="Home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m3 11 9-8 9 8M5 9v12h5v-7h4v7h5V9"/></svg>Home</button><button class="text-button" data-action="retry">Restart race</button><button class="text-button" data-action="redraw-all">Draw new lines</button></div>`;
-export const errorPanel = (message?: string) => `<span class="eyebrow">A QUICK PIT STOP</span><h2>Let's get you racing.</h2><p>${message ?? 'The 3D circuit could not start. Try reloading in a current Safari or Chrome browser.'}</p><button class="primary-button" data-action="reload">Try again ${arrow}</button>`;
+
+/** Pause sheet. `status` is the race position at the moment of pausing (lap and time). */
+export interface PausedView { soundOn: boolean; status: string }
+export function pausedPanel({ soundOn, status }: PausedView) {
+  return `<span class="eyebrow">RACE PAUSED${status ? ` · ${status}` : ''}</span><h2>Paused.</h2>
+    <div class="pause-actions"><button class="primary-button" data-action="resume">Resume ${playIcon}</button><button class="secondary-button" data-action="retry" aria-label="Restart race">${restartIcon}Restart</button><button class="secondary-button" data-action="redraw-all" aria-label="Draw new lines">${drawIcon}New lines</button></div>
+    <div class="pause-footer">${soundToggle(soundOn)}<button class="text-button" data-action="home" aria-label="Home">${homeIcon}Home</button></div>`;
+}
+export const errorPanel = (message?: string) => `<span class="eyebrow">A QUICK PIT STOP</span><h2>Let's get you racing.</h2><p>${message ?? 'The 3D circuit could not start. Try reloading in a current Safari or Chrome browser.'}</p><div class="panel-actions"><button class="primary-button" data-action="reload">Try again ${arrow}</button></div>`;

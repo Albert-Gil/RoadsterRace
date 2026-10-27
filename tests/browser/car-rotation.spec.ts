@@ -5,16 +5,16 @@ mkdirSync('artifacts/car-rotation', { recursive: true });
 
 async function proportional(page: Page) {
   await expect.poll(async () => page.evaluate(() => {
-    const p = (window as any).__roadster.getShowcaseProjection();
+    const p = (window as any).__roadster.getProjection();
     return Math.abs(p.aspect / p.expectedAspect - 1);
   })).toBeLessThan(0.002);
   await expect.poll(async () => page.evaluate(() => {
-    const p = (window as any).__roadster.getShowcaseProjection();
+    const p = (window as any).__roadster.getProjection();
     return Math.abs((p.renderWidth / p.renderHeight) / (p.cssWidth / p.cssHeight) - 1);
   })).toBeLessThan(0.002);
 }
 
-test('car proportions follow delayed phone rotation layout and toolbar resizing', async ({ browser }) => {
+test('scene proportions follow delayed phone rotation layout and toolbar resizing', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, hasTouch: true, isMobile: true });
   const page = await context.newPage(), errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));

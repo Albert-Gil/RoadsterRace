@@ -27,7 +27,6 @@ export const ENVIRONMENTS = Object.freeze({
   sunset: { source: 'sunset', clamp: 48 },
   dawn: { source: 'dawn', clamp: 48 },
   night: { source: 'night', clamp: 24 },
-  studio: { source: 'studio', clamp: 48 },
 });
 const CUBE_SIZE = 128; // 512x256 sources hold about 128 px per cube face.
 

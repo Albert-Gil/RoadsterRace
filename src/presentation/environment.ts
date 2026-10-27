@@ -6,8 +6,8 @@ import { CubeTexture } from '@babylonjs/core/Materials/Textures/cubeTexture';
 import '@babylonjs/core/Materials/Textures/Loaders/envTextureLoader';
 import { assetUrl } from './urls';
 
-/** Original small sky/studio reflection cube. No external HDR download is required. */
-export function createReflectionSky(scene: Scene, studio = false) {
+/** Original small sky reflection cube. No external HDR download is required. */
+export function createReflectionSky(scene: Scene) {
   const size = 64, faces: Uint8Array[] = [], sun = new Vector3(-0.5, 0.7, -0.5).normalize();
   for (let face = 0; face < 6; face++) {
     const pixels = new Uint8Array(size * size * 4);
@@ -17,8 +17,7 @@ export function createReflectionSky(scene: Scene, studio = false) {
       const d = directions[face].normalize(), height = Math.max(0, d.y), horizon = Math.exp(-Math.abs(d.y) * 9), highlight = Math.max(0, Vector3.Dot(d, sun)) ** 100;
       const color = d.y > 0 ? [0.31 - height * 0.12 + horizon * 0.35, 0.44 - height * 0.13 + horizon * 0.28, 0.55 - height * 0.14 + horizon * 0.2] : [0.19, 0.18, 0.15];
       const offset = (y * size + x) * 4;
-      const strip = studio ? Math.exp(-(((d.y - 0.55) / 0.11) ** 2)) * 0.7 + Math.exp(-(((d.x - 0.7) / 0.12) ** 2)) * Math.max(0, d.y) : 0;
-      color.forEach((channel, i) => pixels[offset + i] = Math.round(Math.min(1, channel + highlight * 0.8 + strip) * 255)); pixels[offset + 3] = 255;
+      color.forEach((channel, i) => pixels[offset + i] = Math.round(Math.min(1, channel + highlight * 0.8) * 255)); pixels[offset + 3] = 255;
     }
     faces.push(pixels);
   }

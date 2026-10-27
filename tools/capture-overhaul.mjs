@@ -12,10 +12,6 @@ try {
   await page.waitForFunction(() => window.__roadster.getGraphics().renderReady);
   await page.evaluate(() => document.fonts.ready); await page.waitForTimeout(600);
   await page.screenshot({ path: 'artifacts/overhaul/welcome.png' });
-  for (const view of ['front', 'side', 'rear']) {
-    await page.evaluate(view => window.__roadster.inspectVehicle(view), view); await page.waitForTimeout(250);
-    await page.screenshot({ path: `artifacts/overhaul/car-${view}.png` });
-  }
   await page.getByRole('button', { name: "Time Trial" }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
   await page.evaluate(() => window.__roadster.usePracticeLine());
   await page.waitForTimeout(800); await page.screenshot({ path: 'artifacts/overhaul/circuit.png' });

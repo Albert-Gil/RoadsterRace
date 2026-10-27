@@ -14,7 +14,9 @@ The latest playability pass enlarges thrust pads and racing cars, hides floating
 
 **Hop** now gives an immediate one-second lift with a separate seven-second recharge. Both manual hops and automatic ramps gently guide momentum instead of launching according to momentary body yaw. Sand drag is slightly lower; its reduced grip remains. Authored obstacle shortcuts remain unmarked. See [hop controls, flight assistance and tuning](docs/HOP.md).
 
-**Graphics and the iOS app.** Race setup now has a **Graphics** setting (Auto, Low, Medium, High, Ultra). Medium and above light each venue with a real CC0 sky (HDRI) that also reflects in water, glass and the car; add world-space surface detail (sand ripples, asphalt, dirt and grass texture, animated waves) and sharper shadows. High adds ambient occlusion, soft contact-hardening shadows, bloom, anti-aliasing and a colour grade; Ultra adds screen-space reflections and 4K shadow maps. Auto picks a tier for the device and steps down by itself if frames run slow. Pinch and double-tap no longer zoom the page. The game can also be installed as a real iOS app for free testing (sideloaded with your own Apple ID) before deciding on the Apple Developer Program. See [graphics tiers](docs/GRAPHICS.md) and [the iOS app](docs/IOS_APP.md).
+**Interface.** Home shows one of five key-art pictures, chosen at random each time you arrive there and unchanged while you stay. Menus use translucent glass panels, slanted race tags and stacked mode bars; race setup is two columns (one in narrow portrait) with a summary and the start button at the bottom and Home in the header. The gear on Home and race setup opens **Settings**: Sound, Touch test, Graphics and Renderer. During a race, Sound is in the Pause menu.
+
+**Graphics and the iOS app.** **Settings** has a **Graphics** setting (Auto, Low, Medium, High, Ultra). Medium and above light each venue with a real CC0 sky (HDRI) that also reflects in water, glass and the car; add world-space surface detail (sand ripples, asphalt, dirt and grass texture, animated waves) and sharper shadows. High adds ambient occlusion, soft contact-hardening shadows, bloom, anti-aliasing and a colour grade; Ultra adds screen-space reflections and 4K shadow maps. Auto picks a tier for the device and steps down by itself if frames run slow. Pinch and double-tap no longer zoom the page. The game can also be installed as a real iOS app for free testing (sideloaded with your own Apple ID) before deciding on the Apple Developer Program. See [graphics tiers](docs/GRAPHICS.md) and [the iOS app](docs/IOS_APP.md).
 
 ## Online testing
 
@@ -67,7 +69,7 @@ New players can choose **Tutorial** on the home screen: one guided lap on Newpor
 
 Solo keeps the bottom-right thrust/hop pads with Space (Thrust) and H (Hop). The top two multiplayer controls face players seated opposite the screen. Numbered car labels supplement color. Escape pauses everyone together. An interruption during the ready check clears readiness; an interrupted race requires an explicit resume and countdown. Four people are best served by a tablet; real-device comfort and Safari performance still need testing.
 
-The separate **Touch test** screen remains available for the 50-cycle input diagnostic.
+**Touch test** (in Settings) remains available for the 50-cycle input diagnostic.
 
 ### Tournaments and six circuits
 
@@ -132,7 +134,7 @@ The current upgrade adds a RoadsterLAB-derived car in showcase/racing detail, gr
 
 ## Sound
 
-Tap the speaker button to turn sound on. The electric drive tone follows speed; tire and sand layers follow actual sliding/contact. Thrust, 3–2–1, start, final lap, finish and recharge have distinct cues. Pause/interruption silence play sounds; mute leaves the race running. Sound begins off so browser autoplay restrictions do not block play.
+Sound is on by default and starts with your first tap; turn it off or on in **Settings** (Home and race setup) or the **Pause** menu. The electric drive tone follows speed; tire and sand layers follow actual sliding/contact. Thrust, 3–2–1, start, final lap, finish and recharge have distinct cues. Pause/interruption silence play sounds; mute leaves the race running.
 
 Recordings can replace individual roles through `src/presentation/audio-assets.ts`, with synthesized fallback. This is ready for future ElevenLabs exports without adding any service credentials or API dependency to the game. See [the sound guide](docs/SOUND_GUIDE.md) for file slots, briefs and mix settings, and listen to the [current synthesized cue preview](artifacts/sound-preview.wav).
 
@@ -148,7 +150,7 @@ See [multiplayer decisions and next steps](docs/MULTIPLAYER.md), [verification a
 
 ## Race setup and driver identity
 
-Race setup now serves solo and local play. Choose 1–6 laps and enter each driver's name (up to 18 characters) and one of six paints: Crimson, Glacier silver, Cobalt blue, Solar yellow, Verdant green or Ultraviolet. A live showcase previews paint. Names are carried through handoff, controls and results; driver numbers remain visible when names or paints repeat.
+Race setup now serves solo and local play. Choose 1–6 laps and enter each driver's name (up to 18 characters) and one of six paints: Crimson, Glacier silver, Cobalt blue, Solar yellow, Verdant green or Ultraviolet. Names are carried through handoff, controls and results; driver numbers remain visible when names or paints repeat.
 
 These choices are saved locally in this browser, with a safe session-only fallback if storage is unavailable. The pace line is 10 CSS pixels wide while planning (14 px outline), and 8 pixels during racing (11 px outline). Coaching pop-ups during drift and advice after the race have been removed. Racing results show the selected distance, finishing order and split times, with session bests scoped by circuit/version/lap count. Time Trial ranks fastest laps and stores records by circuit/track/physics/compiler version, independently of session length.
 

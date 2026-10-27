@@ -36,7 +36,6 @@ test('Full Tour scores all six circuits, survives refresh and ends with a champi
   for (let round = 0; round < 6; round++) {
     const intro = await state(page); expect(intro.roundIndex).toBe(round); expect(intro.confirmedCount).toBe(0);
     expect(intro.circuitId).toBe(['coastal-launch', 'orbital-launchyard', 'golden-gate', 'santa-monica', 'grand-canyon', 'la-nights'][round]);
-    if (await page.getByRole('button', { name: 'Turn sound on', exact: true }).count()) await page.getByRole('button', { name: 'Turn sound on', exact: true }).click();
     await drawAndRace(page, 4);
     if (round === 2) {
       await page.waitForTimeout(350); await page.screenshot({ path: 'artifacts/golden-gate/thrust-race.png' });

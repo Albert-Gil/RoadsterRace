@@ -44,7 +44,6 @@ import type { SceneryId } from '../content/circuits';
 import { surfaceTexture } from './textures';
 import { createReflectionSky, loadSky } from './environment';
 import { PaceLine } from './pace-line';
-import { VehicleShowcase } from './showcase';
 import { jumpCoordinates, flightGravity, FLIGHT_RULES } from '../core/support';
 import { RULES } from '../core/simulation';
 import { planningHeight } from './planning-height';
@@ -63,7 +62,6 @@ export class GameScene {
   private ignoredLines: PaceLine[] = [];
   private approach: Mesh;
   private errorLine?: PaceLine;
-  private showcase: VehicleShowcase;
   private activePlayer: number | null = null;
   private driverColors?: string[];
   private marker: Mesh;
@@ -93,13 +91,15 @@ export class GameScene {
   private reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
   private layoutMode = 'welcome';
   private canvasResizeObserver: ResizeObserver;
-  inspectVehicle(view: 'front' | 'side' | 'rear') { this.showcase.inspectView(view); }
-  get showcaseProjection() { return this.showcase.projectionMetrics; }
+  /** Development metric: the camera's projection aspect against the canvas's CSS and render aspect (rotation regressions). */
+  get projectionMetrics() {
+    const rect = this.canvas.getBoundingClientRect(), viewport = this.camera.viewport, projection = this.scene.getProjectionMatrix().m;
+    return { cssWidth: rect.width, cssHeight: rect.height, renderWidth: this.engine.getRenderWidth(true), renderHeight: this.engine.getRenderHeight(true), aspect: projection[5] / projection[0], expectedAspect: rect.width * viewport.width / (rect.height * viewport.height) };
+  }
   ready = false;
-  /** Development metric: draw calls of the last frame (world scene, plus the menu showcase when shown), via public instrumentation. Always 0 in production. */
+  /** Development metric: draw calls of the last frame, via public instrumentation. Always 0 in production. */
   drawCalls = 0;
   private instrumentation?: SceneInstrumentation;
-  private showcaseInstrumentation?: SceneInstrumentation;
   constructor(readonly canvas: HTMLCanvasElement, readonly track: TrackDefinition, theme: PresentationTheme, readonly scenery: SceneryId = 'coastal', engine?: AbstractEngine, graphics: GraphicsChoice = 'auto') {
     theme = sceneryTheme(theme, scenery);
     this.theme = theme;
@@ -221,13 +221,12 @@ export class GameScene {
       // Asphalt artwork must never replace the packed-dirt venue's own material.
       if (url && !track.sections) material.diffuseTexture = new Texture(assetUrl(url), this.scene, false, true, Texture.TRILINEAR_SAMPLINGMODE, undefined, () => { material.diffuseTexture?.dispose(); material.diffuseTexture = null; });
     }
-    this.showcase = new VehicleShowcase(this.engine, theme);
     this.post = new PostEffects(this.scene, this.camera);
     this.applyGraphics();
     // Loaded only for development builds; the inspector and browser budgets read drawCalls.
     if (import.meta.env.DEV) void import('@babylonjs/core/Instrumentation/sceneInstrumentation').then(({ SceneInstrumentation }) => {
       if (this.scene.isDisposed) return;
-      this.instrumentation = new SceneInstrumentation(this.scene); this.showcaseInstrumentation = new SceneInstrumentation(this.showcase.scene);
+      this.instrumentation = new SceneInstrumentation(this.scene);
     });
     this.setTheme(theme); this.resize(); this.ready = true;
     // Mobile layout / dynamic viewport units may settle after window.resize.
@@ -248,7 +247,7 @@ export class GameScene {
     for (const mesh of this.shadowCasters) if (!mesh.isDisposed()) shadows.addShadowCaster(mesh, false);
     return shadows;
   }
-  /** Sky, surfaces, post-processing and showcase lighting for the current tier. Shadows are rebuilt by setGraphicsLevel. */
+  /** Sky, surfaces and post-processing for the current tier. Shadows are rebuilt by setGraphicsLevel. */
   private applyGraphics() {
     const tier = graphicsTiers[this.graphicsLevel], venue = venueSkies[this.scenery];
     if (tier.skyLighting && !this.skyFailed) {
@@ -266,7 +265,6 @@ export class GameScene {
       ip.colorCurves = curves;
     }
     this.post.apply(tier, sky);
-    this.showcase.setSkyLighting(tier.skyLighting);
     this.governor.reset();
   }
   private setGraphicsLevel(level: GraphicsLevel) {
@@ -297,7 +295,7 @@ export class GameScene {
     const box = this.canvas.getBoundingClientRect(), ratio = renderPixelRatio(this.graphicsLevel, box.width, box.height, window.devicePixelRatio || 1);
     if (box.width > 0 && Math.abs(this.engine.getHardwareScalingLevel() - 1 / ratio) > 1e-4) this.engine.setHardwareScalingLevel(1 / ratio);
     this.engine.resize();
-    this.showcase?.resize(); this.lines.forEach(line => line.resize()); this.ignoredLines.forEach(line => line.resize()); this.errorLine?.resize();
+    this.lines.forEach(line => line.resize()); this.ignoredLines.forEach(line => line.resize()); this.errorLine?.resize();
     const interactive = ['drawing', 'preview', 'handoff', 'ready', 'racing', 'countdown', 'paused'].includes(this.layoutMode);
     // Draw scenery edge to edge. Fit the course into a CSS safe rectangle instead of
     // shrinking the rendered viewport into a letterboxed strip. Every interactive phase
@@ -358,7 +356,6 @@ export class GameScene {
     this.materials.get('accent')!.diffuseColor = Color3.FromHexString('#b32a35');
     this.materials.get('start-glow')!.diffuseColor = Color3.FromHexString(theme.players[0]);
     this.light.intensity = sceneTuning.lighting.sunlight * theme.scene.sunlight; this.vehicles.forEach(vehicle => vehicle.setTheme(theme));
-    this.showcase?.setTheme(theme);
     this.setPlanningPlayer(this.activePlayer);
   }
   setPlayers(count: number) {
@@ -368,8 +365,7 @@ export class GameScene {
     }
     this.vehicles.forEach((vehicle, player) => { vehicle.setEnabled(player < count); vehicle.setIdentity(count > 1 ? player : null, this.theme); });
   }
-  setDriverPaints(colors: string[]) { this.driverColors = colors; this.vehicles.forEach((vehicle, index) => vehicle.setPaint(colors[index])); this.setShowcasePaint(colors[0]); this.setPlanningPlayer(this.activePlayer); }
-  setShowcasePaint(color: string) { this.showcase.car.setPaint(color); }
+  setDriverPaints(colors: string[]) { this.driverColors = colors; this.vehicles.forEach((vehicle, index) => vehicle.setPaint(colors[index])); this.setPlanningPlayer(this.activePlayer); }
   private registerVehicleShadows(vehicle: VehicleView) {
     if (this.scene.isDisposed) return;
     for (const mesh of vehicle.root.getChildMeshes()) if (mesh.material && !mesh.material.needAlphaBlending()) {
@@ -443,7 +439,7 @@ export class GameScene {
   }
   showError(point?: Point, section?: Point[]) { this.errorLine?.dispose(); this.errorLine = undefined; this.errorMarker.isVisible = !!point; if (point) this.errorMarker.position.set(point.x, 0.3, point.z); if (section) this.errorLine = new PaceLine(this.scene, section, section.map(() => 9), this.theme, 0, false, true, false, this.track); }
   showStart(show: boolean) { this.marker.isVisible = show; this.approach.isVisible = show; }
-  get depthFeatures() { return { hopCores: this.scene.meshes.filter(m=>m.name === 'four-downward-cold-gas-cores' && m.isEnabled() && m.isVisible).length, vehicleScale: sceneTuning.vehicle.racingScale, ghostVisible:this.lapGhost.visible, graphicsLevel: this.graphicsLevel, graphicsChoice: this.graphicsChoice, renderer: this.engine.isWebGPU ? 'webgpu' : 'webgl2', postPasses: this.post.passes, sky: this.scene.environmentTexture?.name ?? null, decorativeMotion: this.scene.meshes.filter(m => m.metadata?.dynamicScenery).map(m => ({name: m.name, rotation: m.rotation.asArray(), position: m.position.asArray()})), perspective: this.camera.mode === Camera.PERSPECTIVE_CAMERA, shadowMapSize: this.shadows.getShadowMap()?.getSize().width ?? 0, shadowCasters: this.shadows.getShadowMap()?.renderList?.length ?? 0, renderReady: this.scene.isReady() && this.showcase.scene.isReady(), worldReady: this.scene.isReady(), showcaseReady: this.showcase.scene.isReady(), pending: [...this.scene.meshes, ...this.showcase.scene.meshes].filter(m => !m.isReady(true)).map(m => m.name), carTriangles: this.vehicle.triangleCount, showcaseTriangles: this.showcase.car.triangleCount, pace: this.theme.pace, lineWidths: this.lines.map(line => line.cssWidths), ignoredStrokeCount: this.ignoredLines.length }; }
+  get depthFeatures() { return { hopCores: this.scene.meshes.filter(m=>m.name === 'four-downward-cold-gas-cores' && m.isEnabled() && m.isVisible).length, vehicleScale: sceneTuning.vehicle.racingScale, ghostVisible:this.lapGhost.visible, graphicsLevel: this.graphicsLevel, graphicsChoice: this.graphicsChoice, renderer: this.engine.isWebGPU ? 'webgpu' : 'webgl2', postPasses: this.post.passes, sky: this.scene.environmentTexture?.name ?? null, decorativeMotion: this.scene.meshes.filter(m => m.metadata?.dynamicScenery).map(m => ({name: m.name, rotation: m.rotation.asArray(), position: m.position.asArray()})), perspective: this.camera.mode === Camera.PERSPECTIVE_CAMERA, shadowMapSize: this.shadows.getShadowMap()?.getSize().width ?? 0, shadowCasters: this.shadows.getShadowMap()?.renderList?.length ?? 0, renderReady: this.scene.isReady(), worldReady: this.scene.isReady(), pending: this.scene.meshes.filter(m => !m.isReady(true)).map(m => m.name), carTriangles: this.vehicle.triangleCount, pace: this.theme.pace, lineWidths: this.lines.map(line => line.cssWidths), ignoredStrokeCount: this.ignoredLines.length }; }
   render(time: number) {
     const reduced = this.reducedMotion.matches, frameMs = this.lastFrame ? (time - this.lastFrame) * 1000 : 0; this.lastFrame = time;
     if (this.graphicsChoice === 'auto' && this.governor.sample(frameMs)) this.stepDownPending = true;
@@ -461,7 +457,6 @@ export class GameScene {
     // Each instrumented scene restarts the shared engine counter as it begins rendering.
     this.scene.render();
     this.drawCalls = this.instrumentation?.drawCallsCounter.current ?? 0;
-    if (['welcome', 'setup', 'results'].includes(this.layoutMode)) { this.showcase.render(time); this.drawCalls += this.showcaseInstrumentation?.drawCallsCounter.current ?? 0; }
   }
-  dispose(disposeEngine = true) { this.ready = false; this.canvasResizeObserver.disconnect(); this.post.dispose(); this.instrumentation?.dispose(); this.showcaseInstrumentation?.dispose(); this.showcase.dispose(); this.scene.dispose(); if (disposeEngine) this.engine.dispose(); }
+  dispose(disposeEngine = true) { this.ready = false; this.canvasResizeObserver.disconnect(); this.post.dispose(); this.instrumentation?.dispose(); this.scene.dispose(); if (disposeEngine) this.engine.dispose(); }
 }

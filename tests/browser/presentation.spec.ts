@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
-import { waitForPhase } from './ui';
+import { waitForPhase, openSettings, closeSettings, soundToggle } from './ui';
 
 const audio = (page: import('@playwright/test').Page) => page.evaluate(() => (window as any).__roadster.getAudio());
 
@@ -26,7 +26,7 @@ test('sound defaults on, unlocks on first play, follows a race, silences on paus
   expect((await audio(page)).context).toBe('locked'); expect((await audio(page)).muted).toBe(false);
   await page.getByRole('button', { name: 'Time Trial', exact: true }).click();
   await expect.poll(async () => (await audio(page)).context).toBe('running');
-  await expect(page.getByRole('button', { name: 'Turn sound off' })).toHaveAttribute('aria-pressed', 'true');
+  await openSettings(page); await expect(soundToggle(page)).toHaveAttribute('aria-pressed', 'true'); await closeSettings(page);
   await page.getByRole('button', { name: 'Draw racing line' }).click();
   await page.evaluate(() => (window as any).__roadster.usePracticeLine()); await page.getByRole('button', { name: 'Race this line' }).click();
   await waitForPhase(page, 'racing');
@@ -39,7 +39,9 @@ test('sound defaults on, unlocks on first play, follows a race, silences on paus
   await page.getByRole('button', { name: 'Resume', exact: true }).click();
   await waitForPhase(page, 'racing');
   await expect.poll(async () => (await audio(page)).outputRms).toBeGreaterThan(0.001);
-  await page.getByRole('button', { name: 'Turn sound off' }).click(); await page.waitForTimeout(450);
+  // Mute from the Pause menu; the race stays silent after resuming.
+  await page.keyboard.press('Escape'); await soundToggle(page).click(); await expect(soundToggle(page)).toHaveAttribute('aria-pressed', 'false');
+  await page.getByRole('button', { name: 'Resume', exact: true }).click(); await waitForPhase(page, 'racing'); await page.waitForTimeout(450);
   expect((await audio(page)).outputRms).toBeLessThan(0.0001);
   const before = await page.evaluate(() => (window as any).__roadster.getState());
   await page.keyboard.press('KeyT'); await page.waitForTimeout(400);
@@ -58,7 +60,7 @@ test('recorded audio roles decode and play, while missing or invalid recordings 
   for (let i = 0; i < length; i++) wav.writeInt16LE(Math.round(Math.sin(i / sampleRate * Math.PI * 400) * 6000), 44 + i * 2);
   await page.route('**/test-audio/**', route => route.fulfill(route.request().url().endsWith('valid.wav') ? { status: 200, contentType: 'audio/wav', body: wav } : route.request().url().endsWith('broken.wav') ? { status: 200, contentType: 'audio/wav', body: 'invalid audio data' } : { status: 404, body: 'missing' }));
   await page.goto('/'); await page.waitForFunction(() => Boolean((window as any).__roadster));
-  await page.getByRole('button', { name: 'Turn sound off' }).click();
+  await openSettings(page); await soundToggle(page).click(); await closeSettings(page);
   await page.evaluate(async () => {
     const { GameAudio } = await import('/src/presentation/audio.ts' as string);
     const engine = new GameAudio({ cues: { finish: { url: '/test-audio/valid.wav' }, thrust: { url: '/test-audio/missing.wav' } }, loops: { drive: { url: '/test-audio/valid.wav', loopStart: 0, loopEnd: 0.5 }, sand: { url: '/test-audio/broken.wav' } } });
