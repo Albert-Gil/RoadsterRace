@@ -101,6 +101,32 @@ The same generators (`src/presentation/landscape/`: `runtime.ts` runs a venue's 
 
 Draw calls (Medium, phone landscape, drawing phase; before → after): Newport 58 → 61, Launchsite 45 → 47, Golden Gate 51 → 56, Santa Monica 50 → 51, Grand Canyon 25 → 24, LA nights 64 → 66. Added geometry (triangles, rock / plants): Grand Canyon about 280 k / 110 k, Golden Gate 66 k / 46 k, Santa Monica 7 k / 46 k, Newport 6 k / 7.5 k, LA nights 16 k of palms (cars are batched boxes). Painted maps are 2048 px wide (1536 at Santa Monica).
 
+### Grand Canyon trail integration
+
+The elevated trails now share the surrounding canyon's geology. `canyon-earthwork.ts` derives
+exact non-flight section paths and creates one vertex-coloured bank mesh and one multi-row
+shoulder mesh. Sixteen depth bands carry horizontal sandstone beds, mineral stains, recessed
+erosion channels and dusty rims. Relief retreats under the authoritative support edge. The
+takeoff and receiving faces close against the canyon floor; no geometry bridges the flight
+opening or obscures the lower road.
+
+The shoulder has its own world-space sediment map, broken edge wear and gravel. Compacted
+dirt is darker than the runoff. Flat painted sediment fans and contact shade tie the bank toes
+into the floor. The old smooth vertical bank ribbons and decorative scrub on the driving
+shoulder were removed. Existing inner mesas now have foundations down to the canyon floor,
+with the same original tops and footprint.
+
+Beyond the full planning corridor, terraced ridges connect the isolated buttes into a broader
+landscape. Their height is limited by distance from the road, and terrain near formations is
+capped to preserve exposed cliff faces. These are cosmetic heightfields; driving surfaces,
+sections, barriers, fixed framing and physics remain unchanged. Appearance tuning lives in
+`themes.ts` (`canyonIntegration`, canyon scenery palette and material finishes).
+
+Geometry safety is covered by `tests/unit/canyon-integration.test.ts`. Matching desktop,
+phone landscape, phone portrait and inspection views are captured in
+`artifacts/canyon-integration/{before,after}/`. Physical iPhone/iPad Safari verification remains
+pending.
+
 ### Post-processing
 
 `PostEffects` (`post-processing.ts`) runs in LDR: materials still apply tone mapping and

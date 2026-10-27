@@ -102,7 +102,7 @@ export const sceneryPalettes = {
   spaceport: { terrain: '#d1bc9b', embankment: '#a69a85', asphalt: '#aeb1ad', shoulder: '#a99c85',
     structure: '#33404b', curb: '#e8e8dd', glass: '#243746', foliage: '#68674b', foliageLight: '#8d8863',
     rock: '#a69883', trunk: '#7d715d', sky: '#cfae94', sunlight: 1.05 },
-  canyon: { terrain:'#bd8963',embankment:'#c69c72',asphalt:'#aa895d',shoulder:'#c3a27a',rock:'#ae6344',foliage:'#68724b',foliageLight:'#8c9565',trunk:'#765640',water:'#98785d',sky:'#e5c6a5',sunlight:1.08 },
+  canyon: { terrain:'#bd8963',embankment:'#c69c72',asphalt:'#805d43',shoulder:'#b58b62',rock:'#ae6344',foliage:'#68724b',foliageLight:'#8c9565',trunk:'#765640',water:'#98785d',sky:'#e5c6a5',sunlight:1.08 },
 } satisfies Record<string, Partial<PresentationTheme['scene']>>;
 export const sceneryLighting = {
   'night-city': {ambient:'#a4bce8',ground:'#3e4768',sun:'#9bbaff'},
@@ -193,6 +193,7 @@ export const surfaceFinishes: Record<string, SurfaceFinish> = {
   'sandstone-*': { kind: 'rock', scale: 16, normal: 0.6, variation: 0.1, walls: true },
   // Procedural landscape (landscape/): colour lives in the vertices, the finish adds grain and relief.
   'landscape-rock': { kind: 'rock', scale: 5, normal: 0.55, variation: 0.08, walls: true },
+  'canyon-trail-rock': { kind: 'rock', scale: 4, normal: 0.6, variation: 0.1, walls: true },
   'landscape-plants': { kind: 'grass', scale: 1.6, normal: 0.8, variation: 0.14, walls: true },
   foliage: { kind: 'grass', scale: 2.5, normal: 0.9, variation: 0.22, walls: true },
   foliageLight: { kind: 'grass', scale: 2.5, normal: 0.9, variation: 0.22, walls: true },
@@ -220,6 +221,13 @@ export const sceneryFinishes: Partial<Record<keyof typeof sceneryLighting, Recor
 };
 
 export const canyonAppearance={cliff:['#a85f43','#bc7850','#d39464','#e1ad79'],mesa:'#c6986b',road:'#aa895d',ruts:'#705c42',dryWash:'#d9b891',scrub:'#68724b',guard:'#96745a'};
+/** Cosmetic trail geology: actual support edges/elevations stay authoritative. */
+export const canyonIntegration = {
+  floor: -2.6, bankLayers: 16, maxUndercut: 2.4, bedHeight: 1.15,
+  strata: ['#a65d43', '#bf7852', '#d69b6c', '#bd7350', '#ddb48a', '#ac6347', '#c78b61'],
+  cap: '#c49b72', dust: '#b98159', shade: '#6f4437',
+  shoulderMapSize: 2048,
+};
 export const nightAppearance={facades:['#384863','#52445c','#354e5e'],neon:['#fa5ca8','#49d8ef','#d9a674'],window:'#ffdc9d',darkWindow:'#111d32',signBackground:'#11162b',poolOpacity:.48,glowIntensity:.4,glowTextureSize:256,glowKernel:24,ambientIntensity:.8,vehicleFill:.55,gameExposure:1.12,menuExposure:.65};
 export function sceneryTheme(theme: PresentationTheme, scenery: keyof typeof sceneryPalettes): PresentationTheme {
   return { ...theme, scene: { ...theme.scene, ...sceneryPalettes[scenery] } };

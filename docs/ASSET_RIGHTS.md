@@ -96,6 +96,13 @@ Launchsite's rock formations, terrain, painted ground, loose stones and plants a
 
 Grand Canyon, Golden Gate, Santa Monica, Newport and LA nights now carry the same kind of procedural landscape as Launchsite: terrain, painted ground maps, solid rock from 'rock' barriers, loose rocks, plants, tennis and volleyball courts, streets, parked cars and lamps are original procedural code (`src/presentation/landscape/` and each venue's `*-landscape.ts` / `*-detail.ts`). The only external art they use is the same eight CC0 Poly Haven rock scans already shipped in `public/assets/models/launchsite-props.bin` (tinted toward each venue's rock palette); nothing new was downloaded and no new asset file is shipped.
 
+## Grand Canyon trail integration — 2026-10-27
+
+The eroded trail foundations, coloured strata, shoulder sediment map, floor contact/fan painting
+and terraced background ridges are original procedural geometry and canvas artwork authored in
+this repository. No new external assets or models were downloaded. Existing CC0 Poly Haven
+formations, RoadsterLAB, font and audio provenance remain unchanged.
+
 ## Home key art (AI-generated, supplied by the project owner) — 2026-10-27
 
 The five Home pictures in `public/assets/hero/` (`thruster-hop`, `drivers-grid`, `door-to-door`, `water-jump`, `canyon-jump`, each as `-wide` 1672×941 and `-tall` 941×1672 WebP at quality 74) are AI-generated images that the project owner created and supplied on 2026-10-26 in the folder `RoadsterRace_Key_Art_v10_Water_Fix`, from prompts written for this project. They depict the game's own fictional roadster and drivers: no Tesla, SpaceX or other real brand, logo or car is intended. Hidden Hop shortcuts are not shown.

@@ -2,7 +2,7 @@ import type { Scene } from '@babylonjs/core/scene';
 import type { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import type { TrackBarrier, TrackDefinition } from '../core/types';
 import { buildTerrain, courseDistance, distanceField, polygonField, type Extent } from './landscape/terrain';
-import { fbm2, smoothstep } from './landscape/noise';
+import { fbm2, ridged2, smoothstep } from './landscape/noise';
 import { hex, mix, scale, type Rgb } from './landscape/mesh';
 import type { FormationSpec, RockPalette } from './landscape/rocks';
 import type { PlantKind, PlantPalette } from './landscape/plants';
@@ -51,7 +51,11 @@ const style = (b: TrackBarrier) => CANYON.formations[b.id] ?? (b.id.includes('le
 export function canyonLayout(track: TrackDefinition) {
   const C = CANYON, extent = C.extent, D = courseDistance(track, extent, 3);
   const rocks = track.barriers.filter(b => b.kind === 'rock' || b.kind === 'infield');
-  const formations: FormationSpec[] = rocks.map((b, i) => ({ id: b.id, footprint: b.footprint, height: b.height, base: b.baseHeight ?? 0, seed: 301 + i * 41, ...style(b) }));
+  // Ground the inner mesas without changing their collision top or outline.
+  const formations: FormationSpec[] = rocks.map((b, i) => {
+    const originalBase = b.baseHeight ?? 0, base = Math.min(C.floor, originalBase);
+    return { id: b.id, footprint: b.footprint, height: b.height + originalBase - base, base, seed: 301 + i * 41, ...style(b) };
+  });
   const washes = C.washes.map(w => smoothPath(w, 2)), W = distanceField(washes, extent, 3);
   const tall = rocks.filter(b => b.kind === 'rock' && b.height >= 12), tallField = polygonField(tall.map(b => b.footprint), extent, 3), rockField = polygonField(rocks.map(b => b.footprint), extent, 3);
   const rise = (d: number) => smoothstep(C.flatUntil, 70, d);
@@ -60,12 +64,26 @@ export function canyonLayout(track: TrackDefinition) {
     const d = D(x, z), gate = smoothstep(C.flatUntil - 2, 40, d);
     if (gate <= 0) return C.floor;
     let h = rise(d) * (1.4 * (0.5 + 0.5 * fbm2(x / 55, z / 55, 4, 13)) + 0.6 * fbm2(x / 17, z / 17, 2, 17));
+    // Broad canyon benches tie the isolated formations into a single eroded landscape.
+    // They begin beyond the entire planning corridor; their height also respects the
+    // overview's sight line so a foreground ridge cannot cover a lower trail.
+    const ridge = ridged2(x / 74 + 0.2 * fbm2(x / 100, z / 100, 2, 8), z / 46, 3, 817);
+    const bench = smoothstep(C.flatUntil + 3, 57, d) * (2.2 + 12 * ridge);
+    const bed = 2.1, fraction = bench / bed - Math.floor(bench / bed);
+    h += bench * 0.4 + (Math.floor(bench / bed) + smoothstep(0.55, 0.94, fraction)) * bed * 0.6;
     // Talus aprons swell toward the tall rock; the canyon rims rise behind the walls.
     const t = tallField.nearest(x, z);
     if (t >= 0) { const sd = tallField(x, z), b = tall[t]; h += gate * 0.08 * b.height * Math.exp(-Math.max(0, sd) / (0.5 * b.height + 8)) * smoothstep(-1, 6, sd); }
     h += smoothstep(128, 200, Math.abs(z)) * 7;
     const dw = W(x, z); h += gate * (-0.9 * Math.exp(-((dw / 4.4) ** 2)) + 0.25 * Math.exp(-(((dw - 8) / 3) ** 2)));
-    return C.floor + h * edge(x, z);
+    // Preserve each formation's readable cliff face instead of burying low ledges in a dune.
+    const near = rockField.nearest(x, z);
+    if (near >= 0) {
+      const estimated = rockField(x, z);
+      const contact = estimated < 3 ? rockField.exact(x, z) : { distance: estimated, index: near };
+      h = Math.min(h, rocks[contact.index].height * 0.18 + Math.max(0, contact.distance) * 0.8);
+    }
+    return C.floor + Math.min(h, Math.max(0, (d - track.roadWidth / 2) / 1.45)) * edge(x, z);
   };
   const tint = (x: number, z: number, h: number, slope: number): Rgb => {
     const d = D(x, z), n1 = fbm2(x / 36, z / 36, 3, 23), n2 = fbm2(x / 8, z / 8, 2, 37);
@@ -77,6 +95,9 @@ export function canyonLayout(track: TrackDefinition) {
     if (near >= 0) c = mix(c, [1.0, 0.8, 0.7], Math.exp(-Math.max(0, rockField(x, z)) / (0.3 * rocks[near].height + 5)) * 0.5);
     const dw = W(x, z); c = mix(c, [1.2, 1.12, 1.06], Math.exp(-((dw / 4.4) ** 2)) * 0.65);
     c = mix(c, [1.0, 0.86, 0.78], smoothstep(0.1, 0.35, slope) * 0.25);
+    const exposed = smoothstep(0.06, 0.35, slope) * smoothstep(C.floor + 1.6, C.floor + 4.5, h);
+    const bed = Math.floor((h - C.floor) / 2.1) % 3;
+    c = mix(c, bed === 1 ? [1.08, 0.88, 0.69] : bed === 2 ? [0.83, 0.64, 0.53] : [1.0, 0.73, 0.55], exposed * 0.7);
     return scale(c, 1 + 0.035 * n2 + 0.015 * (h - C.floor) / 6);
   };
 
@@ -108,7 +129,7 @@ export function buildCanyonLandscape(scene: Scene, track: TrackDefinition, mater
   const terrain = timed('terrain', () => buildTerrain('canyon-floor', scene, { extent: C.extent, cell: C.terrainCell, height: (x, z) => layout.height(x, z), color: (x, z, h, slope) => layout.tint(x, z, h, slope) }, terrainMaterial));
   const { shadowCasters } = runLandscape(scene, materials, { name: 'canyon', props: 'launchsite', timings, load: async () => {
     const detail = await import('./canyon-detail'), { loose, plants } = timed('scatter', () => layout.scatter());
-    return { generators: detail, paint: detail.paintInto(scene, track, layout, terrainMaterial), formations: layout.formations, rock: C.rock, loose, plants, plantPalette: C.plants, topPlants: ['sage', 'grass', 'agave'] };
+    return { generators: detail, paint: detail.paintInto(scene, track, layout, terrainMaterial, materials.get('shoulder')), formations: layout.formations, rock: C.rock, loose, plants, plantPalette: C.plants, topPlants: ['sage', 'grass', 'agave'] };
   } });
   return { terrain: terrain.mesh, shadowCasters };
 }
