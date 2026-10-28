@@ -97,6 +97,7 @@ const bestTimes = new Map<string, number>();
 const bestKey = () => `${activeTrack.id}:${activeTrack.version}:${lapCount}:${RULES.version}:${COMPILER_VERSION}`;
 let drawingTrim: DrawingTrim | undefined;
 let stroke: DrawSample[] = [], drawingPointer: number | null = null;
+let drawingDirty = false;
 let countdownRemaining = 0, resuming = false, best: number | null = null, previousPoses: { x: number; z: number; heading: number; y: number }[] = [], noticeUntil = 0, lastFrame = performance.now();
 let pauseReason='';
 /** Preview heads-up about stretches of the line the car cannot drive (it crashes there and is reset). */
@@ -487,7 +488,10 @@ panel.addEventListener('change', event => {
 });
 function appendSample(event: PointerEvent) {
   const point = world.groundPoint(event.clientX, event.clientY, stroke.at(-1)); if (!point) return;
-  const sample = { ...point, time: event.timeStamp }; if (!stroke.length || distance(sample, stroke[stroke.length - 1]) > 0.1) stroke.push(sample);
+  // Preserve pauses and sub-metre motion; metre-based filtering belongs in the compiler.
+  const sample = { ...point, time: event.timeStamp }, last = stroke.at(-1);
+  if (last && sample.time < last.time) return;
+  if (!last || sample.time > last.time || distance(sample, last) > 0.001) { stroke.push(sample); drawingDirty = true; }
 }
 canvas.addEventListener('pointerdown', e => {
   if (phase !== 'drawing' || drawingPointer !== null || (e.pointerType === 'mouse' && e.button !== 0)) return;
@@ -497,7 +501,7 @@ canvas.addEventListener('pointerdown', e => {
 });
 canvas.addEventListener('pointermove', e => {
   if (phase !== 'drawing' || drawingPointer !== e.pointerId) return;
-  e.preventDefault(); const events = e.getCoalescedEvents?.() ?? []; for (const p of events.length ? events : [e]) appendSample(p); world.drawLine(stroke);
+  e.preventDefault(); const events = e.getCoalescedEvents?.() ?? []; for (const p of events) appendSample(p); appendSample(e);
 });
 canvas.addEventListener('pointerup', e => {
   if (drawingPointer !== e.pointerId || phase !== 'drawing') return;
@@ -505,7 +509,7 @@ canvas.addEventListener('pointerup', e => {
   const result = compileRoute(stroke, activeTrack);
   if (result.ok) showPreview(result.route, result.drawing); else { world.showError(result.point, result.section); renderPanel(result.message); }
 });
-function cancelStroke() { if (drawingPointer === null) return; drawingPointer = null; stroke = []; world.drawLine(null); if (phase === 'drawing') renderPanel('That drawing was interrupted. Start a fresh lap at the start line.'); }
+function cancelStroke() { if (drawingPointer === null) return; drawingPointer = null; drawingDirty = false; stroke = []; world.drawLine(null); if (phase === 'drawing') renderPanel('That drawing was interrupted. Start a fresh lap at the start line.'); }
 canvas.addEventListener('pointercancel', cancelStroke); canvas.addEventListener('lostpointercapture', cancelStroke);
 function interrupt() {
   audio.silence(); pauseRace('app-interruption'); clearRaceInput(); ownership.clear(); updateDiagnostics(); cancelStroke();
@@ -533,6 +537,8 @@ try {
   canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); pauseRace(); showNotice('The graphics were interrupted. Reload if the circuit does not recover.', 10); });
   world.engine.runRenderLoop(() => {
     const now = performance.now(), elapsed = (now - lastFrame) / 1000; lastFrame = now;
+    // Capture every timestamp, but rebuild the live line at most once per rendered frame.
+    if (phase === 'drawing' && drawingDirty) { drawingDirty = false; world.drawLine(stroke); }
     if (phase === 'racing' && elapsed > 0.5) pauseRace('render-delay');
     // A resumed tutorial race returns to its unanswered prompt before any further step.
     if (phase === 'racing' && tutorial?.awaiting) setPhase('coaching');

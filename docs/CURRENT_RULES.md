@@ -8,8 +8,8 @@ Conventions: SI units; horizontal plane (x, z) with y up; heading 0 points along
 
 | Item | Version |
 |---|---:|
-| Vehicle rules (`RULES.version`) | 14 |
-| Route compiler (`COMPILER_VERSION`) | 15 |
+| Vehicle rules (`RULES.version`) | 15 |
+| Route compiler (`COMPILER_VERSION`) | 16 |
 | Newport Island track (`coastal-launch`) | 6 |
 | Launchsite track (`orbital-launchyard`) | 9 |
 | Golden Gate track (`golden-gate`) | 7 |
@@ -36,7 +36,7 @@ Vehicle envelope: 2.2 m × 5.2 m. Race distance: 1–6 laps (default 2). Champio
 
 | Key | Value | Unit | Meaning |
 |---|---:|---|---|
-| `version` | 14 | — | Vehicle rules version; stored with records and championships |
+| `version` | 15 | — | Vehicle rules version; stored with records and championships |
 | `dt` | 0.0166667 | s | Fixed simulation step (two equal substeps per step) |
 | `laps` | 2 | laps | Default race distance |
 | `acceleration` | 6 | m/s² | Maximum pace-following acceleration |
@@ -66,6 +66,8 @@ Vehicle envelope: 2.2 m × 5.2 m. Race distance: 1–6 laps (default 2). Champio
 | `surfaceTransition` | 1.2 | m | Distance over which asphalt blends to sand |
 | `driftStartAngle` | 0.17 (9.74028°) | rad | Slip angle that starts a drift |
 | `driftEndAngle` | 0.09 (5.15662°) | rad | Slip angle below which a drift ends |
+| `driftGripLoss` | 0.14 | fraction | Largest loss of lateral authority beyond peak tire slip; no speed multiplier |
+| `driftSaturationRange` | 2 | peak-demand multiples | Excess tire demand over which lateral grip falls smoothly |
 | `recoveryHold` | 1 | s | Time a reset car waits before driving on |
 | `hazardApproach` | 12 | m | A crash this far before a drawn hazard resets the car past it |
 | `hazardPenaltySpeed` | 20 | m/s | Extra reset wait is the skipped circuit distance divided by this |
@@ -103,8 +105,10 @@ Derived: level-ground manual hop peak 8.028 m and airtime 0.944 s. Santa Monica 
 
 | Key | Value | Unit | Meaning |
 |---|---:|---|---|
-| `gestureRadius` | 5 | m | Half-window for measuring drawing speed |
+| `gestureRadius` | 5 | m | Exact half-window for measuring drawing speed |
 | `compiledRadius` | 8 | m | Half-window of the compiled pace filter |
+| `sampleSpacing` | 1 | m | Maximum spacing of retained timed samples before pace/geometry smoothing |
+| `pauseRadius` | 0.35 | m | Motion inside this radius is a resting finger, independent of event rate |
 
 ## DRAWING_RULES
 
@@ -148,3 +152,15 @@ Derived: level-ground manual hop peak 8.028 m and airtime 0.944 s. Santa Monica 
 | `easy` | 0.9 | — | Fraction of the safe pace profile |
 | `normal` | 0.97 | — | Fraction of the safe pace profile |
 | `hard` | 1 | — | Fraction of the safe pace profile |
+
+## AI_DRIVING
+
+| Key | Value | Unit | Meaning |
+|---|---:|---|---|
+| `decisionTicks` | 12 | ticks | Fixed-clock interval between each computer driver decision |
+| `cornerGripShare` | 0.64 | fraction | Nominal grip used for the safe planned corner pace |
+| `brakingShare` | 0.65 | fraction | Ordinary braking reserved by corner and burst predictions |
+| `responseSeconds` | 0.45 | s | Extra braking distance for pace-controller response after a burst |
+| `followingSeconds` | 0.65 | s | Following headway and speed-response horizon |
+| `trafficRange` | 32 | m | Furthest same-level car considered ahead |
+| `minimumGap` | 2.5 | m | Minimum bumper-to-bumper following gap |

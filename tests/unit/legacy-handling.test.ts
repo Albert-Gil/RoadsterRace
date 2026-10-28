@@ -5,9 +5,9 @@ import type { TrackDefinition, CompiledRoute } from '../../src/core/types';
 import { LocalRace } from '../../src/core/local-race';
 import { RULES } from '../../src/core/simulation';
 
-// Keep the historic geometry. Rules v10 intentionally reduce sand drag, which
-// changes off-road trajectories and contacts, so record a separate v10 baseline.
-test.each(fixtures)('$track.id has a repeatable v10 baseline on frozen geometry', ({ track: data, route: line }) => {
+// Keep historic geometry and pace frozen. Rules v15 intentionally increase saturated
+// tire slip; these snapshots record that new handling independently of compiler changes.
+test.each(fixtures)('$track.id has a repeatable v15 baseline on frozen geometry', ({ track: data, route: line }) => {
   const track=data as TrackDefinition, route={...line,version:COMPILER_VERSION} as CompiledRoute;
   const race = new LocalRace([route], track, 2);
   for (let tick = 0; tick < 18000 && !race.finished; tick++) {
@@ -26,4 +26,5 @@ test('ground force tuning retains established grip, response, acceleration and t
     grip: 48, sandGrip: 6.5, response: 7.5, sandResponse: 1.8, acceleration: 6, braking: 8.5, thrust: 25, max: 42,
   });
   expect(RULES.sandDrag).toBe(0.95);
+  expect(RULES.driftGripLoss).toBe(.14); expect(RULES.driftSaturationRange).toBe(2);
 });

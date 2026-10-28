@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest';
 import { angleDelta, cumulative, distance } from '../../src/core/geometry';
 import type { CompiledRoute, TrackDefinition } from '../../src/core/types';
 import { compileRoute, createPracticeSamples, COMPILER_VERSION, gestureSpeeds, paceToSpeed, PACE_RANGE } from '../../src/core/route';
-import { RaceSimulation, RULES, sampleSurface } from '../../src/core/simulation';
+import { RaceSimulation, RULES, sampleSurface, lateralGrip } from '../../src/core/simulation';
 import fixtures from '../fixtures/handling-v8.json';
 const coastalTrack=fixtures[0].track as TrackDefinition;
 
@@ -27,6 +27,16 @@ function measure(seconds: number) {
 }
 
 describe('momentum, steering recovery and real surfaces', () => {
+  test('excess slip smoothly loses lateral authority while clean corner grip stays unchanged',()=>{
+    expect(lateralGrip(48,7.5,20,.1)).toBe(48);
+    expect(lateralGrip(48,7.5,30,.3)).toBeLessThan(48);
+    expect(lateralGrip(48,7.5,30,.8)).toBeCloseTo(48*.86);
+    expect(lateralGrip(38.4,7.5,30,.8)).toBeCloseTo(38.4*.86);
+    for(let slip=.05;slip<1;slip+=.01){
+      expect(lateralGrip(48,7.5,30,slip)).toBeLessThanOrEqual(lateralGrip(48,7.5,30,slip-.01));
+      expect(lateralGrip(48,7.5,30,slip)).toBeGreaterThanOrEqual(48*.86);
+    }
+  });
   test('a fast plan can exceed the former 28 m/s cruising speed without thrust', () => {
     expect(PACE_RANGE.max).toBe(30);
     const sim = new RaceSimulation(route(2), coastalTrack);

@@ -1,6 +1,6 @@
 # Forgiving lines, Home everywhere and touch scaling
 
-Compiler v15 and vehicle rules v14 (compiler v15 relaxed Hop-lane approval; see below).
+Compiler v16 and vehicle rules v15. The v15 Hop-lane approval remains unchanged; v16 adds distance-based drawing normalization (see `DRIVING_CONSISTENCY.md`).
 
 ## What a player sees
 
@@ -28,7 +28,7 @@ All values are generated in `docs/CURRENT_RULES.md`.
 
 ### Pauses
 
-A resting finger (under 1 m of movement) counts as at most 0.4 s (`DRAWING_RULES.longestPause`). Hesitation does not slow the pace.
+A resting finger inside a 0.35 m radius counts as at most 0.4 s (`DRAWING_RULES.longestPause`), whether the browser sends one paused sample or many. This bounded pause remains in the local pace; time beyond it is ignored. Deliberately slow movement remains slower.
 
 ### Lap coverage
 

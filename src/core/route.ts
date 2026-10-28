@@ -7,15 +7,10 @@ import { assessSupports } from './support';
 import { assessHopShortcuts } from './hop-shortcuts';
 import { annotateRoad } from './elevation';
 import { hazardSpans } from './hazards';
+import { compressDrawingPauses, gestureSpeeds, PACE_FILTER, prepareDrawingSamples } from './drawing-pace';
+export { gestureSpeeds, paceToSpeed, PACE_RANGE, PACE_FILTER } from './drawing-pace';
 
-export const COMPILER_VERSION = 15;
-export const PACE_RANGE = Object.freeze({ min: 9, max: 30 });
-export const PACE_FILTER = Object.freeze({ gestureRadius: 5, compiledRadius: 8 });
-
-export function paceToSpeed(worldUnitsPerSecond: number, trackLength: number): number {
-  const u = clamp((worldUnitsPerSecond / trackLength - 0.015) / 0.245, 0, 1);
-  return lerp(PACE_RANGE.min, PACE_RANGE.max, u * u * (3 - 2 * u));
-}
+export const COMPILER_VERSION = 16;
 
 /**
  * Lap-level checks only: the right direction, enough of the circuit and one lap. Barriers,
@@ -56,29 +51,6 @@ function lapCoverage(points: Point[], drawnDistances: number[], track: TrackDefi
   return covered / n;
 }
 
-/**
- * A hesitation (the finger resting, under a metre of movement) does not change the intended
- * pace: inside the counted lap it lasts at most `longestPause`. It never rejects the drawing.
- */
-function compressPauses(samples: DrawSample[]): DrawSample[] {
-  let removed = 0;
-  return samples.map((p, i) => {
-    if (i && distance(p, samples[i - 1]) < 1) removed += Math.max(0, p.time - samples[i - 1].time - DRAWING_RULES.longestPause * 1000);
-    return { ...p, time: p.time - removed };
-  });
-}
-
-/** Shared live/compiled gesture interpretation; the trailing live window is provisional. */
-export function gestureSpeeds(samples: DrawSample[], trackLength: number) {
-  const ds = cumulative(samples); let start = 0, end = 0;
-  return samples.map((_, i) => {
-    while (start < i && ds[start + 1] < ds[i] - PACE_FILTER.gestureRadius) start++;
-    while (end < samples.length - 1 && ds[end] < ds[i] + PACE_FILTER.gestureRadius) end++;
-    const a = samples[start], b = samples[end];
-    return paceToSpeed((ds[end] - ds[start]) / Math.max(0.016, (b.time - a.time) / 1000), trackLength);
-  });
-}
-
 export function compileRoute(input: DrawSample[], track: TrackDefinition): RouteResult {
   if (input.some(p => !Number.isFinite(p.x) || !Number.isFinite(p.z) || !Number.isFinite(p.time))) return { ok: false, message: 'The drawing was interrupted. Please redraw your lap.' };
   if (input.length < 12) return { ok: false, message: 'Start on the line or just behind it. Draw one lap.' };
@@ -86,19 +58,15 @@ export function compileRoute(input: DrawSample[], track: TrackDefinition): Route
   if (input.some((p, i) => i > 0 && p.time < input[i - 1].time)) return { ok: false, message: 'The drawing was interrupted. Please redraw your lap.' };
   const trimmed = trimDrawing(input, track);
   if (!trimmed.ok) return trimmed;
-  const lapSamples = compressPauses(trimmed.samples);
-  let samples: DrawSample[] = [lapSamples[0]];
-  for (const p of lapSamples.slice(1)) {
-    const last = samples.at(-1)!;
-    if (distance(p, last) > 0.08) samples.push(p);
-  }
-  if (samples.length < 12) return { ok: false, message: 'Draw all the way around the circuit.' };
   // A finger cannot cover this much ground between two touch events: the stroke lost contact.
-  if (samples.some((p, i) => i > 0 && distance(samples[i - 1], p) > track.roadWidth * DRAWING_RULES.longestStepRoadWidths)) return { ok: false, message: 'Part of your line is missing. Draw one continuous lap.', point: samples[0] };
+  if (trimmed.samples.some((p, i) => i > 0 && distance(trimmed.samples[i - 1], p) > track.roadWidth * DRAWING_RULES.longestStepRoadWidths)) return { ok: false, message: 'Part of your line is missing. Draw one continuous lap.', point: trimmed.samples[0] };
+  let samples = compressDrawingPauses(trimmed.samples);
+  if (samples.length < 12) return { ok: false, message: 'Draw all the way around the circuit.' };
   if (track.sections) samples = annotateRoad(samples, track);
-  const rawDuration = lapSamples.at(-1)!.time / 1000;
+  const rawDuration = samples.at(-1)!.time / 1000;
   const cleaned = cleanDrawnRoute(samples, track, true);
-  samples = cleaned.samples;
+  // Erase corrections before resampling so their clocks cannot contaminate a retained segment.
+  samples = prepareDrawingSamples(cleaned.samples);
   if (samples.length < 12) return { ok: false, message: 'Follow the arrows and draw one complete lap in the circuit direction.', point: input[0] };
   const rawError = validateLap(samples, track).error;
   if (rawError) return rawError;

@@ -29,6 +29,7 @@ import { distance, mix, modulo } from '../core/geometry';
 import { drawingStart, drawingStartBounds, startGate, gatePoint, trimDrawing } from '../core/start-finish';
 import { bridgeAt } from '../core/bridge';
 import { gestureSpeeds } from '../core/route';
+import { prepareDrawingSamples } from '../core/drawing-pace';
 import type { CompiledRoute, DrawSample, DrawingTrim, Point, TrackDefinition } from '../core/types';
 import type { PresentationTheme } from './themes';
 import { sceneTuning, sceneryTheme, sceneryLighting, nightAppearance, graphicsTiers, venueSkies, colorGrade, type GraphicsLevel } from './themes';
@@ -427,7 +428,7 @@ export class GameScene {
       if (!start) { muted(samples); return; }
       const trimmed = trimDrawing(samples, this.track);
       muted(start.leadIn); if (trimmed.ok) muted(trimmed.tail);
-      const counted = (trimmed.ok ? trimmed.samples : [start.sample, ...samples.slice(start.next)]).filter((p, i, all) => !i || distance(p, all[i - 1]) > 0.001);
+      const counted = prepareDrawingSamples(trimmed.ok ? trimmed.samples : [start.sample, ...samples.slice(start.next)]);
       points = counted; speeds = gestureSpeeds(counted, this.track.length);
     } else { speeds = samples.points.map(p => p.desiredSpeed); if (drawing) { muted(drawing.leadIn); muted(drawing.tail); } }
     if (points.length > 1) this.lines.push(new PaceLine(this.scene, points, speeds, this.theme, 0, false, false, false, this.track));

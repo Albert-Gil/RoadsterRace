@@ -11,6 +11,13 @@ import { permittedHopBarriers } from './hop-shortcuts';
 
 export { RULES };
 
+/** Tires lose a little lateral authority past peak slip; no timed speed cap or asphalt drag. */
+export function lateralGrip(grip: number, response: number, speed: number, slip: number) {
+  const demand = Math.abs(slip) * response * speed;
+  const saturation = clamp((demand / Math.max(1e-9, grip) - 1) / RULES.driftSaturationRange, 0, 1);
+  return grip * (1 - RULES.driftGripLoss * saturation);
+}
+
 /** Surface comes from the physical car footprint, never from its planned line. */
 export function sampleSurface(position: Point, track: TrackDefinition) {
   const road = track.sections ? locateRoad(position,track) : projectToPolyline(position, track.centerline, track.distances);
@@ -31,6 +38,9 @@ export class RaceSimulation {
   private collisionNearbyUntil = -1;
   private progressAnchor = 0;
   private invalidFlight = false;
+  private paceLimit = Infinity;
+  /** A computer may lift/brake using the same pace controller; never raise its drawn target. */
+  setPaceLimit(speed = Infinity) { this.paceLimit = Math.max(0, speed); }
   private lastRecoveryDistance = -Infinity;
   gridPending = false;
   markContact(now: number) { this.collisionNearbyUntil = now + 3; }
@@ -159,7 +169,7 @@ export class RaceSimulation {
     const surface = sampleSurface(s.position, this.track);
     s.sandAmount = surface.sandAmount; s.surface = surface.sandAmount > 0.25 ? 'sand' : this.track.surface==='packed-dirt'?'packed-dirt':'asphalt';
     const guide = sampleRoute(this.route, s.distance);
-    s.desiredSpeed += (guide.desiredSpeed - s.desiredSpeed) * (1 - Math.exp(-3 * dt));
+    s.desiredSpeed += (Math.min(guide.desiredSpeed, this.paceLimit) - s.desiredSpeed) * (1 - Math.exp(-3 * dt));
     const error = s.desiredSpeed - s.speed;
     const requestedAcceleration = clamp(Math.abs(error) < RULES.paceDeadband ? 0 : error * RULES.paceResponse, -RULES.braking, RULES.acceleration);
     s.acceleration += clamp(requestedAcceleration - s.acceleration, -RULES.accelerationJerk * dt, RULES.accelerationJerk * dt);
@@ -185,7 +195,8 @@ export class RaceSimulation {
     let travelHeading = s.speed > 0.05 ? Math.atan2(s.velocity.x, s.velocity.z) : s.heading;
     const slip = angleDelta(travelHeading, s.heading);
     // Tire force bends momentum toward the steered heading. At high speed it cannot turn fast enough.
-    const turnRate = clamp(slip * surface.response, -surface.grip / Math.max(2, s.speed), surface.grip / Math.max(2, s.speed));
+    const grip = lateralGrip(surface.grip, surface.response, s.speed, slip);
+    const turnRate = clamp(slip * surface.response, -grip / Math.max(2, s.speed), grip / Math.max(2, s.speed));
     travelHeading += turnRate * dt;
     let speed = Math.max(0, s.speed + s.acceleration * dt) * Math.exp(-RULES.sandDrag * surface.sandAmount * dt);
     let vx = Math.sin(travelHeading) * speed, vz = Math.cos(travelHeading) * speed;

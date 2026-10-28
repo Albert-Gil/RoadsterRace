@@ -59,7 +59,8 @@ export function trimDrawing(samples: DrawSample[], track: TrackDefinition) {
     if (travelled >= track.length * DRAWING_RULES.minimumPhysicalLap && hit) {
       lap.push(hit); tail = [hit, ...samples.slice(i)]; ended = true; break;
     }
-    if (distance(before, p) > 0.001) lap.push(p);
+    // Retain stationary timestamps so pause handling is identical at every event rate.
+    lap.push(p);
   }
   if (!ended) {
     // Lifting a little before the line still finishes: the lap closes straight onto the gate

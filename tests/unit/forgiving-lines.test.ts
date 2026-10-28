@@ -1,8 +1,7 @@
 import { describe, expect, test } from 'vitest';
-import { circuits, findCircuit } from '../../src/content/circuits';
-import { compileRoute, createPracticeSamples } from '../../src/core/route';
-import { LocalRace } from '../../src/core/local-race';
-import { RaceSimulation } from '../../src/core/simulation';
+import { circuits } from '../../src/content/circuits';
+import { compileRoute, createPracticeSamples, sampleRoute } from '../../src/core/route';
+import { RaceSimulation, RULES } from '../../src/core/simulation';
 import { PROFILES, humanStroke } from '../support/strokes';
 
 // Simulated human strokes: tidy, loose (about half a road width of wander), wild (off the
@@ -22,22 +21,26 @@ describe.each(circuits.map(c => c.track))('$id accepts sloppy drawings and every
 });
 
 test('a car that keeps failing at the same spot is moved forward instead of looping', () => {
-  // Pin the original building-contact fixture: the later cut-review annex/arcade
-  // changes the car's first impact, so it no longer repeats that particular failure.
-  // Current venue blockers are exercised separately in approved-cuts.test.ts.
-  const venue = findCircuit('golden-gate').track;
-  const track = { ...venue, barriers: venue.barriers.filter(b => !['market-annex', 'median-arcade'].includes(b.id)) };
+  // Feed actual zero committed motion after contact. Depending on a particular drift
+  // to hit one building twice makes a recovery test break whenever grip is tuned.
+  const track = circuits[0].track;
   const r = compileRoute(createPracticeSamples(track), track); if (!r.ok) throw new Error(r.message);
   expect(r.route.hazards).toBeUndefined();
-  const race = new LocalRace([r.route], track, 2), recoveries: { distance: number; penalty?: number }[] = [];
-  for (let tick = 0; tick < 18000 && !race.finished; tick++) {
-    if (tick % 300 === 0) race.pressThrust(0); if (tick % 480 === 240) race.pressHop(0);
-    const before = race.racers[0].state.distance;
-    race.step();
-    for (const e of race.racers[0].drainEvents()) if (e.type === 'recovery') recoveries.push({ distance: race.racers[0].state.distance - before, penalty: e.penalty });
+  const sim = new RaceSimulation(r.route,track,1),recoveries:{distance:number;penalty?:number}[]=[];
+  while(sim.state.distance<20)sim.step();
+  const blockedDistance=sim.state.distance+2,p=sampleRoute(r.route,blockedDistance);
+  for(let repeat=0;repeat<2;repeat++){
+    while(sim.state.time<sim.state.recoveringUntil)sim.finishTick();
+    Object.assign(sim.state,{position:{x:p.x+Math.cos(p.heading)*4,z:p.z-Math.sin(p.heading)*4},distance:blockedDistance,speed:0,velocity:{x:0,z:0}});
+    sim.drainEvents();
+    for(let tick=0;tick<180&&recoveries.length<=repeat;tick++){
+      const before=sim.state.distance;sim.markContact(sim.state.time);
+      sim.commitMotion({...sim.state.position},RULES.dt,sim.state.time,0);sim.finishTick();
+      for(const e of sim.drainEvents())if(e.type==='recovery')recoveries.push({distance:sim.state.distance-before,penalty:e.penalty});
+    }
   }
-  expect(race.finished).toBe(true);
-  expect(recoveries.length).toBeGreaterThanOrEqual(2);
+  expect(recoveries).toHaveLength(2);
   expect(recoveries[0].distance).toBeLessThan(0); expect(recoveries[0].penalty).toBeUndefined();
   expect(recoveries[1].distance).toBeGreaterThan(0); expect(recoveries[1].penalty).toBeGreaterThan(0);
+  for(let i=0;i<18000&&!sim.state.finished;i++)sim.step();expect(sim.state.finished).toBe(true);
 });

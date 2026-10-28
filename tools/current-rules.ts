@@ -7,7 +7,7 @@ import { COMPILER_VERSION, PACE_RANGE, PACE_FILTER } from '../src/core/route';
 import { DRAWING_RULES } from '../src/core/route-cleanup';
 import { GATE_RULES } from '../src/core/start-finish';
 import { SHORTCUT_RULES } from '../src/core/hop-shortcuts';
-import { AI_TUNING } from '../src/core/computer';
+import { AI_TUNING, AI_DRIVING } from '../src/core/computer';
 import { CHAMPIONSHIP_POINTS } from '../src/core/tournament';
 import { DEFAULT_LAPS, MAX_LAPS, MIN_LAPS } from '../src/core/race-options';
 import { circuits } from '../src/content/circuits';
@@ -46,6 +46,8 @@ const documentation: Record<string, Record<string, Unit>> = {
     surfaceTransition: ['m', 'Distance over which asphalt blends to sand'],
     driftStartAngle: ['rad', 'Slip angle that starts a drift'],
     driftEndAngle: ['rad', 'Slip angle below which a drift ends'],
+    driftGripLoss: ['fraction', 'Largest loss of lateral authority beyond peak tire slip; no speed multiplier'],
+    driftSaturationRange: ['peak-demand multiples', 'Excess tire demand over which lateral grip falls smoothly'],
     recoveryHold: ['s', 'Time a reset car waits before driving on'],
     hazardApproach: ['m', 'A crash this far before a drawn hazard resets the car past it'],
     hazardPenaltySpeed: ['m/s', 'Extra reset wait is the skipped circuit distance divided by this'],
@@ -65,7 +67,7 @@ const documentation: Record<string, Record<string, Unit>> = {
     ghostStartSeconds: ['s', 'Opening period without car-to-car contact (multi-car races)'],
   },
   PACE_RANGE: { min: ['m/s', 'Slowest drawn target speed'], max: ['m/s', 'Fastest drawn target speed'] },
-  PACE_FILTER: { gestureRadius: ['m', 'Half-window for measuring drawing speed'], compiledRadius: ['m', 'Half-window of the compiled pace filter'] },
+  PACE_FILTER: { gestureRadius: ['m', 'Exact half-window for measuring drawing speed'], compiledRadius: ['m', 'Half-window of the compiled pace filter'], sampleSpacing: ['m', 'Maximum spacing of retained timed samples before pace/geometry smoothing'], pauseRadius: ['m', 'Motion inside this radius is a resting finger, independent of event rate'] },
   DRAWING_RULES: {
     minimumLapProgress: ['fraction', 'Minimum forward course progress, and share of covered stretches, for a completed lap'],
     minimumPhysicalLap: ['fraction of centerline length', 'Minimum actual drawing travel before finish can be counted'],
@@ -93,6 +95,15 @@ const documentation: Record<string, Record<string, Unit>> = {
     commitAlignment: ['—', 'Minimum cosine between the line and the hop lane where the line meets the named obstacle (0.5 = within 60°)'],
   },
   AI_TUNING: { easy: ['—', 'Fraction of the safe pace profile'], normal: ['—', 'Fraction of the safe pace profile'], hard: ['—', 'Fraction of the safe pace profile'] },
+  AI_DRIVING: {
+    decisionTicks: ['ticks', 'Fixed-clock interval between each computer driver decision'],
+    cornerGripShare: ['fraction', 'Nominal grip used for the safe planned corner pace'],
+    brakingShare: ['fraction', 'Ordinary braking reserved by corner and burst predictions'],
+    responseSeconds: ['s', 'Extra braking distance for pace-controller response after a burst'],
+    followingSeconds: ['s', 'Following headway and speed-response horizon'],
+    trafficRange: ['m', 'Furthest same-level car considered ahead'],
+    minimumGap: ['m', 'Minimum bumper-to-bumper following gap'],
+  },
 };
 
 const format = (value: number) => Number.isInteger(value) ? String(value) : String(Number(value.toPrecision(6)));
@@ -147,5 +158,6 @@ ${table('PACE_FILTER', PACE_FILTER)}
 ${table('DRAWING_RULES', DRAWING_RULES)}
 ${table('GATE_RULES', GATE_RULES)}
 ${table('SHORTCUT_RULES', SHORTCUT_RULES)}
-${table('AI_TUNING', AI_TUNING)}`;
+${table('AI_TUNING', AI_TUNING)}
+${table('AI_DRIVING', AI_DRIVING)}`;
 }

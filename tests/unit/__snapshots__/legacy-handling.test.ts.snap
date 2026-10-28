@@ -1,39 +1,39 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`coastal-launch has a repeatable v10 baseline on frozen geometry 1`] = `
+exports[`coastal-launch has a repeatable v15 baseline on frozen geometry 1`] = `
 {
   "collisions": 2,
-  "drifts": 5,
-  "finish": 44.215117,
+  "drifts": 7,
+  "finish": 41.602048,
   "laps": [
-    20.982838,
-    23.232278,
+    24.646585,
+    16.955463,
   ],
   "recoveries": 1,
 }
 `;
 
-exports[`golden-gate has a repeatable v10 baseline on frozen geometry 1`] = `
+exports[`golden-gate has a repeatable v15 baseline on frozen geometry 1`] = `
 {
-  "collisions": 2,
-  "drifts": 15,
-  "finish": 62.812139,
+  "collisions": 3,
+  "drifts": 19,
+  "finish": 63.373864,
   "laps": [
-    31.954183,
-    30.857956,
+    33.376982,
+    29.996882,
   ],
-  "recoveries": 0,
+  "recoveries": 3,
 }
 `;
 
-exports[`orbital-launchyard has a repeatable v10 baseline on frozen geometry 1`] = `
+exports[`orbital-launchyard has a repeatable v15 baseline on frozen geometry 1`] = `
 {
-  "collisions": 0,
-  "drifts": 11,
-  "finish": 53.003839,
+  "collisions": 1,
+  "drifts": 13,
+  "finish": 54.189438,
   "laps": [
-    25.455401,
-    27.548438,
+    25.198462,
+    28.990975,
   ],
   "recoveries": 0,
 }

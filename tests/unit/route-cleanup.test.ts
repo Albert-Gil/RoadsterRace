@@ -36,7 +36,8 @@ describe('forgiving forward-line cleanup', () => {
     const messy = timed([...base.slice(0, 31), ...base.slice(14, 30).reverse(), ...base.slice(15, 31), ...base.slice(31)]);
     const corrected = compile(messy), reference = compile(createPracticeSamples(track, 7));
     expect(corrected.cleanup!.removedPoints).toBeGreaterThan(20); expect(corrected.cleanup!.removedSeconds).toBeGreaterThan(0.2);
-    expect(corrected.length).toBeCloseTo(reference.length, 4);
+    // Uniform metre resampling can shift a retained bend by a few millimetres.
+    expect(Math.abs(corrected.length-reference.length)).toBeLessThan(.01);
     expect(corrected.drawingDuration).toBeGreaterThan(reference.drawingDuration);
     expect(Math.max(...corrected.points.map((p, i) => Math.abs(p.desiredSpeed - reference.points[i].desiredSpeed)))).toBeLessThan(0.1);
     let previous = { point: corrected.points[0], progress: 0 };
@@ -64,7 +65,7 @@ describe('forgiving forward-line cleanup', () => {
     const initial = [...base.slice(-9, -1).reverse(), base[0]];
     const finish = [gatePoint(track, 0, 2)];
     const result = compile(timed([base[0], ...initial, ...base.slice(1), ...finish]));
-    expect(result.cleanup).toBeDefined(); expect(result.length).toBeCloseTo(compile(createPracticeSamples(track)).length, 3);
+    expect(result.cleanup).toBeDefined(); expect(Math.abs(result.length-compile(createPracticeSamples(track)).length)).toBeLessThan(.01);
     expect(distance(result.points[0], result.points.at(-1)!)).toBeLessThan(0.001);
   });
   test('wrong-way and incomplete laps fail; another lap after the first finish is ignored', () => {

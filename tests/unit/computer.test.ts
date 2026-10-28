@@ -1,10 +1,41 @@
 import { expect, test } from 'vitest';
 import { circuits } from '../../src/content/circuits';
-import { computerRoute, stepComputers } from '../../src/core/computer';
+import { computerRoute, stepComputers, computerPaceLimit, computerTraffic, shouldComputerThrust } from '../../src/core/computer';
 import { LocalRace } from '../../src/core/local-race';
 import type { Difficulty } from '../../src/core/session';
 import { RULES } from '../../src/core/simulation';
 import { FixedStepClock } from '../../src/core/simulation';
+import { sampleRoute } from '../../src/core/route';
+
+function decisionRace(){
+  const track=circuits[0].track,route=computerRoute(track,'normal',0,92),race=new LocalRace(Array(4).fill(route),track,1);
+  race.tick=240;
+  race.racers.forEach((r,i)=>{r.state.position={x:1000+i*100,z:1000};r.state.time=4;});
+  const s=race.racers[1].state,p=sampleRoute(route,8);
+  Object.assign(s,{position:{x:p.x,z:p.z},distance:8,heading:p.heading,speed:12,velocity:{x:Math.sin(p.heading)*12,z:Math.cos(p.heading)*12}});
+  return race;
+}
+
+test('CPU brakes for same-level traffic ahead, ignoring adjacent and elevated cars',()=>{
+  const race=decisionRace(),s=race.racers[1].state,other=race.racers[0].state,dx=Math.sin(s.heading),dz=Math.cos(s.heading);
+  other.position={x:s.position.x+dx*9,z:s.position.z+dz*9};other.speed=5;other.velocity={x:dx*5,z:dz*5};
+  expect(computerTraffic(race,1)).not.toBeNull();expect(computerPaceLimit(race,1)).toBeLessThan(s.speed);expect(shouldComputerThrust(race,1)).toBe(false);
+  other.elevation=8;expect(computerTraffic(race,1)).toBeNull();
+  other.elevation=0;other.position.x+=dz*4;other.position.z-=dx*4;expect(computerTraffic(race,1)).toBeNull();
+});
+
+test('CPU predicts the burst and braking room before a corner',()=>{
+  const race=decisionRace(),route=race.routes[1];
+  route.points.forEach(p=>{p.curvature=0;});expect(shouldComputerThrust(race,1)).toBe(true);
+  route.points.filter(p=>p.distance>25&&p.distance<40).forEach(p=>{p.curvature=.12;});
+  expect(shouldComputerThrust(race,1)).toBe(false);
+});
+
+test('CPU lifts during a slide and releases its recovery cap once aligned',()=>{
+  const race=decisionRace(),s=race.racers[1].state;
+  s.speed=26;s.slipAngle=.5;expect(computerPaceLimit(race,1)).toBe(18);expect(shouldComputerThrust(race,1)).toBe(false);
+  s.slipAngle=0;s.lineError=0;expect(computerPaceLimit(race,1)).toBe(Infinity);
+});
 
 test.each(circuits)('$id computer plans are safe, deterministic and finish six laps',({track})=>{
   const medians:number[]=[];
