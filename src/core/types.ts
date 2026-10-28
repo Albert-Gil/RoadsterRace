@@ -1,7 +1,7 @@
 export interface Point { x: number; z: number; y?: number; sectionId?: string; courseProgress?: number }
 export interface DrawSample extends Point { time: number }
-export interface TrackBarrier { id: string; footprint: Point[]; height: number; baseHeight?: number; sectionId?: string; kind?: 'infield' | 'bridge-rail' | 'bridge-support' | 'pier-rail' | 'service-barrier' | 'cliff-rail' | 'cliff-face' | 'rock'; bridgeId?: string }
-export interface RoadSection { id: string; from: number; to: number; heights: [number, number][]; supportWidth: number; flight?: boolean }
+export interface TrackBarrier { id: string; footprint: Point[]; height: number; baseHeight?: number; sectionId?: string; kind?: 'infield' | 'building' | 'bridge-rail' | 'bridge-support' | 'pier-rail' | 'service-barrier' | 'cliff-rail' | 'cliff-face' | 'rock'; bridgeId?: string; /** Explicit constrained lane, city median or approved broad infield protection. */ runoffException?: 'hop-lane' | 'urban-median' | 'cut-protection'; /** A real sloping cliff, not an extruded invisible wall. */ slopedFace?: { lip: Point; toe: Point; lipWidth: number; toeWidth: number; lipHeight: number; toeHeight: number } }
+export interface RoadSection { id: string; from: number; to: number; heights: [number, number][]; supportWidth: number; /** Optional distance/width profile for continuous shoulders, relative to section.from. */ supportWidths?: [number, number][]; flight?: boolean }
 export interface SupportSurface { id: string; footprint: Point[] }
 export interface TrackJump {
   id: string; from: Point; forward: Point; width: number; rampLength: number; lipHeight: number;

@@ -4,13 +4,13 @@ import type { Point, TrackDefinition } from '../core/types';
 import { courseDistance, type Extent } from './landscape/terrain';
 import { fbm2, random } from './landscape/noise';
 import { edgeDistance, hex, insidePolygon } from './landscape/mesh';
-import type { LooseRock, RockPalette } from './landscape/rocks';
+import type { LooseRock, RockPalette, FormationSpec } from './landscape/rocks';
 import type { Plant, PlantPalette } from './landscape/plants';
 import { runLandscape, stopwatch } from './landscape/runtime';
 
 /**
- * Newport's island beach (presentation only; the course, its version and its footprints are
- * unchanged). The island's sand gets a painted map (its UVs already span NEWPORT.map), granite
+ * Newport's island beach and v6 protected palm garden. The scenery never modifies the course:
+ * solid formations use its authoritative footprints. The sand gets a painted map, granite
  * boulder groups replace the old rounded shore stones, a short rock jetty runs out on the
  * grandstand side, and ice plant and dune grass grow along the beach beyond the corridor.
  */
@@ -28,6 +28,7 @@ export const NEWPORT = {
   } satisfies RockPalette,
   plants: {
     dry: hex('#b9a47c'), dunegrass: [hex('#8c9a5e'), hex('#dcc890')], iceplant: [hex('#5f8a42'), hex('#e0609c')],
+    palm: [hex('#28583c'),hex('#83a752')], shrub: [hex('#345d39'),hex('#73934c')], bark:hex('#877559'),
   } satisfies PlantPalette,
 };
 
@@ -38,6 +39,17 @@ const onRing = (angle: number, r: number) => ({ x: Math.cos(angle) * NEWPORT.isl
 /** The deterministic layout (no rendering): shore rocks, the jetty and beach plants. */
 export function newportLandscapeLayout(track: TrackDefinition, pierAngles: readonly number[]) {
   const N = NEWPORT, D = courseDistance(track, N.extent, 2);
+  const formations: FormationSpec[] = track.barriers.filter(b => b.kind === 'rock').map((b, i) => ({id:b.id,footprint:b.footprint,height:b.height,base:b.baseHeight??0,style:'tor',seed:1511+i*37}));
+  // Deliberately authored inside a protected parcel; separate from loose beach scatter.
+  const garden=track.barriers.find(b=>b.id==='apex-rocks')!, grovePlants: Plant[]=[];
+  for(const [i,[x,z,size]] of [[1,-15.2,7.0],[9,-14.6,7.6],[17,-13.7,8.3],[25,-12.2,8.7],[32.5,-11.3,7.4]].entries()){
+    grovePlants.push({kind:'palm',x,z,y:.18,size,heading:i*1.8,seed:241+i*17});
+  }
+  for(let x=-2;x<42;x+=2.1)for(let z=-18;z<-5;z+=2.1){
+    const p={x:x+.25*Math.sin(z*2),z:z+.25*Math.sin(x)};
+    if(!insidePolygon(p,garden.footprint)||edgeDistance(p,garden.footprint)<1.1)continue;
+    grovePlants.push({kind:'shrub',...p,y:.18,size:2.0+(.5+.5*Math.sin(x+z))*.9,heading:x+z,seed:700+grovePlants.length});
+  }
   const clear = (p: Point, minD = N.corridor) => (D(p.x, p.z) >= minD + 2 || D.exact(p.x, p.z) >= minD) && !track.barriers.some(b => insidePolygon(p, b.footprint) || edgeDistance(p, b.footprint) < 3);
   const nearPier = (angle: number, margin: number) => pierAngles.some(a => Math.abs(Math.atan2(Math.sin(angle - a), Math.cos(angle - a))) < margin);
   let scattered: { loose: LooseRock[]; plants: Plant[] } | null = null;
@@ -71,7 +83,7 @@ export function newportLandscapeLayout(track: TrackDefinition, pierAngles: reado
     }
     return { loose, plants };
   })();
-  return { D, ring, onRing, clear, scatter };
+  return { D, ring, onRing, clear, scatter, formations, grovePlants };
 }
 export type NewportLandscapeLayout = ReturnType<typeof newportLandscapeLayout>;
 
@@ -80,7 +92,7 @@ export function buildNewportLandscape(scene: Scene, track: TrackDefinition, mate
   const { timings, timed } = stopwatch(), N = NEWPORT, layout = timed('layout', () => newportLandscapeLayout(track, pierAngles)), sand = materials.get('terrain')!;
   const { shadowCasters } = runLandscape(scene, materials, { name: 'newport', props: 'launchsite', timings, load: async () => {
     const detail = await import('./newport-detail'), { loose, plants } = timed('scatter', () => layout.scatter());
-    return { generators: detail, paint: detail.paintInto(scene, track, layout, sand), formations: [], rock: N.rock, loose, plants, plantPalette: N.plants };
+    return { generators: detail, paint: detail.paintInto(scene, track, layout, sand), formations: layout.formations, rock: N.rock, loose, plants:[...plants,...layout.grovePlants], plantPalette: N.plants };
   } });
   return { shadowCasters };
 }

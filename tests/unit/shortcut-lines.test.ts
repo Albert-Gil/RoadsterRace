@@ -21,13 +21,14 @@ const cuts: [string, number, number, number][] = [
   ['orbital-launchyard', 157, 85, 14],
   ['golden-gate', 32, 105, 14],
   ['santa-monica', 457, 105, 16],
-  ['grand-canyon', 382, 55, 10],
+  ['grand-canyon', 0, 62, 10], // positioned relative to the descent below
   ['la-nights', 32, 85, 14],
 ];
 
 test.each(cuts)('%s accepts a supported inside cut that skips a turn', (id, start, skip, minimumDeviation) => {
   const track = circuits.find(c => c.id === id)!.track;
-  const result = compileRoute(insideCut(track, start, skip), track);
+  const from = id === 'grand-canyon' ? track.sections!.find(s => s.id === 'descent')!.from + 11 : start;
+  const result = compileRoute(insideCut(track, from, skip), track);
   expect(result.ok, result.ok ? undefined : result.message).toBe(true);
   if (!result.ok) return;
   const reference = compileRoute(createPracticeSamples(track), track);

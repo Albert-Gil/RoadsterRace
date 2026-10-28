@@ -22,8 +22,12 @@ describe.each(circuits.map(c => c.track))('$id accepts sloppy drawings and every
 });
 
 test('a car that keeps failing at the same spot is moved forward instead of looping', () => {
-  // Fixed-interval hops make this Golden Gate car hit the same building twice.
-  const track = findCircuit('golden-gate').track, r = compileRoute(createPracticeSamples(track), track); if (!r.ok) throw new Error(r.message);
+  // Pin the original building-contact fixture: the later cut-review annex/arcade
+  // changes the car's first impact, so it no longer repeats that particular failure.
+  // Current venue blockers are exercised separately in approved-cuts.test.ts.
+  const venue = findCircuit('golden-gate').track;
+  const track = { ...venue, barriers: venue.barriers.filter(b => !['market-annex', 'median-arcade'].includes(b.id)) };
+  const r = compileRoute(createPracticeSamples(track), track); if (!r.ok) throw new Error(r.message);
   expect(r.route.hazards).toBeUndefined();
   const race = new LocalRace([r.route], track, 2), recoveries: { distance: number; penalty?: number }[] = [];
   for (let tick = 0; tick < 18000 && !race.finished; tick++) {

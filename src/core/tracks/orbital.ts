@@ -3,6 +3,8 @@ import { createStartFinish } from '../start-finish';
 import { cumulative, projectToPolyline } from '../geometry';
 import type { HopShortcut, Point, TrackDefinition } from '../types';
 import { outcrop } from './outcrop';
+import { launchsiteVessels } from './venue-parcels';
+import { serviceConduit, obstacleRectangle } from './hop-obstacles';
 
 const centerline = roundedCircuit([
   { x: -38, z: -40 }, { x: -4, z: -40 }, { x: 48, z: -40 },
@@ -46,9 +48,15 @@ const rocks: TrackDefinition['barriers'] = [
 
 /** Flat physical layout; scenery/branding never participate in its rules. */
 export const orbitalTrack: TrackDefinition = {
-  id: 'orbital-launchyard', version: 4, name: 'Launchsite', centerline, distances, length,
+  id: 'orbital-launchyard', version: 9, name: 'Launchsite', centerline, distances, length,
   roadWidth: 16, carWidth: 2.2, carLength: 5.2, start: centerline[0], startFinish: createStartFinish(centerline[0], centerline[1], 16),
-  barriers: [
+  barriers: ([
+    // Protected utility parcel with low perimeter and separate real-height vessels.
+    { id:'utility-storage-tower',kind:'infield',height:1.25,runoffException:'cut-protection',
+      footprint:[[-28,0],[-23,-4],[-13,-3],[-12,28],[-10,39],[2,42.4],[6,42.4],
+        [6,43.6],[-13,43.6],[-26,32],[-26,24],[-27,17]].map(([x,z])=>({x,z})) },
+    ...launchsiteVessels.map(v=>({id:v.id,kind:'building' as const,height:v.height,baseHeight:1.25,runoffException:'cut-protection' as const,
+      footprint:Array.from({length:20},(_,i)=>({x:v.x+Math.cos(i/20*Math.PI*2)*v.radius,z:v.z+Math.sin(i/20*Math.PI*2)*v.radius}))})),
     { id: 'assembly-island', height: 1.05, footprint: [
       { x: -47, z: -23 }, { x: -30, z: -26 }, { x: 30, z: -26 },
       { x: 34, z: -20 }, { x: 34, z: -5 }, { x: 12, z: -5 },
@@ -61,9 +69,10 @@ export const orbitalTrack: TrackDefinition = {
       { x: 87, z: 6 }, { x: 110, z: 6 }, { x: 110, z: 35 }, { x: 87, z: 35 },
     ] },
     { id: 'service-divider', height: 1.05, kind: 'service-barrier', footprint: rect(64, -20, 0.4, 8) },
-    { id: 'service-hop-left-end', height: 1, kind: 'service-barrier', footprint: rect(32.2, -16.5, 11.8, 1) },
-    { id: 'service-hop-right-end', height: 1, kind: 'service-barrier', footprint: rect(60, -16.5, 4.4, 1) },
-    { id: 'service-hop-barrier', height: 1, kind: 'service-barrier', footprint: rect(44, -16.5, 16, 1) },
-  ].map(b=>b.id==='assembly-island'?{...b,footprint:b.footprint.map(p=>({x:-8+(p.x+8)*0.96,z:-15+(p.z+15)*0.96}))}:b).concat(rocks) as TrackDefinition['barriers'],
+    { id: 'service-hop-left-end', height: 1, kind: 'infield', footprint: obstacleRectangle(32.2,-16,12,2) },
+    { id: 'service-hop-right-end', height: 1, kind: 'infield', runoffException: 'hop-lane', footprint: obstacleRectangle(59.8,-16,4.6,2) },
+    { id: 'service-hop-barrier', height: serviceConduit.height, kind: 'service-barrier', runoffException: 'hop-lane',
+      footprint: obstacleRectangle(serviceConduit.x,serviceConduit.z,serviceConduit.width,serviceConduit.depth) },
+  ] satisfies TrackDefinition['barriers']).map<TrackDefinition['barriers'][number]>(b=>b.id==='assembly-island'?{...b,footprint:b.footprint.map(p=>({x:-8+(p.x+8)*0.96,z:-15+(p.z+15)*0.96}))}:b).concat(rocks),
   hopShortcuts: [serviceHop],
 };

@@ -22,7 +22,7 @@ All values are generated in `docs/CURRENT_RULES.md`.
 
 ### Start and finish (`GATE_RULES`)
 
-- **Start:** up to 12 m before the line, 4 m past it, or 4 m beyond either end of the gate.
+- **Start:** up to 30 m before the line, 8 m past it, or 8 m beyond either end of the gate. The dashed 38 by 32 m touchdown rectangle matches this area, about 3.17 times the previous accepted area on a 16 m road; all its corners remain in the fixed interactive camera fit. The counted gate stays 16 m wide.
 - **Finish:** a crossing counts up to 24 m beside the gate.
 - **Early lift:** lifting up to 40 m before the line closes the lap onto the gate at the recent drawing pace.
 

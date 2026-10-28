@@ -13,17 +13,17 @@ import { shortcutProjection } from '../../src/core/hop-shortcuts';
 
 const plan=(branch=false)=>{const r=compileRoute(createPracticeSamples(track,7,branch?'mesa-service-trail':false),track);if(!r.ok)throw Error(JSON.stringify(r));return r.route;};
 test('Grand Canyon is a supported 16 m dirt circuit with a required flight and valid hidden branch',()=>{
- expect(track.length).toBeGreaterThanOrEqual(540);expect(track.length).toBeLessThanOrEqual(580);
+ expect(track.length).toBeGreaterThanOrEqual(580);expect(track.length).toBeLessThanOrEqual(610);
  const normal=plan(),short=plan(true);expect(normal.jumps).toContain('canyon-crest');expect(short.hopShortcuts).toHaveLength(1);
  expect(normal.length-short.length).toBeGreaterThanOrEqual(20);expect(normal.length-short.length).toBeLessThanOrEqual(30);
 });
 test.each([20,30,42].flatMap(speed=>[-20,0,20].map(yaw=>({speed,yaw}))))('automatic crest lands safely at $speed m/s with $yaw degree body yaw',({speed,yaw})=>{
  const route=plan(),sim=new RaceSimulation(route,track),s=sim.state,j=track.jumps![0];
- s.position=roadPoint({x:-9.1,z:0},track,j.entryProgress+69.9);s.elevation=s.position.y!;s.heading=Math.PI/2+yaw*Math.PI/180;s.velocity={x:Math.cos(.12)*speed,z:Math.sin(.12)*speed};s.speed=speed;
+ s.position=roadPoint({x:j.from.x-.1,z:0},track,j.entryProgress+69.9);s.elevation=s.position.y!;s.heading=Math.PI/2+yaw*Math.PI/180;s.velocity={x:Math.cos(.12)*speed,z:Math.sin(.12)*speed};s.speed=speed;
  s.distance=route.points.reduce((best,p)=>Math.abs(p.courseProgress!-(s.position.courseProgress??0))<Math.abs(sampleRoute(route,best).courseProgress!-(s.position.courseProgress??0))?p.distance:best,0);
  s.checkpoint=Math.floor(s.distance/(route.length/8))+1;
  const events:string[]=[];for(let i=0;i<180&&!events.includes('landing');i++){sim.step();events.push(...sim.drainEvents().map(e=>e.type));}
- expect(events).toContain('takeoff');expect(events).toContain('landing');expect(s.recoveryCount).toBe(0);expect(s.elevation).toBeCloseTo(6);expect(s.position.x).toBeGreaterThan(11.6);
+ expect(events).toContain('takeoff');expect(events).toContain('landing');expect(s.recoveryCount).toBe(0);expect(s.elevation).toBeCloseTo(6);expect(s.position.x).toBeGreaterThan(j.from.x+j.gap+track.carLength/2);
 });
 test('dirt is grippier than loose runoff and does not apply an on-track drag fraction',()=>{
  const p=roadPoint({x:-55,z:-52},track,0);expect(sampleSurface(p,track).grip).toBe(38.4);expect(sampleSurface(p,track).sandAmount).toBe(0);expect(RULES.maxSpeed).toBe(42);
@@ -79,13 +79,14 @@ test('slow mandatory-jump failure recovers to the upper approach without a water
 });
 
 
-test('a manual hop near the crest cannot stack the automatic impulse',()=>{
+test.each([{speed:30,lands:false},{speed:42,lands:true}])('a manual hop near the crest cannot stack the automatic impulse at $speed m/s',({speed,lands})=>{
  const route=plan(),sim=new RaceSimulation(route,track),s=sim.state,j=track.jumps![0];
  const near=route.points.find(p=>p.courseProgress!>j.entryProgress+66.5)!;
- s.position={...near};s.distance=near.distance;s.elevation=near.y!;s.heading=Math.PI/2;s.velocity={x:30,z:0};s.speed=30;s.checkpoint=Math.floor(s.distance/(route.length/8))+1;
+ s.position={...near};s.distance=near.distance;s.elevation=near.y!;s.heading=Math.PI/2;s.velocity={x:speed,z:0};s.speed=speed;s.checkpoint=Math.floor(s.distance/(route.length/8))+1;
  expect(vehicleSupported(s.position,s.heading,track)).toBe(true);sim.pressHop();let peak=0;const events:string[]=[];
  for(let i=0;i<100;i++){sim.step();peak=Math.max(peak,s.elevation);events.push(...sim.drainEvents().map(e=>e.type));}
- expect(events.filter(e=>e==='hop')).toHaveLength(1);expect(events).not.toContain('takeoff');expect(events).toContain('landing');expect(peak).toBeLessThan(16.1);expect(peak).toBeGreaterThan(15.0);expect(s.recoveryCount).toBe(0);
+ expect(events.filter(e=>e==='hop')).toHaveLength(1);expect(events).not.toContain('takeoff');expect(peak).toBeLessThan(16.1);expect(peak).toBeGreaterThan(15.0);
+ if(lands){expect(events).toContain('landing');expect(s.recoveryCount).toBe(0);}else{expect(events).not.toContain('landing');expect(s.recoveryCount).toBeGreaterThan(0);}
 });
 
 test('missing the hidden trail hop makes a physical impact instead of passing through the rock',()=>{

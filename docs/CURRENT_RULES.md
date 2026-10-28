@@ -10,12 +10,12 @@ Conventions: SI units; horizontal plane (x, z) with y up; heading 0 points along
 |---|---:|
 | Vehicle rules (`RULES.version`) | 14 |
 | Route compiler (`COMPILER_VERSION`) | 15 |
-| Newport Island track (`coastal-launch`) | 3 |
-| Launchsite track (`orbital-launchyard`) | 4 |
-| Golden Gate track (`golden-gate`) | 4 |
+| Newport Island track (`coastal-launch`) | 6 |
+| Launchsite track (`orbital-launchyard`) | 9 |
+| Golden Gate track (`golden-gate`) | 7 |
 | Santa Monica track (`santa-monica`) | 3 |
-| Grand Canyon track (`grand-canyon`) | 3 |
-| LA nights track (`la-nights`) | 1 |
+| Grand Canyon track (`grand-canyon`) | 5 |
+| LA nights track (`la-nights`) | 4 |
 
 Records, ghosts, session bests and championships are scoped by these versions. Change a version whenever a value below changes race results.
 
@@ -23,12 +23,12 @@ Records, ghosts, session bests and championships are scoped by these versions. C
 
 | Circuit | ID | Track version | Road width (m) | Centerline (m) | Barriers | Branches |
 |---|---|---:|---:|---:|---:|---|
-| Newport Island | `coastal-launch` | 3 | 16 | 292.9 | 4 | — |
-| Launchsite | `orbital-launchyard` | 4 | 16 | 460.6 | 20 | hop lane `service-hop` |
-| Golden Gate | `golden-gate` | 4 | 16 | 496.4 | 29 | bridge `golden-span` |
+| Newport Island | `coastal-launch` | 6 | 16 | 292.9 | 4 | — |
+| Launchsite | `orbital-launchyard` | 9 | 16 | 460.6 | 25 | hop lane `service-hop` |
+| Golden Gate | `golden-gate` | 7 | 16 | 496.4 | 38 | bridge `golden-span` |
 | Santa Monica | `santa-monica` | 3 | 16 | 660.7 | 105 | ramp `pacific-hop` |
-| Grand Canyon | `grand-canyon` | 3 | 16 | 568.8 | 43 | crest `canyon-crest`, hop lane `mesa-service-trail` |
-| LA nights | `la-nights` | 1 | 16 | 734.0 | 11 | ramp `channel-crossing`, hop lane `backlot-alley` |
+| Grand Canyon | `grand-canyon` | 5 | 16 | 595.0 | 43 | crest `canyon-crest`, hop lane `mesa-service-trail` |
+| LA nights | `la-nights` | 4 | 16 | 734.0 | 12 | ramp `channel-crossing`, hop lane `backlot-alley` |
 
 Vehicle envelope: 2.2 m × 5.2 m. Race distance: 1–6 laps (default 2). Championship points by place: 10 / 6 / 4 / 0.
 
@@ -71,7 +71,7 @@ Vehicle envelope: 2.2 m × 5.2 m. Race distance: 1–6 laps (default 2). Champio
 | `hazardPenaltySpeed` | 20 | m/s | Extra reset wait is the skipped circuit distance divided by this |
 | `repeatRecoveryWindow` | 15 | m | A second reset within this route distance also moves the car forward |
 
-Derived: level-ground manual hop peak 8.028 m and airtime 0.944 s. Santa Monica ramp launch upward velocity is `rampLaunchBoost + max(0, forward speed) × lipHeight / rampLength`. Grand Canyon uses its authored natural crest: `16 + max(0, forward speed) × 0.20` from 8 m to the 6 m receiving surface, across an 18 m unsupported opening. Grounded elevation changes do not add slope acceleration.
+Derived: level-ground manual hop peak 8.028 m and airtime 0.944 s. Santa Monica ramp launch upward velocity is `rampLaunchBoost + max(0, forward speed) × lipHeight / rampLength`. Grand Canyon uses its authored natural crest: `29 + max(0, forward speed) × 0.05` from 8 m to the 6 m receiving surface, across a 30 m unsupported opening. Grounded elevation changes do not add slope acceleration.
 
 ## FLIGHT_RULES
 
@@ -124,10 +124,10 @@ Derived: level-ground manual hop peak 8.028 m and airtime 0.944 s. Santa Monica 
 
 | Key | Value | Unit | Meaning |
 |---|---:|---|---|
-| `leadIn` | 12 | m | Drawing may start this far before the start/finish line |
+| `leadIn` | 30 | m | Drawing may start this far before the start/finish line |
 | `longitudinalTolerance` | 1 | m | Along-track tolerance at the line |
-| `lateralTolerance` | 4 | m | Start tolerance beyond each end of the gate |
-| `startBeyond` | 4 | m | Drawing may also start this far past the line |
+| `lateralTolerance` | 8 | m | Start tolerance beyond each end of the gate |
+| `startBeyond` | 8 | m | Drawing may also start this far past the line |
 | `finishLateral` | 24 | m | A finish crossing counts this far beyond each end of the gate |
 | `closeDistance` | 40 | m | Lifting up to this far before the line still closes the lap onto it |
 | `blendDistance` | 20 | m | Length blended at each end of the lap |

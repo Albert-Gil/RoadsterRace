@@ -28,6 +28,7 @@ export const CANYON = {
     'canyon-west-mesa': { style: 'mesa', tiers: 2 }, 'canyon-east-mesa': { style: 'butte' }, 'canyon-northeast-mesa': { style: 'mesa', spire: true },
     'canyon-rim-1': { style: 'boulders' }, 'canyon-rim-2': { style: 'boulders' }, 'canyon-rim-3': { style: 'boulders' },
     'western-mesa-rocks': { style: 'mesa' }, 'eastern-mesa-rocks': { style: 'mesa' },
+    'canyon-hop-rock': { style: 'boulder-row' }, 'canyon-hop-end--1': { style: 'boulder-row' }, 'canyon-hop-end-1': { style: 'boulder-row' },
   } as Record<string, Pick<FormationSpec, 'style' | 'tiers' | 'spire' | 'lod'>>,
   washes: [
     [{ x: -285, z: 112 }, { x: -222, z: 74 }, { x: -212, z: 30 }, { x: -214, z: -15 }, { x: -196, z: -55 }, { x: -206, z: -95 }, { x: -232, z: -140 }, { x: -285, z: -172 }],
@@ -53,7 +54,7 @@ export function canyonLayout(track: TrackDefinition) {
   const rocks = track.barriers.filter(b => b.kind === 'rock' || b.kind === 'infield');
   // Ground the inner mesas without changing their collision top or outline.
   const formations: FormationSpec[] = rocks.map((b, i) => {
-    const originalBase = b.baseHeight ?? 0, base = Math.min(C.floor, originalBase);
+    const originalBase = b.baseHeight ?? 0, base = b.kind === 'infield' ? Math.min(C.floor, originalBase) : originalBase;
     return { id: b.id, footprint: b.footprint, height: b.height + originalBase - base, base, seed: 301 + i * 41, ...style(b) };
   });
   const washes = C.washes.map(w => smoothPath(w, 2)), W = distanceField(washes, extent, 3);

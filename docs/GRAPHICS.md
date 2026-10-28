@@ -93,7 +93,7 @@ Rock and plants add two draw calls (Launchsite Medium: 45 → 47). The terrain a
 
 The same generators (`src/presentation/landscape/`: `runtime.ts` runs a venue's build step by step after the first frame; `scatter.ts` and `ground-paint.ts` hold the shared placement and painting passes) dress the other five venues, each from its own `*-landscape.ts` (layout, built with the scene) and `*-detail.ts` (painting, in the lazy chunk). Every layout is deterministic and tested (`tests/unit/landscape-venues.test.ts`).
 
-- **Grand Canyon** (`canyon-landscape.ts`, v3): a canyon-floor heightfield at -2.6 m (level beside the trail supports, talus aprons swelling toward the walls, two dry washes, rims rising behind the walls) with a painted map; every `'rock'` and infield barrier becomes layered Supai-red buttes, mesas, ledges and walls (coarser far away) and rim boulder piles; junipers, sage, agave, yucca, grass and deadwood beyond the corridor.
+- **Grand Canyon** (`canyon-landscape.ts`, v4): a canyon-floor heightfield at -2.6 m (level beside the trail supports, talus aprons swelling toward the walls, two dry washes, rims rising behind the walls) with a painted map; every `'rock'` and infield barrier becomes layered Supai-red buttes, mesas, ledges and walls (coarser far away) and rim boulder piles; junipers, sage, agave, yucca, grass and deadwood beyond the corridor. The hidden trail uses staggered boulder-row geometry clipped to its irregular collision footprints, on the 6 m mesa surface.
 - **Golden Gate** (`golden-gate-landscape.ts`, v4): the city's land boxes take world UVs over a full-colour painted map (`city-ground` material): mown lawns, sidewalks with joints and drains, block plazas, seawall promenades with benches and lamps, quays, park paths, two tennis courts, a lagoon, a fountain plaza, flower beds and picnic blankets. Granite riprap (scanned boulders and low-poly quarried blocks) lines every visible seawall, a beach runs along the south shore, Monterey cypress, palms, shrubs and ice plant grow beyond the corridor, golden headlands rise across the bay (`golden-shore`, one vertex-coloured heightfield), and the four park-boulder barriers become granite groups.
 - **Santa Monica** (`santa-monica-landscape.ts`, v3): the flat beach slab and shore ribbons are replaced by one beach heightfield (level across the corridor and to the shoreline, a berm, restored dunes further out, the wet slope into the Pacific) with a painted map: groomed lanes, swash, foam and wrack lines, the bike path, volleyball courts (with nets), towels, footprints and a lifeguard truck's tracks. Palisades palms line the promenade, the venue's palms are now proper palms, dune grass and ice plant hold the dunes, and the groyne root (`'riprap'` formation) carries on into the surf as blocks.
 - **Newport** (`newport-landscape.ts`, visual only): the island's sand gets a painted map (its UVs already spanned it; islet sand takes world UVs and clamps to plain sand), granite groups replace the round shore stones, a rock jetty runs out on the grandstand side and ice plant and dune grass grow along the upper beach.
@@ -103,28 +103,34 @@ Draw calls (Medium, phone landscape, drawing phase; before → after): Newport 5
 
 ### Grand Canyon trail integration
 
-The elevated trails now share the surrounding canyon's geology. `canyon-earthwork.ts` derives
-exact non-flight section paths and creates one vertex-coloured bank mesh and one multi-row
-shoulder mesh. Sixteen depth bands carry horizontal sandstone beds, mineral stains, recessed
-erosion channels and dusty rims. Relief retreats under the authoritative support edge. The
-takeoff and receiving faces close against the canyon floor; no geometry bridges the flight
-opening or obscures the lower road.
+The elevated trails share the surrounding canyon's geology. `canyon-earthwork.ts` derives
+exact non-flight section paths and creates one vertex-coloured bank mesh, one multi-row
+shoulder mesh and one ragged dirt mesh. Sixteen depth bands carry horizontal sandstone beds,
+mineral stains, erosion channels and dusty rims. The base spreads about 1.65 times the bank
+height beyond the flat support, varied by weathering; curvature bounds keep inside toes from
+folding. The v5 overpass has authored sloping jump heads: the opening between lips grows to
+30 m, while the feet leave 18 m clear around the lower 16 m road. Physical cliff height follows
+the same lip/toe definition over the full capsule. The landing shoulders widen continuously
+from 16 to 30 m and their rails follow that profile. General sloping scenery adds no driving support.
 
-The shoulder has its own world-space sediment map, broken edge wear and gravel. Compacted
-dirt is darker than the runoff. Flat painted sediment fans and contact shade tie the bank toes
+The shoulder has its own world-space sediment map, irregular rims, broken edge wear and gravel.
+Compacted dirt has uneven feathered borders and wandering tire paths. Narrow receiving-edge
+variation stays inside the actual support. Flat painted sediment fans and contact shade tie the bank toes
 into the floor. The old smooth vertical bank ribbons and decorative scrub on the driving
 shoulder were removed. Existing inner mesas now have foundations down to the canyon floor,
 with the same original tops and footprint.
 
 Beyond the full planning corridor, terraced ridges connect the isolated buttes into a broader
 landscape. Their height is limited by distance from the road, and terrain near formations is
-capped to preserve exposed cliff faces. These are cosmetic heightfields; driving surfaces,
-sections, barriers, fixed framing and physics remain unchanged. Appearance tuning lives in
+capped to preserve exposed cliff faces. These are cosmetic heightfields. The v5 track extends
+the outer turns to retain 70/80 m straight approach/runout around the larger opening. Its natural
+crest assistance is retuned to 29 + 0.05 times forward speed; ordinary handling and manual Hop
+remain unchanged. Appearance tuning lives in
 `themes.ts` (`canyonIntegration`, canyon scenery palette and material finishes).
 
 Geometry safety is covered by `tests/unit/canyon-integration.test.ts`. Matching desktop,
 phone landscape, phone portrait and inspection views are captured in
-`artifacts/canyon-integration/{before,after}/`. Physical iPhone/iPad Safari verification remains
+`artifacts/canyon-integration/{overpass-before,overpass-after}/`. Physical iPhone/iPad Safari verification remains
 pending.
 
 ### Post-processing
@@ -136,6 +142,22 @@ ambient-occlusion halos. When ambient occlusion or reflections are active, MSAA 
 pre-pass render target.
 
 ## Budgets and testing
+
+Protected infields use low, readable boundaries with venue-specific contents: Newport's
+authored palm garden (`newportLandscapeLayout.grovePlants`, separate from loose scatter),
+Launchsite's individual vessels and pipework, and Golden Gate's varied market frontage and
+pocket plaza. Their broad protected footprints retain the accepted cut policy without giant
+solid scenery masses. The existing non-jumpable-infield rule remains in the simulation.
+Tank/storefront physical dimensions are shared through `src/core/tracks/venue-parcels.ts`;
+palettes, planting, facade treatment and decoration remain in presentation. The concave
+Launchsite plinth uses `building-geometry.ts` with UV/colour attributes matched to the static
+batch. Do not reintroduce a bounding box over its road-facing notch.
+
+The Launchsite and LA manual-Hop lanes use compact native props from
+`presentation/hop-obstacles.ts`, with geometry shared through `core/tracks/hop-obstacles.ts`.
+Only their IDs are skipped by generic wall rendering. They reuse existing static materials,
+cast normal shadows, add no lights/bloom, and never enter the rock landscape generator.
+Grand Canyon's natural rock Hop trail keeps its existing scenery.
 
 - Draw-call targets (90 one-car / 150 four-car) are scene draw calls. Low and Medium render the
   same scene draw calls; High and Ultra add a fixed number of screen passes (about 5–15).

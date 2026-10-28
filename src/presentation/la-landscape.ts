@@ -5,7 +5,7 @@ import { courseDistance, type Extent } from './landscape/terrain';
 import { random } from './landscape/noise';
 import { hex } from './landscape/mesh';
 import type { Plant, PlantPalette } from './landscape/plants';
-import type { RockPalette } from './landscape/rocks';
+import type { RockPalette, FormationSpec } from './landscape/rocks';
 import { runLandscape, stopwatch } from './landscape/runtime';
 
 /**
@@ -46,7 +46,7 @@ export const LA = {
   ] satisfies Lot[],
   plants: { dry: hex('#6f6a50'), bark: hex('#5a4a40'), palm: [hex('#2e4a32'), hex('#5e7a4a')] } satisfies PlantPalette,
   /** No rock grows here; the runtime still takes a palette. */
-  rock: { strata: [hex('#777777')], stratum: 3, talus: hex('#777777'), cap: hex('#777777'), varnish: hex('#555555'), granite: [hex('#777777'), hex('#999999'), hex('#555555')], lichen: hex('#777777'), dust: hex('#777777') } satisfies RockPalette,
+  rock: { strata: ['#8b8277','#a79580','#696b70'].map(hex), stratum: 3, talus: hex('#77736f'), cap: hex('#aaa59c'), varnish: hex('#45444a'), granite: [hex('#8b8277'), hex('#b2a491'), hex('#62636b')], lichen: hex('#777777'), dust: hex('#aaa095') } satisfies RockPalette,
   carColours: ['#c8ccd2', '#3a3f48', '#a33a3a', '#2f5a8a', '#e0dcd0', '#5a5f66'],
 };
 
@@ -100,7 +100,8 @@ export function buildLALandscape(scene: Scene, track: TrackDefinition, materials
   const { timings } = stopwatch();
   const { shadowCasters } = runLandscape(scene, materials, { name: 'la-nights', props: null, timings, load: async () => {
     const detail = await import('./la-detail');
-    return { generators: detail, paint: detail.paintInto(scene, track, layout, ground, base), formations: [], rock: LA.rock, loose: [], plants: layout.scatter().plants, plantPalette: LA.plants };
+    const formations: FormationSpec[] = track.barriers.filter(b => b.kind === 'rock').map((b, i) => ({ id: b.id, footprint: b.footprint, height: b.height, base: b.baseHeight ?? 0, style: 'boulder-row', seed: 890 + i * 29 }));
+    return { generators: detail, paint: detail.paintInto(scene, track, layout, ground, base), formations, rock: LA.rock, loose: [], plants: layout.scatter().plants, plantPalette: LA.plants };
   } });
   return { shadowCasters };
 }

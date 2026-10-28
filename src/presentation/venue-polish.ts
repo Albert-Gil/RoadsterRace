@@ -80,7 +80,6 @@ export function finishVenue(id: SceneryId, scene: Scene, track: TrackDefinition,
       const a = i * Math.PI / 6;
       const block = box('launch-pad-hazard-marker', 97 + Math.cos(a) * 7.9, 0.38, 20 + Math.sin(a) * 7.9, 0.22, 0.04, 1.3, i % 2 ? white : accent); block.rotation.y = -a;
     }
-    for (const x of [-18, -19, -23]) for (let y = 1; y <= 3; y++) box('utility-tank-service-band', x, y, x === -18 ? 26 : x === -19 ? 32 : 29, 2.84, 0.08, 2.84, metal);
   }
   if (id === 'coastal') {
     for (let row = 0; row < 5; row++) for (let seat = 0; seat < 18; seat++) {

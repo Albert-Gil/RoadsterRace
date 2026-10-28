@@ -1,5 +1,72 @@
 # Grand Canyon verification
 
+## Sloping overpass and start-area revision — 2026-10-27
+
+Current local build: Newport v6, Launchsite v9, Golden Gate v7, Santa Monica v3,
+Grand Canyon v5 (595.0 m, 30 m opening), and LA nights v4. Physics remains v14 and
+compiler v15. The user approved natural sloping overpass terrain and the venue-by-venue
+infield-cut choices in `SHORTCUT_REVIEW.md`; all selected blockers are authored.
+No commit, push or deployment.
+
+The final cut-review verification is recorded in `SHORTCUT_REVIEW.md`. The table below
+records the preceding overpass stage; its evidence remains valid for those specific checks.
+The preceding cut-review revision passed all **517 unit tests / 36 files**, all **18** handling
+regressions, the six expanded-touch-start cases, seven approved-cut browser cases, actual
+canyon/bridge races, Ultra loading on all six venues, and a complete production Pages-path
+touch race with sound and no page/asset failures. See `policy-*.log` in the same artifact folder.
+
+| Check | Result |
+|---|---|
+| Type checking / production build | Pass; `overpass-pages-build.log` |
+| Full unit suite | **507 tests / 35 files pass**, `final-unit.log`; the additional 30/42 m/s manual-Hop non-stacking pair also passes after adding the slower failure case |
+| Existing handling | All **18** HEAD fixtures match after the sloped-face contact-query extension (`final-legacy.log`) |
+| Automatic crest | All **9** combinations of 20/30/42 m/s and −20/0/+20° body yaw with modest sideways velocity land safely (`new-crest-fixtures.log`) |
+| Natural geometry | 10 integration cases pass: open lower road, sloped physical faces, below-road toe clearance, continuously widening support, irregular dirt edges, bounded inside toes and matching rock-pile envelopes |
+| Main browser suite | **10/10 pass**: canyon mouse drawing in both phone orientations, actual race, four-car effects/ghost persistence, and real Chrome touch input from the expanded start rectangle on all six venues in landscape and portrait (`final-browser.log`) |
+| Broader bridge checks | Initial broad run had 11 passes and four test-assertion failures: three compared 11.000000000000002 px with exactly 11 px; one assumed equal-pace cars must always collide. Pixel checks now use subpixel tolerance and the two-car case uses a legal recharged rear-car thrust to exercise contact. All **4** corrected cases pass (`bridge-recheck.log`). The 3-/4-car and six-lap cases passed in the broad run. |
+| Production Pages-path race | Full touch-drawn canyon race passes, sound enabled, no page errors or failed required requests (`overpass-pages-report.json`) |
+| Rendering budget | Four-car effect samples peak at **87** scene draw calls; ready Time Trial ghost **43**. The car remains **9,898 triangles**. |
+| Actual gameplay | The recorded one-lap race finishes in **32.30 s**, with no recoveries; `overpass-after/gameplay.mp4` is a silent browser capture |
+
+Evidence is under `artifacts/canyon-integration/`, including the updated `index.html` and
+matching `overpass-before/` / `overpass-after/` views. Screenshots with close inspection cameras
+are labelled; interactive gameplay retains fixed whole-course framing. Physical iPhone/iPad
+Safari input, sustained performance, rotation and audio verification remain pending.
+
+## Natural hillsides revision — 2026-10-27
+
+Grand Canyon v4 opens the main bends slightly (573.0 m total), replaces the shortcut wall with
+irregular overlapping rock piles, and dresses the trail with broad-footed hillsides, weathered
+rims and feathered dirt. Vehicle physics remain v14 and the compiler v15. This revision is
+local and uncommitted; it has not been pushed or deployed.
+
+| Check | Current result |
+|---|---|
+| Type checking / production build | Pass; final Pages-base build in `artifacts/canyon-integration/mountain-pages-build.log` |
+| Unit coverage | Full 499-case run initially passed 496 and flagged two outdated geometry fixtures plus one load-related timeout. Corrected runoff/inside-cut fixtures pass; all 49 circuit cases pass on rerun, all 7 shortcut-line cases pass, and the unchanged Launchsite six-lap CPU regression passes separately in 13.25 s. The other 496 original assertions passed in the full run. |
+| Final focused checks | 16 tests pass across canyon integration, inside cuts and generated rules (`mountain-focused.log`) |
+| Geometry | Wide hill feet, bounded non-inverted inner toes, irregular rims, receiving support limits, open crossing/lower road, and rock-pile footprint/base/height checks pass |
+| Existing handling | All 18 HEAD fixtures match (`artifacts/legacy-handling/report.json`); the intentionally changed canyon track is separately versioned |
+| Final browser suite | 4/4 pass in 2.5 min: phone landscape/portrait drawing, full automatic-crossing race, four-car effects and persisted elevated Time Trial ghost |
+| Production touch race | Complete Grand Canyon race passes under `/RoadsterRace/`, sound enabled, no page errors or failed required requests (`artifacts/pages/report.json`) |
+| Draw calls | Maximum 87 across four-car ability-effect samples; 43 with a ready Time Trial ghost. High-tier preview is 36. Racing model remains 9,898 triangles. |
+| Physical Safari | Pending; Chrome phone emulation supplements desktop testing only |
+
+Final browser reruns used stable source files. An earlier browser attempt was interrupted by
+a development-page reload during a visual edit; an earlier production attempt timed out
+loading its cold development fixture server. Both final reruns pass. These were test-run
+interruptions, not silently counted as successful races.
+
+Matching captures and the local comparison page live in `artifacts/canyon-integration/`:
+`mountain-before/`, `mountain-after/`, and `index.html`. The new set includes fixed overview
+and phone views plus close inspection views of the hillsides and shortcut boulders. The
+inspection camera is used only for screenshots; gameplay framing remains fixed.
+
+The final actual-gameplay recording is `artifacts/grand-canyon/gameplay.webm`; its MP4 copy
+is included with the comparison captures. Browser video contains no recorded audio track.
+
+## Original elevated-circuit milestone
+
 Original local milestone checks, 2026-10-24. That milestone did not commit, push or deploy. The subsequently authorized circuit-detail release is documented in `VENUE_VISUALS.md`. Browser evidence uses Windows Chrome with ANGLE D3D11; emulated touch is not physical Safari verification.
 
 ## Results

@@ -223,7 +223,9 @@ export const sceneryFinishes: Partial<Record<keyof typeof sceneryLighting, Recor
 export const canyonAppearance={cliff:['#a85f43','#bc7850','#d39464','#e1ad79'],mesa:'#c6986b',road:'#aa895d',ruts:'#705c42',dryWash:'#d9b891',scrub:'#68724b',guard:'#96745a'};
 /** Cosmetic trail geology: actual support edges/elevations stay authoritative. */
 export const canyonIntegration = {
-  floor: -2.6, bankLayers: 16, maxUndercut: 2.4, bedHeight: 1.15,
+  floor: -2.6, bankLayers: 16, baseSpread: 1.65, bedHeight: 1.15,
+  rimRoughness: 1.1, roadRoughness: 0.9, roadFeather: 1.8,
+  cliffErosion: 0.55,
   strata: ['#a65d43', '#bf7852', '#d69b6c', '#bd7350', '#ddb48a', '#ac6347', '#c78b61'],
   cap: '#c49b72', dust: '#b98159', shade: '#6f4437',
   shoulderMapSize: 2048,

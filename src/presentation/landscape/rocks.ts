@@ -261,7 +261,7 @@ export function placeGeometry(g: Geometry, part: Geometry, t: Transform) { g.ins
 // ---------------------------------------------------------------------------------------------
 
 /** 'riprap': quarried blocks heaped over a low core (a groyne or breakwater). */
-export type FormationStyle = 'butte' | 'mesa' | 'tor' | 'boulders' | 'ledge' | 'riprap';
+export type FormationStyle = 'butte' | 'mesa' | 'tor' | 'boulders' | 'boulder-row' | 'ledge' | 'riprap';
 export interface FormationSpec {
   id: string; footprint: readonly Point[]; height: number; style: FormationStyle; seed: number;
   /** Ground level the formation stands on (m); its height counts from here. */
@@ -472,6 +472,36 @@ function formationAtGround(spec: FormationSpec, palette: RockPalette, library: P
       const p = { x: x + (rand() - 0.5) * 0.7, z: z + (rand() - 0.5) * 0.7 }; if (!insidePolygon(p, spec.footprint)) continue;
       const ground = core.heightAt(p) ?? 0, s = Math.min((h - ground + 0.1) / 0.6, 1.2 + rand() * 0.9); if (s < 0.4) continue;
       fitBoulder([s * (1.15 + rand() * 0.35), s * (0.62 + rand() * 0.15), s], spec.seed * 131 + Math.round(x * 7 + z * 13), p, ground - s * 0.14, 0.08, 3.2 + rand() * 1.2, 0);
+    }
+    return { geometry: g, ledges };
+  }
+
+  if (spec.style === 'boulder-row') {
+    // An unmarked natural obstruction: overlapping weathered blocks, with staggered tops
+    // and a low rubble bed. Clip every stone to the authored outline, never to the road.
+    add(column({ centre: c, footprint: spec.footprint, margin: 0.02,
+      rings: [{ y: 0, s: 1, kind: 'base' }, { y: h * 0.12, s: 0.98, kind: 'talus' }, { y: h * 0.3, s: 0.86, kind: 'mound' }],
+      segments: segmentsFor(spec.footprint, 0.45), seed: spec.seed, gully: 0.12, jitter: 0.04,
+      cap: { dome: 0.05, roughness: 0.05 }, colour: (x, y, z) => slabColour(palette, spec.seed, h)(x, y, z, 0.7) }));
+    const lo = -rayToEdge(c, axis + Math.PI, spec.footprint), hi = rayToEdge(c, axis, spec.footprint);
+    const count = Math.max(2, Math.ceil((hi - lo) / 2.1));
+    for (let i = 0; i < count; i++) {
+      const u = lo + (hi - lo) * (i + 0.5) / count, stagger = (rand() - 0.5) * 0.9;
+      const at = { x: c.x + Math.cos(axis) * u - Math.sin(axis) * stagger, z: c.z + Math.sin(axis) * u + Math.cos(axis) * stagger };
+      if (!insidePolygon(at, spec.footprint)) continue;
+      const height = h * (i === Math.floor(count / 2) ? 1 : 0.78 + rand() * 0.22);
+      const part = boulder({ size: [(hi - lo) / count * 1.35, height, 3.5], seed: spec.seed * 17 + i,
+        roundness: 3.2 + rand(), detail: 2, roughness: 0.18, flatten: 0.9, colour: slabColour(palette, spec.seed + i, h) });
+      const maxY = Math.max(...part.positions.filter((_, j) => j % 3 === 1));
+      for (let j = 1; j < part.positions.length; j += 3) part.positions[j] *= height / maxY;
+      const block = new Geometry(); block.instance(part, { x: at.x, y: 0, z: at.z, heading: -axis + (rand() - 0.5) * 0.2 });
+      for (let j = 0; j < block.positions.length; j += 3) {
+        const p = { x: block.positions[j], z: block.positions[j + 2] };
+        if (insidePolygon(p, spec.footprint) && edgeDistance(p, spec.footprint) >= 0.02) continue;
+        const angle = Math.atan2(p.z - at.z, p.x - at.x), r = Math.max(0, rayToEdge(at, angle, spec.footprint) - 0.025);
+        block.positions[j] = at.x + Math.cos(angle) * r; block.positions[j + 2] = at.z + Math.sin(angle) * r;
+      }
+      block.normals = null; g.append(block);
     }
     return { geometry: g, ledges };
   }

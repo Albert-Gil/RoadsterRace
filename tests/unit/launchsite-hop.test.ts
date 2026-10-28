@@ -98,7 +98,8 @@ test('swept clearance protects the full capsule and all unnamed end sections',()
   expect(barrierContact({x:52,z:-16},0,track,0,1.1,true,permit)?.barrier.id).toBe('service-hop-barrier');
   expect(barrierContact({x:61,z:-16},0,track,0,4,true,permit)?.barrier.id).toBe('service-hop-right-end');
   const hit=sweepVehicle({x:52,z:-22},{x:52,z:-10},0,0,{x:0,z:42},track,0,0,true,permit);
-  expect(hit.collided).toBe(true);expect(hit.position.z).toBeLessThan(-19);expect(hit.velocity.z).toBe(0);
+  // The weathered face can leave a tiny sliding component after this nearly head-on hit.
+  expect(hit.collided).toBe(true);expect(hit.position.z).toBeLessThan(-19);expect(Math.abs(hit.velocity.z)).toBeLessThan(0.1);
   // Even after the nose clears, the tail must not land through the barrier.
   expect(barrierContact({x:52,z:-14},0,track,0,1,true,permit)).not.toBeNull();
 });

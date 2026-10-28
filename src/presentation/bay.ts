@@ -49,7 +49,7 @@ export function buildBay(scene: Scene, track: TrackDefinition, theme: Presentati
     body.useVertexColors = true; body.hasVertexAlpha = false;
     box(`${b.id}-cornice`, b.x, top + 0.12, b.z, b.width + 0.12, 0.24, b.depth + 0.12, white);
     box(`${b.id}-roof`, b.x, top + 0.27, b.z, b.width - 0.3, 0.08, b.depth - 0.3, steel);
-    const front = b.z - b.depth / 2 - 0.04, cols = b.style === 'office' ? 3 : 2;
+    const front = b.z - b.depth / 2 - 0.04, cols = Math.max(b.style === 'office' ? 3 : 2, Math.floor(b.width / 4.5));
     for (let floor = 1.7; floor < b.height - 0.6; floor += 1.9) {
       for (let c = 0; c < cols; c++) {
         const x = b.x + (c - (cols - 1) / 2) * b.width / (cols + 0.4);
@@ -72,6 +72,16 @@ export function buildBay(scene: Scene, track: TrackDefinition, theme: Presentati
       const z = z0 + 1;
       box('city-light-post', x, 2.1, z, 0.12, 4, 0.12, metal); box('city-light-head', x, 4.15, z, 0.6, 0.12, 0.38, white);
     }
+  }
+  // Small pocket plaza breaks the market frontage into a believable neighbourhood.
+  box('market-pocket-plaza',-30.5,.2,-26,6.6,.18,5.8,paving);
+  for(const x of [-32.5,-28.5]){
+    box('market-planter',x,.52,-24.5,1.1,.7,1.1,white);
+    const bush=MeshBuilder.CreateSphere('market-plaza-shrub',{diameter:1.35,segments:6},scene);bush.position.set(x,1.2,-24.5);bush.material=leaf;
+  }
+  for(const z of [-27.4,-25.8]){
+    box('market-plaza-bench',-30.5,.64,z,2.1,.16,.42,metal);
+    for(const x of [-31.25,-29.75])box('market-bench-foot',x,.38,z,.13,.52,.38,white);
   }
   for (const [x, z] of [[-33, 3], [-15, 3], [21, 17], [102, 13], [117, 13], [-115, 23], [-105, 23], [74, 101], [111, 101]].map(([x, z]) => [-x, z])) {
     box('city-planter', x, 0.25, z, 1.8, 0.5, 1.8, concrete);

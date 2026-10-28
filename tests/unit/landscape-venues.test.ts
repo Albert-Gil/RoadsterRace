@@ -98,12 +98,17 @@ describe('Santa Monica beach', () => {
   });
 });
 
-describe('Newport island (visual only)', () => {
+describe('Newport island and authored apex protection', () => {
   const piers = [0.16, -0.22, Math.PI - 0.2, Math.PI + 0.16, Math.PI + 0.48, -1.3];
   const newport = newportLandscapeLayout(coastalTrack, piers), { loose, plants } = newport.scatter(), exact = courseDistance(coastalTrack, NEWPORT.extent).exact;
-  it('keeps the course and its footprints untouched', () => {
-    expect(coastalTrack.version).toBe(3);
-    expect(coastalTrack.barriers.some(b => b.kind === 'rock')).toBe(false);
+  it('versions the protected apex garden and keeps its tropical planting inside it', () => {
+    expect(coastalTrack.version).toBe(6);
+    const b = coastalTrack.barriers.find(b => b.id === 'apex-rocks')!;
+    expect(b.kind).toBe('infield'); expect(b.height).toBe(1.3);
+    expect(newport.formations.find(f=>f.id===b.id)).toBeUndefined();
+    expect(newport.grovePlants.filter(p=>p.kind==='palm')).toHaveLength(5);
+    expect(newport.grovePlants.length).toBeGreaterThan(40);
+    for(const p of newport.grovePlants)expect(insidePolygon(p,b.footprint)).toBe(true);
   });
   it('puts shore boulders and the jetty at the waterline and plants on the upper beach, all beyond the corridor', () => {
     expect(loose.length).toBeGreaterThan(100); expect(plants.length).toBeGreaterThan(40);

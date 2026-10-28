@@ -26,7 +26,7 @@ import type { BaseTexture } from '@babylonjs/core/Materials/Textures/baseTexture
 import type { CubeTexture } from '@babylonjs/core/Materials/Textures/cubeTexture';
 import '@babylonjs/core/Culling/ray';
 import { distance, mix, modulo } from '../core/geometry';
-import { drawingStart, startGate, gatePoint, trimDrawing } from '../core/start-finish';
+import { drawingStart, drawingStartBounds, startGate, gatePoint, trimDrawing } from '../core/start-finish';
 import { bridgeAt } from '../core/bridge';
 import { gestureSpeeds } from '../core/route';
 import type { CompiledRoute, DrawSample, DrawingTrim, Point, TrackDefinition } from '../core/types';
@@ -173,8 +173,9 @@ export class GameScene {
     this.marker = MeshBuilder.CreateGround('start-finish-gate', { width: gate.width, height: 1.6 }, this.scene); this.marker.position.set(gate.center.x, 0.24, gate.center.z); this.marker.rotation.y = startHeading; this.marker.material = startMat; startMat.alpha = 0.32;
     const guides: Vector3[][] = [];
     const at = (across: number, along: number) => { const p = gatePoint(track, across, along); return new Vector3(p.x, 0.26, p.z); };
-    for (const side of [-1, 1]) for (let along = -gate.leadIn; along < 0; along += 1.4) guides.push([at(side * gate.width / 2, along), at(side * gate.width / 2, Math.min(0, along + 0.8))]);
-    for (let across = -gate.width / 2; across < gate.width / 2; across += 1.4) guides.push([at(across, -gate.leadIn), at(Math.min(gate.width / 2, across + 0.8), -gate.leadIn)]);
+    const zone = drawingStartBounds(track);
+    for (const side of [-1, 1]) for (let along = zone.from; along < zone.to; along += 1.4) guides.push([at(side * zone.halfWidth, along), at(side * zone.halfWidth, Math.min(zone.to, along + 0.8))]);
+    for (const along of [zone.from, zone.to]) for (let across = -zone.halfWidth; across < zone.halfWidth; across += 1.4) guides.push([at(across, along), at(Math.min(zone.halfWidth, across + 0.8), along)]);
     for (const across of [-gate.width / 4, gate.width / 4]) guides.push([at(across - 0.7, -6), at(across, -4.6), at(across + 0.7, -6)]);
     const approach = MeshBuilder.CreateLineSystem('drawing-approach-zone', { lines: guides }, this.scene); approach.color = Color3.FromHexString('#d4e6df'); approach.alpha = 0.8; this.approach = approach;
     const err = mat('error', '#ec765a'); err.emissiveColor = Color3.FromHexString('#ec765a');
@@ -311,7 +312,7 @@ export class GameScene {
     const tangent = Math.tan(this.camera.fov / 2);
     const paths = [this.track.centerline,...(this.track.jumps??[]).map(j=>j.branch),...(this.track.hopShortcuts??[]).map(j=>j.branch)];
     const fitted = paths.flatMap((path,i)=>roadEdges(path,this.track.roadWidth,i===0).flatMap(side=>side.map((p,n)=>new Vector3(p.x,this.track.sections?roadHeight(this.track,path[n].courseProgress??0):0,p.z))));
-    for(const across of [-this.track.roadWidth/2,this.track.roadWidth/2]) fitted.push(new Vector3(...(()=>{const p=gatePoint(this.track,across,-12);return [p.x,0,p.z] as [number,number,number];})()));
+    for(const p of drawingStartBounds(this.track).corners) fitted.push(new Vector3(p.x,0,p.z));
     // Reserve the complete manual-hop height envelope, including a ramp launch.
     const hopEnvelope = RULES.hopLaunchSpeed ** 2 / (2 * flightGravity('hop')) + FLIGHT_RULES.carHeight + 0.3;
     for (const p of [...fitted]) fitted.push(new Vector3(p.x, p.y+hopEnvelope, p.z));

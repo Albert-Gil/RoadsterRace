@@ -1,14 +1,11 @@
 import type { Scene } from '@babylonjs/core/scene';
 import type { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import type { TrackDefinition } from '../core/types';
-import { sectionAt } from '../core/elevation';
-import { roadEdges } from '../core/road-geometry';
 import type { CanyonLayout } from './canyon-landscape';
 import { fbm2, random, smoothstep } from './landscape/noise';
 import { GroundPainter } from './landscape/paint';
-import { offsetPath } from './landscape/paths';
 import { contactShadows, mudCracks, pebbles, ripples, tone, trails, washBeds } from './landscape/ground-paint';
-import { canyonTrails } from './canyon-earthwork';
+import { canyonTrails, canyonBankToes, canyonTrailEdges } from './canyon-earthwork';
 import { canyonIntegration } from './themes';
 export { buildFormation, looseRocks } from './landscape/rocks';
 export { plantGeometry } from './landscape/plants';
@@ -33,15 +30,10 @@ export function* paintInto(scene: Scene, track: TrackDefinition, layout: CanyonL
   // Cracked mud where floodwater pools: low flats beside the washes and in hollows.
   mudCracks(g, rand, 26, (x, z) => (layout.D(x, z) > 28 ? 1 : 0) * Math.max(Math.exp(-((Math.max(0, layout.W(x, z) - 6) / 10) ** 2)), smoothstep(0.25, 0.5, -fbm2(x / 40, z / 40, 2, 13))), '96,58,42');
   trails(g, rand, 14, p => layout.D(p.x, p.z) > 30, '128,88,66');
-  // Dark feet of the trail embankments: shade where the supports meet the floor.
-  const n = track.centerline.length, half = (i: number) => (sectionAt(track, track.distances[i])?.flight ? 0 : sectionAt(track, track.distances[i])!.supportWidth / 2);
-  for (const side of [-1, 1]) {
-    const foot = offsetPath(track.centerline, i => side * (half(i) + 1.2));
-    for (let i = 1; i < n; i++) if (half(i) && half(i - 1)) g.stroke([foot[i - 1], foot[i]], 2.6, 'rgb(64,40,30)', 0.2);
-  }
   // Sediment fans and soft contact at the base make the trail emerge from the floor.
   // These are flat paint: they add no support or obstacle beyond the authored road.
-  for (const trail of canyonTrails(track)) for (const side of roadEdges(trail.path, trail.width, false)) {
+  for (const trail of canyonTrails(track)) for (const side of canyonBankToes(trail)) {
+    g.stroke(side, 2.2, 'rgb(79,48,33)', 0.18);
     for (let i = 3; i < side.length - 1; i += 9) {
       const p = side[i], center = trail.path[i], dx = p.x - center.x, dz = p.z - center.z, d = Math.hypot(dx, dz) || 1;
       const height = (center.y ?? 0) + 2.6;
@@ -62,7 +54,7 @@ export function* paintInto(scene: Scene, track: TrackDefinition, layout: CanyonL
     for (const trail of canyonTrails(track)) {
       // Compacted travel and diffuse shoulder deposits remain muted beneath pace colours.
       cap.stroke(trail.path, track.roadWidth + 1.4, 'rgb(158,132,105)', 0.10);
-      for (const edge of roadEdges(trail.path, trail.width, false)) for (let i = 1; i < edge.length - 1; i += 3) {
+      for (const edge of canyonTrailEdges(trail)) for (let i = 1; i < edge.length - 1; i += 3) {
         const p = edge[i], c = trail.path[i], dx = c.x - p.x, dz = c.z - p.z, len = Math.hypot(dx, dz) || 1;
         const x = p.x + dx / len * 0.8, z = p.z + dz / len * 0.8;
         cap.blot(x, z, 1.5 + rand() * 2.8, rand() < 0.55 ? '255,220,171' : '107,65,43', 0.13 + rand() * 0.12, 0.4, Math.atan2(dz, dx));

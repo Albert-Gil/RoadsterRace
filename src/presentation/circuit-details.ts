@@ -12,6 +12,7 @@ import { bridgeAt } from '../core/bridge';
 import { insideBarrier } from '../core/barriers';
 import { cumulative, distance, projectToPolyline } from '../core/geometry';
 import type { PresentationTheme } from './themes';
+import { hopPropIds } from '../core/tracks/hop-obstacles';
 
 /** Walls originate in physical footprints. Every other solid prop is inside a protected island. */
 export function buildCircuitDetails(scene: Scene, track: TrackDefinition, theme: PresentationTheme, materials: Map<string, StandardMaterial>, casters: Set<StandardMaterial>, coastal = true) {
@@ -27,7 +28,8 @@ export function buildCircuitDetails(scene: Scene, track: TrackDefinition, theme:
     const sign = MeshBuilder.CreatePlane(name, { width, height }, scene); sign.position.set(p.x, y, p.z); sign.rotation.y = angle; sign.material = m; return sign;
   };
   for (const barrier of track.barriers) {
-    if (barrier.id === 'gantry-support' || barrier.id === 'grandstand' || barrier.kind === 'rock') continue; // Rendered separately (rock formations: landscape/).
+    if (hopPropIds.includes(barrier.id)) continue; // Compact native props replace these generic walls.
+    if (barrier.id === 'gantry-support' || barrier.id === 'grandstand' || barrier.kind === 'rock' || barrier.kind === 'building') continue; // Native architecture and landscape draw their own authoritative footprints.
     if (barrier.kind === 'bridge-rail' || barrier.kind === 'bridge-support' || barrier.kind === 'pier-rail' || barrier.kind === 'service-barrier') {
       const p = barrier.footprint, positions: number[] = [], indices: number[] = [];
       const quad = (a: number[], b: number[], c: number[], d: number[]) => { const base = positions.length / 3; positions.push(...a, ...b, ...c, ...d); indices.push(base, base + 1, base + 2, base, base + 2, base + 3); };
@@ -45,7 +47,7 @@ export function buildCircuitDetails(scene: Scene, track: TrackDefinition, theme:
     vertices.forEach(p => { positions.push(p.x, 0.16, p.z); normals.push(0, 1, 0); uvs.push(p.x / 8, p.z / 8); });
     for (let i = 0; i < vertices.length; i++) indices.push(0, (i + 1) % vertices.length + 1, i + 1);
     data.positions = positions; data.normals = normals; data.uvs = uvs; data.indices = indices;
-    const ground = new Mesh(`protected-${barrier.id}`, scene); data.applyToMesh(ground); ground.material = grass;
+    const ground = new Mesh(`protected-${barrier.id}`, scene); data.applyToMesh(ground); ground.material = barrier.id === 'apex-rocks' ? leaf : grass;
     for (let i = 0; i < vertices.length; i++) {
       const a = vertices[i], b = vertices[(i + 1) % vertices.length], len = distance(a, b), dx = (b.x - a.x) / len, dz = (b.z - a.z) / len;
       const center = { x: (a.x + b.x) / 2 - dz * 0.25, z: (a.z + b.z) / 2 + dx * 0.25 }, angle = Math.atan2(dx, dz);
@@ -58,10 +60,11 @@ export function buildCircuitDetails(scene: Scene, track: TrackDefinition, theme:
         box('wall-marker', p, 0.62, 0.54, 0.22, 0.7, i % 3 === 0 ? red : dark, angle);
       }
     }
+    if (barrier.id === 'apex-rocks') continue; // Authored tropical planting comes from Newport's landscape batch.
     // Plant only within the solid islands, leaving the generous sand runoff usable.
     for (let i = 0; coastal && i < 110; i++) {
       const p = { x: cx + Math.sin(i * 17.3) * 26, z: cz + Math.sin(i * 9.71) * 16 };
-      if (!insideBarrier(p, barrier) || (barrier.id === 'coastal-gardens' && p.x > -24 && p.x < 2 && p.z > -12 && p.z < 3)) continue;
+      if (!insideBarrier(p, barrier) || track.barriers.some(b => b !== barrier && (b.kind === 'building' || b.kind === 'rock') && insideBarrier(p, b)) || (barrier.id === 'coastal-gardens' && p.x > -24 && p.x < 2 && p.z > -12 && p.z < 3)) continue;
       if (projectToPolyline(p, [...vertices, vertices[0]], cumulative([...vertices, vertices[0]])).distance < 1.7) continue;
       const bush = MeshBuilder.CreateSphere('coastal-scrub', { diameter: 1.3 + (i % 4) * 0.35, segments: 4 }, scene); bush.position.set(p.x, 0.7, p.z); bush.scaling.set(1.3, 0.75, 1); bush.material = i % 3 ? leaf : leafLight;
       if (i % 7 === 0) { const stone = MeshBuilder.CreateSphere('landscaped-limestone', { diameter: 2.3, segments: 4 }, scene); stone.position.set(p.x + 0.4, 0.7, p.z); stone.scaling.set(1.3, 0.7, 1); stone.material = rock; }

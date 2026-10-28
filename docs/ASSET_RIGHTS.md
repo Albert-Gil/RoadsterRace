@@ -103,6 +103,33 @@ and terraced background ridges are original procedural geometry and canvas artwo
 this repository. No new external assets or models were downloaded. Existing CC0 Poly Haven
 formations, RoadsterLAB, font and audio provenance remain unchanged.
 
+The follow-up broad-footed hillsides, irregular dirt/shoulder borders and staggered shortcut
+boulder rows are also original procedural code. Their fine mineral texture reuses the existing
+locally generated sandstone texture; no additional artwork, downloads or licences were added.
+
+The sloping overpass heads, continuous canyon shoulders, expanded drawing guides, Launchsite
+desert rubble and LA backlot rubble are further original procedural geometry. No third-party
+asset was added for this revision; existing CC0 scan fallbacks and other provenance remain unchanged.
+
+The approved Newport apex formation, Launchsite storage vessel, Golden Gate annex/arcade and
+LA studio hall use the existing original procedural scenery and material systems. No new
+third-party model, texture or audio file was introduced for these cut blockers.
+
+The wider follow-up ridge, concave industrial complex/heat-exchanger wing and market arcade
+also use original procedural geometry. The building's ear-clipped roof and walls follow the
+authored polygon, while Newport's rock mesh is scaled vertically to its authoritative peak.
+Existing asset sources and licences remain unchanged.
+
+The subsequent lighter revision uses the existing original palm/shrub generator, low parcel
+edges, procedural tank bodies and pipework, and varied original city storefronts with a pocket
+plaza. No new third-party assets were added. Shared physical component dimensions live in
+`src/core/tracks/venue-parcels.ts`; decorative dressing remains in presentation.
+
+Launchsite's compact utility conduit/valve beds and LA nights' individual studio flight cases,
+hardware and planted end beds are original procedural geometry (`presentation/hop-obstacles.ts`).
+Their shared dimensions are in `core/tracks/hop-obstacles.ts`. They replace the experimental
+rock rows; no model, texture, recording or external licence was added for this revision.
+
 ## Home key art (AI-generated, supplied by the project owner) — 2026-10-27
 
 The five Home pictures in `public/assets/hero/` (`thruster-hop`, `drivers-grid`, `door-to-door`, `water-jump`, `canyon-jump`, each as `-wide` 1672×941 and `-tall` 941×1672 WebP at quality 74) are AI-generated images that the project owner created and supplied on 2026-10-26 in the folder `RoadsterRace_Key_Art_v10_Water_Fix`, from prompts written for this project. They depict the game's own fictional roadster and drivers: no Tesla, SpaceX or other real brand, logo or car is intended. Hidden Hop shortcuts are not shown.

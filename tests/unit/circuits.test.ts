@@ -5,6 +5,8 @@ import { compileRoute, createPracticeSamples } from '../../src/core/route';
 import { RaceSimulation } from '../../src/core/simulation';
 import { LocalRace } from '../../src/core/local-race';
 import { mix, projectToPolyline } from '../../src/core/geometry';
+import { shortcutProjection } from '../../src/core/hop-shortcuts';
+import { insideBarrier } from '../../src/core/barriers';
 
 describe('playable circuit registry', () => {
   test('only known circuits resolve; maps represent distinct physical layouts', () => {
@@ -29,7 +31,28 @@ describe('playable circuit registry', () => {
           const p = mix(barrier.footprint[i], barrier.footprint[(i + 1) % barrier.footprint.length], j / 40);
           minimum = Math.min(minimum, projectToPolyline(p, track.centerline, track.distances).distance - track.roadWidth / 2);
         }
-        expect(minimum, `${barrier.id}: ${minimum.toFixed(2)}m runoff`).toBeGreaterThanOrEqual(5);
+        if (barrier.runoffException === 'hop-lane') {
+          // Natural shortcut piles replace the old service barriers, whose limited-space
+          // exception already existed. Scope it to the authored lane and keep the main
+          // driving surface clear by at least a full vehicle width.
+          expect(track.hopShortcuts?.some(lane => barrier.footprint.every(p => shortcutProjection(p, lane).distance <= lane.width / 2 + track.carLength)), barrier.id).toBe(true);
+          expect(minimum, `${barrier.id}: main-road clearance`).toBeGreaterThanOrEqual(track.carWidth);
+        } else if (barrier.runoffException === 'cut-protection') {
+          const approved: Record<string, string> = { 'coastal-launch': 'apex-rocks', 'orbital-launchyard': 'utility-storage-tower', 'golden-gate': 'market-annex' };
+          const parent=track.barriers.find(b=>b.id===approved[track.id])!;
+          if(barrier!==parent){
+            expect(barrier.kind).toBe('building');
+            expect(barrier.id.startsWith(track.id==='golden-gate'?'market-frontage-':'utility-vessel-')).toBe(true);
+            expect(barrier.footprint.every(p=>insideBarrier(p,parent))).toBe(true);
+          }
+          // The full asphalt remains clear. Only the Launchsite neck has a
+          // sub-metre shoulder, deliberately separating its adjacent roads.
+          expect(minimum, barrier.id).toBeGreaterThanOrEqual(barrier===parent&&track.id==='orbital-launchyard' ? 0.45 : 2);
+        } else if (barrier.runoffException === 'urban-median') {
+          expect(track.id).toBe('golden-gate'); expect(barrier.id).toBe('median-arcade');
+          expect(barrier.kind).toBe('building');
+          expect(minimum, 'Constrained urban median must retain at least 3 m of runoff').toBeGreaterThanOrEqual(3);
+        } else expect(minimum, `${barrier.id}: ${minimum.toFixed(2)}m runoff`).toBeGreaterThanOrEqual(5);
       }
     });
     test.each([2, 4, 7, 14, 24])('%i-second pace plan compiles and finishes both laps', seconds => {

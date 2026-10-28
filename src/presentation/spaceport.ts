@@ -6,6 +6,9 @@ import type { Scene } from '@babylonjs/core/scene';
 import type { TrackDefinition } from '../core/types';
 import type { PresentationTheme } from './themes';
 import { buildLaunchsiteLandscape } from './launchsite';
+import { Mesh } from '@babylonjs/core/Meshes/mesh';
+import { buildingGeometry } from './building-geometry';
+import { launchsiteVessels } from '../core/tracks/venue-parcels';
 
 /** Original, lightweight launchyard scenery. All substantial structures occupy protected footprints. */
 export function buildSpaceport(scene: Scene, track: TrackDefinition, theme: PresentationTheme, materials: Map<string, StandardMaterial>) {
@@ -52,11 +55,23 @@ export function buildSpaceport(scene: Scene, track: TrackDefinition, theme: Pres
   box('start-cantilever-column', -43, 3.9, -20, 0.8, 7.8, 0.8, steel);
   box('start-cantilever-arm', -43, 7.5, -31, 0.8, 0.7, 23, steel);
   for (let i = 0; i < 5; i++) box('start-light', -43.5, 6.7, -36.5 - i * 1.2, 0.2, 0.42, 0.42, red);
-  // Utility tanks fit within utilities-island and cannot become a shortcut.
-  for (const [x, z] of [[-18, 26], [-19, 32], [-23, 29]]) {
-    cylinder('utility-tank', x, 2, z, 3.6, 2.8, 2.8, white);
-    cylinder('tank-cap', x, 3.9, z, 0.35, 2.8, 2.3, metal);
-    box('tank-service-box', x + 1.3, 0.8, z, 0.7, 1.2, 0.6, steel);
+  // Low service plinth with individual vessels and pipes: no enormous warehouse.
+  const tower=track.barriers.find(b=>b.id==='utility-storage-tower')!;
+  const storage=new Mesh('utility-storage-body',scene);
+  const storageData=buildingGeometry(tower.footprint,tower.height,tower.baseHeight??0).toVertexData();
+  // Match the existing box/cylinder attributes so the body joins their static batch.
+  storageData.colors=null;storageData.uvs=new Float32Array(storageData.positions!.length/3*2);
+  storageData.applyToMesh(storage);storage.material=concrete;
+  for(const [i,v] of launchsiteVessels.entries()){
+    const base=tower.height, diameter=v.radius*2;
+    cylinder(v.id,v.x,base+(v.height-.4)/2,v.z,v.height-.4,diameter,diameter,i%2?metal:white);
+    cylinder(`${v.id}-cap`,v.x,base+v.height-.2,v.z,.4,diameter,diameter*.88,white);
+    for(const h of [.3,v.height*.38,v.height*.76])cylinder('vessel-weld-band',v.x,base+h,v.z,.09,diameter,diameter,steel);
+    box('vessel-service-valve',v.x,base+.7,v.z+v.radius-.35,.65,.55,.65,red);
+  }
+  for(const x of [-9,-5,-1,3]){
+    box('utility-pipe-foot',x,tower.height+.65,43,.15,1.3,.7,steel);
+    const pipe=cylinder('utility-header-pipe',x,tower.height+1.35,43,4.1,.34,.34,metal);pipe.rotation.z=Math.PI/2;
   }
   // Launch landmark beyond the driving apron, protected by launch-complex.
   cylinder('landing-pad', 97, 0.26, 20, 0.12, 18, 18, concrete);

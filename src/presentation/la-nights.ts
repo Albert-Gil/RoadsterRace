@@ -96,7 +96,7 @@ export function buildLANights(scene:Scene,track:TrackDefinition,theme:Presentati
    const tank=MeshBuilder.CreateCylinder('la-rooftop-water-tank',{height:1.7,diameter:2,tessellation:10},scene);tank.position.set(b.x,y+1.8,b.z+b.d*.24);tank.material=concrete;
    for(const side of [-1,1])box('la-tank-support',b.x+side*.6,y+.65,b.z+b.d*.24,.12,1.3,.12,dark);
   }
-  if(index<10)patch('la-neon-pavement',b.x,b.z-b.d/2-1,b.w+6,9,pools[b.style],.055);
+  if(b.z<98)patch('la-neon-pavement',b.x,b.z-b.d/2-1,b.w+6,9,pools[b.style],.055);
   else{
    box('la-skyline-crown',b.x,y+1.1,b.z,b.w*.7,1.7,b.d*.7,material);
    for(const side of [-1,1]){

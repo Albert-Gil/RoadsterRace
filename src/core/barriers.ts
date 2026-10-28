@@ -46,11 +46,20 @@ export function barrierContact(position: Point, heading: number, track: TrackDef
     // Above-road obstacles protect the infield/rails in this milestone. Submerged
     // landing faces retain their real height so an approved jump can pass above.
     if(barrier.kind==='cliff-face'&&barrier.sectionId===position.sectionId)continue;
+    let top = (barrier.baseHeight ?? 0) + barrier.height;
+    if (barrier.slopedFace) {
+      const f = barrier.slopedFace, dx = f.lip.x - f.toe.x, dz = f.lip.z - f.toe.z, length = Math.hypot(dx, dz) || 1;
+      // Highest point reached by the complete capsule, including its round ends.
+      const reach = Math.abs(axis.x * dx + axis.z * dz) / length + radius;
+      const p = { x: position.x + dx / length * reach, z: position.z + dz / length * reach };
+      const t = clamp(((p.x - f.toe.x) * dx + (p.z - f.toe.z) * dz) / (length * length), 0, 1);
+      top = f.toeHeight + (f.lipHeight - f.toeHeight) * t;
+    }
     const crossingFace = barrier.kind==='cliff-face'&&permitted.includes(barrier.id);
     const jumpable = barrier.kind!=='cliff-face'&&permitted.includes(barrier.id);
-    const protectedColumn = protectFlight && !jumpable && !crossingFace && (barrier.baseHeight ?? 0) + barrier.height > 1e-6
+    const protectedColumn = protectFlight && !jumpable && !crossingFace && top > (barrier.slopedFace ? position.y ?? 0 : 0) + 1e-6
       && (!track.sections || barrier.kind==='infield' || barrier.kind==='cliff-face' || barrier.sectionId===position.sectionId);
-    if (!protectedColumn && (elevation >= (barrier.baseHeight ?? 0) + barrier.height + (jumpable ? 0.15 : 0) - 1e-6 || elevation + 1.05 <= (barrier.baseHeight ?? 0))) continue;
+    if (!protectedColumn && (elevation >= top + (jumpable ? 0.15 : 0) - 1e-6 || elevation + 1.05 <= (barrier.baseHeight ?? 0))) continue;
     const box = bounds(barrier);
     if (Math.max(a.x, b.x) + radius < box.minX || Math.min(a.x, b.x) - radius > box.maxX || Math.max(a.z, b.z) + radius < box.minZ || Math.min(a.z, b.z) - radius > box.maxZ) continue;
     const inside = insideBarrier(position, barrier), v = barrier.footprint;

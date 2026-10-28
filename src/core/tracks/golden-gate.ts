@@ -3,6 +3,7 @@ import { closedSpline, cumulative, samplePolyline, projectToPolyline, distance }
 import { createStartFinish } from '../start-finish';
 import type { Point, TrackBarrier, TrackDefinition } from '../types';
 import { outcrop } from './outcrop';
+import { goldenMarketFrontage } from './venue-parcels';
 
 // Clockwise city streets, quayside chicane, 88 m bridge and inland return. No road crossings.
 const centerline = roundedCircuit([
@@ -33,10 +34,13 @@ const parkBoulders = [boulders('northwest', -91, 55, 2.6, 2, 0.3, 1.9, 1.7), bou
 const supports: TrackBarrier[] = [];
 for (const x of [-28, 28]) for (const z of [32.5, 51.5]) supports.push({ ...rectangle(`bridge-pier-${x}-${z}`, x - 0.8, z - 0.8, 1.6, 1.6), height: 0.4, kind: 'bridge-support', bridgeId: bridge.id });
 export const goldenGateTrack: TrackDefinition = {
-  id: 'golden-gate', version: 4, name: 'Golden Gate', centerline, distances, length,
+  id: 'golden-gate', version: 7, name: 'Golden Gate', centerline, distances, length,
   roadWidth: 16, carWidth: 2.2, carLength: 5.2, start: centerline[0],
   startFinish: createStartFinish(centerline[0], centerline[1], 16), bridges: [bridge],
   barriers: [
+    { ...rectangle('market-annex',2,-29.5,65,7),height:1.25,runoffException:'cut-protection' },
+    ...goldenMarketFrontage.map(b=>({...rectangle(b.id,b.x-b.width/2,b.z-b.depth/2,b.width,b.depth),kind:'building' as const,height:b.height+.28,runoffException:'cut-protection' as const})),
+    { ...rectangle('median-arcade',57,-.5,44,4.5),kind:'building',height:8.8,runoffException:'urban-median' },
     rectangle('civic-block', -36, -23, 23, 29), rectangle('market-block', 2, -23, 22, 13),
     rectangle('waterfront-block', -4, 9, 27, 10), rectangle('east-city-block', 100, -30, 24, 45),
     rectangle('west-city-block', -118, -7, 16, 32), rectangle('distant-city', 70, 66, 45, 38),

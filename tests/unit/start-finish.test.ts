@@ -3,11 +3,12 @@ import { circuits } from '../../src/content/circuits';
 import { cityBuildings, buildingFootprint, onCityLand } from '../../src/content/golden-city';
 import { goldenGateTrack as golden } from '../../src/core/tracks/golden-gate';
 import { compileRoute, createPracticeSamples, COMPILER_VERSION } from '../../src/core/route';
-import { GATE_RULES, canStartDrawing, gateCoordinates, gatePoint, startGate, trimDrawing } from '../../src/core/start-finish';
+import { GATE_RULES, canStartDrawing, drawingStartBounds, gateCoordinates, gatePoint, startGate, trimDrawing } from '../../src/core/start-finish';
 import { blockedRouteSection, insideBarrier, sweepVehicle, barrierContact } from '../../src/core/barriers';
 import { distance, projectToPolyline } from '../../src/core/geometry';
 import { RaceSimulation } from '../../src/core/simulation';
 import type { DrawSample, TrackDefinition } from '../../src/core/types';
+import { edgeDistance } from '../../src/presentation/landscape/mesh';
 
 function planned(track: TrackDefinition, first = 0, last = first) {
   return createPracticeSamples(track, 7).map((p, i, all) => {
@@ -21,6 +22,19 @@ function success(samples: DrawSample[], track: TrackDefinition) {
   const result = compileRoute(samples, track); if (!result.ok) throw new Error(result.message); return result;
 }
 for (const { track } of circuits) describe(`${track.id} full-width drawing`, () => {
+  test('the larger visible start rectangle agrees with acceptance and ignores the complete approach', () => {
+    const bounds = drawingStartBounds(track);
+    expect((bounds.to - bounds.from) * bounds.halfWidth * 2).toBeGreaterThanOrEqual(3 * 16 * 24);
+    for (const p of bounds.corners) expect(canStartDrawing(p, track)).toBe(true);
+    const lap = planned(track), reference = success(lap, track);
+    const prefix = [-GATE_RULES.leadIn, -20, -8, -2].map((along, i) => ({ ...gatePoint(track, 0, along), time: i * 5000 }));
+    const input = [...prefix, ...lap.map(p => ({ ...p, time: p.time + 20000 }))];
+    const result = success(input, track);
+    expect(result.route.points.map(p => [p.x, p.z, p.y])).toEqual(reference.route.points.map(p => [p.x, p.z, p.y]));
+    expect(result.route.drawingDuration).toBeCloseTo(reference.route.drawingDuration, 9);
+    expect(Math.max(...result.route.points.map((p, i) => Math.abs(p.desiredSpeed - reference.route.points[i].desiredSpeed)))).toBeLessThan(1e-9);
+    expect(result.drawing!.leadIn.length).toBeGreaterThan(4);
+  });
   test.each([-1, 0, 1])('start and finish at lateral edge %i', side => {
     const edge = side * track.roadWidth / 2;
     expect(canStartDrawing(gatePoint(track, edge), track)).toBe(true);
@@ -30,9 +44,9 @@ for (const { track } of circuits) describe(`${track.id} full-width drawing`, () 
   });
   test('generous start tolerances are projected to the gate; touchdown far from it is rejected', () => {
     const lateral = track.roadWidth / 2 + GATE_RULES.lateralTolerance;
-    expect(canStartDrawing(gatePoint(track, lateral, -12), track)).toBe(true);
+    expect(canStartDrawing(gatePoint(track, lateral, -GATE_RULES.leadIn), track)).toBe(true);
     expect(canStartDrawing(gatePoint(track, 0, GATE_RULES.startBeyond), track)).toBe(true);
-    expect(canStartDrawing(gatePoint(track, 0, -12.01), track)).toBe(false);
+    expect(canStartDrawing(gatePoint(track, 0, -GATE_RULES.leadIn - 0.01), track)).toBe(false);
     expect(canStartDrawing(gatePoint(track, lateral + 0.01), track)).toBe(false);
     expect(canStartDrawing(gatePoint(track, 0, GATE_RULES.startBeyond + 0.01), track)).toBe(false);
     for (const start of [gatePoint(track, track.roadWidth / 2 + 3, 0.6), gatePoint(track, 0, 3)]) {
@@ -124,11 +138,11 @@ describe('authored Golden Gate city and narrow bridge', () => {
   test('all building footprints have land and protected foundations', () => {
     for (const b of cityBuildings) for (const point of buildingFootprint(b)) {
       expect(onCityLand(point), b.id).toBe(true);
-      expect(golden.barriers.some(w => w.kind === 'infield' && insideBarrier(point, w)), b.id).toBe(true);
+      expect(golden.barriers.some(w => (w.kind === 'infield' || w.kind === 'building') && (insideBarrier(point, w) || edgeDistance(point, w.footprint) < 1e-6)), b.id).toBe(true);
     }
   });
   test('the widened city course has an 88 m by 16 m deck and 15.3 m between straight rails', () => {
-    expect(golden.version).toBe(4); expect(golden.length).toBeGreaterThan(430); expect(golden.length).toBeLessThan(520);
+    expect(golden.version).toBe(7); expect(golden.length).toBeGreaterThan(430); expect(golden.length).toBeLessThan(520);
     const b = golden.bridges![0]; expect(distance(b.from, b.to)).toBe(88); expect(b.width).toBe(16);
     const straightRails = golden.barriers.filter(b => b.id.endsWith('-3') && b.kind === 'bridge-rail');
     expect(straightRails).toHaveLength(2);

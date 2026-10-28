@@ -38,7 +38,7 @@ describe('solid track boundaries', () => {
         const p = mix(barrier.footprint[i], barrier.footprint[(i + 1) % barrier.footprint.length], j / 20);
         min = Math.min(min, projectToPolyline(p, coastalTrack.centerline, coastalTrack.distances).distance - coastalTrack.roadWidth / 2);
       }
-      expect(min, `${barrier.id} runoff: ${min.toFixed(2)}m`).toBeGreaterThanOrEqual(5);
+      expect(min, `${barrier.id} runoff: ${min.toFixed(2)}m`).toBeGreaterThanOrEqual(barrier.runoffException === 'cut-protection' ? 2 : 5);
     }
   });
   test('a line through a solid is accepted; the car crashes, is reset just past it with a penalty and finishes', () => {

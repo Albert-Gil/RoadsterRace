@@ -2,7 +2,7 @@ import { clamp, cumulative, distance, lerp, mix } from './geometry';
 import { DRAWING_RULES } from './route-cleanup';
 import type { DrawSample, Point, StartFinishGate, TrackDefinition } from './types';
 
-export const GATE_RULES = Object.freeze({ leadIn: 12, longitudinalTolerance: 1, lateralTolerance: 4, startBeyond: 4, finishLateral: 24, closeDistance: 40, blendDistance: 20 });
+export const GATE_RULES = Object.freeze({ leadIn: 30, longitudinalTolerance: 1, lateralTolerance: 8, startBeyond: 8, finishLateral: 24, closeDistance: 40, blendDistance: 20 });
 export function createStartFinish(center: Point, next: Point, width: number): StartFinishGate {
   const length = distance(center, next) || 1;
   return { center: { ...center }, forward: { x: (next.x - center.x) / length, z: (next.z - center.z) / length }, width, leadIn: GATE_RULES.leadIn };
@@ -15,6 +15,12 @@ export function gateCoordinates(point: Point, track: TrackDefinition) {
 export function gatePoint(track: TrackDefinition, across: number, along = 0): Point {
   const g = startGate(track);
   return { x: g.center.x + g.forward.x * along + g.forward.z * across, z: g.center.z + g.forward.z * along - g.forward.x * across };
+}
+/** Full touchdown rectangle, shared by acceptance, the dashed guide and fixed-camera fitting. */
+export function drawingStartBounds(track: TrackDefinition) {
+  const g = startGate(track), halfWidth = g.width / 2 + GATE_RULES.lateralTolerance;
+  return { halfWidth, from: -g.leadIn, to: GATE_RULES.startBeyond,
+    corners: [-halfWidth, halfWidth].flatMap(across => [-g.leadIn, GATE_RULES.startBeyond].map(along => gatePoint(track, across, along))) };
 }
 export function canStartDrawing(point: Point, track: TrackDefinition) {
   const p = gateCoordinates(point, track), g = startGate(track);

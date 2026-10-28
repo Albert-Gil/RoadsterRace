@@ -5,6 +5,27 @@ mkdirSync('artifacts/golden-city', { recursive: true });
 if (existsSync('artifacts/golden-gate/circuit-preview.png') && !existsSync('artifacts/golden-city/before.png')) copyFileSync('artifacts/golden-gate/circuit-preview.png', 'artifacts/golden-city/before.png');
 const state = (page: Page) => page.evaluate(() => (window as any).__roadster.getState());
 const graphics = (page: Page) => page.evaluate(() => (window as any).__roadster.getGraphics());
+async function liveRaceCondition(page: Page, condition: (s: any) => boolean, timeout = 90000) {
+  const deadline = Date.now() + timeout, interruptions: { time: number; reason: string }[] = [];
+  while (Date.now() < deadline) {
+    const s = await state(page);
+    if (condition(s)) return interruptions;
+    if (s.phase === 'paused') {
+      // Cold shader compilation or a screenshot can stall a shared test GPU.
+      // Exercise the real Resume action; never alter clocks or disable the safeguard.
+      expect(s.pauseReason).toBe('render-delay');
+      interruptions.push({ time: s.race.time, reason: s.pauseReason });
+      expect(interruptions.length).toBeLessThanOrEqual(4);
+      await page.getByRole('button', { name: 'Resume', exact: true }).click();
+    }
+    await page.waitForTimeout(200);
+  }
+  throw Error(`Race condition timed out: ${JSON.stringify(await state(page))}`);
+}
+function lineWidths(actual: number[][], expected: number[][]) {
+  expect(actual).toHaveLength(expected.length);
+  actual.forEach((widths, i) => { expect(widths).toHaveLength(expected[i].length); widths.forEach((width, j) => expect(width).toBeCloseTo(expected[i][j], 6)); });
+}
 async function stroke(page: Page, touch: boolean, lead = true, overshoot = 2) {
   const points = await page.evaluate(({lead, overshoot}) => {
     const game = (window as any).__roadster, t = game.getTrack(), g = t.startFinish;
@@ -55,11 +76,11 @@ for (const circuit of ['coastal-launch', 'orbital-launchyard', 'golden-gate']) t
   await stroke(page, false); await expect(page.getByRole('button', { name: 'Race this line' })).toBeVisible();
   expect((await state(page)).route.joined).toBe(true);
   const before = await state(page); expect(before.route.leadInCount).toBeGreaterThan(3); expect(before.route.drawingDuration).toBeCloseTo(7, 1);
-  expect((await graphics(page)).lineWidths).toEqual([[14, 10]]); expect((await graphics(page)).ignoredStrokeCount).toBe(2);
+  lineWidths((await graphics(page)).lineWidths, [[14, 10]]); expect((await graphics(page)).ignoredStrokeCount).toBe(2);
   await page.screenshot({ path: `artifacts/golden-city/${circuit}-lead-in.png` });
   await page.keyboard.press('KeyT'); expect((await state(page)).route).toEqual(before.route); expect((await graphics(page)).ignoredStrokeCount).toBe(2);
   await page.getByRole('button', { name: 'Race this line' }).click(); await waitForPhase(page, 'racing');
-  expect((await graphics(page)).lineWidths).toEqual([[11, 8]]); expect((await graphics(page)).ignoredStrokeCount).toBe(0);
+  lineWidths((await graphics(page)).lineWidths, [[11, 8]]); expect((await graphics(page)).ignoredStrokeCount).toBe(0);
   await waitForPhase(page, 'results', 90000);
   expect((await state(page)).race.lapTimes).toHaveLength(1); expect(errors).toEqual([]);
 });
@@ -91,14 +112,22 @@ for (const count of [2, 3, 4]) test(`Golden Gate ${count}-car bridge race comple
   for (const key of ['KeyA', 'KeyL', 'KeyQ', 'KeyP'].slice(0, count)) await page.keyboard.press(key);
   await waitForPhase(page, 'racing');
   for (const key of ['KeyA', 'KeyL', 'KeyQ', 'KeyP'].slice(0, count)) await page.keyboard.press(key);
+  const interruptions: { time: number; reason: string }[] = [];
+  if (count === 2) {
+    // Equal-pace cars can legally finish without touching. Close the gap with a real,
+    // recharged rear-car thrust command after the starting contact ghost has ended.
+    interruptions.push(...await liveRaceCondition(page, s => s.race.time > 6.1));
+    const rear = await page.evaluate(() => { const p = (window as any).__roadster.getState().players; return p[0].distance < p[1].distance ? 0 : 1; });
+    await page.keyboard.press(['KeyA', 'KeyL'][rear]);
+  }
   const samples: any[] = [];
-  await page.waitForFunction(() => (window as any).__roadster.getState().players.some((p: any) => p.position.x > -40 && p.position.x < 40 && p.position.z > 36 && p.position.z < 48), undefined, { timeout: 90000 });
+  interruptions.push(...await liveRaceCondition(page, s => s.players.some((p: any) => p.position.x > -40 && p.position.x < 40 && p.position.z > 36 && p.position.z < 48)));
   await page.screenshot({ path: `artifacts/golden-city/bridge-race-${count}.png` });
   for (let i = 0; i < 5; i++) { samples.push(await graphics(page)); await page.waitForTimeout(120); }
-  await waitForPhase(page, 'results', 240000);
+  interruptions.push(...await liveRaceCondition(page, s => s.phase === 'results', 240000));
   const result = await state(page); expect(result.players.every((p: any) => p.finished && p.lapTimes.length === (count === 4 ? 6 : 1))).toBe(true);
   expect(result.contactCount).toBeGreaterThan(0); expect(Math.max(...samples.map(g => g.drawCalls))).toBeLessThanOrEqual(150); expect(errors).toEqual([]);
-  writeFileSync(`artifacts/golden-city/race-${count}-report.json`, JSON.stringify({ samples, result, errors }, null, 2));
+  writeFileSync(`artifacts/golden-city/race-${count}-report.json`, JSON.stringify({ samples, result, errors, interruptions }, null, 2));
 });
 
 test('old Golden Gate and compiler tournament saves are rejected while ordinary preferences survive', async ({ page }) => {

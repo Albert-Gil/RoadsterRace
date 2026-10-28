@@ -25,6 +25,14 @@ export function roadHeight(track: TrackDefinition, progress: number) {
 }
 export function roadGrade(track: TrackDefinition, progress: number) { return (roadHeight(track, progress + .15) - roadHeight(track, progress - .15)) / .3; }
 
+export function roadSupportWidth(track: TrackDefinition, progress: number, ownSection?: RoadSection) {
+  const section = ownSection ?? sectionAt(track, progress); if (!section) return track.roadWidth;
+  const profile = section.supportWidths; if (!profile?.length) return section.supportWidth;
+  const p = clamp((ownSection ? progress : modulo(progress, track.length)) - section.from, 0, section.to - section.from);
+  for (let i = 1; i < profile.length; i++) if (p <= profile[i][0]) return lerp(profile[i - 1][1], profile[i][1], clamp((p - profile[i - 1][0]) / (profile[i][0] - profile[i - 1][0] || 1), 0, 1));
+  return profile.at(-1)![1];
+}
+
 /** Ordered association, including both visits to an x/z crossing. Never selects by height alone. */
 export function locateRoad(p: Point, track: TrackDefinition, previous?: number, window = 12) {
   const hint = previous ?? p.courseProgress;
@@ -43,7 +51,7 @@ export function locateRoad(p: Point, track: TrackDefinition, previous?: number, 
   else {const near=modulo(hint,track.length),span=window+track.roadWidth*2;for(const shift of [-track.length,0,track.length])for(let i=Math.floor((near-span+shift)/16);i<=Math.floor((near+span+shift)/16);i++)for(const s of cached.bins.get(i)??[])consider(s.a,s.b,s.from,s.to,s.branchId);}
   const section=sectionAt(track,best.progress);
   const branch=track.hopShortcuts?.find(h=>h.id===best.branchId);
-  return {...best,section,height:roadHeight(track,best.progress),supportWidth:branch?branch.width+2:section?.supportWidth??0};
+  return {...best,section,height:roadHeight(track,best.progress),supportWidth:branch?branch.width+2:section?roadSupportWidth(track,best.progress):0};
 }
 export function roadPoint(p: Point, track: TrackDefinition, previous?: number): Point {
   if(!track.sections)return p;
@@ -65,7 +73,7 @@ export function supportBelow(p:Point,elevation:number,track:TrackDefinition){
  for(let i=1;i<track.centerline.length;i++){
   const a=track.centerline[i-1],b=track.centerline[i],dx=b.x-a.x,dz=b.z-a.z,raw=((p.x-a.x)*dx+(p.z-a.z)*dz)/(dx*dx+dz*dz||1);if(raw<0||raw>1)continue;
   const t=clamp(raw,0,1),progress=lerp(track.distances[i-1],track.distances[i],t),s=sectionAt(track,progress);
-  if(!s||s.flight||Math.hypot(p.x-lerp(a.x,b.x,t),p.z-lerp(a.z,b.z,t))>s.supportWidth/2)continue;
+  if(!s||s.flight||Math.hypot(p.x-lerp(a.x,b.x,t),p.z-lerp(a.z,b.z,t))>roadSupportWidth(track,progress)/2)continue;
   const y=roadHeight(track,progress);if(y<=elevation+.05&&(height===undefined||y>height))height=y;
  }
  if(roadSupported(p,track)){const y=locateRoad(p,track).height;if(y<=elevation+.05&&(height===undefined||y>height))height=y;}

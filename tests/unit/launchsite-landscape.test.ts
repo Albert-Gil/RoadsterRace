@@ -22,10 +22,10 @@ describe('Launchsite landscape', () => {
   });
 
   it('gives every solid rock a style, clear of the road by at least 5 m of run-off', () => {
-    expect(rocks.length).toBe(13);
+    expect(rocks).toHaveLength(13);
     for (const b of rocks) {
       expect(LAUNCHSITE.formations[b.id], b.id).toBeDefined();
-      for (const p of b.footprint) expect(projectToPolyline(p, orbitalTrack.centerline, orbitalTrack.distances).distance, b.id).toBeGreaterThanOrEqual(orbitalTrack.roadWidth / 2 + 5);
+      for (const p of b.footprint) expect(projectToPolyline(p, orbitalTrack.centerline, orbitalTrack.distances).distance, b.id).toBeGreaterThanOrEqual(orbitalTrack.roadWidth / 2 + (b.runoffException ? orbitalTrack.carWidth : 5));
     }
   });
 

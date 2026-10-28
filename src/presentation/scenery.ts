@@ -13,6 +13,7 @@ import { finishVenue } from './venue-polish';
 import { buildCanyon } from './canyon';
 import { dressVenue } from './venue-detail';
 import { buildLANights } from './la-nights';
+import { buildHopObstacles } from './hop-obstacles';
 
 export interface SceneryRuntime {
   shadowCasterMaterials: Set<StandardMaterial>;
@@ -36,6 +37,7 @@ export function buildScenery(id: SceneryId, scene: Scene, track: TrackDefinition
     } };
   }
   buildCircuitDetails(scene, track, theme, materials, runtime.shadowCasterMaterials, id === 'coastal');
+  buildHopObstacles(scene,track,materials);
   if(id!=='night-city')finishVenue(id, scene, track, theme, materials);
   if(id!=='night-city')dressVenue(id, scene, materials);
   return runtime;

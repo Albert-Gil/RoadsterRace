@@ -6,4 +6,5 @@ export const laBuildings = [
   {x:55,z:26,w:18,d:22,h:6,style:1}, {x:80,z:27,w:17,d:20,h:8,style:2},
   {x:105,z:27,w:18,d:20,h:10,style:0}, {x:-86,z:26,w:16,d:22,h:7,style:2},
   ...Array.from({length:10},(_,i)=>({x:-123+i*30,z:111,w:18+(i%3)*3,d:20,h:17+(i*13%23),style:i%3})),
+  {x:23.5,z:29,w:37,d:10,h:9.28,style:1},
 ];

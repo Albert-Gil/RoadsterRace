@@ -1,4 +1,5 @@
 import type { Point } from '../core/types';
+import { goldenMarketFrontage } from '../core/tracks/venue-parcels';
 
 export const cityLand = [
   { x: -125, z: -85, width: 250, depth: 109 },
@@ -7,6 +8,9 @@ export const cityLand = [
 ] as const;
 export interface CityBuilding { id: string; x: number; z: number; width: number; depth: number; height: number; style: 'painted' | 'brick' | 'office'; color: number }
 export const cityBuildings: readonly CityBuilding[] = [
+  // Mirrored below, matching the new physical blocks exactly.
+  ...goldenMarketFrontage.map((b,i)=>({...b,style:i%3===1?'brick' as const:'painted' as const,color:i+1})),
+  {id:'median-arcade',x:79,z:1.75,width:44,depth:4.5,height:8.52,style:'office' as const,color:2},
   ...[-31, -23, -16].map((x, i) => ({ id: `civic-front-${i}`, x, z: -16, width: 5.5, depth: 8, height: 5 + i * 1.4, style: 'painted' as const, color: i })),
   ...[-30, -20].map((x, i) => ({ id: `civic-rear-${i}`, x, z: -2, width: 7, depth: 9, height: 7 + i * 2, style: 'brick' as const, color: i + 3 })),
   ...[6, 13, 20].map((x, i) => ({ id: `market-${i}`, x, z: -16.5, width: 5, depth: 8, height: 4.5 + i, style: 'painted' as const, color: i + 2 })),
