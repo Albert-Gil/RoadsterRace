@@ -174,3 +174,7 @@ The fictional circuit layout, granite monoliths, pine geometry, ranger buildings
 ### Yosemite refinement — 2026-10-29
 
 The new mineral/lichen cliff colouring, rounded rock skin, layered conifers, meadow variation, worn dirt treatment, depth-coloured creek/foam, stone-and-timber ranger buildings and detailed fallen cedar are original native procedural work in this repository. They add no third-party models, maps, photographs, recordings or trademarks. Existing environment/audio licences and the RoadsterLAB model attribution remain unchanged.
+
+### Yosemite freefall water — 2026-10-29
+
+The new cliff recess/lip, airborne water sheets, basin stonework, procedural fibre texture, ripple geometry and bounded falling-water/splash sprites are original procedural repository artwork. They reuse the existing environment and audio assets. No photographs, external models, recordings or new licences were added.

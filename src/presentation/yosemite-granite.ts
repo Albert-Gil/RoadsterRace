@@ -1,5 +1,6 @@
 import type { TrackBarrier } from '../core/types';
 import { rayToEdge } from './landscape/mesh';
+import { waterfallCliffRadius } from './yosemite-waterfall-shape';
 
 /** Shared cliff skin for rock geometry and attached streams; contained by the solid footprint. */
 export function yosemiteGranitePoint(b: TrackBarrier, t: number, angle: number) {
@@ -12,6 +13,7 @@ export function yosemiteGranitePoint(b: TrackBarrier, t: number, angle: number) 
   // Smooth the crown towards an inscribed dome, avoiding radial folds at the pole.
   const minRadius = Math.min(...b.footprint.map(p=>Math.hypot(p.x-center.x,p.z-center.z))) * .8;
   const blend = Math.max(0,Math.min(1,(t-.45)/.5));
-  const r = (edge+(minRadius-edge)*blend*blend*(3-2*blend)) * Math.max(0, cap*(1-erosion));
+  const original = (edge+(minRadius-edge)*blend*blend*(3-2*blend)) / edge * Math.max(0, cap*(1-erosion));
+  const r = edge * waterfallCliffRadius(b,t,angle,original);
   return { x:center.x+Math.cos(angle)*r, y:(b.baseHeight??0)+b.height*t, z:center.z+Math.sin(angle)*r };
 }

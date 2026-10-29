@@ -1,5 +1,6 @@
 import{Mesh}from'@babylonjs/core/Meshes/mesh';import{VertexBuffer}from'@babylonjs/core/Buffers/buffer';import type{Scene}from'@babylonjs/core/scene';import type{StandardMaterial}from'@babylonjs/core/Materials/standardMaterial';import type{TrackDefinition}from'../core/types';import{terrainElevation}from'../core/elevation';import{insideBarrier}from'../core/barriers';import{supported}from'../core/support';import{buildTerrain,courseDistance}from'./landscape/terrain';import{Geometry,hex,mix,edgeDistance}from'./landscape/mesh';import{fbm2,smoothstep}from'./landscape/noise';import{yosemiteAppearance as art}from'./themes';import{yosemiteGranitePoint}from'./yosemite-granite';import type{RenderedSurface}from'./rendered-surface';
 import{yosemiteMeadowColor}from'./yosemite-surfaces';
+import{waterfallFaceWeight}from'./yosemite-waterfall-shape';
 
 /** Native, vertex-coloured cliffs and forest, generated in a lazy chunk after frame one. */
 export function buildYosemiteLandscape(scene:Scene,track:TrackDefinition,m:{meadow:StandardMaterial;stone:StandardMaterial;forest:StandardMaterial;detail:StandardMaterial},surface:RenderedSurface){
@@ -16,6 +17,7 @@ export function buildYosemiteLandscape(scene:Scene,track:TrackDefinition,m:{mead
    let color=mix(hex(art.granite[0]),hex(art.granite[2]),Math.min(.88,Math.max(.1,.4+t*.24+grain*.28)));
    color=mix(color,hex(art.granite[3]),streak*.36*(1-smoothstep(.65,.9,t))+Math.max(0,-grain)*.2);
    color=mix(color,hex(art.lichen),(1-smoothstep(0,.24,t))*(.14+.12*Math.sin(angle*7)**2));
+   color=mix(color,hex(art.waterfall.wetRock),waterfallFaceWeight(b,angle)*(1-smoothstep(.72,.84,t))*.5);
    return granite.vertex(p.x,p.y,p.z,color);
   }));
   for(let k=0;k<layers;k++)for(let i=0;i<columns;i++){const j=(i+1)%columns;granite.triangle(rings[k][i],rings[k+1][j],rings[k+1][i]);granite.triangle(rings[k][i],rings[k][j],rings[k+1][j]);}

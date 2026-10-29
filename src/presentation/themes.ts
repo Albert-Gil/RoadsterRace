@@ -306,6 +306,7 @@ export const snowyTahoeAppearance = {
 /** Original granite-valley presentation; all physical heights/footprints come from the track. */
 export const yosemiteAppearance={
  extent:{minX:-280,maxX:300,minZ:-220,maxZ:320},cameraElevation:58,road:'#8f8065',shoulder:'#a3936d',meadow:'#728363',dryMeadow:'#a69d71',forestFloor:'#56644c',forest:'#34553d',forestLight:'#70865a',bark:'#71563e',granite:['#aeb6b1','#c9c8b9','#e2ddce','#737f83'],lichen:'#727b4e',timber:'#896648',roof:'#495548',window:'#b9d5bf',water:'#438c8d',waterDeep:'#285b6c',foam:'#dcebdc',
- treeCount:440,treeHeight:[10,23],surfaceOffsets:{road:.12,branch:.13,fringe:.045,branchFringe:.055},mist:{count:18,opacity:.065,speed:.42},waterfall:{speed:.3,sprayCount:22},
+ treeCount:440,treeHeight:[10,23],surfaceOffsets:{road:.12,branch:.13,fringe:.045,branchFringe:.055},mist:{count:18,opacity:.04,speed:.42},
+ waterfall:{speed:.8,sprayCount:36,dropletCount:54,gravity:28,opacity:.92,sprayOpacity:.48,wetRock:'#657b7b',lipFraction:.84,lipRadius:.88,waterRadius:.89,halfAngle:.29,curtainWidth:7.2,basinWidth:8.6,basinDepth:3.6,basinHeight:.75,angle:Math.PI/2+.04},
  dressing:{roadWorn:'#b0a07d',roadEdge:'#857d60',barkDark:'#4d3a2c',cutWood:'#c8ab77',stonework:'#a2a18f',trim:'#d6cfac',roofSeam:'#687166'},
 };
