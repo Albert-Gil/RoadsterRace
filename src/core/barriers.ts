@@ -1,5 +1,6 @@
 import { angleDelta, clamp, distance, mix } from './geometry';
 import type { Point, TrackBarrier, TrackDefinition } from './types';
+import { VEHICLE_DIMENSIONS } from './vehicle-size';
 
 const dot = (a: Point, b: Point) => a.x * b.x + a.z * b.z;
 const sub = (a: Point, b: Point): Point => ({ x: a.x - b.x, z: a.z - b.z });
@@ -59,7 +60,7 @@ export function barrierContact(position: Point, heading: number, track: TrackDef
     const jumpable = barrier.kind!=='cliff-face'&&permitted.includes(barrier.id);
     const protectedColumn = protectFlight && !jumpable && !crossingFace && top > (barrier.slopedFace ? position.y ?? 0 : 0) + 1e-6
       && (!track.sections || barrier.kind==='infield' || barrier.kind==='cliff-face' || barrier.sectionId===position.sectionId);
-    if (!protectedColumn && (elevation >= top + (jumpable ? 0.15 : 0) - 1e-6 || elevation + 1.05 <= (barrier.baseHeight ?? 0))) continue;
+    if (!protectedColumn && (elevation >= top + (jumpable ? 0.15 : 0) - 1e-6 || elevation + VEHICLE_DIMENSIONS.height <= (barrier.baseHeight ?? 0))) continue;
     const box = bounds(barrier);
     if (Math.max(a.x, b.x) + radius < box.minX || Math.min(a.x, b.x) - radius > box.maxX || Math.max(a.z, b.z) + radius < box.minZ || Math.min(a.z, b.z) - radius > box.maxZ) continue;
     const inside = insideBarrier(position, barrier), v = barrier.footprint;

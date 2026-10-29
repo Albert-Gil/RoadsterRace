@@ -1,3 +1,4 @@
+import { VEHICLE_DIMENSIONS } from '../vehicle-size';
 import{roundedCircuit}from'../road-geometry';
 import{cumulative,distance,projectToPolyline}from'../geometry';
 import{createStartFinish}from'../start-finish';
@@ -14,7 +15,7 @@ const centerline=[...loop.slice(first,-1),...loop.slice(0,first),loop[first]],di
 const progress=(p:Point)=>projectToPolyline(p,centerline,distances).progress;
 const branch=roundedCircuit([{x:-75,z:76},{x:-65,z:50},{x:-65,z:-12},{x:-105,z:-50}],14,false);
 export const yosemiteTrack:TrackDefinition={
- id:'capitan-yosemite',name:'Capitan Yosemite',version:1,surface:'packed-dirt',roadWidth:16,carWidth:2.2,carLength:5.2,
+ id:'capitan-yosemite',name:'Capitan Yosemite',version:1,surface:'packed-dirt',roadWidth:16,carWidth: VEHICLE_DIMENSIONS.width,carLength: VEHICLE_DIMENSIONS.length,
  centerline,distances,length,start:centerline[0],startFinish:createStartFinish(centerline[0],centerline[1],16),
  supports:[{id:'valley-land',footprint:obstacleRectangle(0,0,900,900)}],waterOpenings:[{id:'bridalveil-creek',footprint:yosemiteCreek}],
  jumps:[{id:'valley-creek-crest',kind:'crest',mandatory:true,from:{x:10,z:-70},forward:{x:1,z:0},width:16,rampLength:0,lipHeight:0,gap:8,runout:70,corridorLength:82,takeoffElevation:0,landingElevation:0,launchBoost:10,launchSlope:.10,branch:[{x:-8,z:-70},{x:10,z:-70},{x:88,z:-70}],entryProgress:progress({x:-8,z:-70}),exitProgress:progress({x:88,z:-70})}],

@@ -11,10 +11,17 @@ import { AI_TUNING, AI_DRIVING } from '../src/core/computer';
 import { CHAMPIONSHIP_POINTS } from '../src/core/tournament';
 import { DEFAULT_LAPS, MAX_LAPS, MIN_LAPS } from '../src/core/race-options';
 import { circuits } from '../src/content/circuits';
+import { VEHICLE_DIMENSIONS } from '../src/core/vehicle-size';
 
 type Unit = [unit: string, meaning: string];
 /** Every exported tuning value needs a unit and meaning here; the test rejects undocumented keys. */
 const documentation: Record<string, Record<string, Unit>> = {
+  VEHICLE_DIMENSIONS: {
+    scale: ['factor', 'Uniform enlargement relative to the original vehicle'],
+    width: ['m', 'Authoritative horizontal vehicle width on every circuit'],
+    length: ['m', 'Authoritative capsule length on every circuit'],
+    height: ['m', 'Vertical vehicle envelope for airborne contacts and barriers'],
+  },
   RULES: {
     version: ['—', 'Vehicle rules version; stored with records and championships'],
     dt: ['s', 'Fixed simulation step (two equal substeps per step)'],
@@ -165,6 +172,7 @@ ${table('RULES', RULES)}
 Derived: level-ground manual hop peak ${peak.toFixed(3)} m and airtime ${airtime.toFixed(3)} s. Santa Monica ramp launch upward velocity is \`rampLaunchBoost + max(0, forward speed) × lipHeight / rampLength\`. Grand Canyon uses its authored natural crest: \`${format(crest.launchBoost!)} + max(0, forward speed) × ${format(crest.launchSlope!)}\` from ${format(crest.takeoffElevation!)} m to the ${format(crest.landingElevation!)} m receiving surface, across a ${format(crest.gap)} m unsupported opening. Grounded elevation changes do not add slope acceleration.
 
 ${table('FLIGHT_RULES', FLIGHT_RULES)}
+${table('VEHICLE_DIMENSIONS', VEHICLE_DIMENSIONS)}
 ${table('CONTACT_RULES', CONTACT_RULES)}
 ${table('PACE_RANGE', PACE_RANGE)}
 ${table('PACE_FILTER', PACE_FILTER)}

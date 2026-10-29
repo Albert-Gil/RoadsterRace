@@ -24,6 +24,7 @@ const MATS={
   satin:{c:[.042,.044,.047],rough:.85},
   well:{c:[.028,.03,.032],rough:.95},
   chrome:{c:[.72,.74,.75],metal:.9,rough:.12,spec:.6},
+  steel:{c:[.68,.71,.73],metal:.86,rough:.28},
   light:{c:[.95,.97,1],emit:2.2},
   red:{c:[.95,.10,.06],emit:2},
   amber:{c:[1,.55,.12],emit:1.1},
@@ -197,10 +198,13 @@ function sweep(path,zc,hw,hz,m,out){
     poly([C(i,a[0],a[1]),C(i,b[0],b[1]),C(i+1,b[0],b[1]),C(i+1,a[0],a[1])],m,r,out);
 }
 function wing(out){
-  // Integrated active-aero lip, instead of an oversized pedestal racing wing.
-  const profile=[[-1.94,.916],[-2.015,.951],[-2.145,.964],[-2.18,.947],[-2.13,.925],[-1.94,.906]];
-  grid(profile.map(([x,y])=>[[x,y,0],[x+.025,y-.009,.84]]),'blade','wing',p=>[p[0]+2.06,p[1]-.935,0],out);
-  prism(profile,.84,.865,'blade',out);
+  // Broad raised steel airfoil, an open gap and two slender dark mounts.
+  const a=.16,d=[-Math.cos(a),Math.sin(a)],u=[Math.sin(a),Math.cos(a)];
+  const P=([c,h])=>[-1.96+c*d[0]+h*u[0],1.035+c*d[1]+h*u[1]],center=P([.20,.006]);
+  const profile=[[0,0],[.04,.014],[.12,.022],[.25,.021],[.38,.009],[.40,0],[.38,-.009],[.20,-.011],[.05,-.008],[0,0]];
+  grid(profile.map(q=>{const[x,y]=P(q);return[[x,y,0],[x+.025,y-.012,.955]];}),'steel','wing',p=>[p[0]-center[0],p[1]-center[1],0],out);
+  prism([P([-.005,0]),P([.405,.04]),P([.405,-.035]),P([.015,-.035])],.955,.969,'steel',out);
+  sweep([[-1.90,.89],[-1.96,.95],[-2.07,1.025],[-2.14,1.035]],.40,.022,.012,'black',out);
 }
 function nozzle(y0,z0,out){
   const xf=RF(y0,z0)[0]+.004,seg=detail === "showcase" ? 28 : 10,C=(r,a)=>Array.from({length:seg+1},(_,i)=>{const t=i/seg*Math.PI*2;return [xf-a,y0+r*Math.cos(t),z0+r*Math.sin(t)];});

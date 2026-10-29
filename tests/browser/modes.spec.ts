@@ -26,7 +26,7 @@ test('Solo Race has three CPU cars, one human control and a deterministic rematc
   await finish(page);expect((await state(page)).players.every((p:any)=>p.finished)).toBe(true);
   await expect(page.locator('.standings')).toContainText('Apex');await expect(page.locator('.standings')).toContainText('CPU');
   await page.screenshot({path:'artifacts/phone-upgrade/solo-results.png'});
-  await page.getByRole('button',{name:'Restart',exact:false}).click();const fresh=await state(page);expect(fresh.phase).toBe('countdown');expect(fresh.ghostStartRemaining).toBe(3);expect(fresh.players.every((p:any)=>p.thrustCount===0)).toBe(true);
+  await page.getByRole('button',{name:'Restart',exact:false}).click();const fresh=await state(page);expect(fresh.phase).toBe('countdown');expect(fresh.ghostStartRemaining).toBe(5);expect(fresh.players.every((p:any)=>p.thrustCount===0)).toBe(true);
   expect(errors).toEqual([]);
 });
 

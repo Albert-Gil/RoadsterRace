@@ -103,7 +103,7 @@ test('jump commands retain identical results across 30/60/120 Hz rendering and f
     expect(sim.state.finished).toBe(true); return sim.state.finishTime!;
   });
   expect(Math.max(...results) - Math.min(...results)).toBeLessThan(RULES.dt);
-  const rematch = new LocalRace([r.route, r.route], track); expect(rematch.ghostStartRemaining).toBe(3); expect(rematch.racers.every(r => r.state.elevation === 0 && r.state.movement === 'grounded')).toBe(true);
+  const rematch = new LocalRace([r.route, r.route], track); expect(rematch.ghostStartRemaining).toBe(5); expect(rematch.racers.every(r => r.state.elevation === 0 && r.state.movement === 'grounded')).toBe(true);
 });
 test('obsolete track/rules tournaments cannot migrate after widening; current schedules still resume',()=>{
  const rounds=circuits.map(c=>({circuitId:c.id,trackVersion:c.track.version})),state=createTournament(rounds,2,6),drivers=defaultPreferences().drivers.slice(0,2);

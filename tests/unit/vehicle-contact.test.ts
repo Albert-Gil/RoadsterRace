@@ -6,6 +6,7 @@ import { circuits } from '../../src/content/circuits';
 import { compileRoute, createPracticeSamples } from '../../src/core/route';
 import { coastalTrack } from '../../src/core/track';
 import { RULES, RaceSimulation, sampleSurface } from '../../src/core/simulation';
+import { VEHICLE_DIMENSIONS } from '../../src/core/vehicle-size';
 const track = { ...coastalTrack, barriers: [], roadWidth: 500 };
 const body = (x: number, z: number, vx = 0, vz = 0, heading = Math.PI / 2) => ({ position: { x, z }, velocity: { x: vx, z: vz }, heading });
 function race() {
@@ -17,21 +18,28 @@ function race() {
   return session;
 }
 describe('physical multiplayer contact', () => {
-  test.each([2, 3, 4])('%i cars move independently through overlaps for the first three seconds', count => {
+  test('larger width and height affect actual contacts rather than only car artwork', () => {
+    const a=body(0,0,0,0,0),b=body(2.4,0,0,0,0);
+    expect(vehicleContact(a,b,track)).not.toBeNull();
+    expect(vehicleContact(a,b,{...track,carWidth:2.2,carLength:5.2})).toBeNull();
+    expect(vehicleContact({...a,elevation:0},{...a,elevation:VEHICLE_DIMENSIONS.height-.01},track)).not.toBeNull();
+    expect(vehicleContact({...a,elevation:0},{...a,elevation:VEHICLE_DIMENSIONS.height+.01},track)).toBeNull();
+  });
+  test.each([2, 3, 4])('%i cars move independently through overlaps for the first five seconds', count => {
     const reference = race(), route = reference.routes[0], session = new LocalRace(Array(count).fill(route), track, 1);
     const solos = session.racers.map((sim, i) => {
       sim.state.position = { ...track.start }; sim.gridPending = false;
       sim.state.speed = 10 + i * 2; sim.state.velocity = { x: Math.sin(sim.state.heading) * sim.state.speed, z: Math.cos(sim.state.heading) * sim.state.speed };
       const solo = new RaceSimulation(route, track, 1); Object.assign(solo.state, structuredClone(sim.state)); return solo;
     });
-    expect(session.ghostStartRemaining).toBe(3);
-    for (let i = 0; i < Math.round(3 / RULES.dt); i++) { session.step(); solos.forEach(sim => sim.step()); }
+    expect(session.ghostStartRemaining).toBe(5);
+    for (let i = 0; i < Math.round(5 / RULES.dt); i++) { session.step(); solos.forEach(sim => sim.step()); }
     expect(session.ghostStartRemaining).toBe(0);
     session.racers.forEach((sim, i) => expect(sim.state).toEqual(solos[i].state));
     expect(session.contactCount).toBe(0);
     expect(session.drainEvents().filter(e => e.type === 'car-impact' || e.type === 'scrape')).toEqual([]);
   });
-  test('car contacts activate at exactly three seconds and resolve existing overlaps without awarding progress', () => {
+  test('car contacts activate at exactly five seconds and resolve existing overlaps without awarding progress', () => {
     const session = race(); session.tick--;
     const setOverlap = () => session.racers.forEach((sim, i) => {
       Object.assign(sim.state, body(i ? 2.4 : -2.4, 0, i ? -30 : 30, 0, i ? -Math.PI / 2 : Math.PI / 2), { speed: 30, acceleration: 0 }); sim.gridPending = false;
@@ -40,14 +48,14 @@ describe('physical multiplayer contact', () => {
     expect(session.ghostStartRemaining).toBe(0);
     setOverlap(); const progress = session.racers.map(r => r.state.distance);
     session.step(); expect(session.contactCount).toBe(1);
-    expect(session.drainEvents().some(e => e.type === 'car-impact' && e.time === 3)).toBe(true);
+    expect(session.drainEvents().some(e => e.type === 'car-impact' && e.time === 5)).toBe(true);
     session.racers.forEach((sim, i) => {
       expect(Number.isFinite(sim.state.position.x + sim.state.position.z + sim.state.speed)).toBe(true);
       expect(sim.state.distance - progress[i]).toBeLessThanOrEqual(30 * RULES.dt + 1e-6);
     });
     expect(vehicleContact(session.racers[0].state, session.racers[1].state, track)?.depth ?? 0).toBeLessThan(0.01);
     const rematch = new LocalRace(session.routes, track, 1);
-    expect(rematch.ghostStartRemaining).toBe(3);
+    expect(rematch.ghostStartRemaining).toBe(5);
     expect(new LocalRace([session.routes[0]], track, 1).ghostStartRemaining).toBe(0);
   });
   test('the opening ghost period still collides with physical barriers', () => {

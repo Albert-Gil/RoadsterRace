@@ -2,9 +2,10 @@ import type { Point, TrackDefinition } from './types';
 import { clamp, mix } from './geometry';
 import { sweepVehicle } from './barriers';
 import { terrainElevation } from './elevation';
+import { VEHICLE_DIMENSIONS } from './vehicle-size';
 
 export interface ContactBody { position: Point; velocity: Point; heading: number; elevation?: number; movement?:'grounded'|'airborne' }
-export const CONTACT_RULES = Object.freeze({ restitution: 0.1, friction: 0.2, passes: 4, ghostStartSeconds: 3 });
+export const CONTACT_RULES = Object.freeze({ restitution: 0.1, friction: 0.2, passes: 4, ghostStartSeconds: 5 });
 const dot = (a: Point, b: Point) => a.x * b.x + a.z * b.z;
 const sub = (a: Point, b: Point) => ({ x: a.x - b.x, z: a.z - b.z });
 function axis(body: ContactBody, track: TrackDefinition) {
@@ -13,7 +14,7 @@ function axis(body: ContactBody, track: TrackDefinition) {
 }
 function closest(a: Point, b: Point, p: Point) { const d = sub(b, a); return mix(a, b, clamp(dot(sub(p, a), d) / (dot(d, d) || 1), 0, 1)); }
 export function vehicleContact(a: ContactBody, b: ContactBody, track: TrackDefinition) {
-  if (!track.terrain && Math.abs((a.elevation ?? 0) - (b.elevation ?? 0)) >= 1.05) return null;
+  if (!track.terrain && Math.abs((a.elevation ?? 0) - (b.elevation ?? 0)) >= VEHICLE_DIMENSIONS.height) return null;
   const [a0, a1] = axis(a, track), [b0, b1] = axis(b, track);
   const da = sub(a1, a0), db = sub(b1, b0), cross = da.x * db.z - da.z * db.x;
   const ab = sub(b0, a0);
@@ -27,7 +28,7 @@ export function vehicleContact(a: ContactBody, b: ContactBody, track: TrackDefin
     // contact position, rather than mistaking uphill centre heights for flight.
     const point=mix(p,q,.5),height=terrainElevation(point,track);
     const atContact=(body:ContactBody)=>(body.elevation??0)+(body.movement==='airborne'?0:height-terrainElevation(body.position,track));
-    if(Math.abs(atContact(a)-atContact(b))>=1.05)return null;
+    if(Math.abs(atContact(a)-atContact(b))>=VEHICLE_DIMENSIONS.height)return null;
   }
   const center = sub(b.position, a.position), nlen = Math.hypot(center.x, center.z);
   const normal = length > 1e-7 ? { x: d.x / length, z: d.z / length } : nlen > 1e-7 ? { x: center.x / nlen, z: center.z / nlen } : { x: Math.cos(a.heading), z: -Math.sin(a.heading) };

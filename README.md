@@ -57,7 +57,7 @@ New players can choose **Tutorial** on the home screen: one guided lap on Newpor
 1. Choose **Multiplayer**, select two, three, or four players, choose 1–6 laps, customize each name/paint, then **Plan your lines**.
 2. Each player draws, previews and locks in a line. Pass the device at the handoff screen; earlier lines stay hidden until all plans are locked in.
 3. Place the device flat in landscape. Everyone taps their numbered corner pad to get ready. The shared countdown starts when all players are ready.
-4. Tap your pad for thrust during the race. Cars start on a separated grid with three seconds of ghosting, then physically collide: rear impacts transfer momentum, side contacts push and slide, and crashes can send you into sand or barriers. Finished cars leave active racing while everyone else completes the distance.
+4. Tap your pad for thrust during the race. Cars start on a separated grid with five seconds of ghosting, then physically collide: rear impacts transfer momentum, side contacts push and slide, and crashes can send you into sand or barriers. Finished cars leave active racing while everyone else completes the distance.
 5. See finishing order and individual times. Times equal to the displayed hundredth share a place. **Rematch** preserves all lines and requests readiness again; **Draw new lines** starts at Player 1.
 
 | Player | Corner | Thrust key | Hop key |

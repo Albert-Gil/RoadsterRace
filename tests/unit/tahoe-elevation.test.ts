@@ -3,7 +3,7 @@ import{snowyTahoeTrack as track}from'../../src/core/tracks/snowy-tahoe';
 import{roadGrade,roadHeight,roadPoint,drawingRay,terrainElevation}from'../../src/core/elevation';
 import{groundHeight,supported}from'../../src/core/support';
 import{compileRoute,createPracticeSamples,sampleRoute}from'../../src/core/route';
-import{RaceSimulation}from'../../src/core/simulation';
+import{RaceSimulation,RULES}from'../../src/core/simulation';
 import{computerRoute,computerTraffic}from'../../src/core/computer';
 import{planningHeight}from'../../src/presentation/planning-height';
 import{samplePolyline}from'../../src/core/geometry';
@@ -40,7 +40,7 @@ test('grounded cars still collide and anticipate traffic on a steep hillside',()
  const before=make(roadPoint(samplePolyline(track.centerline,track.distances,s-2),track),25);
  expect(sweptContact(before,aa,bb,bb,track)).not.toBeNull();
  expect(vehicleContact({...aa,movement:'airborne',elevation:aa.elevation+8},bb,track)).toBeNull();
- const route=computerRoute(track,'normal',0,92),race=new LocalRace([route,route],track);race.tick=200;
+ const route=computerRoute(track,'normal',0,92),race=new LocalRace([route,route],track);race.tick=Math.round(6/RULES.dt);
  for(const [i,body]of [aa,bb].entries())Object.assign(race.racers[i].state,body,{speed:i?15:25,time:race.time});
  expect(computerTraffic(race,0)?.speed).toBeCloseTo(15,4);
  race.racers[1].state.movement='airborne';race.racers[1].state.elevation+=8;

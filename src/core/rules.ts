@@ -2,7 +2,7 @@ import { DEFAULT_LAPS } from './race-options';
 
 /** Shared vehicle rules. Re-exported by simulation.ts; changing a value that alters results requires a version bump. */
 export const RULES = Object.freeze({
-  version: 16, dt: 1 / 60, laps: DEFAULT_LAPS,
+  version: 17, dt: 1 / 60, laps: DEFAULT_LAPS,
   acceleration: 6, braking: 8.5, accelerationJerk: 14, paceResponse: 1.6, paceDeadband: 0.4,
   maxSpeed: 42, thrustAcceleration: 25, thrustDuration: 0.7, thrustRecharge: 5,
   hopRecharge: 7, hopLaunchSpeed: 34,

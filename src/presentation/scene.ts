@@ -407,7 +407,7 @@ export class GameScene {
       if(this.vehicleFill&&!this.vehicleFill.includedOnlyMeshes.includes(mesh))this.vehicleFill.includedOnlyMeshes.push(mesh);
       mesh.receiveShadows = true;
       // Body and aero silhouette suffice at gameplay scale; wheels use the contact shadow.
-      if (mesh.name === 'roadster-paint' || mesh.name === 'roadster-carbon') this.castShadow(mesh);
+      if (mesh.name === 'roadster-paint' || mesh.name === 'roadster-carbon' || mesh.name === 'roadster-metal') this.castShadow(mesh);
     }
     if(this.vehicleFill?.includedOnlyMeshes.length)this.vehicleFill.setEnabled(true);
   }

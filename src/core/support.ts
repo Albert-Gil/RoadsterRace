@@ -2,8 +2,9 @@ import { clamp, cumulative, distance, lerp, mix, projectToPolyline } from './geo
 import { insideBarrier } from './barriers';
 import { annotateRoad, locateRoad, roadHeight, roadSupported, sectionAt,terrainElevation } from './elevation';
 import type { Point, RaceState, TrackDefinition, TrackJump } from './types';
+import { VEHICLE_DIMENSIONS } from './vehicle-size';
 
-export const FLIGHT_RULES = Object.freeze({ gravity: 36, hopGravity: 72, rampLaunchBoost: 8, carHeight: 1.05, waterHeight: -2.4 });
+export const FLIGHT_RULES = Object.freeze({ gravity: 36, hopGravity: 72, rampLaunchBoost: 8, carHeight: VEHICLE_DIMENSIONS.height, waterHeight: -2.4 });
 /** A manual hop keeps its gravity even when crossing an automatic ramp lip. */
 export const flightGravity = (origin: RaceState['flightOrigin']) => origin === 'hop' ? FLIGHT_RULES.hopGravity : FLIGHT_RULES.gravity;
 const footprintBounds = new WeakMap<Point[], { x0: number; x1: number; z0: number; z1: number }>();

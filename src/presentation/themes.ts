@@ -1,4 +1,5 @@
 import { assetUrl } from './urls';
+import { VEHICLE_DIMENSIONS } from '../core/vehicle-size';
 
 export const paintFinishes = [
   { id: 'crimson', name: 'Crimson', color: '#d51f35' },
@@ -16,7 +17,7 @@ export const vehicleMaterials = {
   painted: { metallic: .5, roughness: .23, coat: 1, coatRoughness: .1 },
   glass: { color: '#17252f', metallic: .18, roughness: .105, coat: .85 },
   carbon: { color: '#141a20', metallic: .3, roughness: .4 },
-  metal: { color: '#9ea8b0', metallic: .9, roughness: .24 },
+  metal: { color: '#aeb4b8', metallic: .86, roughness: .28 },
   wheels: { metallic: .65, roughness: .32 },
 };
 
@@ -61,7 +62,7 @@ export const themes: Record<string, PresentationTheme> = {
 
 /** Presentation only: camera, lighting and quality never enter route compilation or physics. */
 export const sceneTuning = {
-  vehicle: { racingScale: 1.12, landingCompression: 0.09, contactCompression: 0.05, impactDuration: 0.22, groundLift:0.13, contactGap:.01,shadowGap:.008,shadowMaxScale:2.5,shadowTriangles:512,suspensionTravel:0.22, tireMarkLift:0.16,projectedMarkLift:.025 },
+  vehicle: { racingScale: 1.12 * VEHICLE_DIMENSIONS.scale, landingCompression: 0.09, contactCompression: 0.05, impactDuration: 0.22, groundLift:0.13, contactGap:.01,shadowGap:.008,shadowMaxScale:2.5,shadowTriangles:512,suspensionTravel:0.22, tireMarkLift:0.16,projectedMarkLift:.025 },
   camera: { elevationDegrees: 42, compactElevationDegrees: 65, terrainElevationDegrees: [50,58,65,72], terrainVerticalFov: 0.3, azimuthDegrees: 5, verticalFov: 0.5, fittingMargin: 1, clearancePixels: 6, phoneRunoffClearancePixels: 20, azimuthStep: 5 },
   grading: { exposure: 1.16, contrast: 1.1 },
   lighting: { ambient: 0.55, sunlight: 1.25, shadowDarkness: 0.32, contactHardening: 0.012 },

@@ -1,3 +1,4 @@
+import { VEHICLE_DIMENSIONS } from '../vehicle-size';
 import { roundedCircuit } from '../road-geometry';
 import { closedSpline, cumulative, distance, projectToPolyline } from '../geometry';
 import { createStartFinish } from '../start-finish';
@@ -56,7 +57,7 @@ barriers.push({ id: 'landing-edge', kind: 'pier-rail', baseHeight: -2.4, height:
 barriers.push({ id: 'beach-groyne', kind: 'rock', height: 2, footprint: outcrop(24.5, -84, 8.5, 2.8, 0, 2.3) });
 const authoredTrack: TrackDefinition = {
   id: 'santa-monica', version: 3, name: 'Santa Monica', centerline, distances, length,
-  roadWidth: 16, carWidth: 2.2, carLength: 5.2, start: centerline[0], startFinish: createStartFinish(centerline[0], centerline[1], 16),
+  roadWidth: 16, carWidth: VEHICLE_DIMENSIONS.width, carLength: VEHICLE_DIMENSIONS.length, start: centerline[0], startFinish: createStartFinish(centerline[0], centerline[1], 16),
   supports, waterOpenings: [{ id: 'pacific-gap', footprint: rectangle(62, -20, 10, 16) }], jumps: [jump], barriers,
 };
 

@@ -1,3 +1,4 @@
+import { VEHICLE_DIMENSIONS } from './vehicle-size';
 import { roundedCircuit } from './road-geometry';
 import { createStartFinish } from './start-finish';
 import { closedSpline, cumulative } from './geometry';
@@ -13,7 +14,7 @@ const distances = cumulative(centerline);
 const length = distances[distances.length - 1];
 export const coastalTrack: TrackDefinition = {
   id: 'coastal-launch', version: 6, name: 'Newport Island', centerline, distances, length,
-  roadWidth: 16, carWidth: 2.2, carLength: 5.2, start: centerline[0], startFinish: createStartFinish(centerline[0], centerline[1], 16),
+  roadWidth: 16, carWidth: VEHICLE_DIMENSIONS.width, carLength: VEHICLE_DIMENSIONS.length, start: centerline[0], startFinish: createStartFinish(centerline[0], centerline[1], 16),
   // Authored infield islands: all faces are also used by the visible retaining walls.
   barriers: ([
     { id: 'gantry-support', height: 7, footprint: [{ x: -18.35, z: -48.35 }, { x: -17.65, z: -48.35 }, { x: -17.65, z: -47.65 }, { x: -18.35, z: -47.65 }] },

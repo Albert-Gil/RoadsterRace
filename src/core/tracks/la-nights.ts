@@ -1,3 +1,4 @@
+import { VEHICLE_DIMENSIONS } from '../vehicle-size';
 import { roundedCircuit } from '../road-geometry';
 import { cumulative, projectToPolyline } from '../geometry';
 import { createStartFinish } from '../start-finish';
@@ -24,7 +25,7 @@ const hop: HopShortcut = {id:'backlot-alley',branch,width:16,obstacleId:'backlot
 const solid = (id:string,x:number,z:number,w:number,d:number,height=1.1,kind:TrackBarrier['kind']='infield'):TrackBarrier => ({id,height,kind,footprint:laRectangle(x,z,w,d)});
 export const laNightsTrack: TrackDefinition = {
   id:'la-nights',version:4,name:'LA nights',centerline,distances,length,
-  roadWidth:16,carWidth:2.2,carLength:5.2,start:centerline[0],startFinish:createStartFinish(centerline[0],centerline[1],16),
+  roadWidth:16,carWidth: VEHICLE_DIMENSIONS.width,carLength: VEHICLE_DIMENSIONS.length,start:centerline[0],startFinish:createStartFinish(centerline[0],centerline[1],16),
   supports:[{id:'city-ground',footprint:laRectangle(-500,-500,1000,1000)}],
   waterOpenings:[{id:'storm-channel',footprint:laRectangle(62,-27,10,37)}],jumps:[jump],hopShortcuts:[hop],
   barriers:([

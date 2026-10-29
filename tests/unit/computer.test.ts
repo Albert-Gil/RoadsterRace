@@ -6,11 +6,12 @@ import type { Difficulty } from '../../src/core/session';
 import { RULES } from '../../src/core/simulation';
 import { FixedStepClock } from '../../src/core/simulation';
 import { sampleRoute } from '../../src/core/route';
+import { CONTACT_RULES } from '../../src/core/vehicle-contact';
 
 function decisionRace(){
   const track=circuits[0].track,route=computerRoute(track,'normal',0,92),race=new LocalRace(Array(4).fill(route),track,1);
-  race.tick=240;
-  race.racers.forEach((r,i)=>{r.state.position={x:1000+i*100,z:1000};r.state.time=4;});
+  const time=CONTACT_RULES.ghostStartSeconds+1;race.tick=Math.round(time/RULES.dt);
+  race.racers.forEach((r,i)=>{r.state.position={x:1000+i*100,z:1000};r.state.time=time;r.state.tick=race.tick;});
   const s=race.racers[1].state,p=sampleRoute(route,8);
   Object.assign(s,{position:{x:p.x,z:p.z},distance:8,heading:p.heading,speed:12,velocity:{x:Math.sin(p.heading)*12,z:Math.cos(p.heading)*12}});
   return race;

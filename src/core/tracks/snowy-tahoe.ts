@@ -1,3 +1,4 @@
+import { VEHICLE_DIMENSIONS } from '../vehicle-size';
 import { roundedCircuit } from '../road-geometry';
 import { cumulative, distance, projectToPolyline,samplePolyline } from '../geometry';
 import { createStartFinish } from '../start-finish';
@@ -17,7 +18,7 @@ const takeoffs=TAHOE_CORNICES.map(j=>{const center=samplePolyline(centerline,dis
 
 export const snowyTahoeTrack: TrackDefinition = {
   id:'snowy-tahoe',version:5,name:'Snowy Tahoe',surface:'packed-snow',centerline,distances,length,
-  roadWidth:16,carWidth:2.2,carLength:5.2,start:centerline[0],startFinish:createStartFinish(centerline[0],centerline[1],16),
+  roadWidth:16,carWidth: VEHICLE_DIMENSIONS.width,carLength: VEHICLE_DIMENSIONS.length,start:centerline[0],startFinish:createStartFinish(centerline[0],centerline[1],16),
   supports:[{id:'alpine-land',footprint:tahoeLand}],
   terrainTakeoffs:takeoffs,
   hopShortcuts:[{id:'forestry-trail',branch,width:16,obstacleId:'fallen-timber',entryProgress:progress(branch[0]),exitProgress:progress(branch.at(-1)!)}],

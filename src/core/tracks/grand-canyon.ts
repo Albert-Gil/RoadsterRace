@@ -1,3 +1,4 @@
+import { VEHICLE_DIMENSIONS } from '../vehicle-size';
 import { roundedCircuit } from '../road-geometry';
 import { cumulative, projectToPolyline } from '../geometry';
 import { annotateRoad } from '../elevation';
@@ -69,7 +70,7 @@ const canyonRock:TrackBarrier[]=[
  // Rim boulder piles on the lower crossing's outer edge (base on the canyon floor, top 1.7 m above the road).
  rock('rim-1',15.4,-32,1.8,3,0,4.3,13.1),rock('rim-2',6,-58.4,2.2,1.8,.78,4.3,13.2),rock('rim-3',-20,-67.4,3,1.8,0,4.3,13.3),
 ];
-const track:TrackDefinition={id:'grand-canyon',version:5,name:'Grand Canyon',centerline:path,distances,length,roadWidth:16,carWidth:2.2,carLength:5.2,start:path[0],startFinish:createStartFinish(path[0],path[1],16),surface:'packed-dirt',sections,barriers:[...barriers,...canyonRock],
+const track:TrackDefinition={id:'grand-canyon',version:5,name:'Grand Canyon',centerline:path,distances,length,roadWidth:16,carWidth: VEHICLE_DIMENSIONS.width,carLength: VEHICLE_DIMENSIONS.length,start:path[0],startFinish:createStartFinish(path[0],path[1],16),surface:'packed-dirt',sections,barriers:[...barriers,...canyonRock],
  jumps:[{id:'canyon-crest',kind:'crest',from:{x:-15,z:0},forward:{x:1,z:0},width:16,rampLength:0,lipHeight:8,takeoffElevation:8,landingElevation:6,launchBoost:29,launchSlope:.05,gap:30,runout:80,corridorLength:110,branch:[{x:-85,z:0},{x:-15,z:0},{x:15,z:0},{x:95,z:0}],entryProgress:approach,exitProgress:mesa}],
  hopShortcuts:[{id:'mesa-service-trail',branch,width:16,obstacleId:'canyon-hop-rock',entryProgress:at(branch[0]),exitProgress:at(branch.at(-1)!)}],
 };

@@ -81,7 +81,8 @@ test('slow mandatory-jump failure recovers to the upper approach without a water
 
 test.each([{speed:30,lands:false},{speed:42,lands:true}])('a manual hop near the crest cannot stack the automatic impulse at $speed m/s',({speed,lands})=>{
  const route=plan(),sim=new RaceSimulation(route,track),s=sim.state,j=track.jumps![0];
- const near=route.points.find(p=>p.courseProgress!>j.entryProgress+66.5)!;
+ // Keep the complete enlarged footprint on the approach before pressing Hop.
+ const near=route.points.find(p=>p.courseProgress!>j.entryProgress+70-track.carLength/2-.6)!;
  s.position={...near};s.distance=near.distance;s.elevation=near.y!;s.heading=Math.PI/2;s.velocity={x:speed,z:0};s.speed=speed;s.checkpoint=Math.floor(s.distance/(route.length/8))+1;
  expect(vehicleSupported(s.position,s.heading,track)).toBe(true);sim.pressHop();let peak=0;const events:string[]=[];
  for(let i=0;i<100;i++){sim.step();peak=Math.max(peak,s.elevation);events.push(...sim.drainEvents().map(e=>e.type));}

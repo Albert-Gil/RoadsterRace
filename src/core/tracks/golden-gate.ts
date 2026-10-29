@@ -1,3 +1,4 @@
+import { VEHICLE_DIMENSIONS } from '../vehicle-size';
 import { roundedCircuit } from '../road-geometry';
 import { closedSpline, cumulative, samplePolyline, projectToPolyline, distance } from '../geometry';
 import { createStartFinish } from '../start-finish';
@@ -35,7 +36,7 @@ const supports: TrackBarrier[] = [];
 for (const x of [-28, 28]) for (const z of [32.5, 51.5]) supports.push({ ...rectangle(`bridge-pier-${x}-${z}`, x - 0.8, z - 0.8, 1.6, 1.6), height: 0.4, kind: 'bridge-support', bridgeId: bridge.id });
 export const goldenGateTrack: TrackDefinition = {
   id: 'golden-gate', version: 7, name: 'Golden Gate', centerline, distances, length,
-  roadWidth: 16, carWidth: 2.2, carLength: 5.2, start: centerline[0],
+  roadWidth: 16, carWidth: VEHICLE_DIMENSIONS.width, carLength: VEHICLE_DIMENSIONS.length, start: centerline[0],
   startFinish: createStartFinish(centerline[0], centerline[1], 16), bridges: [bridge],
   barriers: [
     { ...rectangle('market-annex',2,-29.5,65,7),height:1.25,runoffException:'cut-protection' },

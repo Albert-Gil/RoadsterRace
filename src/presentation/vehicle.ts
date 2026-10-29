@@ -87,6 +87,8 @@ export class VehicleView {
     this.glass = pbr('roadster-glass', vehicleMaterials.glass.color, vehicleMaterials.glass.metallic, vehicleMaterials.glass.roughness);
     this.glass.clearCoat.isEnabled = true; this.glass.clearCoat.intensity = vehicleMaterials.glass.coat;
     const carbon = pbr('roadster-carbon', vehicleMaterials.carbon.color, vehicleMaterials.carbon.metallic, vehicleMaterials.carbon.roughness), metal = pbr('roadster-metal', vehicleMaterials.metal.color, vehicleMaterials.metal.metallic, vehicleMaterials.metal.roughness);
+    metal.clearCoat.isEnabled = true; metal.clearCoat.intensity = vehicleMaterials.steel.coat; metal.clearCoat.roughness = vehicleMaterials.steel.coatRoughness;
+    metal.bumpTexture = steelBrushing(scene); metal.bumpTexture.level = vehicleMaterials.steel.brushing;
     const front = pbr('roadster-led', '#f2f8ff', 0.2, 0.2); front.emissiveColor = new Color3(0.8, 0.9, 1);
     this.tail = pbr('roadster-tail', '#d91e29', 0.2, 0.25); this.tail.emissiveColor = new Color3(0.5, 0.015, 0.005);
     let g = geometries.get(detail); if (!g) { g = buildRoadsterGeometry(detail); geometries.set(detail, g); }
@@ -108,7 +110,7 @@ export class VehicleView {
     };
     const groups = new Map<PBRMaterial, RoadsterPart[]>();
     for (const [name, part] of Object.entries(g.body)) {
-      const mat = name === 'paint' ? this.paint : name.startsWith('glass') ? this.glass : name === 'light' || name === 'plate' ? front : name === 'red' || name === 'amber' ? this.tail : name === 'chrome' ? metal : carbon;
+      const mat = name === 'paint' ? this.paint : name.startsWith('glass') ? this.glass : name === 'light' || name === 'plate' ? front : name === 'red' || name === 'amber' ? this.tail : name === 'chrome' || name === 'steel' ? metal : carbon;
       const parts = groups.get(mat) ?? []; parts.push(part); groups.set(mat, parts);
     }
     for (const [mat, parts] of groups) meshFor(mat.name, parts.map(part => ({ part })), this.chassis).material = mat;
@@ -143,10 +145,15 @@ export class VehicleView {
     this.brakes.setVerticesData(VertexBuffer.NormalKind, this.brakeNormals, true);
     this.triangleCount = triangles;
     const jet = new StandardMaterial('cold-gas-thrust', scene); jet.disableLighting = true; jet.emissiveColor = Color3.FromHexString(thrustEffects.coreColor); jet.alpha = thrustEffects.coreOpacity;
+    const cores: Mesh[] = [];
     for (const x of vehicleAttachments.rearJets) {
       const plume = MeshBuilder.CreateCylinder('expanding-thrust', { height: 3, diameterTop: 0.08, diameterBottom: 0.7, tessellation: 8 }, scene);
-      plume.rotation.x = Math.PI / 2; plume.position.set(x, vehicleAttachments.jetHeight, -3.7); plume.parent = this.root; plume.material = jet; plume.isVisible = false; this.jets.push(plume);
+      plume.rotation.x = Math.PI / 2; plume.position.x = x; plume.material = jet; cores.push(plume);
     }
+    // Bake the four local nozzle shapes before parenting, avoiding doubled vehicle scale.
+    const plume = Mesh.MergeMeshes(cores, true, true)!; plume.name = 'four-forward-thrust-cores';
+    plume.position.set(0, vehicleAttachments.jetHeight, -3.7); plume.parent = this.root;
+    plume.isPickable = false; plume.isVisible = false; plume.metadata = { boundedCores: 4 }; this.jets.push(plume);
     const shadowMat = new StandardMaterial('car-contact', scene); shadowMat.emissiveColor.setAll(1); shadowMat.alpha = 0.5; shadowMat.disableLighting = true; shadowMat.diffuseTexture = softShadowTexture(scene); shadowMat.useAlphaFromDiffuseTexture = true;
     shadowMat.diffuseTexture.wrapU=shadowMat.diffuseTexture.wrapV=Texture.CLAMP_ADDRESSMODE;shadowMat.backFaceCulling=false;
     this.shadowView=new ContactShadow(scene,shadowMat,sceneTuning.vehicle.shadowTriangles);this.shadow=this.shadowView.mesh;
@@ -208,7 +215,7 @@ export class VehicleView {
     }
     this.brakes.updateVerticesData(VertexBuffer.PositionKind, this.brakePositions); this.brakes.updateVerticesData(VertexBuffer.NormalKind, this.brakeNormals);
     if (this.detail === 'race') { this.vapor.update(renderPose, speed, thrust, dt, reduced); this.coldGas.update(renderPose, reduced); }
-    this.jets.forEach((j, i) => { j.isVisible = thrust; j.scaling.y = 1 + (reduced ? 0 : Math.sin(time * 55 + i) * 0.14); });
+    this.jets.forEach((j, i) => { j.isVisible = thrust; j.scaling.z = 1 + (reduced ? 0 : Math.sin(time * 55 + i) * 0.14); });
     const impact = time < this.impactUntil;
     this.dustMaterial.alpha = impact ? 0.6 : sandAmount * 0.28;
     this.dust.isVisible = !position.airborne && !reduced && ((sandAmount > 0.08 && speed > 2) || impact);

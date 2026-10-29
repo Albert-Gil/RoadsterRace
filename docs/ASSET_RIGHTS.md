@@ -16,6 +16,8 @@
 
 The 2026-10-29 car refinements (body shaping, twin-spoke wheels, stationary brakes, mirrors, lower aero and generated satin-steel normal map) are original procedural changes to that adaptation. No manufacturer mesh, logo, photograph or external texture was imported. The existing RoadsterLAB MIT notice remains applicable.
 
+The subsequent larger raised steel airfoil, endplates and supports are original procedural refinements of the same model. The 15% artwork enlargement and batched four-nozzle forward exhaust introduce no downloaded artwork or new third-party assets; the existing RoadsterLAB notice remains.
+
 The project is a public testing prototype. A future custom model, font, texture, logo, music track, or public branding treatment needs its own origin/license record before inclusion in a public build. The shipped Babylon runtime license and upstream notices are retained in `public/licenses/Babylon-Apache-2.0.txt` and `public/licenses/Babylon-NOTICE.txt`, alongside the Barlow and RoadsterLAB notices. Home Screen PNG icons are raster exports of the project's original R mark, created with `tools/generate-app-icons.mjs`.
 
 Golden Gate's factory hall, solar canopies, red suspension portals/cables, shoreline, skyline and course layout are original procedural geometry. Its foundry sign uses original wording and bundled/fallback typography; no Tesla logo or copied factory/bridge model is included. The spaceport's player-facing name is now Launchsite, with its original geometry unchanged. Thrust vapor uses an original radial canvas texture and a bounded billboard mesh; car-impact and scrape cues use original oscillator/noise synthesis. No ElevenLabs audio or network service was added.

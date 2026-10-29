@@ -10,7 +10,7 @@ import { hazardSpans } from './hazards';
 import { compressDrawingPauses, gestureSpeeds, PACE_FILTER, prepareDrawingSamples } from './drawing-pace';
 export { gestureSpeeds, paceToSpeed, PACE_RANGE, PACE_FILTER } from './drawing-pace';
 
-export const COMPILER_VERSION = 16;
+export const COMPILER_VERSION = 17;
 
 /**
  * Lap-level checks only: the right direction, enough of the circuit and one lap. Barriers,

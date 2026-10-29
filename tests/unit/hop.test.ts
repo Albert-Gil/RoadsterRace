@@ -110,21 +110,21 @@ test('CPU hops require traffic, a clear straight and landing, readiness, and an 
   a.gridPending = b.gridPending = false; a.state.position = { x: 0, z: 56 }; b.state.position = { x: 0, z: 50 };
   a.state.distance = 56; b.state.distance = 50; moving(a, 10); moving(b, 30);
   expect(shouldComputerHop(race, 1)).toBe(false);
-  race.tick = 240; a.state.tick = b.state.tick = 240; a.state.time = b.state.time = 4;
+  race.tick = Math.round(6 / RULES.dt); a.state.tick = b.state.tick = race.tick; a.state.time = b.state.time = 6;
   expect(shouldComputerHop(race, 1)).toBe(true); stepComputers(race, 'normal'); race.step(); expect(b.state.hopCount).toBe(1);
   expect(shouldComputerHop(race, 1)).toBe(false);
   b.state.movement = 'grounded'; b.state.hopReadyAt = 0; a.state.position.x = 10; expect(shouldComputerHop(race, 1)).toBe(false);
 });
 test('height-separated cars have no contact; landing-height envelopes still collide', () => {
   const body = (y: number) => ({ position: { x: 0, z: 0 }, heading: 0, velocity: { x: 0, z: 20 }, elevation: y });
-  expect(vehicleContact(body(1.2), body(0), flat)).toBeNull(); expect(vehicleContact(body(0.9), body(0), flat)).not.toBeNull();
+  expect(vehicleContact(body(FLIGHT_RULES.carHeight+.1), body(0), flat)).toBeNull(); expect(vehicleContact(body(FLIGHT_RULES.carHeight-.1), body(0), flat)).not.toBeNull();
 });
 test('simultaneous recoveries sharing a safe point admit one car, then release the waiting car', () => {
-  const race = new LocalRace([line, line], flat); race.tick = 240;
+  const race = new LocalRace([line, line], flat); race.tick = Math.round(6 / RULES.dt);
   for (const sim of race.racers) {
     sim.gridPending = false;
-    Object.assign(sim.state, { position: { x: 0, z: 0 }, velocity: { x: 0, z: 0 }, heading: 0, speed: 0, time: 4, tick: 240,
-      recoveringUntil: 4, recoveryWaiting: true, recoveryCount: 1, hopReadyAt: 10, thrustReadyAt: 8 });
+    Object.assign(sim.state, { position: { x: 0, z: 0 }, velocity: { x: 0, z: 0 }, heading: 0, speed: 0, time: 6, tick: race.tick,
+      recoveringUntil: 6, recoveryWaiting: true, recoveryCount: 1, hopReadyAt: 10, thrustReadyAt: 8 });
   }
   race.step(); expect(race.racers.filter(r => !r.state.recoveryWaiting)).toHaveLength(1);
   expect(race.racers.every(r => r.state.distance < 0.01 && r.state.hopReadyAt === 10 && r.state.thrustReadyAt === 8)).toBe(true);

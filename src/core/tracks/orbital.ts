@@ -1,3 +1,4 @@
+import { VEHICLE_DIMENSIONS } from '../vehicle-size';
 import { roundedCircuit } from '../road-geometry';
 import { createStartFinish } from '../start-finish';
 import { cumulative, projectToPolyline } from '../geometry';
@@ -49,7 +50,7 @@ const rocks: TrackDefinition['barriers'] = [
 /** Flat physical layout; scenery/branding never participate in its rules. */
 export const orbitalTrack: TrackDefinition = {
   id: 'orbital-launchyard', version: 9, name: 'Launchsite', centerline, distances, length,
-  roadWidth: 16, carWidth: 2.2, carLength: 5.2, start: centerline[0], startFinish: createStartFinish(centerline[0], centerline[1], 16),
+  roadWidth: 16, carWidth: VEHICLE_DIMENSIONS.width, carLength: VEHICLE_DIMENSIONS.length, start: centerline[0], startFinish: createStartFinish(centerline[0], centerline[1], 16),
   barriers: ([
     // Protected utility parcel with low perimeter and separate real-height vessels.
     { id:'utility-storage-tower',kind:'infield',height:1.25,runoffException:'cut-protection',
