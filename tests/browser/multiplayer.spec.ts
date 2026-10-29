@@ -3,10 +3,11 @@ import { resultRows, waitForPhase } from './ui';
 import { formatTime } from '../../src/ui/format';
 
 const state = (page: Page) => page.evaluate(() => (window as any).__roadster.getState());
-async function planFriends(page: Page, count: number) {
+async function planFriends(page: Page, count: number, steelPaint = false) {
   await page.goto('/'); await page.waitForFunction(() => Boolean((window as any).__roadster));
   await page.getByRole('button', { name: 'Multiplayer' }).click();
   await page.getByRole('button', { name: `${count} players`, exact: true }).click();
+  if(steelPaint)for(let i=1;i<=count;i++)await page.getByRole('group',{name:`Driver ${i} paint`}).getByRole('button',{name:'Stainless steel gray',exact:true}).click();
   await page.getByRole('button', { name: 'Plan your lines' }).click();
   for (let i = 0; i < count; i++) {
     if (i > 0) {
@@ -94,7 +95,9 @@ test('two-player handoff, ready check, independent thrust, finish order and fres
 test('four simultaneous corner touches on a phone retain ownership, never auto-repeat, and clear on interruption', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
   const page = await context.newPage(), errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
-  await planFriends(page, 4);
+  await planFriends(page, 4, true);
+  expect((await state(page)).drivers.every((d:any)=>d.paint==='glacier')).toBe(true);
+  for(const[i,color]of ['rgb(213, 31, 53)','rgb(59, 121, 230)','rgb(241, 190, 55)','rgb(69, 167, 123)'].entries())await expect(page.locator(`.racer-${i} .racer-pad`)).toHaveCSS('color',color);
   const points = await page.locator('.racer-pad').evaluateAll(pads => pads.map((pad, i) => { const r = pad.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2, id: i + 1 }; }));
   const hits = await page.evaluate(points => points.map(p => document.elementFromPoint(p.x, p.y)?.closest<HTMLElement>('.racer-pad')?.dataset.racer), points);
   expect(hits).toEqual(['0', '1', '2', '3']);

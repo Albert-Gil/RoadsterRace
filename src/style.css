@@ -295,7 +295,7 @@ p.resume-tour { color: #ffd15a; font-size: 12px; }
 .vehicle-label { position: absolute; z-index: 3; display: flex; align-items: center; justify-content: center; width: 21px; height: 21px; border: 2px solid var(--surface); border-radius: 50%; background: var(--identity); color: var(--identity-ink); font-size: 10px; font-weight: 800; pointer-events: none; transform: translate(-50%, -50%); box-shadow: 0 2px 5px rgb(0 0 0 / 45%); }
 .vehicle-label .cpu-tag { display: block; font-size: 6px; }
 .playground[data-phase="racing"] .vehicle-label { display: none; }
-/* Thrust and Hop: each human's pair sits in a course rail. Ready = filled with the driver's paint; the ring is the recharge. */
+/* Thrust and Hop use fixed player-control colors, independent of car paint; the ring is the recharge. */
 .ability-cluster { position: absolute; z-index: 8; display: flex; flex-direction: column-reverse; align-items: center; gap: var(--ability-gap); width: var(--thrust-size); pointer-events: none; right: calc(env(safe-area-inset-right, 0px) + 2px); bottom: calc(env(safe-area-inset-bottom, 0px) + 4px); }
 .ability-control { position: relative; flex: none; margin: 0; padding: 3px; border: 0; border-radius: 50%; color: var(--identity, var(--accent)); background: conic-gradient(currentColor var(--charge), rgb(255 255 255 / 16%) var(--charge)); box-shadow: 0 8px 26px rgb(0 0 0 / 45%); pointer-events: auto; touch-action: none; user-select: none; -webkit-user-select: none; }
 .thrust-control { --charge: 360deg; width: var(--thrust-size); height: var(--thrust-size); }

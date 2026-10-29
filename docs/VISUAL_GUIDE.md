@@ -139,3 +139,11 @@ The eighth biome uses yosemiteAppearance, sceneryPalettes.yosemite, sceneryLight
 The 2026-10-29 refinement adds `yosemite-granite.ts` (shared cliff/cascade skin), `yosemite-dressing.ts` (one batched park-detail mesh) and `yosemite-surfaces.ts` (shared meadow/fringe colours). `absoluteVertexColors` marks materials whose vertex palette must not be multiplied again during a theme switch. Solid rocks and props remain within existing authored footprints/heights; the scenery pass changes no track or rules version. See YOSEMITE_VISUAL_REFINEMENT.md.
 
 The waterfall follow-up replaces face-following water strips with `yosemite-waterfall-shape.ts` and `yosemite-waterfall.ts`: the lip/recess and gravity-shaped curtain share their placement. Cosmetic basin geometry stays inside the existing granite parcel; it grants no support and changes no water hazard. See YOSEMITE_WATERFALL.md.
+
+### Steel paint, red controls
+
+Stainless steel gray is first in the six-finish paint selector and remains the fresh-profile car default, including rendered planning/ready previews. Existing saved paint IDs are retained. Interface branding keeps its red palette. `abilityControlColors` defines independent red/blue/yellow/green controls, so changing a car to steel (or any other finish) cannot recolor Thrust/Hop. `--control-*` tokens belong to buttons; `--player-*` tokens continue to represent selected car paints in setup/results and other driver presentation.
+
+The Home pictures are baked artwork, not live paintable 3D models. Their existing files and layout are preserved for replacement with the owner's supplied steel-car versions. No key-art recoloring or new imagery is introduced in this change.
+
+Verification for this UI correction: type checking, 668 unit tests, seven relevant browser checks, the production build and a complete production touch race pass. All 24 exact handling fixtures match the committed build. Automated phone/tablet checks supplement physical Safari verification, which remains pending. The UI correction is released separately from the following Yosemite scenery work.

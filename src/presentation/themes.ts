@@ -2,8 +2,8 @@ import { assetUrl } from './urls';
 import { VEHICLE_DIMENSIONS } from '../core/vehicle-size';
 
 export const paintFinishes = [
-  { id: 'crimson', name: 'Crimson', color: '#d51f35' },
   { id: 'glacier', name: 'Stainless steel gray', color: '#aeb4b8' },
+  { id: 'crimson', name: 'Crimson', color: '#d51f35' },
   { id: 'cobalt', name: 'Cobalt blue', color: '#3b79e6' },
   { id: 'solar', name: 'Solar yellow', color: '#f1be37' },
   { id: 'verdant', name: 'Verdant green', color: '#45a77b' },
@@ -12,6 +12,8 @@ export const paintFinishes = [
 
 /** Stable paint IDs preserve saved choices. Steel is the fresh-install/default finish. */
 export const defaultPaintId = 'glacier';
+/** Stable button identities keep the red interface independent of each driver's car paint. */
+export const abilityControlColors = ['#d51f35', '#3b79e6', '#f1be37', '#45a77b'] as const;
 export const vehicleMaterials = {
   steel: { metallic: .86, roughness: .28, coat: .32, coatRoughness: .2, brushing: .035 },
   painted: { metallic: .5, roughness: .23, coat: 1, coatRoughness: .1 },
@@ -266,17 +268,22 @@ export function applyTheme(theme: PresentationTheme) {
   root.style.setProperty('--pace-medium', theme.pace.medium);
   root.style.setProperty('--pace-fast', theme.pace.fast);
   applyPlayerColors(theme.players);
+  setIdentityColors('control', abilityControlColors);
   document.title = `${theme.branding.title.replace(' / ', ' ')} — ${theme.branding.tagline}`;
   document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.setAttribute('content', theme.scene.water);
 }
 
 export function applyPlayerColors(colors: readonly string[]) {
+  setIdentityColors('player', colors);
+}
+
+function setIdentityColors(prefix: 'player' | 'control', colors: readonly string[]) {
   const root = document.documentElement;
   colors.forEach((color, i) => {
-    root.style.setProperty(`--player-${i + 1}`, color);
+    root.style.setProperty(`--${prefix}-${i + 1}`, color);
     const rgb = [1, 3, 5].map(offset => parseInt(color.slice(offset, offset + 2), 16) / 255).map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
     const luminance = rgb[0] * 0.2126 + rgb[1] * 0.7152 + rgb[2] * 0.0722;
-    root.style.setProperty(`--player-${i + 1}-ink`, luminance < 0.179 ? '#ffffff' : '#000000');
+    root.style.setProperty(`--${prefix}-${i + 1}-ink`, luminance < 0.179 ? '#ffffff' : '#000000');
   });
 }
 

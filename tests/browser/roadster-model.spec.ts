@@ -8,6 +8,11 @@ test('steel paint, shared geometry and fixed brakes render correctly through a r
   await page.goto('/?circuit=coastal-launch&graphics=medium');
   await page.getByRole('button', { name: 'Time Trial', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Stainless steel gray', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('group', {name:'Driver 1 paint'}).getByRole('button').first()).toHaveAccessibleName('Stainless steel gray');
+  // Paint selection must not recolor the menu or the live ability controls.
+  await page.getByRole('button', {name:'Cobalt blue',exact:true}).click();
+  await page.getByRole('button', {name:'Stainless steel gray',exact:true}).click();
+  expect(await page.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--fill').trim())).toBe('#d9303a');
   await page.getByRole('button', { name: '1 lap', exact: true }).click();
   await page.getByRole('button', { name: 'Draw racing line', exact: true }).click();
   await page.waitForFunction(() => (window as any).__roadster.getGraphics().renderReady);
@@ -37,6 +42,12 @@ test('steel paint, shared geometry and fixed brakes render correctly through a r
   await page.evaluate(() => (window as any).__roadster.usePracticeLine());
   await page.getByRole('button', { name: 'Race this line', exact: true }).click(); await waitForPhase(page, 'racing');
   expect(await page.evaluate(()=>(window as any).__roadster.getState().ghostStartRemaining)).toBe(0);
+  for(const selector of ['#thrust-button .thrust-inner','#hop-button .hop-inner']){
+    await expect(page.locator(selector)).toHaveCSS('background-color','rgb(213, 31, 53)');
+    await expect(page.locator(selector)).toHaveCSS('color','rgb(255, 255, 255)');
+  }
+  mkdirSync('artifacts/steel-paint-red-ui',{recursive:true});
+  await page.screenshot({path:'artifacts/steel-paint-red-ui/racing-red-controls.png'});
   await page.keyboard.press('Space'); await page.keyboard.press('h');
   await page.screenshot({ path: 'artifacts/vehicle-upgrade/racing-desktop.png' });
   await waitForPhase(page, 'results'); expect(errors).toEqual([]);
