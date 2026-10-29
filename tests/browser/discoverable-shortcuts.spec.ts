@@ -1,3 +1,4 @@
+import { circuits } from '../../src/content/circuits';
 import { test, expect } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 mkdirSync('artifacts/higher-hop', { recursive: true });
@@ -6,7 +7,7 @@ for (const viewport of [{ width: 844, height: 390 }, { width: 390, height: 844 }
   test(`circuit selection omits feature notes and accepts hidden branches at ${viewport.width}x${viewport.height}`, async ({ page }) => {
     await page.setViewportSize(viewport); await page.goto('/');
     await page.getByRole('button', { name: 'Time Trial', exact: true }).click();
-    await expect(page.locator('.circuit-card')).toHaveCount(6);
+    await expect(page.locator('.circuit-card')).toHaveCount(circuits.length);
     await expect(page.locator('.circuit-card small,.circuit-description')).toHaveCount(0);
     for (const name of ['Newport Island', 'Launchsite', 'Golden Gate', 'Santa Monica', 'Grand Canyon']) {
       const card = page.getByRole('button', { name: `${name} circuit`, exact: true });

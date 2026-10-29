@@ -34,7 +34,8 @@ export function trailRockColor(x: number, y: number, z: number, top: number): Rg
   c = mix(c, shadow, 0.2 * seam + channel * 0.42);
   c = mix(c, cap, smoothstep(top - 0.7, top + 0.02, y) * 0.7);
   c = mix(c, hex(art.dust), (1 - smoothstep(art.floor, art.floor + 1.1, y)) * 0.35);
-  return scale(c, grain);
+  const mineralWash=.96+.055*fbm2(x/17+y*.025,z/17,3,621);
+  return scale(c, grain*mineralWash);
 }
 
 /** Rough visual rims over the authored supports; narrow landing edges stay inside support. */
@@ -98,7 +99,8 @@ export function canyonBankGeometry(trails: readonly CanyonTrail[]) {
         const taper = (1 - f) ** 0.85;
         const profile = taper * (1 - p.erosion * erosion * Math.sin(Math.PI * f)) + Math.sin(Math.PI * f) * 0.012 * shelf;
         const x = lerp(p.x, p.foot.x, profile), z = lerp(p.z, p.foot.z, profile);
-        row.push(part.vertex(x, y, z, trailRockColor(x, y, z, top)));
+        // A grounded foot and lighter weathered crown tie hillsides into the canyon floor.
+        row.push(part.vertex(x, y, z, scale(trailRockColor(x, y, z, top),.88+.12*f)));
       }
       rows.push(row);
     }

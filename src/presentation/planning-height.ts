@@ -1,9 +1,10 @@
 import { jumpCoordinates } from '../core/support';
 import type { Point, TrackDefinition } from '../core/types';
-import { locateRoad } from '../core/elevation';
+import { locateRoad,terrainElevation } from '../core/elevation';
 
 /** Planning guide across the opening, never a physical supporting surface. */
 export function planningHeight(p: Point, track: TrackDefinition) {
+  if(track.terrain)return p.y??terrainElevation(p,track);
   if(track.sections)return p.y??locateRoad(p,track).height;
   for (const j of track.jumps ?? []) {
     const c = jumpCoordinates(p, j);

@@ -37,7 +37,7 @@ test('CPU lifts during a slide and releases its recovery cap once aligned',()=>{
   s.slipAngle=0;s.lineError=0;expect(computerPaceLimit(race,1)).toBe(Infinity);
 });
 
-test.each(circuits)('$id computer plans are safe, deterministic and finish six laps',({track})=>{
+for(const{id,track}of circuits)test(`${id} computer plans are safe, deterministic and finish six laps`,()=>{
   const medians:number[]=[];
   for(const difficulty of ['easy','normal','hard'] as Difficulty[]){
     const routes=[0,1,2].map(i=>computerRoute(track,difficulty,i,71));
@@ -52,17 +52,20 @@ test.each(circuits)('$id computer plans are safe, deterministic and finish six l
     }).sort((a,b)=>a-b);
     medians.push(times[1]);
 
-    expect(routes.filter(r=>r.jumps?.length).length).toBe(track.sections?3:track.jumps?.length?(difficulty==='easy'?0:difficulty==='normal'?1:2):0);
+    expect(routes.filter(r=>r.jumps?.length).length).toBe(track.sections||track.jumps?.some(j=>j.mandatory)?3:track.jumps?.length?(difficulty==='easy'?0:difficulty==='normal'?1:2):0);
   }
   expect(medians[0]).toBeGreaterThan(medians[1]);expect(medians[1]).toBeGreaterThan(medians[2]);
-}, 180000);
+// Nine six-lap races on the alpine heightfield are bounded by simulation ticks;
+// give shared test hosts enough wall time without weakening any driving checks.
+}, track.terrain ? 360000 : 180000);
 
 test.each(circuits)('$id computer contact and thrust share the human simulation',({track})=>{
   const routes=[0,0,1,2].map(i=>computerRoute(track,'normal',i,92)),race=new LocalRace(routes,track,2);
   for(let tick=0;tick<24000&&!race.finished;tick++){if(tick%300===0)race.pressThrust(0);stepComputers(race,'normal');race.step();}
   expect(race.finished).toBe(true);expect(race.racers.slice(1).some(r=>r.state.thrustCount>0)).toBe(true);
   expect(race.racers.every(r=>Number.isFinite(r.state.finishTime))).toBe(true);
-});
+// Completion is bounded by simulation ticks; shared-host speed is not the assertion.
+},90000);
 
 test('recorded human commands and CPU decisions are identical across render rates',()=>{
   const track=circuits[0].track,routes=[0,0,1,2].map(i=>computerRoute(track,'normal',i,502));

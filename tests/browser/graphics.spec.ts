@@ -51,7 +51,7 @@ test('every venue loads its real sky and surface detail on Ultra without errors'
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
   mkdirSync('artifacts/graphics', { recursive: true });
-  for (const [circuit, sky] of [['coastal-launch', 'sky-sky'], ['orbital-launchyard', 'sky-dawn'], ['golden-gate', 'sky-sky'], ['santa-monica', 'sky-sunset'], ['grand-canyon', 'sky-dawn'], ['la-nights', 'sky-night']]) {
+  for (const [circuit, sky] of [['coastal-launch', 'sky-sky'], ['orbital-launchyard', 'sky-dawn'], ['golden-gate', 'sky-sky'], ['santa-monica', 'sky-sunset'], ['grand-canyon', 'sky-dawn'], ['la-nights', 'sky-night'], ['snowy-tahoe', 'sky-sky']]) {
     await page.goto(`/?circuit=${circuit}&graphics=ultra`); await ready(page);
     const g = await graphics(page);
     expect(g.graphicsLevel).toBe('ultra'); expect(g.sky).toBe(sky); expect(g.shadowMapSize).toBe(4096);

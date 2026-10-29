@@ -1,3 +1,4 @@
+import { circuits } from '../../src/content/circuits';
 import { test, expect, type Page } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { createTournament, finalizeRound } from '../../src/core/tournament';
@@ -22,8 +23,8 @@ async function drawAndRace(page: Page, count = 2) {
   await waitForPhase(page, 'racing');
   await page.keyboard.press('KeyA'); await page.keyboard.press('KeyL');
 }
-test('Full Tour scores all six circuits, survives refresh and ends with a championship', async ({ page }) => {
-  test.setTimeout(420000);
+test('Full Tour scores all registered circuits, survives refresh and ends with a championship', async ({ page }) => {
+  test.setTimeout(540000);
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
   await page.goto('/?circuit=golden-gate');
   await page.getByRole('button', { name: 'Multiplayer', exact: false }).click();
@@ -33,9 +34,9 @@ test('Full Tour scores all six circuits, survives refresh and ends with a champi
   await page.screenshot({ path: 'artifacts/golden-gate/tournament-setup.png' });
   await page.getByRole('button', { name: 'Start tournament', exact: false }).click();
   const reports = [];
-  for (let round = 0; round < 6; round++) {
+  for (let round = 0; round < circuits.length; round++) {
     const intro = await state(page); expect(intro.roundIndex).toBe(round); expect(intro.confirmedCount).toBe(0);
-    expect(intro.circuitId).toBe(['coastal-launch', 'orbital-launchyard', 'golden-gate', 'santa-monica', 'grand-canyon', 'la-nights'][round]);
+    expect(intro.circuitId).toBe(circuits[round].id);
     await drawAndRace(page, 4);
     if (round === 2) {
       await page.waitForTimeout(350); await page.screenshot({ path: 'artifacts/golden-gate/thrust-race.png' });
@@ -50,7 +51,7 @@ test('Full Tour scores all six circuits, survives refresh and ends with a champi
       expect((await state(page)).tournament.results).toHaveLength(1);
       await page.reload(); await page.getByRole('button', { name: 'Resume tournament', exact: false }).click();
       expect((await state(page)).confirmedCount).toBe(0);
-    } else if (round < 5) await page.getByRole('button', { name: 'Next race', exact: false }).click();
+    } else if (round < circuits.length - 1) await page.getByRole('button', { name: 'Next race', exact: false }).click();
   }
   await expect(page.locator('#panel .eyebrow')).toHaveText('TOURNAMENT COMPLETE');
   await expect(page.locator('.championship-table tbody tr')).toHaveCount(4);
@@ -58,7 +59,7 @@ test('Full Tour scores all six circuits, survives refresh and ends with a champi
   expect(reports.some((r: any) => r.contactCount > 0)).toBe(true);
   expect(errors).toEqual([]); writeFileSync('artifacts/golden-gate/tournament-report.json', JSON.stringify({ reports, errors }, null, 2));
   await page.reload(); await page.getByRole('button', { name: 'Resume tournament', exact: false }).click();
-  await expect(page.locator('#panel .eyebrow')).toHaveText('TOURNAMENT COMPLETE'); expect((await state(page)).tournament.results).toHaveLength(6);
+  await expect(page.locator('#panel .eyebrow')).toHaveText('TOURNAMENT COMPLETE'); expect((await state(page)).tournament.results).toHaveLength(circuits.length);
   await page.getByRole('button', { name: 'Race tournament again', exact: false }).click(); expect((await state(page)).tournament.results).toHaveLength(0);
 });
 test('custom schedule supports repeated circuits, 12 races, reorder, save/exit and discard', async ({ page }) => {

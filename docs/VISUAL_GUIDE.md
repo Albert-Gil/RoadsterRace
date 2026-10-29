@@ -16,7 +16,7 @@ The October 21 upgrade adds a RoadsterLAB-derived car, a miniature coastal venue
 | Optional model/textures | `src/presentation/assets.ts` | Fallback, scale, attribution, transfer size |
 | Sound recordings | `src/presentation/audio-assets.ts` | Unlock, mix, pause, synthesis fallback |
 
-Coastal Day combines graphite/crimson menus, sunny coastal scenery and a crimson solo car. Graphite (`?theme=graphite`, or T in development) changes branding, heading typography, palette, materials and lighting. Both use the same pace colors. Driver-selected paint remains stable across presets. Local Barlow fonts retain system fallbacks.
+Coastal Day combines graphite/crimson menus, sunny coastal scenery and a stainless-steel-gray default car. Graphite (`?theme=graphite`, or T in development) changes branding, heading typography, palette, materials and lighting. Both use the same pace colors and steel default. Driver-selected paint remains stable across presets. Local Barlow fonts retain system fallbacks.
 
 ## Racing lines
 
@@ -32,12 +32,12 @@ Earlier plans stay hidden during sequential drawing. Numbered cars/pads and dist
 
 ## Vehicle contract
 
-`roadster-geometry.js` contains a self-contained adaptation of the user's MIT-licensed RoadsterLAB scene. `tools/port-roadster.mjs` reproduces the extraction; only that development script needs the reference project. The source project stays untouched. Retain `public/licenses/RoadsterLAB.txt`.
+`roadster-geometry.js` contains a self-contained, hand-refined adaptation of the user's MIT-licensed RoadsterLAB scene. `tools/port-roadster.mjs` extracts the upstream version into `artifacts/roadster-upstream/` for comparison, preserving the curated shipped geometry; only that development script needs the reference project. The source project stays untouched. Retain `public/licenses/RoadsterLAB.txt`.
 
 - Game axes: Y up, +Z forward, +X right. The root is centered at ground level; scene placement adds road elevation.
 - Gameplay capsule: 2.2 m wide, 5.2 m long. These are game dimensions, not manufacturer specifications.
 - Source axes: +X forward, +Z right. The adapter swaps X/Z, transforms normals/winding, and scales by `2.2 / 2.0201642066907674`.
-- Racing detail: **9,802 triangles**; showcase: **43,360 triangles**. One definition supplies both. Racing geometry and common materials are shared; paint/brake lights remain independent.
+- Racing detail: **9,856 triangles**; showcase: **42,988 triangles**. One definition supplies both. Racing geometry and common materials are shared; paint/brake lights remain independent.
 - Geometry `mounts` supplies wheel pivots. Front pivots steer; wheel meshes rotate around local X. A sprung-body transform adds visual lean/pitch without changing physics.
 - `vehicleAttachments` in `vehicle.ts` documents rear outlets at X ±0.51/±0.185, Y 0.60, Z −2.36. Plumes extend backward.
 - Brake lights follow deceleration, dust follows physical sand, and skid marks follow asphalt slip. Effect pools are bounded. Reduced motion suppresses extra animation.
@@ -102,3 +102,36 @@ Use `tools/capture-drawing-layout.mjs before|after` for matching 844×390 Launch
 `sunsetAppearance`, `sceneryPalettes.sunset` and `sceneryLighting.sunset` in `themes.ts` centralize the beach, pier, amusement and lighting palette. `content/santa-monica-art.ts` owns building placements; `presentation/santa-monica.ts` builds original geometry. Wheel/train meshes explicitly opt out of static batching. Decorative motion freezes under reduced motion. The visible pier slabs use the core's support polygons, while ramp/landing poses follow simulation height. `planning-height.ts` is a drawing guide only; it cannot support a car. See `SANTA_MONICA.md` for the complete boundaries and replacement guide.
 
 Ghost color/opacity live in `ghostAppearance` in themes.ts. Ghost replay remains separate from vehicle physics and particle/audio effects. See `PHONE_AND_MODES.md` for the revised framing and mode contracts.
+
+## Snowy Tahoe and venue refinement — 2026-10-28
+
+For current v5 see `TAHOE_GROUNDING_UPGRADE.md`; v4 is recorded in `TAHOE_SKI_UPGRADE.md`: the regular summit ski crest, a rental
+chalet and rescue hut, ski racks/bindings, warm lanterns, sled and chairlift skis.
+The snowfall mesh now contains 1,050 course-focused flakes and 48 low-opacity
+powder wisps. Shared materials and one weather mesh preserve batching; reduced
+motion hides weather and freezes the lift. These visuals never change traction.
+
+The underlying v3 mountain climbs 60 m, with a peak 90% ascent and 67% descent.
+The authoritative heightfield supplies physical support and the visible mountain.
+Its road skins sample height across their full width; hidden substrate is recessed
+under the skins to prevent intersecting triangles. The terrain camera uses the
+centrally configured narrower lens, checks all azimuths for occlusion, and caches
+the selected fixed view for each usable rectangle. See `TAHOE_MOUNTAIN_UPGRADE.md`.
+
+The seventh venue uses `sceneryPalettes.alpine`, `sceneryLighting.alpine`, `venueSkies.alpine`, `surfaceFinishes.alpine` and `snowyTahoeAppearance` in themes.ts. The packed trail and ruts remain matte; snow hills, fir caps, timber, warm lodge windows and the lake have separate editable roles. `presentation/tahoe.ts` owns native scenery and placement; `tahoe-forest.ts` lazily produces one vertex-coloured forest mesh after the first frame. Readiness includes this work; a flat base remains usable if optional detail cannot load.
+
+The low forest bank and granite ends follow authored collision footprints. The timber obstacle stays physical and unmarked. Loose firs leave the road/branch corridor and overview sight lines clear. The existing six venues receive native details from `venue-refinements.ts`; shared materials preserve batching. Canyon mineral colors and LA facade/reflection adjustments are presentation only. See `SNOWY_TAHOE.md` and `SNOWY_TAHOE_TEST_REPORT.md`. Current widths, gates and physics are listed in CURRENT_RULES.md; older milestone sections above describe their historic versions.
+
+### Snowy Tahoe v2: terrain and moving alpine details
+
+`core/tracks/tahoe-terrain.ts` authors the physical road profile, shoreline and continuous ground grid; `core/terrain.ts` and `core/elevation.ts` sample it. Never sculpt a separate visual road height or let a theme change that terrain. The lodge district and Hop lane remain level; uphill/downhill roads preserve horizontal force rules. `terrainAnchor` resolves level building and rock foundations against the authored mountain.
+
+`tahoe-details.ts` creates original chalets, terraces, snow equipment, lift structures and one moving chair mesh. `tahoe-weather.ts` uses one bounded billboard mesh for gusting snowfall. Both freeze/hide motion under reduced motion, and the snowfall material explicitly stays out of the geometry buffer. Their colors, snow settings and lift speed live in `snowyTahoeAppearance`. Terrain, forest and obstacles retain authoritative elevations and deliberate road clearance; distant scenery is excluded from camera fitting.
+
+### Snowy Tahoe v5: surface contact and snow rolls
+
+Three main-road snow takeoffs replace the single-crest layout. Four-tyre fitting applies grounded pitch/roll and small visual suspension; rendered-surface triangles drive native height queries and the bounded contact shadow. Ghosts, tire marks and exhaust share the visible slope. Groomer traces make steep gradients legible using existing batched materials. Flight elevation stays physical. See TAHOE_GROUNDING_UPGRADE.md.
+
+## Capitan Yosemite
+
+The eighth biome uses yosemiteAppearance, sceneryPalettes.yosemite, sceneryLighting.yosemite, venueSkies.yosemite and sceneryFinishes.yosemite. Native terrain, granite and forest are built in the lazy yosemite-landscape chunk; the visible road, shoulders and car contact shadows share exact rendered-surface samples. All physical support and obstacles come from the core track. Water flow and bounded mist are presentation only and respect reduced motion. See CAPITAN_YOSEMITE.md.

@@ -6,6 +6,7 @@ import { RULES, sampleSurface } from './simulation';
 import type { CompiledRoute, TrackDefinition } from './types';
 import type { Difficulty } from './session';
 import type { LocalRace } from './local-race';
+import { trackSurface } from './surfaces';
 
 export const AI_TUNING = { easy: 0.90, normal: 0.97, hard: 1 } as const;
 export const AI_DRIVING = Object.freeze({ decisionTicks: 12, cornerGripShare: 0.64, brakingShare: 0.65, responseSeconds: 0.45, followingSeconds: 0.65, trafficRange: 32, minimumGap: 2.5 });
@@ -25,8 +26,10 @@ export function computerRoute(track: TrackDefinition, difficulty: Difficulty, op
   if(!safe(result)) result=compileRoute(createPracticeSamples(track,7,false),track);
   if(!result.ok || result.route.hazards?.length)throw new Error(`No safe computer plan for ${track.name}`);
   const route=result.route, factor=AI_TUNING[difficulty]*(0.99+opponent*0.01);
-  route.points.forEach(p=>{p.desiredSpeed=clamp(Math.sqrt((track.surface==='packed-dirt'?RULES.dirtGrip:RULES.asphaltGrip)*AI_DRIVING.cornerGripShare/Math.max(0.008,Math.abs(p.curvature)))*factor,PACE_RANGE.min,Math.min(PACE_RANGE.max,PACE_RANGE.max*factor));});
+  route.points.forEach(p=>{p.desiredSpeed=clamp(Math.sqrt(trackSurface(track).grip*AI_DRIVING.cornerGripShare/Math.max(0.008,Math.abs(p.curvature)))*factor,PACE_RANGE.min,Math.min(PACE_RANGE.max,PACE_RANGE.max*factor));});
   if(track.sections)for(const p of route.points)for(const j of track.jumps??[])if(j.kind==='crest'&&p.courseProgress!>=j.entryProgress&&p.courseProgress!<=j.exitProgress)p.desiredSpeed=Math.max(22,p.desiredSpeed);
+  // No braking in flight: arrive at a ski crest with the landing bend already planned.
+  for(const p of route.points)for(const j of track.terrainTakeoffs??[])if(p.courseProgress!>=j.progress-12&&p.courseProgress!<=j.progress+48)p.desiredSpeed=Math.min(p.desiredSpeed,j.planningSpeed*factor);
   // Work around the seam too: braking for turn one starts on the previous lap.
   const count=route.points.length-1;
   for(let pass=0;pass<3;pass++)for(let i=count-1;i>=0;i--){
@@ -45,7 +48,8 @@ export function computerTraffic(race: LocalRace, player: number): {gap:number;sp
   let nearest: {gap:number;speed:number}|null=null;
   race.racers.forEach((r,i)=>{
     const o=r.state;
-    if(i===player||o.finished||o.recoveryWaiting||o.time<o.recoveringUntil||Math.abs(o.elevation-s.elevation)>1.2)return;
+    const sameHillside=race.track.terrain&&s.movement==='grounded'&&o.movement==='grounded';
+    if(i===player||o.finished||o.recoveryWaiting||o.time<o.recoveringUntil||(!sameHillside&&Math.abs(o.elevation-s.elevation)>1.2))return;
     const x=o.position.x-s.position.x,z=o.position.z-s.position.z,along=x*forward.x+z*forward.z,across=x*forward.z-z*forward.x;
     if(along<=0||along>AI_DRIVING.trafficRange||Math.abs(across)>race.track.carWidth*1.15)return;
     const gap=Math.max(0,along-race.track.carLength),speed=Math.max(0,o.velocity.x*forward.x+o.velocity.z*forward.z);

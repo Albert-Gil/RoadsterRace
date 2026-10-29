@@ -60,10 +60,11 @@ test.each([false,true,'backlot-alley'])('six laps finish on branch %s',branch=>{
  }
  expect(sim.state.finished,JSON.stringify(sim.state)).toBe(true);expect(sim.state.lapTimes).toHaveLength(6);
  expect(sim.state.recoveryCount).toBe(0);if(branch==='backlot-alley')expect(sim.state.hopCount).toBe(6);
-},30000);
-test('new Full Tours append LA nights without changing an existing saved schedule',()=>{
+},90000);
+test('new Full Tours include all registered venues without changing an existing saved schedule',()=>{
  const rounds=circuits.map(c=>({circuitId:c.id,trackVersion:c.track.version}));
  const old=createTournament(rounds.slice(0,-1),2,1);
  const fresh=createTournament(rounds,2,1);
- expect(old.rounds).toHaveLength(5);expect(fresh.rounds).toHaveLength(6);expect(fresh.rounds.at(-1)?.circuitId).toBe('la-nights');
+ expect(old.rounds).toEqual(rounds.slice(0,-1));expect(fresh.rounds).toEqual(rounds);
+ expect(fresh.rounds.at(-1)?.circuitId).toBe(circuits.at(-1)!.id);
 });

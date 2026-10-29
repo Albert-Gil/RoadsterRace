@@ -4,9 +4,11 @@ import { orbitalTrack } from '../core/tracks/orbital';
 import { santaMonicaTrack } from '../core/tracks/santa-monica';
 import { grandCanyonTrack } from '../core/tracks/grand-canyon';
 import { laNightsTrack } from '../core/tracks/la-nights';
+import { snowyTahoeTrack } from '../core/tracks/snowy-tahoe';
+import { yosemiteTrack } from '../core/tracks/yosemite';
 import type { TrackDefinition } from '../core/types';
 
-export type SceneryId = 'coastal' | 'spaceport' | 'bay' | 'sunset' | 'canyon' | 'night-city';
+export type SceneryId = 'coastal' | 'spaceport' | 'bay' | 'sunset' | 'canyon' | 'night-city' | 'alpine' | 'yosemite';
 export interface CircuitDefinition {
   id: string;
   number: string;
@@ -36,10 +38,14 @@ export const circuits: readonly CircuitDefinition[] = [
   { id: laNightsTrack.id, number: '06', scenery: 'night-city', track: laNightsTrack, difficulty: 'EXPERT / 4',
     tagline: 'Own the night.', description: 'Downtown boulevards, an industrial water crossing and a hidden backlot alley.',
     features: [`${Math.round(laNightsTrack.length)} m`] },
+  { id: snowyTahoeTrack.id, number: '07', scenery: 'alpine', track: snowyTahoeTrack, difficulty: 'SPORT / 3',
+    tagline:'Find your winter line.',description:'Packed-snow forest sweepers above an alpine lake.',features:[`${Math.round(snowyTahoeTrack.length)} m`] },
+  { id: yosemiteTrack.id, number:'08', scenery:'yosemite',track:yosemiteTrack,difficulty:'SPORT / 3',
+    tagline:'Into the granite valley.',description:'Forest trails, granite foothills and an automatic creek crossing.',features:[`${Math.round(yosemiteTrack.length)} m`] },
 ];
 export const defaultCircuit = circuits[0];
 /** Player-facing names that differ from the legacy IDs kept for saved preferences and links. */
-const circuitAliases: Record<string, string> = { launchsite: 'orbital-launchyard', newport: 'coastal-launch', 'newport-island': 'coastal-launch' };
+const circuitAliases: Record<string, string> = { launchsite: 'orbital-launchyard', newport: 'coastal-launch', 'newport-island': 'coastal-launch', tahoe:'snowy-tahoe', 'lake-tahoe':'snowy-tahoe',yosemite:'capitan-yosemite','el-capitan':'capitan-yosemite' };
 export const findCircuit = (id: unknown) => circuits.find(circuit => circuit.id === (typeof id === 'string' && circuitAliases[id] || id)) ?? defaultCircuit;
 
 /** Original selection-card silhouette drawn from the actual physical centerline. */

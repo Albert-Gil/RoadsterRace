@@ -8,7 +8,7 @@ Conventions: SI units; horizontal plane (x, z) with y up; heading 0 points along
 
 | Item | Version |
 |---|---:|
-| Vehicle rules (`RULES.version`) | 15 |
+| Vehicle rules (`RULES.version`) | 16 |
 | Route compiler (`COMPILER_VERSION`) | 16 |
 | Newport Island track (`coastal-launch`) | 6 |
 | Launchsite track (`orbital-launchyard`) | 9 |
@@ -16,6 +16,8 @@ Conventions: SI units; horizontal plane (x, z) with y up; heading 0 points along
 | Santa Monica track (`santa-monica`) | 3 |
 | Grand Canyon track (`grand-canyon`) | 5 |
 | LA nights track (`la-nights`) | 4 |
+| Snowy Tahoe track (`snowy-tahoe`) | 5 |
+| Capitan Yosemite track (`capitan-yosemite`) | 1 |
 
 Records, ghosts, session bests and championships are scoped by these versions. Change a version whenever a value below changes race results.
 
@@ -29,14 +31,31 @@ Records, ghosts, session bests and championships are scoped by these versions. C
 | Santa Monica | `santa-monica` | 3 | 16 | 660.7 | 105 | ramp `pacific-hop` |
 | Grand Canyon | `grand-canyon` | 5 | 16 | 595.0 | 43 | crest `canyon-crest`, hop lane `mesa-service-trail` |
 | LA nights | `la-nights` | 4 | 16 | 734.0 | 12 | ramp `channel-crossing`, hop lane `backlot-alley` |
+| Snowy Tahoe | `snowy-tahoe` | 5 | 16 | 554.8 | 17 | hop lane `forestry-trail` |
+| Capitan Yosemite | `capitan-yosemite` | 1 | 16 | 711.2 | 11 | crest `valley-creek-crest`, hop lane `ranger-timber-trail` |
 
 Vehicle envelope: 2.2 m × 5.2 m. Race distance: 1–6 laps (default 2). Championship points by place: 10 / 6 / 4 / 0.
+
+Continuous terrain is authoritative for drawing, cars, runoff and rendering. Slopes change elevation/pitch, not horizontal acceleration. Weather is presentation only.
+
+| Circuit | Road elevation (m) | Ground grid cell (m) |
+|---|---:|---:|
+| Snowy Tahoe | 0–60.8 | 3 |
+| Capitan Yosemite | 0–28 | 4 |
+
+Main-road ski crests keep continuous terrain support and use automatic-flight gravity. They are not branches, ramps or water exemptions; takeoff is forward-only and does not stack with manual Hop.
+
+| Circuit | Main-road takeoff | Station (m) | Width (m) | Upward velocity (m/s) | Minimum forward speed (m/s) | CPU reference pace (m/s) |
+|---|---|---:|---:|---|---:|---:|
+| Snowy Tahoe | `summit-ski-crest` | 364 | 16 | 8 + forward speed × 0.1 | 6 | 24 |
+| Snowy Tahoe | `valley-snow-roll` | 36 | 16 | 5.5 + forward speed × 0.08 | 6 | 21 |
+| Snowy Tahoe | `lakeside-snow-roll` | 146 | 16 | 5.5 + forward speed × 0.08 | 6 | 21 |
 
 ## RULES
 
 | Key | Value | Unit | Meaning |
 |---|---:|---|---|
-| `version` | 15 | — | Vehicle rules version; stored with records and championships |
+| `version` | 16 | — | Vehicle rules version; stored with records and championships |
 | `dt` | 0.0166667 | s | Fixed simulation step (two equal substeps per step) |
 | `laps` | 2 | laps | Default race distance |
 | `acceleration` | 6 | m/s² | Maximum pace-following acceleration |
@@ -58,6 +77,9 @@ Vehicle envelope: 2.2 m × 5.2 m. Race distance: 1–6 laps (default 2). Champio
 | `asphaltResponse` | 7.5 | 1/s | Velocity alignment gain per radian of slip on asphalt |
 | `sandResponse` | 1.8 | 1/s | Velocity alignment gain per radian of slip on sand |
 | `sandDrag` | 0.95 | 1/s | Exponential speed decay at full sand contact |
+| `snowGrip` | 26.4 | m/s² | Packed-snow lateral grip, 55% of asphalt and below packed dirt |
+| `snowLooseGrip` | 7.5 | m/s² | Deep-powder lateral grip outside the packed lane |
+| `snowDrag` | 1.1 | 1/s | Exponential speed decay at full deep-powder contact |
 | `steeringResponse` | 4.8 | 1/s | Yaw-rate gain per radian of heading error |
 | `steeringRate` | 2.8 (160.428°/s) | rad/s | Largest commanded yaw rate |
 | `steeringSmoothing` | 7 | 1/s | First-order yaw-rate smoothing |

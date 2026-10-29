@@ -5,9 +5,10 @@ import { DEFAULT_LAPS, validateLapCount } from './race-options';
 import { RULES } from './rules';
 import { createContactLog, stepRacers } from './stepping';
 import type { CompiledRoute, Point, RaceEvent, RaceState, TrackDefinition } from './types';
-import { branchProjection, flightGravity, FLIGHT_RULES, groundHeight, jumpCoordinates, rampAt, supported, takeoffCrossing, vehicleSupported } from './support';
+import { branchProjection, flightGravity, FLIGHT_RULES, groundHeight, jumpCoordinates, rampAt, supported, takeoffCrossing,terrainTakeoffCrossing, vehicleSupported } from './support';
 import { locateRoad, roadPoint } from './elevation';
 import { permittedHopBarriers } from './hop-shortcuts';
+import { trackSurface } from './surfaces';
 
 export { RULES };
 
@@ -24,7 +25,8 @@ export function sampleSurface(position: Point, track: TrackDefinition) {
   const branch = track.sections ? undefined : branchProjection(position, track); if (branch && branch.distance < road.distance) road.distance = branch.distance;
   const edge = (track.roadWidth - track.carWidth) / 2;
   const sandAmount = clamp((road.distance - edge) / RULES.surfaceTransition, 0, 1);
-  return { sandAmount, grip: lerp(track.surface==='packed-dirt'?RULES.dirtGrip:RULES.asphaltGrip, RULES.sandGrip, sandAmount), response: lerp(RULES.asphaltResponse, RULES.sandResponse, sandAmount) };
+  const profile = trackSurface(track);
+  return { sandAmount, grip: lerp(profile.grip, profile.looseGrip, sandAmount), response: lerp(RULES.asphaltResponse, RULES.sandResponse, sandAmount), drag: profile.drag, surface: sandAmount > .25 ? profile.loose : profile.road };
 }
 
 export class RaceSimulation {
@@ -151,7 +153,7 @@ export class RaceSimulation {
       this.events.push({ type: 'thrust', time: now });
     }
     this.queuedThrust = false;
-    if(this.track.sections){s.position=roadPoint(s.position,this.track,sampleRoute(this.route,s.distance).courseProgress);s.supportSectionId=s.position.sectionId;}
+    if(this.track.sections||this.track.terrain){s.position=roadPoint(s.position,this.track,sampleRoute(this.route,s.distance).courseProgress);s.supportSectionId=s.position.sectionId;}
     const hopRamp = this.queuedHop ? rampAt(s.position, this.track) : undefined;
     const groundedSupport = this.queuedHop && (vehicleSupported(s.position, s.heading, this.track) || !!hopRamp && supported(s.position, this.track)
       && Math.abs(jumpCoordinates(s.position, hopRamp).across) <= (hopRamp.width - this.track.carWidth) / 2);
@@ -167,7 +169,7 @@ export class RaceSimulation {
     this.queuedHop = false;
     if (s.movement === 'airborne') return this.integrateFlight(dt, now);
     const surface = sampleSurface(s.position, this.track);
-    s.sandAmount = surface.sandAmount; s.surface = surface.sandAmount > 0.25 ? 'sand' : this.track.surface==='packed-dirt'?'packed-dirt':'asphalt';
+    s.sandAmount = surface.sandAmount; s.surface = surface.surface;
     const guide = sampleRoute(this.route, s.distance);
     s.desiredSpeed += (Math.min(guide.desiredSpeed, this.paceLimit) - s.desiredSpeed) * (1 - Math.exp(-3 * dt));
     const error = s.desiredSpeed - s.speed;
@@ -198,7 +200,7 @@ export class RaceSimulation {
     const grip = lateralGrip(surface.grip, surface.response, s.speed, slip);
     const turnRate = clamp(slip * surface.response, -grip / Math.max(2, s.speed), grip / Math.max(2, s.speed));
     travelHeading += turnRate * dt;
-    let speed = Math.max(0, s.speed + s.acceleration * dt) * Math.exp(-RULES.sandDrag * surface.sandAmount * dt);
+    let speed = Math.max(0, s.speed + s.acceleration * dt) * Math.exp(-surface.drag * surface.sandAmount * dt);
     let vx = Math.sin(travelHeading) * speed, vz = Math.cos(travelHeading) * speed;
     if (now < s.thrustUntil) { vx += Math.sin(s.heading) * RULES.thrustAcceleration * dt; vz += Math.cos(s.heading) * RULES.thrustAcceleration * dt; }
     speed = Math.hypot(vx, vz);
@@ -218,6 +220,7 @@ export class RaceSimulation {
     }
     if (this.track.supports || this.track.sections) {
       const takeoff = takeoffCrossing(oldPosition, s.position, this.track);
+      const ski=terrainTakeoffCrossing(oldPosition,s.position,this.track);
       if (takeoff) {
         s.activeJump = takeoff.jump.id; this.invalidFlight = !this.route.jumps?.includes(takeoff.jump.id);
         s.flightOrigin = takeoff.jump.kind==='crest'?'crest':'ramp'; s.flightStartedAt = now + dt * takeoff.t;
@@ -228,6 +231,14 @@ export class RaceSimulation {
         s.verticalVelocity -= FLIGHT_RULES.gravity * remaining;
         s.acceleration = 0; s.drifting = false;
         this.events.push({ type: 'takeoff', time: now + dt * takeoff.t, point: { ...s.position } });
+      } else if(ski&&s.velocity.x*ski.launch.forward.x+s.velocity.z*ski.launch.forward.z>=ski.launch.minimumSpeed){
+        s.activeJump=null;this.invalidFlight=false;s.flightOrigin='ski';s.flightStartedAt=now+dt*ski.t;
+        this.assistFlight(RULES.flightLaunchCorrection);
+        s.movement='airborne';s.verticalVelocity=ski.launch.launchBoost+Math.max(0,s.velocity.x*ski.launch.forward.x+s.velocity.z*ski.launch.forward.z)*ski.launch.launchSlope;
+        const remaining=dt*(1-ski.t);
+        s.elevation=groundHeight(ski.point,this.track)+s.verticalVelocity*remaining-FLIGHT_RULES.gravity*remaining*remaining/2;
+        s.verticalVelocity-=FLIGHT_RULES.gravity*remaining;s.acceleration=0;s.drifting=false;
+        this.events.push({type:'takeoff',time:s.flightStartedAt,point:{...ski.point}});
       } else if (!supported(s.position, this.track)) {
         s.movement = 'airborne'; s.flightOrigin = 'fall'; s.flightStartedAt = now; s.activeJump = null; this.invalidFlight = true; s.verticalVelocity = 0; s.acceleration = 0;
       } else s.elevation = nextHeight;
@@ -278,9 +289,12 @@ export class RaceSimulation {
     if (s.flightOrigin === 'fall' || jump && !approved || !vehicleSupported(proposed, s.heading, this.track) && !approved) this.invalidFlight = true;
     const gravity = flightGravity(s.flightOrigin);
     let height = oldHeight + s.verticalVelocity * dt - gravity * dt * dt / 2;
-    const landingHeight = jump?.kind==='crest' ? jump.landingElevation! : groundHeight(proposed, this.track);
+    // A heightfield crest lands on its actual local terrain. The canyon overpass
+    // retains its explicit receiving level so it cannot land on the lower road.
+    const fixedLanding=jump?.kind==='crest'&&!this.track.terrain;
+    const landingHeight = fixedLanding ? jump.landingElevation! : groundHeight(proposed, this.track);
     // Check the support at the actual crossing, not merely at the end of the step.
-    const oldGround = jump?.kind==='crest' ? jump.landingElevation! : groundHeight(old, this.track);
+    const oldGround = fixedLanding ? jump.landingElevation! : groundHeight(old, this.track);
     const crossing = oldHeight >= oldGround && height <= landingHeight && (s.verticalVelocity - gravity * dt < 0 || landingHeight > oldGround);
     const fraction = crossing ? clamp((oldHeight - oldGround) / Math.max(1e-9, oldHeight - oldGround - height + landingHeight), 0, 1) : 1;
     const at = this.track.sections ? roadPoint({x:lerp(old.x,proposed.x,fraction),z:lerp(old.z,proposed.z,fraction)},this.track,proposed.courseProgress) : { x: lerp(old.x, proposed.x, fraction), z: lerp(old.z, proposed.z, fraction) };
@@ -311,7 +325,7 @@ export class RaceSimulation {
   }
   /** Credit only final physical movement, after every contact has been resolved. */
   commitMotion(oldPosition: Point, dt: number, now: number, motionBudget = distance(oldPosition, this.state.position)) {
-    const s = this.state; if(this.track.sections){s.position=roadPoint(s.position,this.track,sampleRoute(this.route,s.distance).courseProgress);s.supportSectionId=s.position.sectionId;} const surface = sampleSurface(s.position, this.track);
+    const s = this.state; if(this.track.sections||this.track.terrain){s.position=roadPoint(s.position,this.track,sampleRoute(this.route,s.distance).courseProgress);s.supportSectionId=s.position.sectionId;} const surface = sampleSurface(s.position, this.track);
     s.speed = Math.hypot(s.velocity.x, s.velocity.z);
     s.slipAngle = s.speed > 0.05 ? angleDelta(Math.atan2(s.velocity.x, s.velocity.z), s.heading) : 0;
     const wasDrifting = s.drifting;

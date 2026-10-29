@@ -111,7 +111,7 @@ export function blockedRouteSection(points: Point[], track: TrackDefinition, per
     for (let j = 0; j <= count; j++) {
       const p = mix(a, b, j / count);
       const approvedCrossing=track.sections&&track.jumps?.some(j=>j.kind==='crest'&&p.courseProgress!==undefined&&p.courseProgress>=j.entryProgress&&p.courseProgress<=j.exitProgress&&Math.abs((p.x-j.from.x)*j.forward.z-(p.z-j.from.z)*j.forward.x)<=(j.width-track.carWidth)/2);
-      if (barrierContact(p, heading, approvedCrossing?crossingPhysical:physical, 0.12, track.sections ? p.y??0 : 0)) return { point: p, section: [a, b] };
+      if (barrierContact(p, heading, approvedCrossing?crossingPhysical:physical, 0.12, (track.sections||track.terrain) ? p.y??0 : 0)) return { point: p, section: [a, b] };
     }
   }
   return null;
@@ -127,6 +127,6 @@ export function routeContacts(points: Point[], track: TrackDefinition, permitted
   return points.map((p, i) => {
     const a = points[Math.max(0, i - 1)], b = points[Math.min(points.length - 1, i + 1)], heading = Math.atan2(b.x - a.x, b.z - a.z);
     const approvedCrossing = track.sections && track.jumps?.some(j => j.kind === 'crest' && p.courseProgress !== undefined && p.courseProgress >= j.entryProgress && p.courseProgress <= j.exitProgress && Math.abs((p.x - j.from.x) * j.forward.z - (p.z - j.from.z) * j.forward.x) <= (j.width - track.carWidth) / 2);
-    return !!barrierContact(p, heading, approvedCrossing ? crossingPhysical : physical, 0, track.sections ? p.y ?? 0 : 0);
+    return !!barrierContact(p, heading, approvedCrossing ? crossingPhysical : physical, 0, (track.sections||track.terrain) ? p.y ?? 0 : 0);
   });
 }

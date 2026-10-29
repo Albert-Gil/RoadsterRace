@@ -1,3 +1,4 @@
+import { circuits } from '../../src/content/circuits';
 import { expect,test } from '@playwright/test';
 import { waitForPhase } from './ui';
 const state=(page:any)=>page.evaluate(()=>(window as any).__roadster.getState());
@@ -46,20 +47,20 @@ test('Time Trial stores lap replay, reloads it and keeps the ghost outside the c
   await page.getByRole('button',{name:'Best-lap ghost on',exact:true}).click();await expect(page.getByRole('button',{name:'Best-lap ghost off',exact:true})).toHaveAttribute('aria-pressed','false');
 });
 
-test('solo Full Tour scores all six venues and resumes controller types and difficulty',async({page})=>{
-  test.setTimeout(420000);
+test('solo Full Tour scores all registered venues and resumes controller types and difficulty',async({page})=>{
+  test.setTimeout(540000);
   // A recorded session seed makes collision-heavy tour regressions reproducible.
   await page.addInitScript(()=>{Math.random=()=>92/0x7fffffff;});
   await page.goto('/');await page.getByRole('button',{name:'Solo Race',exact:true}).click();
   await page.getByRole('button',{name:'Hard',exact:true}).click();await page.getByRole('button',{name:'1 lap',exact:true}).click();
   await page.getByRole('button',{name:'Tournament',exact:true}).click();await page.getByRole('button',{name:'Start tournament',exact:true}).click();
-  for(let round=0;round<6;round++){
+  for(let round=0;round<circuits.length;round++){
     console.log('Solo tour round',round+1,(await state(page)).circuitId);
     if(round===1){await page.reload();await page.getByRole('button',{name:'Resume tournament',exact:false}).click();const resumed=await state(page);expect(resumed.mode).toBe('solo-race');expect(resumed.difficulty).toBe('hard');expect(resumed.humanCount).toBe(1);}
     await page.getByRole('button',{name:'Draw your lines',exact:false}).click();await plan(page);await finish(page);
     const completed=await state(page);expect(completed.tournament.results.length).toBe(round+1);
     for(const f of completed.tournament.results[round].finishes)expect(completed.tournament.results[round].points[f.player]).toBe([10,6,4,0][f.rank-1]);
-    if(round<5)await page.getByRole('button',{name:'Next race',exact:false}).click();
+    if(round<circuits.length-1)await page.getByRole('button',{name:'Next race',exact:false}).click();
   }
   await expect(page.locator('#panel')).toContainText('TOURNAMENT COMPLETE');
 });

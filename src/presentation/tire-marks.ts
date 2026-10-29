@@ -3,13 +3,14 @@ import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
 import { VertexBuffer } from '@babylonjs/core/Buffers/buffer';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import type { Scene } from '@babylonjs/core/scene';
+import {sceneTuning}from'./themes';
 
 /** Bounded, presentation-only tire ribbons: one mesh and a fixed allocation per car. */
 export class TireMarks {
   private mesh: Mesh;
   private positions = new Float32Array(128 * 12);
   private cursor = 0;
-  private last?: { x: number; z: number; y?:number; heading: number; time: number };
+  private last?: { x: number; z: number; y?:number; heading: number; time: number;surfaceAt?:(x:number,z:number)=>number|undefined;trailLift?:number };
   constructor(scene: Scene) {
     this.mesh = new Mesh('tire-trails', scene);
     const data = new VertexData(); data.positions = this.positions; data.normals = Array.from({ length: 128 * 4 }, () => [0, 1, 0]).flat();
@@ -19,14 +20,14 @@ export class TireMarks {
   }
   setEnabled(enabled: boolean) { this.mesh.setEnabled(enabled); }
   clear() { this.positions.fill(0); this.mesh.updateVerticesData(VertexBuffer.PositionKind, this.positions, true); this.last = undefined; this.cursor = 0; }
-  update(pose: { x: number; z: number; y?:number; heading: number }, time: number, active: boolean) {
+  update(pose: { x: number; z: number; y?:number; heading: number;surfaceAt?:(x:number,z:number)=>number|undefined;trailLift?:number }, time: number, active: boolean) {
     if (this.last && time < this.last.time) this.clear();
     if (!active) { this.last = undefined; return; }
     const previous = this.last;
     if (previous && time - previous.time < 0.06) return;
     if (previous && time - previous.time < 0.25 && Math.hypot(pose.x - previous.x, pose.z - previous.z) < 5) {
       for (const side of [-1, 1]) {
-        const end = (p: typeof pose, offset: number) => [p.x + Math.cos(p.heading) * offset - Math.sin(p.heading) * 1.5, (p.y??0)+0.185, p.z - Math.sin(p.heading) * offset - Math.cos(p.heading) * 1.5];
+        const end = (p: typeof pose, offset: number) => {const x=p.x+Math.cos(p.heading)*offset-Math.sin(p.heading)*1.5,z=p.z-Math.sin(p.heading)*offset-Math.cos(p.heading)*1.5;return[x,(p.surfaceAt?.(x,z)??p.y??0)+(p.trailLift??sceneTuning.vehicle.tireMarkLift),z];};
         this.positions.set([...end(previous, side * 0.98 - 0.13), ...end(previous, side * 0.98 + 0.13), ...end(pose, side * 0.98 + 0.13), ...end(pose, side * 0.98 - 0.13)], this.cursor * 12);
         this.cursor = (this.cursor + 1) % 128;
       }

@@ -1,3 +1,4 @@
+import { circuits } from '../../src/content/circuits';
 import { test, expect } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { waitForPhase } from './ui';
@@ -7,7 +8,7 @@ const state=(page:import('@playwright/test').Page)=>page.evaluate(()=>(window as
 for(const viewport of [{width:844,height:390},{width:390,height:844}])test(`Grand Canyon mouse drawing selects the upper and lower road at ${viewport.width}x${viewport.height}`,async({page})=>{
  await page.setViewportSize(viewport);const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('/?circuit=grand-canyon');await page.getByRole('button',{name:'Time Trial',exact:true}).click();
- await expect(page.locator('.circuit-card')).toHaveCount(6);await page.getByRole('button',{name:'Draw racing line',exact:true}).click();
+ await expect(page.locator('.circuit-card')).toHaveCount(circuits.length);await page.getByRole('button',{name:'Draw racing line',exact:true}).click();
  await page.waitForFunction(()=>(window as any).__roadster.getGraphics().renderReady);
  await page.screenshot({path:`artifacts/grand-canyon/drawing-${viewport.width}.png`});
  const points=await page.evaluate(()=>{const g=(window as any).__roadster,t=g.getTrack();return t.centerline.filter((_:any,i:number)=>i%2===0||i===t.centerline.length-1).map((p:any)=>g.project(p));});

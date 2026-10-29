@@ -62,7 +62,7 @@ export function compileRoute(input: DrawSample[], track: TrackDefinition): Route
   if (trimmed.samples.some((p, i) => i > 0 && distance(trimmed.samples[i - 1], p) > track.roadWidth * DRAWING_RULES.longestStepRoadWidths)) return { ok: false, message: 'Part of your line is missing. Draw one continuous lap.', point: trimmed.samples[0] };
   let samples = compressDrawingPauses(trimmed.samples);
   if (samples.length < 12) return { ok: false, message: 'Draw all the way around the circuit.' };
-  if (track.sections) samples = annotateRoad(samples, track);
+  if (track.sections || track.terrain) samples = annotateRoad(samples, track);
   const rawDuration = samples.at(-1)!.time / 1000;
   const cleaned = cleanDrawnRoute(samples, track, true);
   // Erase corrections before resampling so their clocks cannot contaminate a retained segment.

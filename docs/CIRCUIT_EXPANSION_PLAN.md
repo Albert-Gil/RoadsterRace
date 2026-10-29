@@ -1,5 +1,16 @@
 # Circuit expansion plan
 
+## Current status — 2026-10-28
+
+Six venues are playable: Newport Island, Launchsite, Golden Gate, Santa Monica, Grand Canyon
+and LA nights. Rules are v15 and compiler v16. The proposed next sequence is existing-venue
+refinement, a Tahoe packed-snow circuit, then staged private online play; see
+[Tahoe and online roadmap](TAHOE_AND_ONLINE_ROADMAP.md). This is a discussion draft, not a
+new circuit/network implementation. The earlier milestone descriptions below are retained
+as planning history and do not describe the current number of playable courses.
+
+## Earlier expansion briefs
+
 Current milestone: **Coastal Launch, Launchsite and Golden Gate** are playable. Launchsite is the renamed Orbital course, with its legacy ID retained. Golden Gate follows the user-approved stylized Bay Area factory/bridge brief and replaces Alpine as the third delivered venue. Local tournaments span all three or a custom repeated schedule. Multiplayer cars now physically collide. See `GOLDEN_GATE_TOURNAMENT.md` for current behavior; earlier targets below remain planning history. Alpine and Neon Harbour are still future ideas.
 
 Historical status, October 21, 2026: the circuit-selection foundation and first **Orbital Launchyard** playable layout are implemented. Coastal Launch and Orbital are now selectable. Orbital has basic original spaceport scenery; it remains a layout/art prototype for playtesting. The briefs below retain the original targets. Alpine Relay and Neon Harbour remain planned.
@@ -100,3 +111,7 @@ The user liked these directions and requested that they be kept for later. This 
 - Racing liveries with stripes, numbers, wheel finishes and original sponsor artwork.
 
 Future implementations must retain the current protected-area, supported-surface, progression, collision, phone-layout and rules-versioning requirements. The older milestone notes above are historical; current manual-hop behavior is documented in `HEAVY_HOP.md`.
+
+## Snowy Tahoe — 2026-10-28
+
+The user authorized refinement of all existing circuits and a playable Lake Tahoe venue named **Snowy Tahoe**. It is registered seventh, with a 16 m packed-snow road climbing a 60 m mountain, alpine surroundings and an unmarked timber Hop trail. V4 adds lower snow grip, a natural automatic ski jump on the main summit road, rental/rescue chalets and denser gusting snowfall. The initial flat v1, subtle 12 m v2 and first mountain v3 are historical. Existing-circuit geometry and handling remain unchanged. See `TAHOE_SKI_UPGRADE.md` for current scope and verification. The online stages in `TAHOE_AND_ONLINE_ROADMAP.md` remain future proposals.

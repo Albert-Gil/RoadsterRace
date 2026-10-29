@@ -73,7 +73,7 @@ export class PostEffects {
    */
   private excludeOverlays() {
     const pre = this.scene.prePassRenderer; if (!pre) return;
-    const exclude = (material: Material) => { if (!material.isPrePassCapable && !pre.excludedMaterials.includes(material)) pre.excludedMaterials.push(material); };
+    const exclude = (material: Material) => { if ((!material.isPrePassCapable || material.metadata?.roadsterOverlay) && !pre.excludedMaterials.includes(material)) pre.excludedMaterials.push(material); };
     this.scene.materials.forEach(exclude);
     this.observers.push(this.scene.onNewMaterialAddedObservable.add(exclude));
     this.observers.push(this.scene.onMaterialRemovedObservable.add(material => { const i = pre.excludedMaterials.indexOf(material); if (i >= 0) pre.excludedMaterials.splice(i, 1); }));

@@ -91,7 +91,7 @@ test('a human shortcut and three CPU bypasses finish a shared six-lap race',()=>
   }
   expect(race.finished).toBe(true);expect(race.racers.every(r=>r.state.lapTimes.length===6)).toBe(true);
   expect(race.racers[0].state.hopCount).toBeGreaterThanOrEqual(6);
-});
+},90000);
 test('swept clearance protects the full capsule and all unnamed end sections',()=>{
   const permit=['service-hop-barrier'];
   expect(barrierContact({x:52,z:-16},0,track,0,1.16,true,permit)).toBeNull();

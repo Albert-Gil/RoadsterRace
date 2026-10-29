@@ -33,6 +33,9 @@ const documentation: Record<string, Record<string, Unit>> = {
     flightLaunchCorrection: ['rad', 'Largest momentum rotation at launch'],
     flightTurnRate: ['rad/s', 'Largest momentum rotation rate in flight'],
     dirtGrip: ['m/s²', 'Packed-dirt lateral grip'],
+    snowGrip: ['m/s²', 'Packed-snow lateral grip, 55% of asphalt and below packed dirt'],
+    snowLooseGrip: ['m/s²', 'Deep-powder lateral grip outside the packed lane'],
+    snowDrag: ['1/s', 'Exponential speed decay at full deep-powder contact'],
     asphaltGrip: ['m/s²', 'Lateral acceleration limit on asphalt'],
     sandGrip: ['m/s²', 'Lateral acceleration limit on sand'],
     asphaltResponse: ['1/s', 'Velocity alignment gain per radian of slip on asphalt'],
@@ -126,6 +129,8 @@ export function currentRulesMarkdown() {
     ...circuits.map(({ track }) => `| ${track.name} | \`${track.id}\` | ${track.version} | ${format(track.roadWidth)} | ${track.length.toFixed(1)} | ${track.barriers.length} | ${[
       ...(track.jumps ?? []).map(j => `${j.kind === 'crest' ? 'crest' : 'ramp'} \`${j.id}\``), ...(track.hopShortcuts ?? []).map(h => `hop lane \`${h.id}\``), ...(track.bridges ?? []).map(b => `bridge \`${b.id}\``),
     ].join(', ') || '—'} |`)];
+  const terrains=['| Circuit | Road elevation (m) | Ground grid cell (m) |', '|---|---:|---:|',...circuits.filter(c=>c.track.terrain).map(({track})=>`| ${track.name} | ${format(Math.min(...track.terrain!.roadHeights.map(p=>p[1])))}–${format(Math.max(...track.terrain!.roadHeights.map(p=>p[1])))} | ${format(track.terrain!.cell)} |`)];
+  const ski=['| Circuit | Main-road takeoff | Station (m) | Width (m) | Upward velocity (m/s) | Minimum forward speed (m/s) | CPU reference pace (m/s) |','|---|---|---:|---:|---|---:|---:|',...circuits.flatMap(({track})=>(track.terrainTakeoffs??[]).map(j=>`| ${track.name} | \`${j.id}\` | ${format(j.progress)} | ${format(j.width)} | ${format(j.launchBoost)} + forward speed × ${format(j.launchSlope)} | ${format(j.minimumSpeed)} | ${format(j.planningSpeed)} |`))];
   return `# Current rules and course values
 
 Generated from the source by \`pnpm docs:rules\` (see \`tools/current-rules.ts\`). Do not edit by hand; \`pnpm test\` fails when this file is out of date. Dated milestone documents record history; this file and the code are authoritative.
@@ -147,6 +152,14 @@ Records, ghosts, session bests and championships are scoped by these versions. C
 ${courses.join('\n')}
 
 Vehicle envelope: ${format(circuits[0].track.carWidth)} m × ${format(circuits[0].track.carLength)} m. Race distance: ${MIN_LAPS}–${MAX_LAPS} laps (default ${DEFAULT_LAPS}). Championship points by place: ${CHAMPIONSHIP_POINTS.join(' / ')}.
+
+Continuous terrain is authoritative for drawing, cars, runoff and rendering. Slopes change elevation/pitch, not horizontal acceleration. Weather is presentation only.
+
+${terrains.join('\n')}
+
+Main-road ski crests keep continuous terrain support and use automatic-flight gravity. They are not branches, ramps or water exemptions; takeoff is forward-only and does not stack with manual Hop.
+
+${ski.join('\n')}
 
 ${table('RULES', RULES)}
 Derived: level-ground manual hop peak ${peak.toFixed(3)} m and airtime ${airtime.toFixed(3)} s. Santa Monica ramp launch upward velocity is \`rampLaunchBoost + max(0, forward speed) × lipHeight / rampLength\`. Grand Canyon uses its authored natural crest: \`${format(crest.launchBoost!)} + max(0, forward speed) × ${format(crest.launchSlope!)}\` from ${format(crest.takeoffElevation!)} m to the ${format(crest.landingElevation!)} m receiving surface, across a ${format(crest.gap)} m unsupported opening. Grounded elevation changes do not add slope acceleration.

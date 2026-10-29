@@ -1,9 +1,12 @@
 import { clamp, cumulative, distance, lerp, modulo } from './geometry';
 import type { HopShortcut, Point, RoadSection, TrackDefinition } from './types';
+import { sampleTerrain,terrainRoadHeight } from './terrain';
+import { insideBarrier } from './barriers';
 const branchCache=new WeakMap<HopShortcut,number[]>();
 function branchDistances(h:HopShortcut){let ds=branchCache.get(h);if(!ds){ds=cumulative(h.branch);branchCache.set(h,ds);}return ds;}
 type Segment={a:Point;b:Point;from:number;to:number;branchId?:string};
 const segmentCache=new WeakMap<TrackDefinition,{all:Segment[];bins:Map<number,Segment[]>}>();
+const terrainBounds=new WeakMap<TrackDefinition,{min:number;max:number}>();
 function segments(track:TrackDefinition){
  let result=segmentCache.get(track);if(result)return result;
  const all:Segment[]=[],bins=new Map<number,Segment[]>();
@@ -18,12 +21,28 @@ export function sectionAt(track: TrackDefinition, progress: number): RoadSection
   return track.sections?.find(s => p >= s.from - 1e-6 && p < s.to - 1e-6) ?? track.sections?.[0];
 }
 export function roadHeight(track: TrackDefinition, progress: number) {
+  if(track.terrain)return terrainRoadHeight(track,progress);
   const section = sectionAt(track, progress); if (!section) return 0;
   const p = clamp(modulo(progress, track.length) - section.from, 0, section.to - section.from), h = section.heights;
   for (let i = 1; i < h.length; i++) if (p <= h[i][0]) return lerp(h[i-1][1], h[i][1], clamp((p-h[i-1][0])/(h[i][0]-h[i-1][0] || 1),0,1));
   return h.at(-1)![1];
 }
 export function roadGrade(track: TrackDefinition, progress: number) { return (roadHeight(track, progress + .15) - roadHeight(track, progress - .15)) / .3; }
+
+/** Road crown and continuous surrounding terrain share this exact physical surface. */
+export function terrainElevation(p:Point,track:TrackDefinition){
+  return terrainSurface(p,track).height;
+}
+/** One global physical sample, including its nearest driving corridor. */
+export function terrainSurface(p:Point,track:TrackDefinition){
+  // A heightfield has one physical height per x/z. Route progress can lag behind
+  // an airborne/off-line car and must never select a different surface height.
+  const location=locateRoad({x:p.x,z:p.z},track);
+  for(const b of track.barriers)if(insideBarrier(p,b))return{height:b.baseHeight??0,roadDistance:location.distance,branchId:location.branchId};
+  // Finish the crown blend before adjacent roads' nearest-point regions meet.
+  const t=clamp((location.distance-track.roadWidth/2-.15)/1.5,0,1),blend=t*t*(3-2*t);
+  return{height:lerp(location.height,sampleTerrain(p,track),blend),roadDistance:location.distance,branchId:location.branchId};
+}
 
 export function roadSupportWidth(track: TrackDefinition, progress: number, ownSection?: RoadSection) {
   const section = ownSection ?? sectionAt(track, progress); if (!section) return track.roadWidth;
@@ -51,17 +70,17 @@ export function locateRoad(p: Point, track: TrackDefinition, previous?: number, 
   else {const near=modulo(hint,track.length),span=window+track.roadWidth*2;for(const shift of [-track.length,0,track.length])for(let i=Math.floor((near-span+shift)/16);i<=Math.floor((near+span+shift)/16);i++)for(const s of cached.bins.get(i)??[])consider(s.a,s.b,s.from,s.to,s.branchId);}
   const section=sectionAt(track,best.progress);
   const branch=track.hopShortcuts?.find(h=>h.id===best.branchId);
-  return {...best,section,height:roadHeight(track,best.progress),supportWidth:branch?branch.width+2:section?roadSupportWidth(track,best.progress):0};
+  return {...best,section,height:(branch?track.terrain?.branchHeights?.[branch.id]:undefined)??roadHeight(track,best.progress),supportWidth:branch?branch.width+2:section?roadSupportWidth(track,best.progress):0};
 }
 export function roadPoint(p: Point, track: TrackDefinition, previous?: number): Point {
-  if(!track.sections)return p;
+  if(!track.sections&&!track.terrain)return p;
   const location=locateRoad(p,track,previous);
-  return {...p,y:location.height,sectionId:location.section!.id,courseProgress:location.progress};
+  return {...p,y:track.terrain?terrainElevation(p,track):location.height,sectionId:location.section?.id,courseProgress:location.progress};
 }
 export function annotateRoad<T extends Point>(points: T[], track: TrackDefinition): T[] {
-  if(!track.sections)return points;
+  if(!track.sections&&!track.terrain)return points;
   let progress=points[0]?.courseProgress ?? 0;
-  return points.map((p,i)=>{const r=locateRoad(p,track,progress,i?Math.max(12,distance(p,points[i-1])*1.75+2):12);progress=r.progress;return {...p,y:r.height,sectionId:r.section!.id,courseProgress:progress};});
+  return points.map((p,i)=>{const r=locateRoad(p,track,progress,i?Math.max(12,distance(p,points[i-1])*1.75+2):12);progress=r.progress;return {...p,y:track.terrain?terrainElevation(p,track):r.height,sectionId:r.section?.id,courseProgress:progress};});
 }
 export function roadSupported(p: Point, track: TrackDefinition) {
   const r=locateRoad(p,track);
@@ -69,6 +88,7 @@ export function roadSupported(p: Point, track: TrackDefinition) {
 }
 /** Highest physical trail beneath the car; excludes the invisible flight planning surface. */
 export function supportBelow(p:Point,elevation:number,track:TrackDefinition){
+ if(track.terrain){const h=terrainElevation(p,track);return h<=elevation+.05?h:undefined;}
  let height:number|undefined;
  for(let i=1;i<track.centerline.length;i++){
   const a=track.centerline[i-1],b=track.centerline[i],dx=b.x-a.x,dz=b.z-a.z,raw=((p.x-a.x)*dx+(p.z-a.z)*dz)/(dx*dx+dz*dz||1);if(raw<0||raw>1)continue;
@@ -82,6 +102,27 @@ export function supportBelow(p:Point,elevation:number,track:TrackDefinition){
 
 /** Inverse projection onto the next connected road/flight guide, including the lower visit. */
 export function drawingRay(ray:{origin:{x:number;y:number;z:number};direction:{x:number;y:number;z:number}},track:TrackDefinition,previous?:Point):Point|null{
+ if(track.terrain){
+   if(ray.direction.y>=-1e-8)return null;
+   let bounds=terrainBounds.get(track);
+   if(!bounds){let min=0,max=0;for(const h of track.terrain.heights){min=Math.min(min,h);max=Math.max(max,h);}bounds={min,max};terrainBounds.set(track,bounds);}
+   const at=(t:number)=>({x:ray.origin.x+ray.direction.x*t,z:ray.origin.z+ray.direction.z*t});
+   const diff=(t:number)=>ray.origin.y+ray.direction.y*t-terrainElevation(at(t),track);
+   // Bracket the first visible surface, then bisect. Fixed-point projection can
+   // oscillate or switch slopes when the hill is as steep as the camera ray.
+   const from=Math.max(0,(bounds.max+5-ray.origin.y)/ray.direction.y),to=(bounds.min-5-ray.origin.y)/ray.direction.y;
+   const step=2/Math.hypot(ray.direction.x,ray.direction.y,ray.direction.z);let above=from;
+   for(let t=from;t<=to+step;t+=step){
+     const sample=Math.min(t,to),p=at(sample),raw=ray.origin.y+ray.direction.y*sample-sampleTerrain(p,track);
+     if(raw>6){above=sample;continue;}
+     if(diff(sample)>0){above=sample;continue;}
+     let lo=above,hi=sample;
+     for(let i=0;i<18;i++){const mid=(lo+hi)/2;if(diff(mid)>0)lo=mid;else hi=mid;}
+     const hit=at((lo+hi)/2),point=roadPoint(hit,track,previous?.courseProgress);
+     return{...point,y:terrainElevation(hit,track)};
+   }
+   return null;
+ }
  const hint=previous?.courseProgress??0;let best:{score:number;point:Point}|undefined;
  const candidate=(a:Point,b:Point,from:number,to:number)=>{
   let middle=(from+to)/2;middle+=Math.round((hint-middle)/track.length)*track.length;if(Math.abs(middle-hint)>64)return;

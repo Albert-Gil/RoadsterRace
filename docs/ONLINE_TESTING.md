@@ -28,7 +28,7 @@ pnpm test:pages
 
 The smoke starts isolated development/production servers on loopback ports 5177/4177 and closes them afterward. It records screen coordinates from a development page, then sends real browser touch events to the built game. Production has no development inspector or practice shortcut. It checks all courses, production asset paths/fonts, sound activation, Home navigation, saved names/paint, portrait/Graphite, standalone metadata/icons, four-player private drawing/shared start and saved tournament resumption. Linux uses Playwright Chromium (`pnpm exec playwright install --with-deps chromium`); Windows uses installed Chrome, overridable with CHROME_PATH.
 
-Set `PAGES_FULL_RACES=1` to additionally finish the three solo races, four-player race and a complete three-round two-player tournament. Set `PAGES_URL=https://albert-gil.github.io/RoadsterRace/` to repeat the same tests against the hosted build. Screenshots and JSON results are stored locally in ignored `artifacts/pages/`.
+Set `PAGES_FULL_RACES=1` to additionally finish per-circuit races, the four-player race and a complete two-player Full Tour over all registered circuits. Set `PAGES_URL=https://albert-gil.github.io/RoadsterRace/` to repeat the same tests against the hosted build. Screenshots and JSON results are stored locally in ignored `artifacts/pages/`.
 
 Clear VITE_BASE_PATH/ROADSTER_BUILD_ID afterward to return to ordinary root builds. Build-time assets use Vite rewriting; runtime assets, optional GLB/audio and Home use `src/presentation/urls.ts`. External/data/blob references are preserved. Keep future runtime local assets behind this helper.
 
@@ -44,3 +44,7 @@ Clear VITE_BASE_PATH/ROADSTER_BUILD_ID afterward to return to ordinary root buil
 Browser touch emulation supplements these checks; it does not certify physical Safari. There is no service worker or offline mode, so the link needs internet and cannot keep serving an old cached application shell. Ordinary browser/HTTP caching still applies; reload after a deployment when checking a new build label.
 
 Preferences and tournament progress remain on each browser/device. The hosted origin has separate storage from localhost and home-network URLs. Home Screen storage behavior must be checked on the actual iOS version. No analytics, accounts, leaderboards or remote multiplayer are included.
+
+### Reusing a local inspector preview
+
+For a local smoke run, `PAGES_DEV_URL=http://127.0.0.1:5181/` reuses the running development preview solely to record drawing coordinates. The production build is still served/tested under `/RoadsterRace/`, receives only real UI/touch events and has no inspector. Omit this option in CI: the tool starts its isolated 5177 development server as before. This avoids competing local cold-start/optimizer work while reviewing the game. The result records both URLs.

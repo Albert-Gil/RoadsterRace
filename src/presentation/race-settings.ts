@@ -2,18 +2,18 @@ import { DEFAULT_LAPS, MAX_LAPS, MIN_LAPS } from '../core/race-options';
 import { defaultCircuit, findCircuit } from '../content/circuits';
 
 /** Presentation preferences never enter the route compiler or vehicle physics. */
-import { paintFinishes } from './themes';
+import { defaultPaintId, paintFinishes } from './themes';
 export { paintFinishes } from './themes';
 export interface DriverProfile { name: string; paint: string }
 export interface RacePreferences { version: 1; laps: number; drivers: DriverProfile[]; circuitId: string; ghost?: boolean }
 export const PREFERENCES_KEY = 'roadster-race.preferences.v1';
-const defaults = ['crimson', 'cobalt', 'solar', 'verdant'];
+const defaults = [defaultPaintId, 'cobalt', 'solar', 'verdant'];
 export const defaultDriverName = (index: number) => `Player ${index + 1}`;
 export function cleanDriverName(value: string, index: number) {
   const name = Array.from(value.replace(/[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g, '').trim().replace(/\s+/g, ' ')).slice(0, 18).join('');
   return name || defaultDriverName(index);
 }
-export const finishFor = (id: string) => paintFinishes.find(paint => paint.id === id) ?? paintFinishes[0];
+export const finishFor = (id: string) => paintFinishes.find(paint => paint.id === id) ?? paintFinishes.find(paint => paint.id === defaultPaintId)!;
 export function defaultPreferences(): RacePreferences {
   return { version: 1, ghost: true, laps: DEFAULT_LAPS, circuitId: defaultCircuit.id, drivers: defaults.map((paint, index) => ({ name: defaultDriverName(index), paint })) };
 }

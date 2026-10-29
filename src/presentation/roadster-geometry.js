@@ -29,7 +29,7 @@ const MATS={
   amber:{c:[1,.55,.12],emit:1.1},
   plate:{c:[.93,.93,.9],emit:.22}
 };
-const WHEEL_MATS={tire:{c:[.035,.035,.038],rough:.85},lip:{c:[.28,.32,.35],metal:.8,rough:.18,spec:.75},barrel:{c:[.10,.13,.15],metal:.6,rough:.4},disc:{c:[.27,.29,.30],metal:.35,rough:.65},spokes:{c:[.07,.085,.10],metal:.65,rough:.22,spec:.7},hub:{c:[.04,.04,.045],metal:.4,rough:.25},emblem:{c:[.75,.76,.77],metal:.8,rough:.2}};
+const WHEEL_MATS={tire:{c:[.035,.035,.038],rough:.85},lip:{c:[.52,.56,.59],metal:.8,rough:.18,spec:.75},barrel:{c:[.10,.13,.15],metal:.6,rough:.4},disc:{c:[.27,.29,.30],metal:.35,rough:.65},spokes:{c:[.32,.36,.40],metal:.65,rough:.22,spec:.7},hub:{c:[.04,.04,.045],metal:.4,rough:.25},emblem:{c:[.75,.76,.77],metal:.8,rough:.2},caliper:{c:[.65,.055,.035],metal:.3,rough:.4}};
 
 // Character lines: [x, y, z] keys; scalar lines are [x, value].
 const X0=2.10,X1=-1.95;
@@ -45,7 +45,8 @@ const CL={
 };
 // Section loop, bottom centre to roof centre: [name, material, subdivisions].
 const SEGS=[['floor','satin',detail === 'showcase' ? 6 : 1],['bladeU','satin',1],['bladeE','blade',1],['bladeT','blade',1],['skirt','black',2],['ledge','black',1],['side','paint',detail === 'showcase' ? 6 : 2],['deck','paint',detail === 'showcase' ? 3 : 1],['green','paint',detail === 'showcase' ? 5 : 2],['frame','paint',1],['crown','paint',detail === 'showcase' ? 7 : 3]];
-const BULGE=[0,0,0,0,0,0,.008,.003,.010,0,0];
+// Convex door skins and fuller fender shoulders catch long, continuous metal reflections.
+const BULGE=[0,0,0,0,0,0,.035,.012,.014,0,0];
 const archBlend=x=>Math.max(...WHEELS.map(w=>1-smooth(w.arch-.02,w.arch+.10,Math.abs(x-w.x))));
 function named(x){
   const sh=CL.sh(x),be=CL.belt(x),ra=CL.rail(x),yc=CL.yc(x),ysk=CL.ysk(x),W=CL.W(x),yfl=CL.yfl(x),bl=CL.blade(x);
@@ -57,7 +58,8 @@ function segPts(s,a,b){
   for(let k=0;k<=n;k++){const t=k/n;let p;
     if(s===10){const u=1-t;p=[a[0],b[1]+(a[1]-b[1])*u*u,a[2]*u];}
     else{p=lerp3(a,b,t);const bu=BULGE[s]*Math.sin(Math.PI*t);if(bu){const dy=b[1]-a[1],dz=b[2]-a[2],l=Math.hypot(dy,dz)||1;p[1]-=dz/l*bu;p[2]+=dy/l*bu;}}
-    out.push(p);}
+    // Fullness tapers within the original physical-width adapter, including rear haunches.
+    p[2]=Math.min(p[2],1.01008);out.push(p);}
   return out;
 }
 const section=x=>{const v=named(x);return SEGS.map((_,s)=>segPts(s,v[s],v[s+1]));};
@@ -121,7 +123,7 @@ const archPoly=w=>{const p=[];for(let i=0;i<=32;i++){const a=i/32*Math.PI;p.push
 const xCowl=z=>1.66-.10*(z/.56)**2,xVent=z=>1.745-.06*(z/.44)**2;
 const COWL=[...Array.from({length:13},(_,i)=>{const z=-.56+1.12*i/12;return [xCowl(z),z];}),[1,2],[-5,2],[-5,-2],[1,-2]];
 const WEDGE=[[-1.55,-.28],[-1.55,.28],[-1.55+1.944*2.72,3],[6,3],[6,-3],[-1.55+1.944*2.72,-3]];
-const VENT=Array.from({length:12},(_,i)=>{const a=-.44+.88*i/12,b=-.44+.88*(i+1)/12;return [[xVent(a),a],[xVent(a)+.07,a],[xVent(b)+.07,b],[xVent(b),b]];});
+const VENT=Array.from({length:4},(_,i)=>{const a=-.44+.88*i/4,b=-.44+.88*(i+1)/4;return [[xVent(a),a],[xVent(a)+.07,a],[xVent(b)+.07,b],[xVent(b),b]];});
 const S=(...a)=>new Set(a),is=(...m)=>x=>m.includes(x);
 const APIL=[[1.13,.826],[.235,1.116]],SEAL=[[.195,1.126],[.53,.805]],CPIL=[[-.98,1.075],[-.895,.955]];
 const RULES=[
@@ -138,9 +140,10 @@ const RULES=[
   ...VENT.map(poly=>({seg:S(8,9,10),proj:'plan',poly,when:is('paint'),in:'black'})),
   {seg:S(8,9,10),proj:'plan',poly:[[1.980,-.62],[1.990,-.62],[1.990,.62],[1.980,.62]],when:is('paint'),in:'satin'},
   {seg:S(8,9,10),proj:'plan',poly:[[-1.61,-.50],[-1.61,.50],[-2.3,.64],[-2.3,-.64]],when:is('paint'),in:'black'},
-  ...[0,1,2,3,4,5].map(i=>({seg:S(8,9,10),proj:'plan',poly:[[-1.66-i*.075,-.7],[-1.66-i*.075,.7],[-1.685-i*.075,.7],[-1.685-i*.075,-.7]],when:is('black'),in:'satin'})),
+  ...[0,1,2].map(i=>({seg:S(8,9,10),proj:'plan',poly:[[-1.66-i*.15,-.7],[-1.66-i*.15,.7],[-1.685-i*.15,.7],[-1.685-i*.15,-.7]],when:is('black'),in:'satin'})),
   {seg:S(6),proj:'side',poly:band([.660,.262],[.762,.735],.004,.01),when:is('paint'),in:'black'},
   {seg:S(6,7),proj:'side',poly:band([-.405,.300],[-.468,.880],.004,.01),when:is('paint'),in:'black'},
+  {seg:S(6,7),proj:'side',poly:[[-.54,.34],[-.92,.46],[-.91,.72],[-.58,.66]],when:is('paint'),in:'black'},
   {seg:S(6),proj:'side',poly:[[.76,.735],[1.045,.727],[1.045,.772],[.77,.784]],when:is('paint'),in:'black'},
   {seg:S(6),proj:'side',poly:[[.978,.733],[1.038,.731],[1.038,.762],[.978,.765]],when:is('black'),in:'amber'},
   {seg:S(6),proj:'side',poly:[[1.78,.25],[2.30,.25],[2.30,.405],[2.02,.37]],when:is('paint'),in:'black'},
@@ -153,7 +156,7 @@ function well(w,out){
   const R=w.arch,yb=x=>CL.yfl(x)+.004,pts=[[w.x+R,yb(w.x+R)]];
   for(let i=0;i<=36;i++){const a=i/36*Math.PI;pts.push([w.x+R*Math.cos(a),w.y+R*Math.sin(a)]);}
   pts.push([w.x-R,yb(w.x-R)]);
-  const outer=pts.map(([x,y])=>[x,y,bodyZ(x,y)+.005]),inner=pts.map(([x,y])=>[x,y,w.inner]);
+  const outer=pts.map(([x,y])=>[x,y,Math.min(1.01008,bodyZ(x,y)+.005)]),inner=pts.map(([x,y])=>[x,y,w.inner]);
   grid([outer,inner],'well','well',p=>[w.x-p[0],w.y-p[1],0],out);
   const c=[w.x,(yb(w.x)+w.y+R)/2,w.inner];
   for(let i=0;i<inner.length;i++)poly([c,inner[i],inner[(i+1)%inner.length]],'well',[0,0,1],out,'well');
@@ -194,12 +197,10 @@ function sweep(path,zc,hw,hz,m,out){
     poly([C(i,a[0],a[1]),C(i,b[0],b[1]),C(i+1,b[0],b[1]),C(i+1,a[0],a[1])],m,r,out);
 }
 function wing(out){
-  const a=.30,d=[-Math.cos(a),Math.sin(a)],u=[Math.sin(a),Math.cos(a)],L0=[-1.99,1.005];
-  const P=([c,h])=>[L0[0]+c*d[0]+h*u[0],L0[1]+c*d[1]+h*u[1]],cen=P([.16,.006]);
-  const prof=[[0,0],[.012,.011],[.05,.019],[.14,.022],[.26,.016],[.38,.004],[.38,-.002],[.26,-.004],[.14,-.004],[.05,-.006],[.012,-.006],[0,0]];
-  grid(prof.map(q=>{const [x,y]=P(q);return [[x,y,0],[x,y,.955]];}),'paint','wing',p=>[p[0]-cen[0],p[1]-cen[1],0],out);
-  prism([[-1.975,1.03],[-2.40,1.16],[-2.395,.975],[-2.12,.972]],.955,.969,'paint',out);
-  sweep([[-1.90,.89],[-1.95,.955],[-2.02,1.005],[-2.10,1.035],[-2.16,1.045]],.40,.017,.008,'black',out);
+  // Integrated active-aero lip, instead of an oversized pedestal racing wing.
+  const profile=[[-1.94,.916],[-2.015,.951],[-2.145,.964],[-2.18,.947],[-2.13,.925],[-1.94,.906]];
+  grid(profile.map(([x,y])=>[[x,y,0],[x+.025,y-.009,.84]]),'blade','wing',p=>[p[0]+2.06,p[1]-.935,0],out);
+  prism(profile,.84,.865,'blade',out);
 }
 function nozzle(y0,z0,out){
   const xf=RF(y0,z0)[0]+.004,seg=detail === "showcase" ? 28 : 10,C=(r,a)=>Array.from({length:seg+1},(_,i)=>{const t=i/seg*Math.PI*2;return [xf-a,y0+r*Math.cos(t),z0+r*Math.sin(t)];});
@@ -212,17 +213,18 @@ function nozzle(y0,z0,out){
 function bucket(tris){const o={};for(const t of tris){const b=o[t.m]||(o[t.m]={p:[],n:[]});for(let i=0;i<3;i++){b.p.push(...t.p[i]);b.n.push(...t.n[i]);}}return o;}
 // Wheel in local axes: axle along +z (outboard), hub at the origin.
 function wheelParts(w){
-  const spin=[],fixed=[],H=w.w/2,seg=detail === "showcase" ? 56 : 8,ring=(r,z)=>Array.from({length:seg+1},(_,i)=>{const a=i/seg*Math.PI*2;return [r*Math.cos(a),r*Math.sin(a),z];});
+  const spin=[],fixed=[],H=w.w/2,seg=detail === "showcase" ? 64 : 20,ring=(r,z)=>Array.from({length:seg+1},(_,i)=>{const a=i/seg*Math.PI*2;return [r*Math.cos(a),r*Math.sin(a),z];});
   const rr=r=>.262+(r-.262)*(w.r-.262)/(.343-.262),rc=rr(.30);
-  const tire=[[.262,-.86],[.292,-.975],[.318,-.99],[.334,-.92],[.340,-.74],[.342,-.37],[.343,0],[.342,.37],[.340,.74],[.334,.92],[.318,.99],[.292,.975],[.262,.86]];
+  const tire=detail==='showcase'?[[.262,-.86],[.292,-.975],[.318,-.99],[.334,-.92],[.340,-.74],[.343,0],[.340,.74],[.334,.92],[.318,.99],[.292,.975],[.262,.86]]:[[.262,-.86],[.322,-.99],[.340,-.72],[.343,0],[.340,.72],[.322,.99],[.262,.86]];
   grid(tire.map(([r,z])=>ring(rr(r),z*H)),'tire','w',p=>{const r=Math.hypot(p[0],p[1]);return [p[0]/r*(r-rc),p[1]/r*(r-rc),p[2]];},spin);
-  grid([[.246,.80],[.254,.90],[.264,.935],[.271,.88],[.266,.80]].map(([r,z])=>ring(r,z*H)),'lip','w',p=>{const r=Math.hypot(p[0],p[1]);return [p[0]/r*(r-.258),p[1]/r*(r-.258),p[2]-.86*H];},spin);
+  grid([[.246,.80],[.264,.935],[.271,.80]].map(([r,z])=>ring(r,z*H)),'lip','w',p=>{const r=Math.hypot(p[0],p[1]);return [p[0]/r*(r-.258),p[1]/r*(r-.258),p[2]-.86*H];},spin);
   grid([ring(.248,.80*H),ring(.248,-.80*H)],'barrel','w',p=>[-p[0],-p[1],0],spin);
-  grid([ring(.248,.22*H),ring(.06,.22*H)],'disc','w',()=>[0,0,1],spin);
-  for(let s=0;s<6;s++){
-    const path=[];for(let i=0;i<=8;i++){const t=i/8,r=mixf(.058,.250,t),th=s*Math.PI/3;path.push({c:[r*Math.cos(th),r*Math.sin(th)],tn:[-Math.sin(th),Math.cos(th)],zf:mixf(.93,.80,t)*H,hw:mixf(.016,.0065,t)});}
+  grid([ring(.232,.22*H),ring(.06,.22*H)],'disc','w',()=>[0,0,1],fixed);
+  const steps=detail==='showcase'?6:2;
+  for(let s=0;s<10;s++){
+    const path=[];for(let i=0;i<=steps;i++){const t=i/steps,r=mixf(.058,.250,t),th=Math.floor(s/2)*Math.PI*2/5+(s%2?1:-1)*(.045+.07*t)+.12*t;path.push({c:[r*Math.cos(th),r*Math.sin(th)],tn:[-Math.sin(th),Math.cos(th)],zf:mixf(.93,.80,t)*H,hw:mixf(.010,.007,t)});}
     const P=(i,e,deep)=>{const q=path[i];return [q.c[0]+q.tn[0]*q.hw*e,q.c[1]+q.tn[1]*q.hw*e,q.zf-(deep?.03:0)];};
-    for(let i=0;i<8;i++){const tn=path[i].tn;
+    for(let i=0;i<steps;i++){const tn=path[i].tn;
       poly([P(i,-1,0),P(i,1,0),P(i+1,1,0),P(i+1,-1,0)],'spokes',[0,0,1],spin);
       poly([P(i,1,0),P(i,1,1),P(i+1,1,1),P(i+1,1,0)],'spokes',[tn[0],tn[1],0],spin);
       poly([P(i,-1,1),P(i,-1,0),P(i+1,-1,0),P(i+1,-1,1)],'spokes',[-tn[0],-tn[1],0],spin);}
@@ -230,10 +232,16 @@ function wheelParts(w){
   grid([ring(.062,.70*H),ring(.062,.94*H)],'hub','w',p=>[p[0],p[1],0],spin);
   grid([ring(.062,.94*H),ring(.001,.94*H)],'hub','w',()=>[0,0,1],spin);
   grid([ring(.024,.945*H),ring(.001,.945*H)],'emblem','w',()=>[0,0,1],spin);
+  // The caliper stays fixed when the wheel rotates (both turn with the front axle).
+  boxAA([-.215,-.08,.31*H],[-.14,.08,.56*H],'caliper',fixed);
+  if(detail==='showcase')for(let i=0;i<20;i++){
+    const a=i*Math.PI/10,ringHole=Array.from({length:7},(_,j)=>[.188*Math.cos(a)+.006*Math.cos(j*Math.PI/3),.188*Math.sin(a)+.006*Math.sin(j*Math.PI/3),.225*H]);
+    poly(ringHole,'hub',[0,0,1],fixed);
+  }
   return {spin:bucket(spin),fixed:bucket(fixed)};
 }
 function build(){
-  const N=Math.round((X0-X1)/(detail === "showcase" ? .025 : .18)),main=[];
+  const N=Math.round((X0-X1)/(detail === "showcase" ? .025 : .16)),main=[];
   for(let i=0;i<=N;i++)main.push(section(X0-(X0-X1)*i/N));
   const f0=main[0],r0=main[N],ft=noseTargets(f0),rt=rearTargets(r0);
   const mod=(base,tg,t)=>base.map((pts,s)=>pts.map((p,k)=>lerp3(p,tg[s][k],t)));
@@ -243,6 +251,14 @@ function build(){
   for(const r of RULES)H=applyRule(H,r);
   WHEELS.forEach(w=>well(w,H));
   fascia(ft,H);chin(H);rearCap(rt,H);wing(H);
+  // A sculpted intake edge gives the rear quarter depth without a floating black decal.
+  sweep([[-.55,.35],[-.64,.42],[-.72,.54],[-.85,.69]],.96,.010,.009,'blade',H);
+  // Slim front cooling vanes and satin lower-corner blades.
+  for(const z of [.32,.50])boxAA([2.207,.226,z],[2.242,.29,z+.014],'blade',H);
+  // Compact camera-mirror pods stay inside the established visible width envelope.
+  prism([[.60,.805],[.72,.83],[.79,.81],[.69,.785]],.87,.982,'black',H);
+  prism([[.57,.85],[.61,.89],[.78,.875],[.81,.835]],.96,1.006,'paint',H);
+  poly([[.58,.849,1.007],[.61,.88,1.007],[.77,.868,1.007],[.80,.84,1.007]],'glassS',[0,0,1],H);
   for(const [z0,z1] of [[0,.006],[.244,.256],[.494,.506]])prism([[-1.96,.205],[-2.165,.32],[-2.165,.412],[-1.96,.222]],z0,z1,'black',H);
   boxAA([-2.157,.640,0],[-2.146,.770,.162],'black',H);boxAA([-2.161,.650,0],[-2.148,.760,.15],'plate',H);
   for(const z of [.17,.47])nozzle(.548,z,H);

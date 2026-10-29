@@ -14,6 +14,8 @@
 | Barlow Regular/Semibold and Barlow Condensed Bold Italic | Jeremy Tribby / Barlow project, SIL OFL 1.1 | `public/assets/fonts/`; `public/licenses/Barlow.txt` | Unmodified files from the official Google Fonts repository, `ofl/barlow` and `ofl/barlowcondensed`. Retain OFL. System fallbacks remain |
 | Babylon.js and tools | Package dependencies | Locked package manifests | Retain upstream package license files; review notices if redistributing publicly |
 
+The 2026-10-29 car refinements (body shaping, twin-spoke wheels, stationary brakes, mirrors, lower aero and generated satin-steel normal map) are original procedural changes to that adaptation. No manufacturer mesh, logo, photograph or external texture was imported. The existing RoadsterLAB MIT notice remains applicable.
+
 The project is a public testing prototype. A future custom model, font, texture, logo, music track, or public branding treatment needs its own origin/license record before inclusion in a public build. The shipped Babylon runtime license and upstream notices are retained in `public/licenses/Babylon-Apache-2.0.txt` and `public/licenses/Babylon-NOTICE.txt`, alongside the Barlow and RoadsterLAB notices. Home Screen PNG icons are raster exports of the project's original R mark, created with `tools/generate-app-icons.mjs`.
 
 Golden Gate's factory hall, solar canopies, red suspension portals/cables, shoreline, skyline and course layout are original procedural geometry. Its foundry sign uses original wording and bundled/fallback typography; no Tesla logo or copied factory/bridge model is included. The spaceport's player-facing name is now Launchsite, with its original geometry unchanged. Thrust vapor uses an original radial canvas texture and a bounded billboard mesh; car-impact and scrape cues use original oscillator/noise synthesis. No ElevenLabs audio or network service was added.
@@ -145,3 +147,24 @@ The five Home pictures in `public/assets/hero/` (`thruster-hop`, `drivers-grid`,
 - The PNG masters stay with the owner and are not committed; only the WebP conversions ship.
 - **Pending:** the image-generation service used and its terms (commercial use, attribution) have not been recorded yet. Record them here before any public release beyond the testing site.
 - The studio sky (`studio.env`) used by the former menu turntable car was removed with that car.
+
+## Snowy Tahoe and venue refinements — 2026-10-28
+
+Snowy Tahoe’s snow terrain, packed trail, fir geometry, timber lodge, log obstacle, granite ends and snow texture are original procedural assets created in this repository (`presentation/tahoe.ts`, `textures.ts`). No external model or new recording is included. The alpine sky reuses the existing recorded CC0 `sky.env` source. The quiet granular snow mix and alpine wind reuse the project’s existing recordings and fallback roles.
+
+The six existing venues receive original native facade/entrance, garden furniture, utility pipe, bridge-bearing and pier-brace geometry in `presentation/venue-refinements.ts`, plus canyon mineral shading and centrally configured LA material colors. Existing third-party asset licences are unchanged. No Tesla/SpaceX art or branding was added.
+
+## Snowy Tahoe alpine upgrade — 2026-10-28
+
+The steep-roof chalets, timber terraces, windows, icicles, firewood, tracked snow groomer, lift stations/pylons/cables/chairs, irregular fir boughs, granite crowns and snowfall sprites are original procedural geometry/textures created in this repository. No model pack, recording, external weather feed or additional licence was introduced. The existing CC0 sky and recorded audio roles remain unchanged. Chair motion and snow are cosmetic only.
+
+The v4 rental/rescue chalets, lanterns, ski racks and bindings, rescue sled,
+chairlift skis, packed-snow summit cornice and denser snow/powder sprites are also
+original native geometry and procedural effects. No external model, new recording
+or additional licence is introduced.
+
+Snowy Tahoe v5's two snow rolls, transverse groomer traces and surface-projected vehicle/shadow geometry are original procedural work in this repository. No external art, model or sound was introduced. Existing recordings and licences remain intact.
+
+## Capitan Yosemite — 2026-10-29
+
+The fictional circuit layout, granite monoliths, pine geometry, ranger buildings, campground objects, fallen cedar, water geometry, waterfall and mist sprites are original procedural work created in this repository. No park maps, photographs, logos or third-party models were copied. The venue reuses the existing recorded CC0 sky environment and existing licensed sound roles; no new recording or external asset was added.

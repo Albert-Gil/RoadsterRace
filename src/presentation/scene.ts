@@ -1,6 +1,7 @@
 import { LapGhost } from './lap-ghost';
 import type { ReplayFrame } from '../core/lap-replay';
-import { drawingRay, roadHeight } from '../core/elevation';
+import { drawingRay, roadHeight,terrainElevation } from '../core/elevation';
+import { hiddenTerrainRoadPoints,terrainDrawingOcclusion } from './terrain-framing';
 import { roadEdges } from '../core/road-geometry';
 import type { AbstractEngine } from '@babylonjs/core/Engines/abstractEngine';
 import { createWebGLEngine, rendererName } from './engine';
@@ -42,6 +43,7 @@ import { assetUrl } from './urls';
 import { VehicleView } from './vehicle';
 import { buildScenery, type SceneryRuntime } from './scenery';
 import type { SceneryId } from '../content/circuits';
+import { yosemiteAppearance } from './themes';
 import { surfaceTexture } from './textures';
 import { createReflectionSky, loadSky } from './environment';
 import { PaceLine } from './pace-line';
@@ -51,11 +53,13 @@ import { planningHeight } from './planning-height';
 import { JumpFeedback } from './jump-feedback';
 
 export class GameScene {
+  private terrainCameraFits=new Map<string,{position:Vector3;target:Vector3;distance:number}>();
   readonly engine: AbstractEngine;
   readonly scene: Scene;
   readonly camera: FreeCamera;
   readonly vehicle: VehicleView;
   private lapGhost: LapGhost;
+  get groundSurface(){return this.sceneryRuntime?.groundSurface;}
   setGhost(pose:ReplayFrame|null){this.lapGhost.update(pose);}
   readonly vehicles: VehicleView[] = [];
   private materials = new Map<string, StandardMaterial>();
@@ -114,7 +118,7 @@ export class GameScene {
     this.scene.imageProcessingConfiguration.exposure = sceneTuning.grading.exposure;
     this.scene.imageProcessingConfiguration.contrast = sceneTuning.grading.contrast;
     this.camera = new FreeCamera('fixed-race-camera', new Vector3(0, 140, -140), this.scene);
-    this.camera.mode = Camera.PERSPECTIVE_CAMERA; this.camera.fov = sceneTuning.camera.verticalFov; this.camera.setTarget(Vector3.Zero()); this.camera.minZ = 1; this.camera.maxZ = 1000;
+    this.camera.mode = Camera.PERSPECTIVE_CAMERA; this.camera.fov = track.terrain?sceneTuning.camera.terrainVerticalFov:sceneTuning.camera.verticalFov; this.camera.setTarget(Vector3.Zero()); this.camera.minZ = 1; this.camera.maxZ = 1000;
     this.proceduralSky = createReflectionSky(this.scene); this.scene.environmentTexture = this.proceduralSky; this.scene.environmentIntensity = 0.85;
     const lighting = sceneryLighting[scenery];
     const ambient = new HemisphericLight('ambient', new Vector3(0, 1, 0), this.scene); ambient.intensity = sceneTuning.lighting.ambient; ambient.diffuse = Color3.FromHexString(lighting.ambient); ambient.groundColor = Color3.FromHexString(lighting.ground);
@@ -132,7 +136,7 @@ export class GameScene {
     this.terrainMaterial = this.materials.get('terrain')!;
     const p = track.centerline, n = p.length - 1;
     const white = mat('curb', theme.scene.curb), accent = mat('accent', '#b32a35');
-    if(track.sections){this.roadMaterial=this.materials.get('asphalt')!;}else{
+    if(track.sections||track.terrain){this.roadMaterial=this.materials.get('asphalt')!;}else{
     const shoulder = mat('shoulder', theme.scene.shoulder);
     if (track.supports) { /* Authored pier surfaces replace unsupported sand shoulders. */ }
     else if (!track.bridges?.length) this.ribbon('road-shoulder', track.centerline, track.roadWidth + 2.5, 0.04).material = shoulder;
@@ -178,7 +182,7 @@ export class GameScene {
     for (const side of [-1, 1]) for (let along = zone.from; along < zone.to; along += 1.4) guides.push([at(side * zone.halfWidth, along), at(side * zone.halfWidth, Math.min(zone.to, along + 0.8))]);
     for (const along of [zone.from, zone.to]) for (let across = -zone.halfWidth; across < zone.halfWidth; across += 1.4) guides.push([at(across, along), at(Math.min(zone.halfWidth, across + 0.8), along)]);
     for (const across of [-gate.width / 4, gate.width / 4]) guides.push([at(across - 0.7, -6), at(across, -4.6), at(across + 0.7, -6)]);
-    const approach = MeshBuilder.CreateLineSystem('drawing-approach-zone', { lines: guides }, this.scene); approach.color = Color3.FromHexString('#d4e6df'); approach.alpha = 0.8; this.approach = approach;
+    const approach = MeshBuilder.CreateLineSystem('drawing-approach-zone', { lines: guides }, this.scene); approach.color = Color3.FromHexString(track.surface==='packed-snow'?theme.scene.structure:'#d4e6df'); approach.alpha = 0.8; this.approach = approach;
     const err = mat('error', '#ec765a'); err.emissiveColor = Color3.FromHexString('#ec765a');
     this.errorMarker = MeshBuilder.CreateTorus('route-error', { diameter: 4, thickness: 0.25, tessellation: 32 }, this.scene); this.errorMarker.material = err; this.errorMarker.isVisible = false;
     // Small arrows teach direction without a screen-space overlay covering the circuit.
@@ -187,7 +191,7 @@ export class GameScene {
       const a = p[i], b = p[i + 1], angle = Math.atan2(b.x - a.x, b.z - a.z);
       const dx = Math.sin(angle), dz = Math.cos(angle);
       const tri = MeshBuilder.CreateLines('direction-arrow', { points: [new Vector3(a.x - dx - dz * 0.8, (a.y??0)+0.2, a.z - dz + dx * 0.8), new Vector3(a.x + dx, (a.y??0)+0.2, a.z + dz), new Vector3(a.x - dx + dz * 0.8, (a.y??0)+0.2, a.z - dz - dx * 0.8)] }, this.scene);
-      tri.color = Color3.FromHexString('#edf4e8');
+      tri.color = Color3.FromHexString(track.surface==='packed-snow'?theme.scene.structure:'#edf4e8');
     }
     // Bake static scenery by material: curbs and foliage should not each cost a draw call.
     const staticGroups = new Map<number, Mesh[]>();
@@ -209,7 +213,7 @@ export class GameScene {
       }
     }
     void this.sceneryRuntime.lateShadowCasters?.then(meshes => { for (const mesh of meshes) if (!mesh.isDisposed()) this.castShadow(mesh); });
-    this.lapGhost = new LapGhost(this.scene);
+    this.lapGhost = new LapGhost(this.scene,this.track,(x,z)=>this.groundSurface?.height(x,z));
     if(scenery==='night-city'){
       const glow=new GlowLayer('night-architecture-glow',this.scene,{mainTextureFixedSize:nightAppearance.glowTextureSize,blurKernelSize:nightAppearance.glowKernel});
       glow.intensity=nightAppearance.glowIntensity;
@@ -221,7 +225,7 @@ export class GameScene {
     this.registerVehicleShadows(this.vehicle); void this.vehicle.loadAsset(visualAssets.vehicle).then(() => this.registerVehicleShadows(this.vehicle));
     for (const [url, material] of [[visualAssets.roadTexture, this.roadMaterial]] as const) {
       // Asphalt artwork must never replace the packed-dirt venue's own material.
-      if (url && !track.sections) material.diffuseTexture = new Texture(assetUrl(url), this.scene, false, true, Texture.TRILINEAR_SAMPLINGMODE, undefined, () => { material.diffuseTexture?.dispose(); material.diffuseTexture = null; });
+      if (url && !track.sections && !track.surface) material.diffuseTexture = new Texture(assetUrl(url), this.scene, false, true, Texture.TRILINEAR_SAMPLINGMODE, undefined, () => { material.diffuseTexture?.dispose(); material.diffuseTexture = null; });
     }
     this.post = new PostEffects(this.scene, this.camera);
     this.applyGraphics();
@@ -293,6 +297,12 @@ export class GameScene {
     const sides = roadEdges(points,width,false).map(side=>side.map(p=>new Vector3(p.x,y,p.z)));
     const mesh = MeshBuilder.CreateRibbon(name, { pathArray: sides, sideOrientation: Mesh.DOUBLESIDE }, this.scene); mesh.setVerticesData(VertexBuffer.NormalKind, Array.from({ length: mesh.getTotalVertices() * 3 }, (_, i) => i % 3 === 1 ? 1 : 0)); return mesh;
   }
+  private applyCameraFit(position:Vector3,target:Vector3,distance:number){
+    this.camera.minZ=Math.max(1,distance/100);this.camera.maxZ=Math.max(1000,distance+600);
+    this.camera.position.copyFrom(position);this.camera.setTarget(target);
+    this.scene.updateTransformMatrix(true);this.post?.resize();
+    this.lines.forEach(line=>line.resize());this.ignoredLines.forEach(line=>line.resize());this.errorLine?.resize();
+  }
   resize() {
     const box = this.canvas.getBoundingClientRect(), ratio = renderPixelRatio(this.graphicsLevel, box.width, box.height, window.devicePixelRatio || 1);
     if (box.width > 0 && Math.abs(this.engine.getHardwareScalingLevel() - 1 / ratio) > 1e-4) this.engine.setHardwareScalingLevel(1 / ratio);
@@ -309,10 +319,14 @@ export class GameScene {
     const w = rect.width, h = rect.height;
     this.camera.viewport = new Viewport(0, 0, 1, 1);
     const aspect = this.engine.getRenderWidth() / this.engine.getRenderHeight();
-    const elevation = (Math.min(w,h)<=500?sceneTuning.camera.compactElevationDegrees:sceneTuning.camera.elevationDegrees) * Math.PI / 180;
+    const fitTerrain=!!this.track.terrain&&interactive,key=[w,h,left,rightInset,top,bottom,aspect].map(n=>n.toFixed(5)).join('/');
+    const cached=fitTerrain?this.terrainCameraFits.get(key):undefined;
+    if(cached){this.applyCameraFit(cached.position,cached.target,cached.distance);return;}
+    const elevation = Math.max(this.scenery==='yosemite'?yosemiteAppearance.cameraElevation:0,Math.min(w,h)<=500?sceneTuning.camera.compactElevationDegrees:sceneTuning.camera.elevationDegrees) * Math.PI / 180;
     const tangent = Math.tan(this.camera.fov / 2);
     const paths = [this.track.centerline,...(this.track.jumps??[]).map(j=>j.branch),...(this.track.hopShortcuts??[]).map(j=>j.branch)];
-    const fitted = paths.flatMap((path,i)=>roadEdges(path,this.track.roadWidth,i===0).flatMap(side=>side.map((p,n)=>new Vector3(p.x,this.track.sections?roadHeight(this.track,path[n].courseProgress??0):0,p.z))));
+    const fitted = paths.flatMap((path,i)=>roadEdges(path,this.track.roadWidth,i===0).flatMap(side=>side.map((p,n)=>new Vector3(p.x,this.track.terrain?terrainElevation(p,this.track):this.track.sections?roadHeight(this.track,path[n].courseProgress??0):0,p.z))));
+    const sightPoints=fitTerrain?[...fitted.filter((_,i)=>i%8===0).map(p=>({x:p.x,y:p.y,z:p.z})),...paths.flatMap(path=>path.filter((_,i)=>i%4===0))]:[];
     for(const p of drawingStartBounds(this.track).corners) fitted.push(new Vector3(p.x,0,p.z));
     // Reserve the complete manual-hop height envelope, including a ramp launch.
     const hopEnvelope = RULES.hopLaunchSpeed ** 2 / (2 * flightGravity('hop')) + FLIGHT_RULES.carHeight + 0.3;
@@ -323,27 +337,46 @@ export class GameScene {
     const cx = (left-rightInset)/w, cy=(bottom-top)/h;
     const clearance = Math.min(w,h) <= 500 ? sceneTuning.camera.phoneRunoffClearancePixels : sceneTuning.camera.clearancePixels;
     const rx=Math.max(0.2,(w-left-rightInset-2*clearance)/w),ry=Math.max(0.2,(h-top-bottom-2*clearance)/h);
-    const candidate = (degrees:number)=>{
+    const candidate = (degrees:number,angle=elevation)=>{
       const yaw=degrees*Math.PI/180;
-      const away=new Vector3(Math.sin(yaw)*Math.cos(elevation),Math.sin(elevation),-Math.cos(yaw)*Math.cos(elevation));
+      const away=new Vector3(Math.sin(yaw)*Math.cos(angle),Math.sin(angle),-Math.cos(yaw)*Math.cos(angle));
       const right=new Vector3(Math.cos(yaw),0,Math.sin(yaw)),up=Vector3.Cross(away,right);
       let d=0;
       for(const p of fitted){ const point=p.subtract(courseCenter),depth=Vector3.Dot(point,away); d=Math.max(d,depth+Math.max(Math.abs(Vector3.Dot(point,right)+cx*tangent*aspect*depth)/(tangent*aspect*rx),Math.abs(Vector3.Dot(point,up)+cy*tangent*depth)/(tangent*ry))); }
-      return {away,right,up,d};
+      const eye=away.scale(d).add(right.scale(-cx*tangent*aspect*d)).add(up.scale(-cy*tangent*d)).add(courseCenter);
+      return {away,right,up,d,eye,hidden:hiddenTerrainRoadPoints(this.track,eye,sightPoints)};
     };
     let fit=candidate(sceneTuning.camera.azimuthDegrees);
-    for(let yaw=0;yaw<180;yaw+=sceneTuning.camera.azimuthStep){const c=candidate(yaw);if(c.d<fit.d*0.995)fit=c;}
+    const initialChoices=[fit],yawRange=fitTerrain&&this.scenery!=='yosemite'?360:180;
+    for(let yaw=0;yaw<yawRange;yaw+=sceneTuning.camera.azimuthStep){const c=candidate(yaw);initialChoices.push(c);if(c.hidden<fit.hidden||(c.hidden===fit.hidden&&c.d<fit.d*0.995))fit=c;}
+    if(fitTerrain){
+      // Raise the fixed angle only when the steep terrain needs it. Validate
+      // through the same intersection that drawing will use, before input starts.
+      let blocked=terrainDrawingOcclusion(this.track,fit.eye,sightPoints);
+      initialChoices.sort((a,b)=>a.hidden-b.hidden||a.d-b.d);
+      for(const c of initialChoices.slice(0,8)){
+        if(blocked===0)break;const count=terrainDrawingOcclusion(this.track,c.eye,sightPoints);
+        if(count<blocked){fit=c;blocked=count;}
+      }
+      for(const degrees of sceneTuning.camera.terrainElevationDegrees){
+        const angle=degrees*Math.PI/180;if(angle<elevation||blocked===0)continue;
+        const choices=[];
+        for(let yaw=0;yaw<yawRange;yaw+=sceneTuning.camera.azimuthStep)choices.push(candidate(yaw,angle));
+        choices.sort((a,b)=>a.hidden-b.hidden||a.d-b.d);
+        for(const c of choices.slice(0,3)){
+          const count=terrainDrawingOcclusion(this.track,c.eye,sightPoints);
+          if(count<blocked){fit=c;blocked=count;}if(blocked===0)break;
+        }
+      }
+    }
     const {away,right,up,d:cameraDistance}=fit;
     const offset=right.scale(-cx*tangent*aspect*cameraDistance).add(up.scale(-cy*tangent*cameraDistance)).add(courseCenter);
     // Narrow portrait fits may place the camera beyond the old 1000 m far plane.
     // Keep the whole venue visible and retain depth precision at the road surface.
-    this.camera.minZ = Math.max(1, cameraDistance / 100);
-    this.camera.maxZ = Math.max(1000, cameraDistance + 600);
-    this.camera.position.copyFrom(away.scale(cameraDistance).add(offset)); this.camera.setTarget(offset);
+    const position=away.scale(cameraDistance).add(offset);
+    if(fitTerrain){if(this.terrainCameraFits.size>=8)this.terrainCameraFits.delete(this.terrainCameraFits.keys().next().value!);this.terrainCameraFits.set(key,{position:position.clone(),target:offset.clone(),distance:cameraDistance});}
     // Input/projection can run before the next rendered frame after a mode change.
-    this.scene.updateTransformMatrix(true);
-    this.post?.resize();
-    this.lines.forEach(line => line.resize()); this.ignoredLines.forEach(line => line.resize()); this.errorLine?.resize();
+    this.applyCameraFit(position,offset,cameraDistance);
   }
   setLayout(mode: string) { this.layoutMode = mode; const menu=['welcome','setup','results'].includes(mode);this.scene.imageProcessingConfiguration.exposure = this.scenery==='night-city' ? (menu?nightAppearance.menuExposure:nightAppearance.gameExposure) : (menu ? 0.45 : 1.12); this.resize(); }
   setTheme(theme: PresentationTheme) {
@@ -394,7 +427,7 @@ export class GameScene {
     const x = (clientX - rect.left) * this.engine.getRenderWidth() / rect.width * scale;
     const y = (clientY - rect.top) * this.engine.getRenderHeight() / rect.height * scale;
     const ray = this.scene.createPickingRay(x, y, Matrix.Identity(), this.camera);
-    if(this.track.sections)return drawingRay(ray,this.track,previous);
+    if(this.track.sections||this.track.terrain)return drawingRay(ray,this.track,previous);
     if (Math.abs(ray.direction.y) < 1e-8) return null;
     let t = (0.15 - ray.origin.y) / ray.direction.y;
     const flat = { x: ray.origin.x + ray.direction.x * t, z: ray.origin.z + ray.direction.z * t };
@@ -441,7 +474,7 @@ export class GameScene {
   }
   showError(point?: Point, section?: Point[]) { this.errorLine?.dispose(); this.errorLine = undefined; this.errorMarker.isVisible = !!point; if (point) this.errorMarker.position.set(point.x, 0.3, point.z); if (section) this.errorLine = new PaceLine(this.scene, section, section.map(() => 9), this.theme, 0, false, true, false, this.track); }
   showStart(show: boolean) { this.marker.isVisible = show; this.approach.isVisible = show; }
-  get depthFeatures() { return { hopCores: this.scene.meshes.filter(m=>m.name === 'four-downward-cold-gas-cores' && m.isEnabled() && m.isVisible).length, vehicleScale: sceneTuning.vehicle.racingScale, ghostVisible:this.lapGhost.visible, graphicsLevel: this.graphicsLevel, graphicsChoice: this.graphicsChoice, renderer: this.engine.isWebGPU ? 'webgpu' : 'webgl2', postPasses: this.post.passes, sky: this.scene.environmentTexture?.name ?? null, decorativeMotion: this.scene.meshes.filter(m => m.metadata?.dynamicScenery).map(m => ({name: m.name, rotation: m.rotation.asArray(), position: m.position.asArray()})), perspective: this.camera.mode === Camera.PERSPECTIVE_CAMERA, shadowMapSize: this.shadows.getShadowMap()?.getSize().width ?? 0, shadowCasters: this.shadows.getShadowMap()?.renderList?.length ?? 0, renderReady: this.scene.isReady(), worldReady: this.scene.isReady(), pending: this.scene.meshes.filter(m => !m.isReady(true)).map(m => m.name), carTriangles: this.vehicle.triangleCount, pace: this.theme.pace, lineWidths: this.lines.map(line => line.cssWidths), ignoredStrokeCount: this.ignoredLines.length }; }
+  get depthFeatures() { return { refinements: this.sceneryRuntime.refinements ?? [], hopCores: this.scene.meshes.filter(m=>m.name === 'four-downward-cold-gas-cores' && m.isEnabled() && m.isVisible).length, vehicleScale: sceneTuning.vehicle.racingScale, ghostVisible:this.lapGhost.visible, graphicsLevel: this.graphicsLevel, graphicsChoice: this.graphicsChoice, renderer: this.engine.isWebGPU ? 'webgpu' : 'webgl2', postPasses: this.post.passes, sky: this.scene.environmentTexture?.name ?? null, decorativeMotion: this.scene.meshes.filter(m => m.metadata?.dynamicScenery).map(m => ({name: m.name, rotation: m.rotation.asArray(), position: m.position.asArray()})), perspective: this.camera.mode === Camera.PERSPECTIVE_CAMERA, shadowMapSize: this.shadows.getShadowMap()?.getSize().width ?? 0, shadowCasters: this.shadows.getShadowMap()?.renderList?.length ?? 0, renderReady: this.scene.isReady(), worldReady: this.scene.isReady(), pending: this.scene.meshes.filter(m => !m.isReady(true)).map(m => m.name), carTriangles: this.vehicle.triangleCount, pace: this.theme.pace, lineWidths: this.lines.map(line => line.cssWidths), ignoredStrokeCount: this.ignoredLines.length }; }
   render(time: number) {
     const reduced = this.reducedMotion.matches, frameMs = this.lastFrame ? (time - this.lastFrame) * 1000 : 0; this.lastFrame = time;
     if (this.graphicsChoice === 'auto' && this.governor.sample(frameMs)) this.stepDownPending = true;

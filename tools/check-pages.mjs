@@ -9,18 +9,19 @@ import { browserOptions } from './browser-options.mjs';
 // Production receives only real UI events. A separate development page records
 // screen coordinates from the same track/camera, never production test hooks.
 const base = '/RoadsterRace/';
-const devURL = `http://127.0.0.1:5177${base}`;
+// Local runs may reuse a warm inspector server; production is still tested at its real base.
+const devURL = process.env.PAGES_DEV_URL || `http://127.0.0.1:5177${base}`;
 const productionURL = process.env.PAGES_URL || `http://127.0.0.1:4177${base}`;
 const fullRaces = process.env.PAGES_FULL_RACES === '1';
 const tournamentOnly = process.env.PAGES_ONLY === 'tournament';
-const circuits = ['coastal-launch', 'launchsite', 'golden-gate', 'santa-monica', 'grand-canyon', 'la-nights'];
+const circuits = ['coastal-launch', 'launchsite', 'golden-gate', 'santa-monica', 'grand-canyon', 'la-nights', 'snowy-tahoe', 'capitan-yosemite'];
 const selection = process.env.PAGES_ONLY;
 assert.ok(!selection || ['tournament', 'sessions', 'phone', 'multiplayer', 'solo'].includes(selection) || circuits.includes(selection), 'Unknown PAGES_ONLY group');
 const selectedCircuits = selection ? circuits.filter(id => id === selection) : circuits;
 const sessionChecks = !selection || selection === 'sessions';
 const output = new URL('../artifacts/pages/', import.meta.url);
 await mkdir(output, { recursive: true });
-const report = { date: new Date().toISOString(), url: productionURL, group: selection || 'all', fullRaces, checks: [], errors: [], failedRequests: [] };
+const report = { date: new Date().toISOString(), url: productionURL, devURL, group: selection || 'all', fullRaces, checks: [], errors: [], failedRequests: [] };
 const servers = [];
 let browser;
 
@@ -168,7 +169,7 @@ async function finish(page) {
 }
 
 try {
-  await server(['--port', '5177'], devURL);
+  if(!process.env.PAGES_DEV_URL)await server(['--port', '5177'], devURL);
   if (!process.env.PAGES_URL) {
     const html = await readFile(new URL('../dist/index.html', import.meta.url), 'utf8');
     assert.ok(html.includes('/RoadsterRace/assets/'), 'Build with VITE_BASE_PATH=/RoadsterRace/ before testing');
@@ -311,7 +312,7 @@ try {
     } finally { await context.close(); }
   }
   // Saved tournament creation/resumption is checked in every complete release;
-  // full mode additionally completes all six rounds using real drawn input.
+  // full mode additionally completes all registered rounds using real drawn input.
   if (sessionChecks || tournamentOnly) {
     console.log('Checking saved tournament and resumption');
     const { context, page } = await productionPage();
@@ -322,7 +323,7 @@ try {
       await page.getByRole('button', { name: '1 lap', exact: true }).click();
       await page.getByRole('button', { name: 'Start tournament' }).click();
       await page.reload(); await page.getByRole('button', { name: 'Resume tournament' }).click();
-      if (fullRaces) for (const [round, circuit] of ['coastal-launch', 'launchsite', 'golden-gate', 'santa-monica', 'grand-canyon', 'la-nights'].entries()) {
+      if (fullRaces) for (const [round, circuit] of circuits.entries()) {
         console.log(`Tournament round ${round + 1}: ${circuit}`);
         const points = await fixture(circuit, 2);
         await page.getByRole('button', { name: 'Draw your lines' }).click(); await ready(page);
@@ -331,13 +332,13 @@ try {
           await draw(page, context, points); await page.getByRole('button', { name: 'Lock in my line', exact: true }).click();
         }
         await page.keyboard.press('KeyA'); await page.keyboard.press('KeyL'); await racing(page); await finish(page);
-        if (round < 5) await page.getByRole('button', { name: 'Next race' }).click();
+        if (round < circuits.length - 1) await page.getByRole('button', { name: 'Next race' }).click();
       }
       if (fullRaces) {
         assert.equal(await page.locator('#panel .eyebrow').textContent(), 'TOURNAMENT COMPLETE');
         assert.equal(await page.locator('.championship-table tbody tr').count(), 2);
       }
-      report.checks.push({ tournamentSavedAndResumed: true, completedSixRounds: fullRaces });
+      report.checks.push({ tournamentSavedAndResumed: true, completedAllRounds: fullRaces });
     } finally { await context.close(); }
   }
   assert.deepEqual(report.errors, []); assert.deepEqual(report.failedRequests, []);

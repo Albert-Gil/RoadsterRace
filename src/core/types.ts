@@ -1,6 +1,6 @@
 export interface Point { x: number; z: number; y?: number; sectionId?: string; courseProgress?: number }
 export interface DrawSample extends Point { time: number }
-export interface TrackBarrier { id: string; footprint: Point[]; height: number; baseHeight?: number; sectionId?: string; kind?: 'infield' | 'building' | 'bridge-rail' | 'bridge-support' | 'pier-rail' | 'service-barrier' | 'cliff-rail' | 'cliff-face' | 'rock'; bridgeId?: string; /** Explicit constrained lane, city median or approved broad infield protection. */ runoffException?: 'hop-lane' | 'urban-median' | 'cut-protection'; /** A real sloping cliff, not an extruded invisible wall. */ slopedFace?: { lip: Point; toe: Point; lipWidth: number; toeWidth: number; lipHeight: number; toeHeight: number } }
+export interface TrackBarrier { id: string; footprint: Point[]; height: number; baseHeight?: number; /** Resolve a level foundation from the authored terrain before baking its ground grid. */ terrainAnchor?:boolean; sectionId?: string; kind?: 'infield' | 'building' | 'bridge-rail' | 'bridge-support' | 'pier-rail' | 'service-barrier' | 'cliff-rail' | 'cliff-face' | 'rock'; bridgeId?: string; /** Explicit constrained lane, city median or approved broad infield protection. */ runoffException?: 'hop-lane' | 'urban-median' | 'cut-protection'; /** A real sloping cliff, not an extruded invisible wall. */ slopedFace?: { lip: Point; toe: Point; lipWidth: number; toeWidth: number; lipHeight: number; toeHeight: number } }
 export interface RoadSection { id: string; from: number; to: number; heights: [number, number][]; supportWidth: number; /** Optional distance/width profile for continuous shoulders, relative to section.from. */ supportWidths?: [number, number][]; flight?: boolean }
 export interface SupportSurface { id: string; footprint: Point[] }
 export interface TrackJump {
@@ -9,6 +9,8 @@ export interface TrackJump {
   /** Alternate road coordinates, mapped onto the bypass's ordered course distance. */
   branch: Point[]; entryProgress: number; exitProgress: number;
   kind?: 'crest'; takeoffElevation?: number; landingElevation?: number; launchBoost?: number; launchSlope?: number;
+  /** Main-road crossing, included by every legal main route and every CPU difficulty. */
+  mandatory?:boolean;
 }
 /** A manual-hop branch, independent of automatic ramps and water support. */
 export interface HopShortcut {
@@ -18,6 +20,10 @@ export interface HopShortcut {
 export interface HopTraversal { id: string; entryDistance: number; exitDistance: number }
 export interface StartFinishGate { center: Point; forward: Point; width: number; leadIn: number }
 export interface TrackBridge { id: string; from: Point; to: Point; width: number }
+/** Authoritative continuous ground, independent of graphics quality or cosmetic noise. */
+export interface TerrainSurface { minX:number;minZ:number;cell:number;cols:number;rows:number;heights:Float32Array;roadHeights:[number,number][];branchHeights?:Record<string,number> }
+/** Main-road snow crest over continuous terrain; not an alternate or water corridor. */
+export interface TerrainTakeoff { id:string;center:Point;forward:Point;width:number;progress:number;launchBoost:number;launchSlope:number;minimumSpeed:number;planningSpeed:number }
 export interface TrackDefinition {
   id: string;
   version: number;
@@ -37,7 +43,9 @@ export interface TrackDefinition {
   jumps?: TrackJump[];
   hopShortcuts?: HopShortcut[];
   sections?: RoadSection[];
-  surface?: 'packed-dirt';
+  surface?: 'packed-dirt' | 'packed-snow';
+  terrain?: TerrainSurface;
+  terrainTakeoffs?:TerrainTakeoff[];
 }
 export interface RoutePoint extends Point {
   distance: number;
@@ -78,7 +86,7 @@ export interface RaceState {
   thrustReadyAt: number;
   hopReadyAt: number;
   hopCount: number;
-  flightOrigin: 'hop' | 'ramp' | 'crest' | 'fall' | null;
+  flightOrigin: 'hop' | 'ramp' | 'crest' | 'ski' | 'fall' | null;
   flightStartedAt: number;
   position: Point;
   elevation: number;
@@ -95,7 +103,7 @@ export interface RaceState {
   drifting: boolean;
   driftCount: number;
   sandAmount: number;
-  surface: 'asphalt' | 'sand' | 'packed-dirt';
+  surface: 'asphalt' | 'sand' | 'packed-dirt' | 'packed-snow' | 'deep-snow';
   supportSectionId?: string;
   checkpoint: number;
   thrustCount: number;

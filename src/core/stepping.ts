@@ -31,7 +31,7 @@ export function stepRacers(racers: readonly RaceSimulation[], track: TrackDefini
         if (r.state.recoveryWaiting) { r.state.recoveringUntil = now + dt; enabled[i] = false; }
       }
     });
-    const before = racers.map(r => ({ position: { ...r.state.position }, velocity: { ...r.state.velocity }, heading: r.state.heading, elevation: r.state.elevation }));
+    const before = racers.map(r => ({ position: { ...r.state.position }, velocity: { ...r.state.velocity }, heading: r.state.heading, elevation: r.state.elevation, movement:r.state.movement }));
     const old = racers.map(r => r.integrate(dt, now));
     // A water failure can enter recovery during integration. Remove that car
     // from this very contact pass, not only from the following substep.
@@ -39,7 +39,7 @@ export function stepRacers(racers: readonly RaceSimulation[], track: TrackDefini
     const budgets = racers.map((r, i) => Math.hypot(r.state.position.x - before[i].position.x, r.state.position.z - before[i].position.z));
     for (let pass = 0; contactsEnabled && pass < CONTACT_RULES.passes; pass++) {
       // Jacobi corrections: all pair impulses read the same snapshot, then apply together.
-      const bodies: ContactBody[] = racers.map(r => ({ position: { ...r.state.position }, velocity: { ...r.state.velocity }, heading: r.state.heading, elevation: r.state.elevation }));
+      const bodies: ContactBody[] = racers.map(r => ({ position: { ...r.state.position }, velocity: { ...r.state.velocity }, heading: r.state.heading, elevation: r.state.elevation, movement:r.state.movement }));
       const deltas = bodies.map(() => ({ position: { x: 0, z: 0 }, velocity: { x: 0, z: 0 } }));
       for (let i = 0; i < bodies.length; i++) for (let j = i + 1; j < bodies.length; j++) {
         if (!enabled[i] || !enabled[j]) continue;

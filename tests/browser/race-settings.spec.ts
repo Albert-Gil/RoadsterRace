@@ -84,7 +84,7 @@ test('garage fits phone portrait/landscape and tablet with reachable names, pain
   for (const [width, height] of [[844, 390], [390, 844], [1024, 768]]) {
     await page.setViewportSize({ width, height });
     const name = page.getByRole('textbox', { name: 'Driver 4 name' }); await name.fill('Morgan'); await name.press('Enter');
-    const swatch = page.getByRole('group', { name: 'Driver 4 paint' }).getByRole('button', { name: 'Glacier silver', exact: true });
+    const swatch = page.getByRole('group', { name: 'Driver 4 paint' }).getByRole('button', { name: 'Stainless steel gray', exact: true });
     await swatch.click(); const bounds = await swatch.boundingBox();
     expect(bounds!.width).toBeGreaterThanOrEqual(44); expect(bounds!.height).toBeGreaterThanOrEqual(44);
     const start = page.getByRole('button', { name: 'Plan your lines' }); await expect(start).toBeInViewport();

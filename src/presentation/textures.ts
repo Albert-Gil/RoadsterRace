@@ -18,7 +18,7 @@ function mineralNoise(u: number, v: number, cells: number) {
 }
 
 /** Small original, seeded textures. They multiply theme colors; no network art dependency. */
-export function surfaceTexture(scene: Scene, kind: 'asphalt' | 'sand' | 'water' | 'rubber' | 'gravel' | 'timber' | 'concrete' | 'sandstone') {
+export function surfaceTexture(scene: Scene, kind: 'asphalt' | 'sand' | 'snow' | 'water' | 'rubber' | 'gravel' | 'timber' | 'concrete' | 'sandstone') {
   const size = 256, texture = new DynamicTexture(`${kind}-grain`, size, scene, true, Texture.TRILINEAR_SAMPLINGMODE);
   const context = texture.getContext() as CanvasRenderingContext2D, pixels = new ImageData(size, size);
   let seed = 731;
@@ -31,7 +31,8 @@ export function surfaceTexture(scene: Scene, kind: 'asphalt' | 'sand' | 'water' 
     const fineGrain = Math.sin(x * 1.9 + y * 2.1) * Math.sin(y * .9 - x * .7);
     const value = kind === 'sandstone' ? 224 + strata * 12 + broad * 4 + noise * 11 : kind === 'timber' ? (230 + Math.sin(y * 0.4 + Math.sin(x * 0.11) * 2) * 6 + noise * 12) * plank : kind === 'concrete' ? 229 + broad * 4 + noise * 17 : kind === 'gravel' ? 222 + broad * 14 + fineGrain * 6 + noise * 23 : kind === 'rubber' ? 210 : kind === 'water' ? 235 + wave * 1.2 + broad * 1.5 + noise : kind === 'sand' ? 225 + broad * 8 + noise * 13 : 207 + noise * 47;
     const offset = (y * size + x) * 4;
-    pixels.data[offset] = value * (kind === 'water' ? 0.9 : 1); pixels.data[offset + 1] = value * (kind === 'water' ? 0.98 : 1); pixels.data[offset + 2] = value;
+    const tone=kind==='snow'?240+broad*4+noise*8:value;
+    pixels.data[offset] = tone * (kind === 'water' ? 0.9 : 1); pixels.data[offset + 1] = tone * (kind === 'water' ? 0.98 : 1); pixels.data[offset + 2] = tone;
     pixels.data[offset + 3] = kind === 'rubber' ? Math.max(0, Math.sin(y / size * Math.PI)) ** 3 * (0.35 + 0.65 * Math.sin(y / size * Math.PI * 24 + wave * 0.3) ** 8) * noise * 240 : 255;
   }
   context.putImageData(pixels, 0, 0);

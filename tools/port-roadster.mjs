@@ -12,6 +12,8 @@ car = car.replace('const N=Math.round((X0-X1)/.025)', 'const N=Math.round((X0-X1
   .replace("['green','paint',5]", "['green','paint',detail === 'showcase' ? 5 : 2]")
   .replace("['crown','paint',7]", "['crown','paint',detail === 'showcase' ? 7 : 3]");
 const helper = 'const sub=(a,b)=>a.map((x,i)=>x-b[i]),cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],norm=a=>{const l=Math.hypot(...a)||1;return a.map(x=>x/l);},dot=(a,b)=>a.reduce((v,x,i)=>v+x*b[i],0);';
-writeFileSync('src/presentation/roadster-geometry.js', `/** Adapted from RoadsterLAB. Copyright (c) 2026 IMPULSE / TRoadster contributors. MIT; see public/licenses/RoadsterLAB.txt. */\n${helper}\nexport function buildRoadsterGeometry(detail = 'race') {\n${car}\nreturn { ...CAR.build(), mounts: CAR.WHEELS, materials: CAR.MATS, wheelMaterials: CAR.WHEEL_MATS };\n}\n`);
+// The shipped geometry is now hand-refined. Extract upstream for comparison only.
+mkdirSync('artifacts/roadster-upstream', { recursive: true });
+writeFileSync('artifacts/roadster-upstream/roadster-geometry.js', `/** Adapted from RoadsterLAB. Copyright (c) 2026 IMPULSE / TRoadster contributors. MIT; see public/licenses/RoadsterLAB.txt. */\n${helper}\nexport function buildRoadsterGeometry(detail = 'race') {\n${car}\nreturn { ...CAR.build(), mounts: CAR.WHEELS, materials: CAR.MATS, wheelMaterials: CAR.WHEEL_MATS };\n}\n`);
 mkdirSync('public/licenses', {recursive:true});
 copyFileSync(`${source}/LICENSE`, 'public/licenses/RoadsterLAB.txt');

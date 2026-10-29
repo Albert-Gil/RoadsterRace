@@ -97,4 +97,5 @@ test('a single RaceSimulation and a one-car LocalRace share one stepping impleme
     }
     expect(race.finished).toBe(true); expect(single.state).toEqual(race.racers[0].state);
   }
-}, 60000);
+// This compares two complete simulations on every registered course, now seven.
+}, 180000);

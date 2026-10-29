@@ -2,7 +2,7 @@ import { audioAssets, audioMix, soundLoops, venueLoop, type VenueAudio, type Aud
 import { assetUrl } from './urls';
 import { MenuMusic } from './menu-music';
 
-export interface AudioFrame { active: boolean; speed: number; slip: number; sand: number; dirt?: boolean }
+export interface AudioFrame { active: boolean; speed: number; slip: number; sand: number; dirt?: boolean; snow?: boolean }
 const limit = (value: number, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, value));
 
 function noiseBuffer(context: BaseAudioContext) {
@@ -173,7 +173,7 @@ export class GameAudio {
     if (frame.active && !this.muted) {
       this.levels.drive = audioMix.drive * moving * (0.25 + speed * .75);
       this.levels.tire = frame.dirt ? 0 : audioMix.tire * limit(frame.slip) * moving * (1 - frame.sand);
-      this.levels.sand = audioMix.sand * (frame.dirt ? Math.max(frame.sand, .18 + .18*limit(frame.slip)) : frame.sand) * moving;
+      this.levels.sand = audioMix.sand * (frame.dirt ? Math.max(frame.sand, .18 + .18*limit(frame.slip)) : frame.sand) * moving * (frame.snow ? .65 : 1);
       this.levels[this.ambience] = audioMix.coast;
     }
     for (const [role, voice] of this.voices) {

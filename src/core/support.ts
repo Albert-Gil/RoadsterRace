@@ -1,6 +1,6 @@
 import { clamp, cumulative, distance, lerp, mix, projectToPolyline } from './geometry';
 import { insideBarrier } from './barriers';
-import { annotateRoad, locateRoad, roadHeight, roadSupported, sectionAt } from './elevation';
+import { annotateRoad, locateRoad, roadHeight, roadSupported, sectionAt,terrainElevation } from './elevation';
 import type { Point, RaceState, TrackDefinition, TrackJump } from './types';
 
 export const FLIGHT_RULES = Object.freeze({ gravity: 36, hopGravity: 72, rampLaunchBoost: 8, carHeight: 1.05, waterHeight: -2.4 });
@@ -23,6 +23,7 @@ export function rampAt(p: Point, track: TrackDefinition) {
   return track.jumps?.find(j => { const c = jumpCoordinates(p, j); return j.kind!=='crest' && c.along >= 0 && c.along <= j.rampLength && Math.abs(c.across) <= j.width / 2; });
 }
 export function groundHeight(p: Point, track: TrackDefinition) {
+  if(track.terrain)return terrainElevation(p,track);
   if(track.sections)return roadHeight(track,locateRoad(p,track).progress);
   const ramp = rampAt(p, track);
   return ramp ? clamp(jumpCoordinates(p, ramp).along / ramp.rampLength, 0, 1) * ramp.lipHeight : 0;
@@ -48,6 +49,16 @@ export function takeoffCrossing(a: Point, b: Point, track: TrackDefinition) {
       const t = (jump.rampLength - aa.along) / (bb.along - aa.along), across = lerp(aa.across, bb.across, t);
       if (Math.abs(across) <= (jump.width - track.carWidth) / 2) return { jump, t };
     }
+  }
+  return null;
+}
+/** Authored ski crests launch only forward, on the same supported main road. */
+export function terrainTakeoffCrossing(a:Point,b:Point,track:TrackDefinition){
+  for(const launch of track.terrainTakeoffs??[]){
+    if(Math.abs((a.courseProgress??launch.progress)-launch.progress)>30)continue;
+    const coords=(p:Point)=>{const x=p.x-launch.center.x,z=p.z-launch.center.z;return{along:x*launch.forward.x+z*launch.forward.z,across:x*launch.forward.z-z*launch.forward.x};};
+    const aa=coords(a),bb=coords(b);
+    if(aa.along<=0&&bb.along>0){const t=-aa.along/(bb.along-aa.along),across=lerp(aa.across,bb.across,t);if(Math.abs(across)<=(launch.width-track.carWidth)/2)return{launch,t,point:mix(a,b,t)};}
   }
   return null;
 }
