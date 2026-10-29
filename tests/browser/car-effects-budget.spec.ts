@@ -2,10 +2,10 @@ import { expect, test } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { waitForPhase } from './ui';
 
-for (const mode of ['Time Trial', 'Solo Race']) test(`${mode} keeps larger cars within budget with ground effects, thrust and impact dust`, async ({page}) => {
+for (const circuit of ['la-nights','capitan-yosemite']) for (const mode of ['Time Trial', 'Solo Race']) test(`${circuit} ${mode} stays within budget with ground effects, thrust and impact dust`, async ({page}) => {
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
   await page.setViewportSize({width:844,height:390});
-  await page.goto('/?circuit=la-nights&graphics=medium');
+  await page.goto(`/?circuit=${circuit}&graphics=medium`);
   await page.getByRole('button',{name:mode,exact:true}).click();
   await page.getByRole('button',{name:'Draw racing line',exact:true}).click();
   await page.waitForFunction(()=>(window as any).__roadster.getGraphics().renderReady);
@@ -32,5 +32,5 @@ for (const mode of ['Time Trial', 'Solo Race']) test(`${mode} keeps larger cars 
   expect(Math.max(...samples.map(s=>s.drawCalls))).toBeLessThanOrEqual(mode==='Time Trial'?90:150);
   if(mode==='Time Trial')expect(samples.every(s=>s.ghostVisible)).toBe(true);
   expect(errors).toEqual([]);
-  mkdirSync('artifacts/aero-followup',{recursive:true});writeFileSync(`artifacts/aero-followup/ground-effects-${mode.replace(' ','-')}.json`,JSON.stringify({samples,errors},null,2));
+  mkdirSync('artifacts/effects-budget',{recursive:true});writeFileSync(`artifacts/effects-budget/${circuit}-${mode.replace(' ','-')}.json`,JSON.stringify({samples,errors},null,2));
 });

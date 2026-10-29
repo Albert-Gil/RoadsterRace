@@ -135,3 +135,5 @@ Three main-road snow takeoffs replace the single-crest layout. Four-tyre fitting
 ## Capitan Yosemite
 
 The eighth biome uses yosemiteAppearance, sceneryPalettes.yosemite, sceneryLighting.yosemite, venueSkies.yosemite and sceneryFinishes.yosemite. Native terrain, granite and forest are built in the lazy yosemite-landscape chunk; the visible road, shoulders and car contact shadows share exact rendered-surface samples. All physical support and obstacles come from the core track. Water flow and bounded mist are presentation only and respect reduced motion. See CAPITAN_YOSEMITE.md.
+
+The 2026-10-29 refinement adds `yosemite-granite.ts` (shared cliff/cascade skin), `yosemite-dressing.ts` (one batched park-detail mesh) and `yosemite-surfaces.ts` (shared meadow/fringe colours). `absoluteVertexColors` marks materials whose vertex palette must not be multiplied again during a theme switch. Solid rocks and props remain within existing authored footprints/heights; the scenery pass changes no track or rules version. See YOSEMITE_VISUAL_REFINEMENT.md.

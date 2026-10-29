@@ -6,6 +6,10 @@ test('Yosemite landscape is finite, batched, grounded and contained by its autho
   const meshes=buildYosemiteLandscape(scene,track,{meadow:mat('meadow'),stone:mat('stone'),forest:mat('forest'),detail:mat('detail')},surface);
   expect(meshes).toHaveLength(3);for(const mesh of meshes){const p=mesh.getVerticesData('position')!;expect(p.length).toBeGreaterThan(0);for(const v of p)expect(Number.isFinite(v)).toBe(true);}
   const rocks=meshes[0].getVerticesData('position')!,barriers=track.barriers.filter(b=>b.kind==='rock');
+  // A welded summit shares its normal across the crown; split poles create radial lighting seams.
+  const capitan=barriers.find(b=>b.id==='el-capitan-granite')!,top=(capitan.baseHeight??0)+capitan.height,peaks:number[]=[];
+  for(let i=0;i<rocks.length;i+=3)if(Math.abs(rocks[i+1]-top)<.0001)peaks.push(i/3);
+  expect(peaks).toHaveLength(1);expect(meshes[0].getVerticesData('normal')![peaks[0]*3+1]).toBeGreaterThan(.98);
   for(let i=0;i<rocks.length;i+=3){const p={x:rocks[i],z:rocks[i+2]},matches=barriers.filter(b=>insideBarrier(p,b)||edgeDistance(p,b.footprint)<.001);expect(matches.length).toBeGreaterThan(0);expect(matches.some(b=>rocks[i+1]>=(b.baseHeight??0)-.001&&rocks[i+1]<=(b.baseHeight??0)+b.height+.001)).toBe(true);}
   const trees=meshes[1].metadata.placements;expect(trees.length).toBeGreaterThan(360);
   const normals=meshes[1].getVerticesData('normal')!;for(let i=1;i<normals.length;i+=3)expect(normals[i]).toBeGreaterThanOrEqual(-.001);

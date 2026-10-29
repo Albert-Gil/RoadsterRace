@@ -170,3 +170,7 @@ Snowy Tahoe v5's two snow rolls, transverse groomer traces and surface-projected
 ## Capitan Yosemite — 2026-10-29
 
 The fictional circuit layout, granite monoliths, pine geometry, ranger buildings, campground objects, fallen cedar, water geometry, waterfall and mist sprites are original procedural work created in this repository. No park maps, photographs, logos or third-party models were copied. The venue reuses the existing recorded CC0 sky environment and existing licensed sound roles; no new recording or external asset was added.
+
+### Yosemite refinement — 2026-10-29
+
+The new mineral/lichen cliff colouring, rounded rock skin, layered conifers, meadow variation, worn dirt treatment, depth-coloured creek/foam, stone-and-timber ranger buildings and detailed fallen cedar are original native procedural work in this repository. They add no third-party models, maps, photographs, recordings or trademarks. Existing environment/audio licences and the RoadsterLAB model attribution remain unchanged.
