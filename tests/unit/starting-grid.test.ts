@@ -52,7 +52,9 @@ test.each(circuits)('$id separates identical edge anchors without sending cars a
     const poses = startingGrid(track, routes);
     expect(poses.every(p => Math.abs(gateCoordinates(p, track).across - edge) < 4)).toBe(true);
     const race = new LocalRace(routes,track,1);
-    for(let tick=0;tick<180;tick++)race.step();
+    // Four larger cars sharing an edge anchor can occupy four safe staggered
+    // rows. All join before the five-second contact-free start ends.
+    for(let tick=0;tick<300;tick++)race.step();
     expect(race.racers.every(car => !car.gridPending && car.state.distance > 2 && car.state.recoveryCount === 0)).toBe(true);
   }
 }, 60000);

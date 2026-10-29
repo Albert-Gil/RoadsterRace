@@ -17,9 +17,10 @@ export interface Standing {
   finishTime: number | null;
 }
 
-export function gridPose(track: TrackDefinition, slot: number, across?: number) {
+export function gridPose(track: TrackDefinition, slot: number, across?: number, row = Math.floor(slot / 2)) {
   const gate = startGate(track), a = gate.center, heading = Math.atan2(gate.forward.x, gate.forward.z);
-  const back = 3.2 + Math.floor(slot / 2) * 6, side = across ?? (slot % 2 ? 1.6 : -1.6);
+  const back = Math.max(3.2, track.carLength / 2 + .4) + row * (track.carLength + .5);
+  const side = across ?? (slot % 2 ? 1 : -1) * Math.max(1.6, track.carWidth / 2 + .2);
   return { x: a.x - Math.sin(heading) * back + Math.cos(heading) * side, z: a.z - Math.cos(heading) * back - Math.sin(heading) * side, heading };
 }
 /** Keep each driver near their own crossing anchor, without overlapping a neighbour. */
@@ -32,7 +33,12 @@ export function startingGrid(track: TrackDefinition, routes: CompiledRoute[], ro
     const preferred = clamp((anchor.x - gate.center.x) * right.x + (anchor.z - gate.center.z) * right.z, -limit, limit);
     const candidates = [preferred, ...Array.from({ length: Math.ceil(limit * 8) + 1 }, (_, i) => clamp(-limit + i * 0.25, -limit, limit))];
     candidates.sort((a, b) => Math.abs(a - preferred) - Math.abs(b - preferred));
-    const pose = candidates.map(across => gridPose(track, slot, across)).find(p => {
+    // Identical edge anchors may need four staggered rows. Prefer a clear row
+    // behind that anchor over forcing a large sideways detour across the start.
+    const rows = Array.from({length: 4 - Math.floor(slot / 2)}, (_,i)=>Math.floor(slot / 2)+i);
+    const near = candidates.filter(across => Math.abs(across-preferred) <= .3);
+    const options = [...rows.flatMap(row=>near.map(across=>gridPose(track,slot,across,row))), ...rows.flatMap(row=>candidates.map(across=>gridPose(track,slot,across,row)))];
+    const pose = options.find(p => {
       const body = { position: p, velocity: { x: 0, z: 0 }, heading: p.heading };
       return !barrierContact(p, p.heading, track, 0.15) && vehicleSupported(p, p.heading, track)
         && !occupied.some(other => vehicleContact(body, { position: other, velocity: { x: 0, z: 0 }, heading: other.heading }, { ...track, carWidth: track.carWidth + 0.25 }));

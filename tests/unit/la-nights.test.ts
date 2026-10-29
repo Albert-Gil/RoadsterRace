@@ -10,7 +10,8 @@ import { laBuildings } from '../../src/content/la-night-art';
 import { circuits } from '../../src/content/circuits';
 import { createTournament } from '../../src/core/tournament';
 
-function plan(branch: boolean|string=false){const r=compileRoute(createPracticeSamples(track,7,branch),track);if(!r.ok)throw Error(r.message);return r.route;}
+// Match a normal 20+ m/s launch when the automatic branch shortens the lap.
+function plan(branch: boolean|string=false){const r=compileRoute(createPracticeSamples(track,branch===true?6.5:7,branch),track);if(!r.ok)throw Error(r.message);return r.route;}
 test('LA nights has independent, shorter automatic-jump and manual-hop routes',()=>{
  const main=plan(),jump=plan(true),hop=plan('backlot-alley');
  expect(track.roadWidth).toBe(16);expect(jump.jumps).toEqual(['channel-crossing']);expect(hop.hopShortcuts).toHaveLength(1);

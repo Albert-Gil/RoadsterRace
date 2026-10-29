@@ -62,11 +62,12 @@ test('the cosmetic replay uses the complete new body and wheels in one isolated 
   } finally { scene.dispose(); engine.dispose(); }
 });
 
-test('all venues use matching 15% larger contact dimensions and artwork scale', () => {
-  expect(VEHICLE_DIMENSIONS.width).toBeCloseTo(2.2 * 1.15, 10);
-  expect(VEHICLE_DIMENSIONS.length).toBeCloseTo(5.2 * 1.15, 10);
-  expect(FLIGHT_RULES.carHeight).toBeCloseTo(1.05 * 1.15, 10);
-  expect(sceneTuning.vehicle.racingScale / 1.12).toBeCloseTo(1.15, 10);
+test('all venues apply a second multiplicative 15% enlargement to collisions and artwork', () => {
+  const growth = 1.15 * 1.15;
+  expect(VEHICLE_DIMENSIONS.width).toBeCloseTo(2.2 * growth, 10);
+  expect(VEHICLE_DIMENSIONS.length).toBeCloseTo(5.2 * growth, 10);
+  expect(FLIGHT_RULES.carHeight).toBeCloseTo(1.05 * growth, 10);
+  expect(sceneTuning.vehicle.racingScale / 1.12).toBeCloseTo(growth, 10);
   for (const {track} of circuits) {
     expect(track.carWidth).toBe(VEHICLE_DIMENSIONS.width); expect(track.carLength).toBe(VEHICLE_DIMENSIONS.length);
     expect(track.roadWidth).toBe(16);

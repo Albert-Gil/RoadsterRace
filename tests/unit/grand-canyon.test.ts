@@ -11,7 +11,9 @@ import { LocalRace } from '../../src/core/local-race';
 import { LapRecorder, lapRecordKey, replayPose } from '../../src/core/lap-replay';
 import { shortcutProjection } from '../../src/core/hop-shortcuts';
 
-const plan=(branch=false)=>{const r=compileRoute(createPracticeSamples(track,7,branch?'mesa-service-trail':false),track);if(!r.ok)throw Error(JSON.stringify(r));return r.route;};
+// The shorter trail's seven-second gesture made the required crest approach slower
+// than 20 m/s. Keep this successful-lap fixture above that authored minimum for the larger car.
+const plan=(branch=false)=>{const r=compileRoute(createPracticeSamples(track,branch?6.5:7,branch?'mesa-service-trail':false),track);if(!r.ok)throw Error(JSON.stringify(r));return r.route;};
 test('Grand Canyon is a supported 16 m dirt circuit with a required flight and valid hidden branch',()=>{
  expect(track.length).toBeGreaterThanOrEqual(580);expect(track.length).toBeLessThanOrEqual(610);
  const normal=plan(),short=plan(true);expect(normal.jumps).toContain('canyon-crest');expect(short.hopShortcuts).toHaveLength(1);

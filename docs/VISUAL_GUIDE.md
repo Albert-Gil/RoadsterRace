@@ -35,7 +35,7 @@ Earlier plans stay hidden during sequential drawing. Numbered cars/pads and dist
 `roadster-geometry.js` contains a self-contained, hand-refined adaptation of the user's MIT-licensed RoadsterLAB scene. `tools/port-roadster.mjs` extracts the upstream version into `artifacts/roadster-upstream/` for comparison, preserving the curated shipped geometry; only that development script needs the reference project. The source project stays untouched. Retain `public/licenses/RoadsterLAB.txt`.
 
 - Game axes: Y up, +Z forward, +X right. The root is centered at ground level; scene placement adds road elevation.
-- Gameplay capsule: 2.53 m wide, 5.98 m long, with 1.2075 m vertical clearance. These are game dimensions, not manufacturer specifications. The physical and visible cars are 15% larger than the previous model.
+- Gameplay capsule: 2.9095 m wide, 6.877 m long, with 1.388625 m vertical clearance. These are game dimensions, not manufacturer specifications. The physical and visible cars are a further 15% larger than the preceding update (32.25% above the original model).
 - Source axes: +X forward, +Z right. The adapter swaps X/Z, transforms normals/winding, and scales by `2.2 / 2.0201642066907674`.
 - Racing detail: **9,904 triangles**; showcase: **43,036 triangles**. One definition supplies both. Racing geometry and common materials are shared; paint/brake lights remain independent. The larger raised rear airfoil stays stainless steel with every body color, sharing the existing metal group and brushed-steel material.
 - Geometry `mounts` supplies wheel pivots. Front pivots steer; wheel meshes rotate around local X. A sprung-body transform adds visual lean/pitch without changing physics.

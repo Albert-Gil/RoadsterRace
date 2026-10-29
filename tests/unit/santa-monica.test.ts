@@ -61,7 +61,9 @@ test('sideways departures and simultaneous missed jumps recover without appearin
   expect(waited).toBe(true); expect(race.racers.every(r => r.state.recoveryCount === 1)).toBe(true);
 });
 test.each([false, true])('six-lap complete physical race (jump=%s)', jump => {
-  const r = compileRoute(createPracticeSamples(track, 7, jump), track); if (!r.ok) throw new Error(r.message);
+  // The shorter jump branch needs a faster gesture to retain a 20+ m/s approach
+  // with the enlarged capsule's rear fully clearing the receiving edge.
+  const r = compileRoute(createPracticeSamples(track, jump ? 6.5 : 7, jump), track); if (!r.ok) throw new Error(r.message);
   const race = new RaceSimulation(r.route, track, 6); let flights = 0, landings = 0;
   for (let tick = 0; tick < 24000 && !race.state.finished; tick++) {
     race.step(); for (const e of race.drainEvents()) { if (e.type === 'takeoff') flights++; if (e.type === 'landing') landings++; }

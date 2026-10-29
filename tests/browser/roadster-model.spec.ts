@@ -26,7 +26,7 @@ test('steel paint, shared geometry and fixed brakes render correctly through a r
   expect(model.steel).toEqual({ metal: .86, roughness: .28, texture: 'satin-steel-micro-brushing' });
   expect(model.painted).toEqual({ metal: .5, bump: null });
   expect(model.wing).toEqual({color:'#AEB4B8',metal:.86,roughness:.28});
-  expect(model.artScale).toBeCloseTo(1.288, 6);
+  expect(model.artScale).toBeCloseTo(1.4812, 6);
   expect(model.forwardCoreDraws).toBe(1);expect(model.forwardCores).toBe(4);
   expect(model.forwardTriangles).toBe(128);expect(model.forwardPosition).toEqual([0,.6,-3.7]);
   for(const [i,value] of [.86,.35,1.5].entries())expect(model.forwardBounds[i]).toBeCloseTo(value,5);

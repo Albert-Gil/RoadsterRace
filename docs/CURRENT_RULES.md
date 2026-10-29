@@ -8,8 +8,8 @@ Conventions: SI units; horizontal plane (x, z) with y up; heading 0 points along
 
 | Item | Version |
 |---|---:|
-| Vehicle rules (`RULES.version`) | 17 |
-| Route compiler (`COMPILER_VERSION`) | 17 |
+| Vehicle rules (`RULES.version`) | 18 |
+| Route compiler (`COMPILER_VERSION`) | 18 |
 | Newport Island track (`coastal-launch`) | 6 |
 | Launchsite track (`orbital-launchyard`) | 9 |
 | Golden Gate track (`golden-gate`) | 7 |
@@ -34,7 +34,7 @@ Records, ghosts, session bests and championships are scoped by these versions. C
 | Snowy Tahoe | `snowy-tahoe` | 5 | 16 | 554.8 | 17 | hop lane `forestry-trail` |
 | Capitan Yosemite | `capitan-yosemite` | 1 | 16 | 711.2 | 11 | crest `valley-creek-crest`, hop lane `ranger-timber-trail` |
 
-Vehicle envelope: 2.53 m × 5.98 m. Race distance: 1–6 laps (default 2). Championship points by place: 10 / 6 / 4 / 0.
+Vehicle envelope: 2.9095 m × 6.877 m. Race distance: 1–6 laps (default 2). Championship points by place: 10 / 6 / 4 / 0.
 
 Continuous terrain is authoritative for drawing, cars, runoff and rendering. Slopes change elevation/pitch, not horizontal acceleration. Weather is presentation only.
 
@@ -55,7 +55,7 @@ Main-road ski crests keep continuous terrain support and use automatic-flight gr
 
 | Key | Value | Unit | Meaning |
 |---|---:|---|---|
-| `version` | 17 | — | Vehicle rules version; stored with records and championships |
+| `version` | 18 | — | Vehicle rules version; stored with records and championships |
 | `dt` | 0.0166667 | s | Fixed simulation step (two equal substeps per step) |
 | `laps` | 2 | laps | Default race distance |
 | `acceleration` | 6 | m/s² | Maximum pace-following acceleration |
@@ -104,17 +104,17 @@ Derived: level-ground manual hop peak 8.028 m and airtime 0.944 s. Santa Monica 
 | `gravity` | 36 | m/s² | Gravity for automatic ramps and unsupported falls |
 | `hopGravity` | 72 | m/s² | Gravity during manual hops |
 | `rampLaunchBoost` | 8 | m/s | Upward velocity added at a ramp lip, before the slope term |
-| `carHeight` | 1.2075 | m | Vertical vehicle envelope for walls and car contacts |
+| `carHeight` | 1.38862 | m | Vertical vehicle envelope for walls and car contacts |
 | `waterHeight` | -2.4 | m | Water surface elevation |
 
 ## VEHICLE_DIMENSIONS
 
 | Key | Value | Unit | Meaning |
 |---|---:|---|---|
-| `scale` | 1.15 | factor | Uniform enlargement relative to the original vehicle |
-| `width` | 2.53 | m | Authoritative horizontal vehicle width on every circuit |
-| `length` | 5.98 | m | Authoritative capsule length on every circuit |
-| `height` | 1.2075 | m | Vertical vehicle envelope for airborne contacts and barriers |
+| `scale` | 1.3225 | factor | Uniform enlargement relative to the original vehicle |
+| `width` | 2.9095 | m | Authoritative horizontal vehicle width on every circuit |
+| `length` | 6.877 | m | Authoritative capsule length on every circuit |
+| `height` | 1.38862 | m | Vertical vehicle envelope for airborne contacts and barriers |
 
 ## CONTACT_RULES
 

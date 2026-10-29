@@ -13,14 +13,17 @@ import type { DrawSample, RaceState, TrackDefinition } from '../../src/core/type
 // `wander` metres, cut bends and finger jitter. Wander of 4–6 m leaves the lane's gates and
 // edges, which the strict gate-to-gate reading (compiler v14) rejected, leaving the obstacle solid.
 function handDrawnHopLap(track: TrackDefinition, laneId: string, wander: number, cut: number, jitter: number, seed: number): DrawSample[] {
-  const base = createPracticeSamples(track, 7, laneId), ds = cumulative(base), length = ds.at(-1)!, random = rng(seed);
+  // A clean shorter Canyon line needs a quicker gesture to clear its mandatory crest
+  // with the full enlarged car. Wandering strokes already travel farther in the same time.
+  const duration = track.id === 'grand-canyon' && wander === 0 ? 6500 : 7000;
+  const base = createPracticeSamples(track, duration / 1000, laneId), ds = cumulative(base), length = ds.at(-1)!, random = rng(seed);
   const at = (s: number) => samplePolyline(base, ds, Math.max(0, Math.min(length, s)));
   const phase = [random() * 6.28, random() * 6.28], samples: DrawSample[] = [];
   for (let s = 0; s <= length; s += 1.2) {
     const a = at(s - 3), b = at(s), c = at(s + 3), d = distance(a, c) || 1, normal = { x: -(c.z - a.z) / d, z: (c.x - a.x) / d };
     const turn = (b.x - a.x) * (c.z - b.z) - (b.z - a.z) * (c.x - b.x), curvature = 2 * turn / Math.max(1e-6, distance(a, b) * distance(b, c) * d);
     const offset = wander * (Math.sin(s / 37 + phase[0]) * 0.7 + Math.sin(s / 13 + phase[1]) * 0.3) + Math.sign(curvature) * Math.min(cut * 6, cut * Math.abs(curvature) * 120);
-    samples.push({ x: b.x + normal.x * offset + (random() - 0.5) * 2 * jitter, z: b.z + normal.z * offset + (random() - 0.5) * 2 * jitter, time: s / length * 7000 });
+    samples.push({ x: b.x + normal.x * offset + (random() - 0.5) * 2 * jitter, z: b.z + normal.z * offset + (random() - 0.5) * 2 * jitter, time: s / length * duration });
   }
   return samples;
 }
