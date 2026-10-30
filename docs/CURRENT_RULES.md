@@ -17,7 +17,7 @@ Conventions: SI units; horizontal plane (x, z) with y up; heading 0 points along
 | Grand Canyon track (`grand-canyon`) | 5 |
 | LA nights track (`la-nights`) | 4 |
 | Snowy Tahoe track (`snowy-tahoe`) | 5 |
-| Capitan Yosemite track (`capitan-yosemite`) | 2 |
+| Capitan Yosemite track (`capitan-yosemite`) | 3 |
 
 Records, ghosts, session bests and championships are scoped by these versions. Change a version whenever a value below changes race results.
 
@@ -32,7 +32,7 @@ Records, ghosts, session bests and championships are scoped by these versions. C
 | Grand Canyon | `grand-canyon` | 5 | 16 | 595.0 | 43 | crest `canyon-crest`, hop lane `mesa-service-trail` |
 | LA nights | `la-nights` | 4 | 16 | 734.0 | 12 | ramp `channel-crossing`, hop lane `backlot-alley` |
 | Snowy Tahoe | `snowy-tahoe` | 5 | 16 | 554.8 | 17 | hop lane `forestry-trail` |
-| Capitan Yosemite | `capitan-yosemite` | 2 | 16 | 711.2 | 55 | crest `valley-creek-crest`, hop lane `ranger-timber-trail` |
+| Capitan Yosemite | `capitan-yosemite` | 3 | 16 | 711.2 | 55 | crest `valley-creek-crest`, hop lane `ranger-timber-trail` |
 
 Vehicle envelope: 2.9095 m × 6.877 m. Race distance: 1–6 laps (default 2). Championship points by place: 10 / 6 / 4 / 0.
 

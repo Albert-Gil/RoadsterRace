@@ -2,45 +2,45 @@ import type { TrackBarrier } from '../types';
 import { outcrop } from './outcrop';
 
 /** Authored valley geology, not cosmetic scatter. Every visible mass has a real footprint.
- * Exterior walls stop well outside the driving/branch corridor; their foundations cannot
- * change its heightfield. These are original, compressed Yosemite-inspired landforms.
+ * Roadside walls retain at least five metres of runoff from both driving corridors.
+ * Their foundations may shape the surrounding ground, never the road profile. These are original, compressed Yosemite-inspired landforms.
  */
 const formations: [string, number, number, number, number, number, number][] = [
   ['sentinel-buttress', -2, 0, 11, 17, 31, .2],
   ['sentinel-shoulder', -3, -21, 11, 9, 13, .5],
   ['valley-erratic', -6, 43, 6, 6, 9, .7],
-  ['west-cathedral', -193, 39, 32, 54, 84, .1],
-  ['west-cathedral-spire', -205, 94, 25, 27, 96, .4],
-  ['west-cathedral-shoulder', -177, -21, 24, 30, 40, .3],
-  ['west-glacier-wall', -222, -52, 33, 46, 90, .2],
-  ['west-glacier-dome', -240, -116, 30, 36, 75, -.2],
-  ['south-cathedral-foot', -167, -104, 21, 25, 25, .3],
-  ['south-valley-wall', -100, -166, 47, 28, 70, -.1],
-  ['south-valley-shoulder', -41, -161, 29, 22, 44, .2],
-  ['south-sentinel-wall', 45, -172, 45, 29, 80, .1],
-  ['south-sentinel-foot', 100, -165, 29, 24, 43, -.2],
-  ['east-washington-column', 204, -37, 28, 45, 90, .1],
-  ['east-royal-arches', 203, 39, 35, 49, 74, -.2],
-  ['east-royal-shoulder', 193, 104, 33, 24, 45, .1],
-  ['east-dome-foot', 213, 163, 29, 32, 60, -.1],
-  ['north-three-brothers-low', -134, 179, 35, 29, 48, .1],
-  ['north-three-brothers-middle', -92, 203, 33, 30, 75, .1],
-  ['north-three-brothers-high', -49, 227, 35, 34, 103, .1],
-  ['north-clouds-rest', 22, 228, 42, 37, 110, -.15],
-  ['north-tenaya-dome', 85, 246, 34, 38, 94, .2],
-  ['north-distant-ridge', -164, 264, 53, 35, 108, .1],
-  ['east-distant-ridge', 259, 235, 33, 54, 112, -.2],
+  ['west-cathedral', -144.194, 35.413, 21.76, 36.72, 32.2, 0.1],
+  ['west-cathedral-spire', -133.806, 56.066, 17, 18.36, 35.8, 0.4],
+  ['west-cathedral-shoulder', -135.645, -37.657, 16.32, 20.4, 19, 0.3],
+  ['west-glacier-wall', -138.681, -50.576, 22.44, 31.28, 34, 0.2],
+  ['west-glacier-dome', -136.203, -72.473, 20.4, 24.48, 29.5, -0.2],
+  ['south-cathedral-foot', -125.658, -77.524, 14.28, 17, 14.5, 0.3],
+  ['south-valley-wall', -91.963, -111.149, 31.96, 19.04, 28, -0.1],
+  ['south-valley-shoulder', -41, -110.935, 19.72, 14.96, 20.2, 0.2],
+  ['south-sentinel-wall', 45, -104.747, 30.6, 19.72, 31, 0.1],
+  ['south-sentinel-foot', 97.215, -101.615, 19.72, 16.32, 19.9, -0.2],
+  ['east-washington-column', 155.224, -33.695, 19.04, 30.6, 34, 0.1],
+  ['east-royal-arches', 143.77, 48.017, 23.8, 33.32, 29.2, -0.2],
+  ['east-royal-shoulder', 136.131, 78.517, 22.44, 16.32, 20.5, 0.1],
+  ['east-dome-foot', 131.85, 94.749, 19.72, 21.76, 25, -0.1],
+  ['north-three-brothers-low', -86.655, 107.289, 23.8, 19.72, 21.4, 0.1],
+  ['north-three-brothers-middle', -57.856, 121.581, 22.44, 20.4, 29.5, 0.1],
+  ['north-three-brothers-high', -26.779, 137.343, 23.8, 23.12, 37.9, 0.1],
+  ['north-clouds-rest', 1.186, 141.475, 28.56, 25.16, 40, -0.15],
+  ['north-tenaya-dome', 74.487, 128.956, 23.12, 25.84, 35.2, 0.2],
+  ['north-distant-ridge', -86.191, 115.783, 36.04, 23.8, 39.4, 0.1],
+  ['east-distant-ridge', 133.242, 105.272, 22.44, 36.72, 40.6, -0.2],
 ];
 
 // Smaller glacial erratics and talus clusters make the feet of the walls irregular.
 const erratics: [number, number, number, number, number][] = [
-  [-153, 22, 6, 12, 9], [-147, 62, 7, 8, 11], [-157, 113, 9, 7, 12],
-  [-144, 143, 10, 8, 11], [-113, 151, 8, 7, 8], [-53, 157, 11, 7, 12],
-  [3, 153, 7, 9, 9], [47, 149, 8, 8, 10], [110, 143, 9, 7, 10],
-  [159, 60, 7, 9, 10], [164, 11, 8, 9, 12], [158, -59, 6, 9, 9],
-  [143, -118, 8, 7, 8], [91, -121, 9, 6, 9], [48, -124, 8, 8, 8],
-  [-16, -125, 9, 7, 8], [-65, -122, 11, 7, 10], [-117, -120, 8, 7, 8],
-  [-148, -58, 6, 9, 8], [-159, -3, 6, 7, 8],
+  [-126.937, 25.379, 6, 12, 9], [-124.632, 50.658, 7, 8, 11], [-107.851, 69.312, 9, 7, 12],
+  [-90.529, 91.079, 10, 8, 11], [-79.736, 97.752, 8, 7, 8], [-37.583, 120.235, 11, 7, 12],
+  [-3.843, 123.436, 7, 9, 9], [58.168, 107.518, 8, 8, 10], [88.893, 103.788, 9, 7, 10],
+  [127.836, 58.631, 7, 9, 10], [135.456, -7.248, 8, 9, 12], [136.92, -53.379, 6, 9, 9],
+  [117.975, -83.337, 8, 7, 8], [91, -92.236, 9, 6, 9], [48, -92.018, 8, 8, 8],
+  [-16, -93.191, 9, 7, 8], [-65, -105.477, 11, 7, 10], [-101.741, -88.058, 8, 7, 8],
+  [-125.803, -53.87, 6, 9, 8], [-122.368, 11.653, 6, 7, 8],
 ];
 
 export function yosemiteValleyRocks(): TrackBarrier[] {

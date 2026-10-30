@@ -1,5 +1,6 @@
 import{Mesh}from'@babylonjs/core/Meshes/mesh';import{VertexBuffer}from'@babylonjs/core/Buffers/buffer';import type{Scene}from'@babylonjs/core/scene';import type{StandardMaterial}from'@babylonjs/core/Materials/standardMaterial';import type{TrackDefinition}from'../core/types';import{terrainElevation}from'../core/elevation';import{insideBarrier}from'../core/barriers';import{supported}from'../core/support';import{buildTerrain,courseDistance}from'./landscape/terrain';import{Geometry,hex,mix,edgeDistance}from'./landscape/mesh';import{fbm2,smoothstep}from'./landscape/noise';import{yosemiteAppearance as art}from'./themes';import{yosemiteGeology}from'./yosemite-geology';import{yosemiteTreeTemplates,yosemiteUndergrowth}from'./yosemite-forest';import type{RenderedSurface}from'./rendered-surface';
 import{yosemiteMeadowColor}from'./yosemite-surfaces';
+import { gateCoordinates, startGate } from '../core/start-finish';
 
 
 /** Native, vertex-coloured cliffs and forest, generated in a lazy chunk after frame one. */
@@ -22,11 +23,19 @@ export function buildYosemiteLandscape(scene:Scene,track:TrackDefinition,m:{mead
  const granite=yosemiteGeology(track);
  const cliffs=bake('weathered-yosemite-granite',granite,m.stone);
  let seed=6923;const rand=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
- const trees:{x:number;z:number;height:number}[]=[];
+ const trees:{x:number;z:number;height:number;near?:boolean}[]=[],gate=startGate(track);
  for(let i=0;i<18000&&trees.length<art.treeCount;i++){
   const x=-245+rand()*500,z=-160+rand()*430,h=art.treeHeight[0]+rand()*(art.treeHeight[1]-art.treeHeight[0]),p={x,z};
   if(!supported(p,track)||D(x,z)<26+h*1.1||track.barriers.some(b=>insideBarrier(p,b)))continue;
   trees.push({x,z,height:h});
+ }
+ let nearCount=0;
+ for(let i=0;i<16000&&nearCount<art.nearTreeCount;i++){
+  const x=-145+rand()*295,z=-110+rand()*250,h=art.nearTreeHeight[0]+rand()*(art.nearTreeHeight[1]-art.nearTreeHeight[0]),p={x,z},d=D(x,z),g=gateCoordinates(p,track),r=h*.27;
+  if(d<art.nearTreeSetback+1+h*art.nearTreeSightline||d>31||!supported(p,track))continue;
+  if(g.along>-gate.leadIn-8&&g.along<8+8&&Math.abs(g.across)<gate.width/2+16)continue;
+  if(track.barriers.some(b=>insideBarrier(p,b)||edgeDistance(p,b.footprint)<r+.5)||trees.some(t=>Math.hypot(t.x-x,t.z-z)<(t.height+h)*.17))continue;
+  trees.push({x,z,height:h,near:true});nearCount++;
  }
  for(const reserve of track.barriers.filter(b=>b.kind==='infield')){
   const xs=reserve.footprint.map(p=>p.x),zs=reserve.footprint.map(p=>p.z);

@@ -23,7 +23,7 @@ test('Yosemite landscape is finite, batched, grounded and contained by its autho
   expect(meshes.reduce((n,m)=>n+m.getTotalIndices()/3,0)).toBeLessThan(600000);
   for(const t of trees){const parcel=track.barriers.find(b=>b.kind==='infield'&&insideBarrier(t,b));
    if(parcel){for(let i=0;i<8;i++){const a=i*Math.PI/4,p={x:t.x+Math.cos(a)*t.height*.24,z:t.z+Math.sin(a)*t.height*.24};expect(insideBarrier(p,parcel)).toBe(true);}}
-   else {let gap=projectToPolyline(t,track.centerline,track.distances).distance;for(const h of track.hopShortcuts??[])gap=Math.min(gap,projectToPolyline(t,h.branch,cumulative(h.branch)).distance);expect(gap).toBeGreaterThanOrEqual(24+t.height*1.1);}
+   else {let gap=projectToPolyline(t,track.centerline,track.distances).distance;for(const h of track.hopShortcuts??[])gap=Math.min(gap,projectToPolyline(t,h.branch,cumulative(h.branch)).distance);expect(gap).toBeGreaterThanOrEqual(t.near?14+t.height*.45:24+t.height*1.1);}
   }
  }finally{scene.dispose();engine.dispose();}
 },90000);

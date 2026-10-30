@@ -220,3 +220,10 @@ the repository. These source hashes identify the owner's attachments:
 filenames remain base-aware. Focus points are centrally adjustable. Rotation
 continues to choose a different picture on every arrival at Home and leaves it
 unchanged while Settings or Touch test is open.
+
+### Yosemite roadside relocation — 2026-10-29
+
+The closer granite footprints, resized native formations and authored near-course
+conifer layer are original procedural edits of the existing Yosemite assets.
+No external model, image, recording or new licence was introduced. The existing
+road, jump and waterfall assets retain their provenance.

@@ -16,7 +16,7 @@ const centerline=[...loop.slice(first,-1),...loop.slice(0,first),loop[first]],di
 const progress=(p:Point)=>projectToPolyline(p,centerline,distances).progress;
 const branch=roundedCircuit([{x:-75,z:76},{x:-65,z:50},{x:-65,z:-12},{x:-105,z:-50}],14,false);
 export const yosemiteTrack:TrackDefinition={
- id:'capitan-yosemite',name:'Capitan Yosemite',version:2,surface:'packed-dirt',roadWidth:16,carWidth: VEHICLE_DIMENSIONS.width,carLength: VEHICLE_DIMENSIONS.length,
+ id:'capitan-yosemite',name:'Capitan Yosemite',version:3,surface:'packed-dirt',roadWidth:16,carWidth: VEHICLE_DIMENSIONS.width,carLength: VEHICLE_DIMENSIONS.length,
  centerline,distances,length,start:centerline[0],startFinish:createStartFinish(centerline[0],centerline[1],16),
  supports:[{id:'valley-land',footprint:obstacleRectangle(0,0,900,900)}],waterOpenings:[{id:'bridalveil-creek',footprint:yosemiteCreek}],
  jumps:[{id:'valley-creek-crest',kind:'crest',mandatory:true,from:{x:10,z:-70},forward:{x:1,z:0},width:16,rampLength:0,lipHeight:0,gap:8,runout:70,corridorLength:82,takeoffElevation:0,landingElevation:0,launchBoost:10,launchSlope:.10,branch:[{x:-8,z:-70},{x:10,z:-70},{x:88,z:-70}],entryProgress:progress({x:-8,z:-70}),exitProgress:progress({x:88,z:-70})}],
@@ -30,9 +30,9 @@ export const yosemiteTrack:TrackDefinition={
   {id:'cedar-west-end',kind:'rock',height:2.5,runoffException:'hop-lane',footprint:outcrop(-75,20,2.1,2.4,0,.6)},
   {id:'cedar-east-end',kind:'rock',height:2.1,runoffException:'hop-lane',footprint:outcrop(-55,20,2.1,2.2,0,1.1)},
   {id:'el-capitan-granite',kind:'rock',height:48,footprint:outcrop(46,29,19,25,.1,2)},
-  {id:'half-dome-granite',kind:'rock',height:60,terrainAnchor:true,footprint:outcrop(162,192,36,30,0,3)},
+  {id:'half-dome-granite',kind:'rock',height:25,terrainAnchor:true,footprint:outcrop(113.738,108.067,24.48,20.4,0,3)},
   {id:'bridalveil-granite',kind:'rock',height:17,footprint:outcrop(15,31,13,8,0,1.7)},
-  {id:'east-forest-granite',kind:'rock',height:5,terrainAnchor:true,footprint:outcrop(156,-15,10,8,0,4)},
+  {id:'east-forest-granite',kind:'rock',height:5,terrainAnchor:true,footprint:outcrop(144.315,-17.985,10,8,0,4)},
   ...yosemiteValleyRocks(),
  ],
 };
