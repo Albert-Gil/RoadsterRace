@@ -229,7 +229,7 @@ export const surfaceFinishes: Record<string, SurfaceFinish> = {
   'bay-metal': { kind: 'concrete', scale: 40, normal: 0, variation: 0, reflection: 0.3, roughness: 0.35 },
 };
 export const sceneryFinishes: Partial<Record<keyof typeof sceneryLighting, Record<string, SurfaceFinish>>> = {
-  yosemite:{terrain:{kind:'dirt',scale:22,normal:.3,variation:.06},asphalt:{kind:'dirt',scale:12,normal:.4,variation:.1},shoulder:{kind:'dirt',scale:15,normal:.3,variation:.1},'yosemite-granite':{kind:'rock',scale:8,normal:.65,variation:.12,walls:true}},
+  yosemite:{terrain:{kind:'dirt',scale:22,normal:.3,variation:.06},asphalt:{kind:'dirt',scale:12,normal:.4,variation:.1},shoulder:{kind:'dirt',scale:15,normal:.3,variation:.1},'yosemite-granite':{kind:'rock',scale:14,normal:.28,variation:.07,walls:true}},
   alpine: {terrain:{kind:'sand',scale:18,normal:.18,variation:.04},asphalt:{kind:'dirt',scale:10,normal:.15,variation:.045},shoulder:{kind:'sand',scale:14,normal:.2,variation:.04},'tahoe-granite':{kind:'rock',scale:5,normal:.5,variation:.08,walls:true}},
   // Golden Gate paints its land in full colour; the finish adds only fine grain. The shore carries vertex colour.
   bay: { terrain: { kind: 'grass', scale: 16, normal: 0.55, variation: 0.18 }, 'city-ground': { kind: 'dirt', scale: 6, normal: 0.3, variation: 0.05 }, 'golden-shore': { kind: 'dirt', scale: 14, normal: 0.5, variation: 0.1 } },
@@ -313,7 +313,7 @@ export const snowyTahoeAppearance = {
 /** Original granite-valley presentation; all physical heights/footprints come from the track. */
 export const yosemiteAppearance={
  extent:{minX:-280,maxX:300,minZ:-220,maxZ:320},cameraElevation:58,road:'#8f8065',shoulder:'#a3936d',meadow:'#728363',dryMeadow:'#a69d71',forestFloor:'#56644c',forest:'#34553d',forestLight:'#70865a',bark:'#71563e',granite:['#aeb6b1','#c9c8b9','#e2ddce','#737f83'],lichen:'#727b4e',timber:'#896648',roof:'#495548',window:'#b9d5bf',water:'#438c8d',waterDeep:'#285b6c',foam:'#dcebdc',
- treeCount:440,treeHeight:[10,23],surfaceOffsets:{road:.12,branch:.13,fringe:.045,branchFringe:.055},mist:{count:18,opacity:.04,speed:.42},
+ treeCount:580,treeHeight:[11,25],cedar:'#3c644c',fern:'#426c42',grass:'#8b995a',flowers:'#d4c37c',surfaceOffsets:{road:.12,branch:.13,fringe:.045,branchFringe:.055},mist:{count:18,opacity:.04,speed:.42},
  waterfall:{speed:.8,sprayCount:36,dropletCount:54,gravity:28,opacity:.92,sprayOpacity:.48,wetRock:'#657b7b',lipFraction:.84,lipRadius:.88,waterRadius:.89,halfAngle:.29,curtainWidth:7.2,basinWidth:8.6,basinDepth:3.6,basinHeight:.75,angle:Math.PI/2+.04},
  dressing:{roadWorn:'#b0a07d',roadEdge:'#857d60',barkDark:'#4d3a2c',cutWood:'#c8ab77',stonework:'#a2a18f',trim:'#d6cfac',roofSeam:'#687166'},
 };

@@ -16,7 +16,7 @@ test('freefall stays visible from fixed desktop and phone cameras; droplets desc
    });
    return{drop:site.lip.y-site.impact.y,pixels:Math.hypot(a.x-b.x,a.y-b.y),hidden,triangles:w.scene.getMeshByName('yosemite-freefall-curtains').getTotalIndices()/3};
   });
-  expect(view.drop).toBeGreaterThan(35);expect(view.pixels).toBeGreaterThan(12);expect(view.hidden.some(Boolean)).toBe(false);expect(view.triangles).toBeLessThan(2500);
+  expect(view.drop).toBeGreaterThan(35);expect(view.pixels).toBeGreaterThan(12);expect(view.hidden,JSON.stringify({viewport,hidden:view.hidden})).not.toContain(true);expect(view.triangles).toBeLessThan(2500);
   const sample=()=>page.evaluate(()=>{
    const w=(window as any).__roadster.getWorld(),m=w.scene.getMeshByName('bounded-yosemite-mist'),p=m.getVerticesData('position'),n=m.metadata.fallingWaterCount,first=p.length/12-n;
    return{drops:Array.from({length:n},(_,i)=>(p[(first+i)*12+1]+p[(first+i)*12+4]+p[(first+i)*12+7]+p[(first+i)*12+10])/4),enabled:m.isEnabled(),offset:w.scene.getMaterialByName('yosemite-waterfall').diffuseTexture.vOffset,ripples:Array.from(w.scene.getMeshByName('yosemite-impact-ripples').getVerticesData('position'))};

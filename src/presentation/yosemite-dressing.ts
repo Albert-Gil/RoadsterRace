@@ -1,6 +1,7 @@
 import type { TrackDefinition } from '../core/types';
 import { Geometry, hex, mix, type Rgb } from './landscape/mesh';
 import { yosemiteAppearance as art } from './themes';
+import { insideBarrier } from '../core/barriers';
 
 /** Original, batched park architecture and fallen timber, inside existing protected footprints. */
 export function yosemiteDressing(track: TrackDefinition) {
@@ -50,6 +51,35 @@ export function yosemiteDressing(track: TrackDefinition) {
     box(x,.85,z,3.2,.15,1.5,art.timber);
     for(const side of[-1,1]){box(x,.5,z+side*1.2,3.2,.15,.5,art.timber);box(x+side,.4,z,.16,.8,2.6,art.roof);}
     for(let i=0;i<4;i++)box(x-1.1+i*.73,.94,z,.025,.025,1.4,d.barkDark);
+  }
+  // Small park details are deliberately inside the existing protected groves.
+  // They share the ranger mesh/material rather than adding per-prop draw calls.
+  const grove=track.barriers.filter(b=>b.kind==='infield');
+  const inGrove=(x:number,z:number,r=1)=>grove.some(b=>[-1,1].every(sx=>[-1,1].every(sz=>insideBarrier({x:x+sx*r,z:z+sz*r},b))))&&!track.barriers.some(b=>b.kind==='rock'&&insideBarrier({x,z},b));
+  for(const [x,z] of [[-37,-17],[-37,12],[-38,34],[46,-17],[57,-15]]){
+    if(!inGrove(x,z,2.9))continue;
+    // Soft gravel picnic pads, benches and split timber seats.
+    box(x,.025,z,5.7,.035,5.7,'#b2a68c');
+    if(x>0){box(x,.56,z,3,.14,1.05,art.timber);for(const side of[-1,1]){box(x,.40,z+side*.92,3,.13,.38,art.timber);box(x+side*.85,.26,z,.16,.50,2.12,art.roof);}}
+    for(const side of[-1,1])for(let i=0;i<3;i++)box(x-1.15+i*.8,.046,z+side*2.7,.72,.035,.17,d.stonework);
+  }
+  // A trailhead noticeboard, drinking-water station and bear-resistant storage.
+  for(const[x,z]of[[-40,3],[44,-21]])if(inGrove(x,z,1.5)){
+    for(const side of[-1,1])box(x+side*.72,.85,z,.15,1.7,.18,art.timber);
+    box(x,1.32,z,1.65,.92,.12,d.trim);box(x,1.32,z+.075,1.42,.70,.025,art.roof);
+    for(let i=0;i<3;i++)box(x-.36+i*.36,1.34,z+.094,.24,.43,.01,i%2?d.cutWood:'#83917b');
+    box(x+1,.42,z+.8,.52,.84,.48,art.roof);box(x+1,.86,z+.8,.62,.06,.56,d.trim);
+  }
+  for(const[x,z]of[[-43,21],[-26,37],[55,-22]])if(inGrove(x,z,1.7)){
+    box(x,.48,z,1.8,.90,.85,'#606a57');box(x,.95,z,1.88,.06,.91,d.trim);
+    box(x,.52,z+.44,.06,.12,.025,d.trim);box(x+.65,.52,z+.44,.06,.12,.025,d.trim);
+  }
+  // Ranger-porch furniture, doors, vents and rain gutters stay within building envelopes.
+  for(const b of track.barriers.filter(b=>b.kind==='building')){
+    const xs=b.footprint.map(p=>p.x),zs=b.footprint.map(p=>p.z),x=(Math.min(...xs)+Math.max(...xs))/2,z=(Math.min(...zs)+Math.max(...zs))/2,w=Math.max(...xs)-Math.min(...xs),depth=Math.max(...zs)-Math.min(...zs),y=b.baseHeight??0;
+    box(x+w/2-.10,y+1.53,z,.10,2.12,1.34,d.trim);box(x+w/2-.035,y+1.53,z,.025,1.88,1.10,d.barkDark);
+    box(x+w/2-.016,y+1.70,z,.012,.65,.76,art.window);
+    for(const side of[-1,1]){box(x+side*(w/2-.30),y+1.9,z-depth/2+.10,.12,2.8,.12,d.roofSeam);box(x,y+b.height*.69-.14,z+side*(depth/2-.19),w-.4,.13,.13,art.roof);}
   }
   const obstacle=track.barriers.find(b=>b.id==='yosemite-fallen-cedar')!,xs=obstacle.footprint.map(p=>p.x),zs=obstacle.footprint.map(p=>p.z),x=(Math.min(...xs)+Math.max(...xs))/2,z=(Math.min(...zs)+Math.max(...zs))/2,length=Math.max(...xs)-Math.min(...xs),radius=(Math.max(...zs)-Math.min(...zs))/2,y=(obstacle.baseHeight??0)+.83;
   const rings=Array.from({length:18},(_,k)=>Array.from({length:24},(_,i)=>{const a=i/24*Math.PI*2,r=radius*(.89+.08*Math.sin(i*5.1+k*.65)**2),c=mix(hex(art.timber),hex(d.barkDark),.2+.55*(.5+.5*Math.sin(i*3.1+k*.15)));return g.vertex(x-length/2+k/17*length,y+Math.cos(a)*r,z+Math.sin(a)*r,c);}));

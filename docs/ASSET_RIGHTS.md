@@ -178,3 +178,13 @@ The new mineral/lichen cliff colouring, rounded rock skin, layered conifers, mea
 ### Yosemite freefall water — 2026-10-29
 
 The new cliff recess/lip, airborne water sheets, basin stonework, procedural fibre texture, ripple geometry and bounded falling-water/splash sprites are original procedural repository artwork. They reuse the existing environment and audio assets. No photographs, external models, recordings or new licences were added.
+
+### Yosemite valley composition — 2026-10-29
+
+The additional granite walls, domes, spires, erratics, talus blocks, conifer
+templates, fern/sedge geometry and park furniture are original procedural work
+in this repository. The creek banks derive from the authored course geometry.
+The National Park Service geology page is a factual art-direction reference,
+not an image/model asset: https://www.nps.gov/yose/learn/nature/geology.htm/index.htm.
+No park photograph, map, logo or third-party scenery model was incorporated.
+Existing environment, audio and RoadsterLAB attributions remain unchanged.

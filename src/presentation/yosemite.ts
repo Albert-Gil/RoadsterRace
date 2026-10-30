@@ -20,6 +20,7 @@ import{yosemiteAtmosphere}from'./yosemite-atmosphere';
 import{buildYosemiteWaterfall}from'./yosemite-waterfall';
 import{yosemiteDressing}from'./yosemite-dressing';
 import{yosemiteMeadowColor}from'./yosemite-surfaces';
+import { yosemiteCreekBanks } from '../core/tracks/yosemite-terrain';
 
 /** Terrain and footprints come from core; all dressing and animation remain cosmetic. */
 export function buildYosemite(scene:Scene,track:TrackDefinition,theme:PresentationTheme,materials:Map<string,StandardMaterial>){
@@ -68,17 +69,14 @@ export function buildYosemite(scene:Scene,track:TrackDefinition,theme:Presentati
  water.metadata={absoluteVertexColors:true};
  const waterTexture=surfaceTexture(scene,'water');waterTexture.uScale=3;waterTexture.vScale=14;water.diffuseTexture=waterTexture;
  const creek=track.waterOpenings![0].footprint,g=new Geometry();
- // Subdivide the actual opening for depth colour and shoreline variation, not a rectangular lake.
- for(const[ia,ib,ic]of[[0,1,2],[0,2,5],[5,2,3],[5,3,4]]){
-  const a=creek[ia],b=creek[ib],c=creek[ic],n=32,rows:number[][]=[];
-  for(let i=0;i<=n;i++){
-   const row:number[]=[];for(let j=0;j<=n-i;j++){
-    const x=a.x+(b.x-a.x)*i/n+(c.x-a.x)*j/n,z=a.z+(b.z-a.z)*i/n+(c.z-a.z)*j/n;
-    const depth=smoothstep(.2,3,edgeDistance({x,z},creek)),light=.5+.5*Math.sin(z*.35+x);
-    row.push(g.vertex(x,-2.4,z,mix(hex(art.water),hex(art.waterDeep),Math.min(.88,depth*.75+light*.08))));
-   }rows.push(row);
-  }
-  for(let i=0;i<n;i++)for(let j=0;j<n-i;j++){g.triangle(rows[i][j],rows[i+1][j],rows[i][j+1]);if(j<n-i-1)g.triangle(rows[i][j+1],rows[i+1][j],rows[i+1][j+1]);}
+ // Follow the authoritative meandering banks; the straight eight-metre race gap is unchanged.
+ const [left,right]=yosemiteCreekBanks,waterRows=left.map((a,i)=>Array.from({length:9},(_,j)=>{
+  const t=j/8,x=a.x+(right[i].x-a.x)*t,z=a.z+(right[i].z-a.z)*t;
+  const depth=smoothstep(.2,3,edgeDistance({x,z},creek)),light=.5+.5*Math.sin(z*.35+x);
+  return g.vertex(x,-2.4,z,mix(hex(art.water),hex(art.waterDeep),Math.min(.88,depth*.75+light*.08)));
+ }));
+ for(let i=0;i<waterRows.length-1;i++)for(let j=0;j<8;j++){
+  g.triangle(waterRows[i][j],waterRows[i+1][j],waterRows[i][j+1]);g.triangle(waterRows[i][j+1],waterRows[i+1][j],waterRows[i+1][j+1]);
  }
  const stream=new Mesh('bridalveil-flowing-creek',scene),v=g.toVertexData();v.normals=Array.from({length:g.vertexCount},()=>[0,1,0]).flat();v.uvs=Array.from({length:g.vertexCount},(_,i)=>[g.positions[i*3]/10,g.positions[i*3+2]/10]).flat();v.applyToMesh(stream);stream.material=water;
  const falling=buildYosemiteWaterfall(scene,track,water,stone);materials.set('yosemite-waterfall',falling.material);

@@ -7,6 +7,7 @@ import{obstacleRectangle as edgeRectangle}from'./hop-obstacles';
 import{outcrop}from'./outcrop';
 import type{Point,TrackDefinition}from'../types';
 import{buildYosemiteTerrain,yosemiteCreek}from'./yosemite-terrain';
+import { yosemiteValleyRocks } from './yosemite-rocks';
 const obstacleRectangle=(x:number,z:number,width:number,depth:number)=>edgeRectangle(x-width/2,z,width,depth);
 
 const loop=roundedCircuit([[110,-70],[122,-25],[90,15],[112,65],[72,88],[20,74],[-8,106],[-70,80],[-110,35],[-92,-10],[-110,-70]].map(([x,z])=>({x,z})),20);
@@ -15,7 +16,7 @@ const centerline=[...loop.slice(first,-1),...loop.slice(0,first),loop[first]],di
 const progress=(p:Point)=>projectToPolyline(p,centerline,distances).progress;
 const branch=roundedCircuit([{x:-75,z:76},{x:-65,z:50},{x:-65,z:-12},{x:-105,z:-50}],14,false);
 export const yosemiteTrack:TrackDefinition={
- id:'capitan-yosemite',name:'Capitan Yosemite',version:1,surface:'packed-dirt',roadWidth:16,carWidth: VEHICLE_DIMENSIONS.width,carLength: VEHICLE_DIMENSIONS.length,
+ id:'capitan-yosemite',name:'Capitan Yosemite',version:2,surface:'packed-dirt',roadWidth:16,carWidth: VEHICLE_DIMENSIONS.width,carLength: VEHICLE_DIMENSIONS.length,
  centerline,distances,length,start:centerline[0],startFinish:createStartFinish(centerline[0],centerline[1],16),
  supports:[{id:'valley-land',footprint:obstacleRectangle(0,0,900,900)}],waterOpenings:[{id:'bridalveil-creek',footprint:yosemiteCreek}],
  jumps:[{id:'valley-creek-crest',kind:'crest',mandatory:true,from:{x:10,z:-70},forward:{x:1,z:0},width:16,rampLength:0,lipHeight:0,gap:8,runout:70,corridorLength:82,takeoffElevation:0,landingElevation:0,launchBoost:10,launchSlope:.10,branch:[{x:-8,z:-70},{x:10,z:-70},{x:88,z:-70}],entryProgress:progress({x:-8,z:-70}),exitProgress:progress({x:88,z:-70})}],
@@ -32,6 +33,7 @@ export const yosemiteTrack:TrackDefinition={
   {id:'half-dome-granite',kind:'rock',height:60,terrainAnchor:true,footprint:outcrop(162,192,36,30,0,3)},
   {id:'bridalveil-granite',kind:'rock',height:17,footprint:outcrop(15,31,13,8,0,1.7)},
   {id:'east-forest-granite',kind:'rock',height:5,terrainAnchor:true,footprint:outcrop(156,-15,10,8,0,4)},
+  ...yosemiteValleyRocks(),
  ],
 };
 yosemiteTrack.terrain=buildYosemiteTerrain(yosemiteTrack);

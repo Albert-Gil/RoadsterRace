@@ -147,3 +147,7 @@ Stainless steel gray is first in the six-finish paint selector and remains the f
 The Home pictures are baked artwork, not live paintable 3D models. Their existing files and layout are preserved for replacement with the owner's supplied steel-car versions. No key-art recoloring or new imagery is introduced in this change.
 
 Verification for this UI correction: type checking, 668 unit tests, seven relevant browser checks, the production build and a complete production touch race pass. All 24 exact handling fixtures match the committed build. Automated phone/tablet checks supplement physical Safari verification, which remains pending. The UI correction is released separately from the following Yosemite scenery work.
+
+### Yosemite v2: granite valley composition
+
+Fifty authored rock formations now share one granite mesh, including 44 new walls, domes, spires and talus groups. Eight branched conifer templates share one forest mesh; meadow plants and ranger/campground furniture stay batched. Palette, forest density and water settings remain in yosemiteAppearance. Keep the new rock footprints/heights authoritative and do not add loose rocks within the planning corridor. See YOSEMITE_VALLEY_UPGRADE.md and YOSEMITE_VALLEY_TEST_REPORT.md.

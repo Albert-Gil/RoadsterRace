@@ -16,7 +16,8 @@ export function waterfallFaceWeight(b:TrackBarrier,angle:number){
 export function waterfallCliffRadius(b:TrackBarrier,t:number,angle:number,original:number){
  const weight=waterfallFaceWeight(b,angle);if(!weight)return original;
  const lip=art.waterfall.lipRadius,top=art.waterfall.lipFraction;
- const profile=t<.03?1-(t/.03)*.4:t<.64?.60:t<top-.06?.60+smoothstep(.64,top-.06,t)*(lip-.60):t<=top?lip:lip+(original-lip)*smoothstep(top,.98,t);
+ const recess=.77;
+ const profile=t<.03?1-(t/.03)*(1-recess):t<.64?recess:t<top-.06?recess+smoothstep(.64,top-.06,t)*(lip-recess):t<=top?lip:lip+(original-lip)*smoothstep(top,.98,t);
  return original+(profile-original)*weight;
 }
 export function yosemiteWaterfallSites(track:TrackDefinition):WaterfallSite[]{

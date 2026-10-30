@@ -9,7 +9,7 @@ import{terrainElevation}from'../../src/core/elevation';
 const compiled=compileRoute(createPracticeSamples(track),track);if(!compiled.ok)throw Error(compiled.message);const route=compiled.route;
 
 test('Capitan Yosemite is a distinct eighth venue with real terrain and a main-road creek crossing',()=>{
- expect(findCircuit('yosemite').id).toBe(track.id);expect(circuits.at(-1)!.track).toBe(track);expect(track.version).toBe(1);expect(track.roadWidth).toBe(16);
+ expect(findCircuit('yosemite').id).toBe(track.id);expect(circuits.at(-1)!.track).toBe(track);expect(track.version).toBe(2);expect(track.roadWidth).toBe(16);
  expect(track.length).toBeGreaterThan(680);expect(track.length).toBeLessThan(740);
  expect(Math.max(...track.centerline.map(p=>p.y??0))).toBeCloseTo(28,1);expect(track.centerline[0].y).toBe(0);
  expect(route.jumps).toEqual(['valley-creek-crest']);expect(route.hazards).toBeUndefined();
