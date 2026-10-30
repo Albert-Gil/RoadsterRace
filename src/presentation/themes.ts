@@ -318,3 +318,17 @@ export const yosemiteAppearance={
  waterfall:{speed:.8,sprayCount:36,dropletCount:54,gravity:28,opacity:.92,sprayOpacity:.48,wetRock:'#657b7b',lipFraction:.84,lipRadius:.88,waterRadius:.89,halfAngle:.29,curtainWidth:7.2,basinWidth:8.6,basinDepth:3.6,basinHeight:.75,angle:Math.PI/2+.04},
  dressing:{roadWorn:'#b0a07d',roadEdge:'#857d60',barkDark:'#4d3a2c',cutWood:'#c8ab77',stonework:'#a2a18f',trim:'#d6cfac',roofSeam:'#687166'},
 };
+
+export const roadsideAppearance = {
+ spacing:3.8,plantingOffset:3.4,plantHeight:.65,maxFurniture:48,
+ palettes:{
+  coastal:{plant:'#496c40',tip:'#9bab68',flower:'#e58bb5',trim:'#d2c5a1',timber:'#ae8f64',metal:'#5a7070',surface:'#3f4848'},
+  spaceport:{plant:'#6d7651',tip:'#b5ae78',flower:'#d5bf79',trim:'#b8c4c6',timber:'#858b82',metal:'#4e626b',surface:'#514d45'},
+  bay:{plant:'#3e6b4c',tip:'#82a469',flower:'#d6a673',trim:'#c7c1ad',timber:'#896f55',metal:'#53616a',surface:'#535d61'},
+  sunset:{plant:'#6d8551',tip:'#b8b47d',flower:'#e9a197',trim:'#e3ccaa',timber:'#b78f66',metal:'#57686a',surface:'#5d5349'},
+  canyon:{plant:'#74784c',tip:'#b6a26c',flower:'#d7aa69',trim:'#ab835f',timber:'#876543',metal:'#6a6056',surface:'#b58a64'},
+  'night-city':{plant:'#355b50',tip:'#6c8979',flower:'#a79fc8',trim:'#8d9ca6',timber:'#687273',metal:'#3c5362',surface:'#435262'},
+  alpine:{plant:'#7a9290',tip:'#d1dce0',flower:'#e9eff0',trim:'#b4c5cb',timber:'#95755b',metal:'#586c7a',surface:'#c0d1d8'},
+  yosemite:{plant:'#537548',tip:'#a9ae6e',flower:'#d5c481',trim:'#a8a794',timber:'#97754d',metal:'#53645a',surface:'#b1a080'},
+ },
+};

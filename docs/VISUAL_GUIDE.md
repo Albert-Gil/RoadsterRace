@@ -15,6 +15,7 @@ The October 21 upgrade adds a RoadsterLAB-derived car, a miniature coastal venue
 | Camera/light quality | `sceneTuning` in themes | Fixed drawing/racing projection and render cost |
 | Optional model/textures | `src/presentation/assets.ts` | Fallback, scale, attribution, transfer size |
 | Sound recordings | `src/presentation/audio-assets.ts` | Unlock, mix, pause, synthesis fallback |
+| Details beside the road | `roadsideAppearance` in `themes.ts`; `roadside-geometry.ts` | Full plant crowns clear all roads by 2 m; gate/hidden lanes stay clear; furniture stays in protected parcels; one batch per venue |
 
 Coastal Day combines graphite/crimson menus, sunny coastal scenery and a stainless-steel-gray default car. Graphite (`?theme=graphite`, or T in development) changes branding, heading typography, palette, materials and lighting. Both use the same pace colors and steel default. Driver-selected paint remains stable across presets. Local Barlow fonts retain system fallbacks.
 

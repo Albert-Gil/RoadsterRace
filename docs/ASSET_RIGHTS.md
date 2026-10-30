@@ -227,3 +227,10 @@ The closer granite footprints, resized native formations and authored near-cours
 conifer layer are original procedural edits of the existing Yosemite assets.
 No external model, image, recording or new licence was introduced. The existing
 road, jump and waterfall assets retain their provenance.
+
+### Gameplay roadside detail — 2026-10-29
+
+The low grass/flower geometry, benches, planters, utility cabinets, roof vents and
+flat surface-wear traces in presentation/roadside-geometry.ts are original native
+procedural artwork. No external source or new licence applies. They reuse the
+venue palettes and do not change the provenance of existing third-party props.

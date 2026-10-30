@@ -17,6 +17,7 @@ import { buildHopObstacles } from './hop-obstacles';
 import { buildTahoe } from './tahoe';
 import { buildYosemite } from './yosemite';
 import { refineVenue } from './venue-refinements';
+import { buildRoadsideDetails } from './roadside-details';
 import type{RenderedSurface}from'./rendered-surface';
 
 export interface SceneryRuntime {
@@ -28,9 +29,13 @@ export interface SceneryRuntime {
   update(time: number, reducedMotion: boolean): void;
 }
 export function buildScenery(id: SceneryId, scene: Scene, track: TrackDefinition, theme: PresentationTheme, materials: Map<string, StandardMaterial>): SceneryRuntime {
-  if(id==='yosemite')return buildYosemite(scene,track,theme,materials);
-  if(id==='alpine')return buildTahoe(scene,track,theme,materials);
-  if(id==='canyon'){const runtime:SceneryRuntime=buildCanyon(scene,track,theme,materials);runtime.refinements=refineVenue(id,scene,track,materials);return runtime;}
+  const withRoadside = (runtime: SceneryRuntime) => {
+    buildRoadsideDetails(scene, track, id, materials);
+    return runtime;
+  };
+  if(id==='yosemite')return withRoadside(buildYosemite(scene,track,theme,materials));
+  if(id==='alpine')return withRoadside(buildTahoe(scene,track,theme,materials));
+  if(id==='canyon'){const runtime:SceneryRuntime=buildCanyon(scene,track,theme,materials);runtime.refinements=refineVenue(id,scene,track,materials);return withRoadside(runtime);}
   let runtime: SceneryRuntime;
   if (id === 'night-city') runtime = buildLANights(scene, track, theme, materials);
   else if (id === 'sunset') runtime = buildSantaMonica(scene, track, theme, materials);
@@ -49,5 +54,5 @@ export function buildScenery(id: SceneryId, scene: Scene, track: TrackDefinition
   if(id!=='night-city')finishVenue(id, scene, track, theme, materials);
   if(id!=='night-city')dressVenue(id, scene, materials);
   runtime.refinements=refineVenue(id,scene,track,materials);
-  return runtime;
+  return withRoadside(runtime);
 }
