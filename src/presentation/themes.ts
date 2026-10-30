@@ -182,12 +182,13 @@ export const newportHarbour = {
  * One picture is chosen at random each time the player arrives on Home. `wide`/`tall` are CSS
  * object-position focus points that keep the cars in frame when a screen crops the picture.
  */
+export const heroArtRevision = '2026-10-29-steel';
 export const heroImages = [
-  { id: 'thruster-hop', wide: '78% 50%', tall: '50% 28%' },
-  { id: 'drivers-grid', wide: '66% 60%', tall: '62% 58%' },
-  { id: 'door-to-door', wide: '70% 50%', tall: '45% 50%' },
-  { id: 'water-jump', wide: '45% 66%', tall: '68% 44%' },
-  { id: 'canyon-jump', wide: '58% 30%', tall: '40% 50%' },
+  { id: 'thruster-hop', wide: '78% 50%', tall: '50% 72%' },
+  { id: 'drivers-grid', wide: '100% 60%', tall: '50% 80%' },
+  { id: 'door-to-door', wide: '100% 50%', tall: '50% 60%' },
+  { id: 'water-jump', wide: '50% 52%', tall: '50% 50%' },
+  { id: 'canyon-jump', wide: '58% 45%', tall: '50% 50%' },
 ] as const;
 
 /**

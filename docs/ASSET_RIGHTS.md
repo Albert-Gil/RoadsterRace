@@ -188,3 +188,35 @@ The National Park Service geology page is a factual art-direction reference,
 not an image/model asset: https://www.nps.gov/yose/learn/nature/geology.htm/index.htm.
 No park photograph, map, logo or third-party scenery model was incorporated.
 Existing environment, audio and RoadsterLAB attributions remain unchanged.
+
+## Home artwork refresh — owner-supplied steel-car images, 2026-10-29
+
+The owner supplied ten replacement files in this chat: five wide/portrait pairs
+for the existing Home roles. They are used with the owner's authorization; no
+external stock source, new model, font or recording was introduced. The imagery
+is presentation artwork, not a claim of captured gameplay or an exact venue map.
+The prior 2026-10-27 source table above describes the retired art revision.
+
+The eight PNGs were encoded to WebP at quality 82 without cropping, changing
+composition or stretching. The two supplied door-to-door WebPs were copied
+unchanged (they already match the existing shipped pair). All files retain
+1672×941 wide / 941×1672 tall dimensions. Unchanged source masters remain outside
+the repository. These source hashes identify the owner's attachments:
+
+| Shipped role | Supplied file | Source SHA-256 |
+|---|---|---|
+| door-to-door-tall | `door-to-door-tall.webp` | `38422b8a538f3028eebbe0ad68002d8c37cc11e22b7d9dcf83bc9d2c2c05f4c4` |
+| door-to-door-wide | `door-to-door-wide.webp` | `40209ac9d635d70b6301e0de18c72fc879d240f5a8ce516ccdf7c3b25305f1d8` |
+| canyon-jump-tall | `Imatge de ChatGPT 29 d’oct. del 2026, 16_11_05-1.png` | `efab0bdb553a1e536ee3fd675dacd3bbf332da0430831e6fda1aede5bad29421` |
+| canyon-jump-wide | `Imatge de ChatGPT 29 d’oct. del 2026, 16_11_17-2.png` | `383f6c4b4ae2fc43ae14e0305c3455a768a45d62d724ff381dfdf42fa6fbefca` |
+| drivers-grid-tall | `Imatge de ChatGPT 29 d’oct. del 2026, 16_11_21-3.png` | `ae8081efe927a3f6387cf5ec3119f0f01fb8f383bcce31a9d6844900efe33b79` |
+| drivers-grid-wide | `Imatge de ChatGPT 29 d’oct. del 2026, 16_11_23-4.png` | `a569ffe777cb2f7eb4b27f09ee068fadcef78982f7acc398825e153b34a69fe6` |
+| thruster-hop-tall | `Imatge de ChatGPT 29 d’oct. del 2026, 16_11_25-5.png` | `7e044d49fb5fcfff28a8f6fc13132626aa34a3e1877125895f6d09854f83a018` |
+| thruster-hop-wide | `Imatge de ChatGPT 29 d’oct. del 2026, 16_11_27-6.png` | `8cff2f9ed059334bb07b2166d1e533d701f5fc37d6895f69f9ded70e3bd59fca` |
+| water-jump-tall | `Salt sobre l’oceà al capvespre a Hollywood.png` | `1380cbad402b20f52e7efaa654814f90683fa233c2ac5945cd0021e709a8d1d6` |
+| water-jump-wide | `Salt sobre l’oceà amb Hollywood de fons.png` | `c6b295fe1b2ff96f8be739b001198aec045defab67295bfab84e6f5249fecba6` |
+
+`heroArtRevision` in themes.ts adds a cache revision to image URLs; stable role
+filenames remain base-aware. Focus points are centrally adjustable. Rotation
+continues to choose a different picture on every arrival at Home and leaves it
+unchanged while Settings or Touch test is open.

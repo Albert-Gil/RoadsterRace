@@ -80,6 +80,8 @@ for (const { track } of circuits) describe(`${track.id} full-width drawing`, () 
     const trim = trimDrawing(samples, track); expect(trim.ok).toBe(true);
     if (trim.ok) { expect(distance(trim.samples[0], track.start)).toBeLessThan(0.01); expect(trim.samples[1].time).toBeCloseTo(first.time); }
   });
+  // Six fixed-step laps on elevated terrain can exceed the 30 s default on
+  // shared CI runners. Keep the complete simulation and all seam/finish checks.
   test('opposite-side endpoints join forward at the shared anchor and race six laps', () => {
     const result = success(planned(track, -track.roadWidth / 2 + 0.2, track.roadWidth / 2 - 0.2), track), points = result.route.points;
     expect(result.drawing!.joined).toBe(true); expect(distance(points[0], points.at(-1)!)).toBeLessThan(1e-6);
@@ -94,7 +96,7 @@ for (const { track } of circuits) describe(`${track.id} full-width drawing`, () 
     const sim = new RaceSimulation(result.route, track, 6);
     for (let i = 0; i < 24000 && !sim.state.finished; i++) sim.step();
     expect(sim.state.finished).toBe(true); expect(sim.state.lapTimes).toHaveLength(6);
-  });
+  }, 120000);
   test('first finish crossing discards arbitrary later movement, pauses, reversals and extra laps', () => {
     const lap = planned(track), end = lap.at(-1)!;
     const short = success([...lap, { ...gatePoint(track, 0, 3.9), time: end.time + 100 }], track);

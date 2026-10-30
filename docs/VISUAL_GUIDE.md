@@ -151,3 +151,12 @@ Verification for this UI correction: type checking, 668 unit tests, seven releva
 ### Yosemite v2: granite valley composition
 
 Fifty authored rock formations now share one granite mesh, including 44 new walls, domes, spires and talus groups. Eight branched conifer templates share one forest mesh; meadow plants and ranger/campground furniture stay batched. Palette, forest density and water settings remain in yosemiteAppearance. Keep the new rock footprints/heights authoritative and do not add loose rocks within the planning corridor. See YOSEMITE_VALLEY_UPGRADE.md and YOSEMITE_VALLEY_TEST_REPORT.md.
+
+### Owner-supplied steel-car Home art
+
+The ten files supplied on 2026-10-29 now occupy the existing five wide/portrait
+roles. Their source records are in ASSET_RIGHTS.md. `heroImages` owns crop focus;
+`heroArtRevision` invalidates old cached image URLs without changing role names.
+Keep the full artwork composition and aspect ratio, the existing red UI, and the
+non-repeating Home rotation. See HOME_ART_REFRESH.md for the responsive captures
+and the independently scoped six-lap CI timeout correction.

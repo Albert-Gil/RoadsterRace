@@ -39,7 +39,7 @@ import { TUTORIAL_COPY, tutorialCoach, tutorialCompletePanel, tutorialIntroPanel
 import { TUTORIAL_CIRCUIT, TUTORIAL_LAPS, answerPrompt, duePrompt, freshTutorial, type TutorialProgress } from './app/tutorial';
 import { GameAudio } from './presentation/audio';
 import { GameScene } from './presentation/scene';
-import { applyPlayerColors, applyTheme, themes, hopEffects, heroImages } from './presentation/themes';
+import { applyPlayerColors, applyTheme, themes, hopEffects, heroImages, heroArtRevision } from './presentation/themes';
 import { cleanDriverName, escapeHtml, finishFor, loadPreferences, savePreferences } from './presentation/race-settings';
 import { raceSetupMarkup } from './presentation/race-setup';
 import { isGraphicsChoice, isRendererChoice, loadGraphicsPreference, saveGraphicsPreference, type RendererChoice } from './presentation/graphics';
@@ -143,7 +143,7 @@ function showHero() {
   heroIndex = nextHero(heroImages.length, heroIndex);
   const hero = heroImages[heroIndex];
   heroPicture.classList.remove('loaded'); heroPicture.style.setProperty('--hero-wide', hero.wide); heroPicture.style.setProperty('--hero-tall', hero.tall);
-  heroSource.srcset = assetUrl(`assets/hero/${hero.id}-tall.webp`); heroImage.src = assetUrl(`assets/hero/${hero.id}-wide.webp`);
+  heroSource.srcset = assetUrl(`assets/hero/${hero.id}-tall.webp?v=${heroArtRevision}`); heroImage.src = assetUrl(`assets/hero/${hero.id}-wide.webp?v=${heroArtRevision}`);
 }
 heroImage.addEventListener('load', () => heroPicture.classList.add('loaded'));
 heroImage.addEventListener('error', () => heroPicture.classList.remove('loaded'));
