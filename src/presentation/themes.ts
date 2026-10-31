@@ -12,7 +12,7 @@ export const paintFinishes = [
 
 /** Stable paint IDs preserve saved choices. Steel is the fresh-install/default finish. */
 export const defaultPaintId = 'glacier';
-/** Stable button identities keep the red interface independent of each driver's car paint. */
+/** Solo Thrust/Hop keep the standard red interface (`--control-1`) whatever the car paint; with two or more cars the pads use each driver's paint instead (ui/controls.ts). */
 export const abilityControlColors = ['#d51f35', '#3b79e6', '#f1be37', '#45a77b'] as const;
 export const vehicleMaterials = {
   steel: { metallic: .86, roughness: .28, coat: .32, coatRoughness: .2, brushing: .035 },
@@ -331,21 +331,4 @@ export const roadsideAppearance = {
   alpine:{plant:'#7a9290',tip:'#d1dce0',flower:'#e9eff0',trim:'#b4c5cb',timber:'#95755b',metal:'#586c7a',surface:'#c0d1d8'},
   yosemite:{plant:'#537548',tip:'#a9ae6e',flower:'#d5c481',trim:'#a8a794',timber:'#97754d',metal:'#53645a',surface:'#b1a080'},
  },
-};
-
-/** Santa Monica beach life (santa-monica-beach-life.ts): one opaque vertex-colour batch of people, structures and boats. */
-export const santaBeachLifeAppearance = {
-  skin: ['#f3cfae', '#e3b08a', '#c99067', '#a8704a', '#7f5236', '#5c3b28'],
-  hair: ['#2a201a', '#5b3d2a', '#9a6a3e', '#d8b46c', '#18181b', '#b9b1a7', '#b5452f'],
-  clothes: ['#e54b4b', '#f2a541', '#f6dd5c', '#3fb8af', '#2f6fd6', '#7d4fd1', '#ffffff', '#f27fb2', '#2c3e50', '#8bd17c', '#ff7b54', '#5ec2e6'],
-  swimwear: ['#d62d4f', '#1f4fa8', '#15181c', '#f28c28', '#18a39a', '#e8467c', '#f6dd5c', '#6d4bc3'],
-  towels: ['#c83a3c', '#3c60be', '#ecc446', '#f7f4ec', '#3c968c', '#e678aa', '#7a5bd0', '#f08a3c'],
-  umbrellas: ['#e45d5d', '#f7f4ec', '#f2c14e', '#36a6a1', '#4a74d4', '#f08ac0', '#ff8c42'],
-  boards: ['#f6dd5c', '#ff7b54', '#5ec2e6', '#f7f4ec', '#e8467c', '#3fb8af', '#a3d977'],
-  huts: ['#9fd3e6', '#f7e08a', '#f4a6b4', '#b9e3c6'],
-  trim: '#f6f1e6', timber: '#b88b5e', deck: '#a07d62', concrete: '#d6cfc2', steel: '#4a5763', glass: '#2c4d5c', dark: '#25292e',
-  rope: '#f2efe6', ropeAccent: '#2d5fa8', rescue: '#e8432e', yellow: '#f5c518', tier: ['#7fb9d6', '#f6f1e6'], seat: '#d9573f',
-  fence: ['#2d5fa8', '#e8432e', '#f5c518'], truck: ['#3fb8af', '#f6f1e6'], truckStripe: '#e8467c', cafe: ['#f6e4cc', '#e67b77', '#3a8f8a'],
-  hull: ['#ffffff', '#f3efe4', '#1f3a5f', '#b8392d'], sail: ['#ffffff', '#f6efe0', '#f2d7c4'], kayak: ['#f2a541', '#e54b4b', '#3fb8af', '#f6dd5c'],
-  buoy: ['#f7c948', '#e8432e', '#ffffff'], foam: '#f4fbfb', plant: '#5f8a42', pot: '#c96f4a', bike: ['#2f6fd6', '#e54b4b', '#3fb8af', '#15181c'],
 };

@@ -64,6 +64,9 @@ test('custom names and paints survive a six-lap local race, results and rematch'
   await waitForPhase(page, 'racing');
   await page.keyboard.press('KeyA');
   await expect(page.locator('.racer-0 .pod-name')).toHaveText('Ana & Max');
+  // Each corner pad matches its car's paint: Driver 1 verdant green, Driver 2 solar yellow.
+  await expect(page.locator('.racer-0 .racer-pad')).toHaveCSS('color', 'rgb(69, 167, 123)');
+  await expect(page.locator('.racer-1 .racer-pad')).toHaveCSS('color', 'rgb(241, 190, 55)');
   await expect(page.locator('.racer-1 .pod-lap')).toContainText('/6');
   await waitForPhase(page, 'results', 150000);
   const result = await page.evaluate(() => (window as any).__roadster.getState());
