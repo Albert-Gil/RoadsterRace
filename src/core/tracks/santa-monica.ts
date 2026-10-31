@@ -4,6 +4,7 @@ import { closedSpline, cumulative, distance, projectToPolyline } from '../geomet
 import { createStartFinish } from '../start-finish';
 import type { Point, SupportSurface, TrackBarrier, TrackDefinition, TrackJump } from '../types';
 import { outcrop } from './outcrop';
+import { santaBeachFootprint, santaBeachStructures } from './santa-monica-beach';
 
 export const rectangle = (x: number, z: number, width: number, depth: number): Point[] => [{ x, z }, { x: x + width, z }, { x: x + width, z: z + depth }, { x, z: z + depth }];
 export function strip(a: Point, b: Point, width: number): Point[] {
@@ -55,8 +56,10 @@ barriers.push({ id: 'inbound-inner-rail', kind: 'pier-rail', height: 0.85, footp
 barriers.push({ id: 'landing-edge', kind: 'pier-rail', baseHeight: -2.4, height: 2.4, footprint: rectangle(71.8, -20, 0.2, 16) });
 // v3: the rock groyne's root on the sand beside the hotel row, 12-13 m beyond the road edge (its seaward arm is scenery).
 barriers.push({ id: 'beach-groyne', kind: 'rock', height: 2, footprint: outcrop(24.5, -84, 8.5, 2.8, 0, 2.3) });
+// v4: solid beach structures (lifeguard tower, surf rental, two spectator terraces, food truck, cafe), 6+ m beyond the road edge.
+for (const s of santaBeachStructures) barriers.push({ id: s.id, kind: 'building', height: s.height, footprint: santaBeachFootprint(s) });
 const authoredTrack: TrackDefinition = {
-  id: 'santa-monica', version: 3, name: 'Santa Monica', centerline, distances, length,
+  id: 'santa-monica', version: 4, name: 'Santa Monica', centerline, distances, length,
   roadWidth: 16, carWidth: VEHICLE_DIMENSIONS.width, carLength: VEHICLE_DIMENSIONS.length, start: centerline[0], startFinish: createStartFinish(centerline[0], centerline[1], 16),
   supports, waterOpenings: [{ id: 'pacific-gap', footprint: rectangle(62, -20, 10, 16) }], jumps: [jump], barriers,
 };

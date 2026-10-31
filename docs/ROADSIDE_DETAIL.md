@@ -74,7 +74,7 @@ Maximum measured scene calls on Medium, including shadows and active abilities:
 | Newport Island | 84 | 131 |
 | Launchsite | 68 | 115 |
 | Golden Gate | 77 | 124 |
-| Santa Monica | 72 | 119 |
+| Santa Monica (v4 beach life) | 74 | 130 |
 | Grand Canyon | 43 | 92 |
 | LA nights | 87 | 134 |
 | Snowy Tahoe | 56 | 105 |
@@ -82,4 +82,7 @@ Maximum measured scene calls on Medium, including shadows and active abilities:
 
 The additional simultaneous ground-Thrust/skid/impact-dust stress fixtures reach
 87/143 calls on LA nights and 49/105 on Yosemite, below the 90/150 limits.
+Santa Monica's v4 row was re-measured on 2026-10-29 with the same ground-Thrust/skid/impact-dust
+stress fixture (HEAD before v4 measured 72/128 there); its beach-life batch adds two calls (its pass and
+its shadow).
 These are automated rendering measurements, not a claim of physical-phone FPS.

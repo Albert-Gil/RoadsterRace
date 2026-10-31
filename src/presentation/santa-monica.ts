@@ -15,6 +15,7 @@ import { surfaceTexture } from './textures';
 import { santaMonicaAuthoredBuildings as santaMonicaBuildings } from '../content/santa-monica-art';
 import { reflectSantaVenue } from '../core/tracks/santa-monica';
 import { buildSantaMonicaLandscape } from './santa-monica-landscape';
+import { buildSantaBeachLife } from './santa-monica-beach-life';
 
 /** Original procedural seaside venue. Every pier slab uses a physical support footprint. */
 export function buildSantaMonica(scene: Scene, track: TrackDefinition, theme: PresentationTheme, materials: Map<string, StandardMaterial>) {
@@ -147,6 +148,8 @@ export function buildSantaMonica(scene: Scene, track: TrackDefinition, theme: Pr
 
   for (const mesh of scene.meshes) if (!before.has(mesh) && !mesh.parent) mesh.parent = venueRoot;
   const landscape = buildSantaMonicaLandscape(scene, worldTrack, materials);
+  // Beach life (v4 structures, crowds, boats, towels) is one world-space batch built from the physical track.
+  casters.add(buildSantaBeachLife(scene, worldTrack, landscape.layout, materials).material);
   return { shadowCasterMaterials: casters, lateShadowCasters: landscape.shadowCasters, update(time: number, reduced: boolean) {
     waterTexture.uOffset = reduced ? 0 : time * 0.002;
     wheel.rotation.z = reduced ? 0 : time * 0.11;

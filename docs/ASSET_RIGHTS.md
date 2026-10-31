@@ -32,6 +32,8 @@ The sunset beach/pier, amusement wheel, coaster, train, buildings, palms, deck s
 
 The 2026-10-23 venue finishing pass (rooftops, planting, spectator shapes, concrete/timber/water grain and corrected jump paint) is original procedural geometry and canvas artwork in this repository. It adds no third-party asset downloads. RoadsterLAB and font attributions above continue to apply.
 
+The 2026-10-29 Santa Monica v4 beach life (spectator terraces, lifeguard tower, surf rental, beach clubs, cafe, food truck, stylised people, pier lamps, boats, boards, buoys and towels) is original procedural vertex-coloured geometry generated in `src/presentation/santa-monica-beach-life.ts`. No model, texture, logo, brand or sponsor artwork was downloaded or depicted.
+
 Manual-hop additions use an original inline arrow icon, downward puffs in the existing procedural vapor pool and an original Web Audio pressure/lift cue. No Tesla sound, ElevenLabs recording, model or third-party artwork was added. Gameplay captures show this prototype's actual simulation.
 
 

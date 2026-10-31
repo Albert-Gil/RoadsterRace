@@ -33,3 +33,30 @@ Compiler and physics versions are 8. Fresh routes are required. A narrow migrati
 Run `pnpm typecheck`, `pnpm test`, `pnpm build`, relevant browser tests and `pnpm test:pages`. `tools/capture-santa-monica.mjs` captures desktop/phone/tablet views. For a genuine browser video, install Playwright FFmpeg, set `CAPTURE_RACE=1`, and run the capture tool against the local preview. Evidence is ignored under `artifacts/santa-monica/`.
 
 Physical iPhone/iPad Safari performance, touch comfort and jump readability remain pending until tested on actual hardware. Desktop/mobile browser emulation is supplemental evidence.
+
+## v4 beach life — 2026-10-29
+
+Santa Monica v4 (`santa-monica`, track version 4) adds eight solid beach structures beside the road, authored in `src/core/tracks/santa-monica-beach.ts` and registered as `'building'` barriers with exactly those rectangles and heights (2.5–3.9 m, never above 4 m, so no generic roof hardware is added):
+
+| Structure | Where | Runoff from the road edge |
+|---|---|---:|
+| West spectator terrace | beach straight, by the start corner | 6.75 m |
+| Lifeguard tower | beach straight | 7.5 m |
+| West beach club (roped, around an existing palm) | beach straight | 6.25 m |
+| Surf rental | beach straight | 7.5 m |
+| Beach cafe deck | outside the bend towards the pier | 9.0 m |
+| North beach club (around an existing palm) | outside the bend | 7.15 m |
+| North spectator terrace | outside the bend | 6.8 m |
+| Food truck | before the pier | 7.6 m |
+
+All stand on beach land outside the loop, clear of the start/finish touch zone and the jump, so the ordinary and jump practice lines stay hazard-free. Lines that run wide into them crash like any other wall. The version change resets Santa Monica records and tournaments; rules and compiler versions are unchanged and `pnpm test:legacy` matches HEAD on identical geometry.
+
+`src/presentation/santa-monica-beach-life.ts` builds one opaque vertex-coloured batch in world space (one draw call plus its shadow pass; palette `santaBeachLifeAppearance` in `themes.ts`):
+
+- each structure with its pad, its furniture and the people seated, standing and lying on it, every vertex inside its collision rectangle and below its barrier height;
+- a queue, strollers, benches, a ticket booth and a snack cart on top of the protected amusement plaza, and lamp posts inside the pier-rail footprints;
+- sailboats (6 m masts), motor boats, a lifeguard boat, kayaks, paddle boarders, surfers, swimmers and a buoyed swim zone in open water, at least 6 m from every deck, outside the jump's loop and away from the groyne;
+- flat towels on the beach side of the road, at least 2 m beyond its edge (no height, like painted wear);
+- sunbathers under umbrellas, volleyball players, promenade walkers and cyclists, at least 24 m from the course like other loose scatter.
+
+`tests/unit/santa-monica-beach.test.ts` checks the footprints, runoff, support, gate and loop clearance, hazard-free practice lines, containment, water placement, towel flatness and the 24 m setback.

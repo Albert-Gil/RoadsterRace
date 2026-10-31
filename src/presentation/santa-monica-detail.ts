@@ -97,8 +97,8 @@ export function* paintGround(scene: Scene, track: TrackDefinition, layout: Santa
     c.restore();
   }
   yield;
-  // Contact shadows: the venue's blocks, the groyne and its blocks on the sand, dune plants.
-  for (const b of layout.barriers.filter(b => b.kind === 'infield')) g.soft(b.footprint, 2, '96,74,56', 0.3);
+  // Contact shadows: the venue's blocks and beach structures, the groyne and its blocks on the sand, dune plants.
+  for (const b of layout.barriers.filter(b => b.kind === 'infield' || b.kind === 'building')) g.soft(b.footprint, 2, '96,74,56', 0.3);
   const { loose, plants } = layout.scatter();
   contactShadows(g, layout.rocks, loose.filter(r => r.y > S.level - 1.2), [...plants, ...layout.decor()], '96,74,56');
   c.globalAlpha = 1;

@@ -13,7 +13,7 @@ Conventions: SI units; horizontal plane (x, z) with y up; heading 0 points along
 | Newport Island track (`coastal-launch`) | 6 |
 | Launchsite track (`orbital-launchyard`) | 9 |
 | Golden Gate track (`golden-gate`) | 7 |
-| Santa Monica track (`santa-monica`) | 3 |
+| Santa Monica track (`santa-monica`) | 4 |
 | Grand Canyon track (`grand-canyon`) | 5 |
 | LA nights track (`la-nights`) | 4 |
 | Snowy Tahoe track (`snowy-tahoe`) | 5 |
@@ -28,7 +28,7 @@ Records, ghosts, session bests and championships are scoped by these versions. C
 | Newport Island | `coastal-launch` | 6 | 16 | 292.9 | 4 | — |
 | Launchsite | `orbital-launchyard` | 9 | 16 | 460.6 | 25 | hop lane `service-hop` |
 | Golden Gate | `golden-gate` | 7 | 16 | 496.4 | 38 | bridge `golden-span` |
-| Santa Monica | `santa-monica` | 3 | 16 | 660.7 | 105 | ramp `pacific-hop` |
+| Santa Monica | `santa-monica` | 4 | 16 | 660.7 | 113 | ramp `pacific-hop` |
 | Grand Canyon | `grand-canyon` | 5 | 16 | 595.0 | 43 | crest `canyon-crest`, hop lane `mesa-service-trail` |
 | LA nights | `la-nights` | 4 | 16 | 734.0 | 12 | ramp `channel-crossing`, hop lane `backlot-alley` |
 | Snowy Tahoe | `snowy-tahoe` | 5 | 16 | 554.8 | 17 | hop lane `forestry-trail` |

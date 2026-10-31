@@ -57,7 +57,7 @@ export function santaLayout(track: TrackDefinition) {
     return a.x + (b.x - a.x) * t;
   };
   const onLand = (p: Point) => p.x <= shoreX(p.z);
-  const barriers = track.barriers.filter(b => b.kind === 'infield' || b.kind === 'rock'), rocks = track.barriers.filter(b => b.kind === 'rock');
+  const barriers = track.barriers.filter(b => b.kind === 'infield' || b.kind === 'building' || b.kind === 'rock'), rocks = track.barriers.filter(b => b.kind === 'rock');
   const formations: FormationSpec[] = rocks.map((b, i) => ({ id: b.id, footprint: b.footprint, height: b.height, base: 0, seed: 811 + i * 29, style: 'riprap' }));
   const built = polygonField(barriers.map(b => b.footprint), extent, 2.5), bike = smoothPath(S.bikePath, 2), bikeField = distanceField([bike], extent, 2.5);
   const courtBox = (c: Point) => ({ minX: c.x - 8, maxX: c.x + 8, minZ: c.z - 4, maxZ: c.z + 4 });
@@ -149,5 +149,5 @@ export function buildSantaMonicaLandscape(scene: Scene, track: TrackDefinition, 
     const detail = await import('./santa-monica-detail'), { loose, plants } = timed('scatter', () => layout.scatter());
     return { generators: detail, paint: detail.paintInto(scene, track, layout, sand), formations: layout.formations, rock: S.rock, loose, plants: [...plants, ...layout.decor()], plantPalette: S.plants };
   } });
-  return { shadowCasters };
+  return { shadowCasters, layout };
 }
