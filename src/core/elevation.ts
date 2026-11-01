@@ -1,11 +1,12 @@
 import { clamp, cumulative, distance, lerp, modulo } from './geometry';
-import type { HopShortcut, Point, RoadSection, TrackDefinition } from './types';
+import type { HopShortcut, Point, RoadSection, TrackBarrier, TrackDefinition } from './types';
 import { sampleTerrain,terrainRoadHeight } from './terrain';
 import { insideBarrier } from './barriers';
+import { nearbySegments, segmentGrid, type SegmentGrid } from './nearest';
 const branchCache=new WeakMap<HopShortcut,number[]>();
 function branchDistances(h:HopShortcut){let ds=branchCache.get(h);if(!ds){ds=cumulative(h.branch);branchCache.set(h,ds);}return ds;}
 type Segment={a:Point;b:Point;from:number;to:number;branchId?:string};
-const segmentCache=new WeakMap<TrackDefinition,{all:Segment[];bins:Map<number,Segment[]>}>();
+const segmentCache=new WeakMap<TrackDefinition,{all:Segment[];bins:Map<number,Segment[]>;grid:SegmentGrid}>();
 const terrainBounds=new WeakMap<TrackDefinition,{min:number;max:number}>();
 function segments(track:TrackDefinition){
  let result=segmentCache.get(track);if(result)return result;
@@ -13,9 +14,8 @@ function segments(track:TrackDefinition){
  for(let i=1;i<track.centerline.length;i++)all.push({a:track.centerline[i-1],b:track.centerline[i],from:track.distances[i-1],to:track.distances[i]});
  for(const h of track.hopShortcuts??[]){const ds=branchDistances(h),n=ds.at(-1)!;for(let i=1;i<h.branch.length;i++)all.push({a:h.branch[i-1],b:h.branch[i],from:lerp(h.entryProgress,h.exitProgress,ds[i-1]/n),to:lerp(h.entryProgress,h.exitProgress,ds[i]/n),branchId:h.id});}
  for(const segment of all)for(let i=Math.floor(segment.from/16);i<=Math.floor(segment.to/16);i++){const bin=bins.get(i)??[];bin.push(segment);bins.set(i,bin);}
- result={all,bins};segmentCache.set(track,result);return result;
+ result={all,bins,grid:segmentGrid(all.length,i=>[all[i].a,all[i].b])};segmentCache.set(track,result);return result;
 }
-
 export function sectionAt(track: TrackDefinition, progress: number): RoadSection | undefined {
   const p = modulo(progress, track.length);
   return track.sections?.find(s => p >= s.from - 1e-6 && p < s.to - 1e-6) ?? track.sections?.[0];
@@ -38,7 +38,7 @@ export function terrainSurface(p:Point,track:TrackDefinition){
   // A heightfield has one physical height per x/z. Route progress can lag behind
   // an airborne/off-line car and must never select a different surface height.
   const location=locateRoad({x:p.x,z:p.z},track);
-  for(const b of track.barriers)if(insideBarrier(p,b))return{height:b.baseHeight??0,roadDistance:location.distance,branchId:location.branchId};
+  for(const b of track.barriers){const r=barrierBox(b);if(p.x<r.minX||p.x>r.maxX||p.z<r.minZ||p.z>r.maxZ)continue;if(insideBarrier(p,b))return{height:b.baseHeight??0,roadDistance:location.distance,branchId:location.branchId};}
   // Finish the crown blend before adjacent roads' nearest-point regions meet.
   const t=clamp((location.distance-track.roadWidth/2-.15)/1.5,0,1),blend=t*t*(3-2*t);
   return{height:lerp(location.height,sampleTerrain(p,track),blend),roadDistance:location.distance,branchId:location.branchId};
@@ -52,6 +52,12 @@ export function roadSupportWidth(track: TrackDefinition, progress: number, ownSe
   return profile.at(-1)![1];
 }
 
+/** A point outside a footprint's bounding box is never inside it (identical to the polygon test alone). */
+const barrierBoxes=new WeakMap<TrackBarrier,{minX:number;maxX:number;minZ:number;maxZ:number}>();
+function barrierBox(b:TrackBarrier){
+ let r=barrierBoxes.get(b);if(r)return r;
+ const xs=b.footprint.map(p=>p.x),zs=b.footprint.map(p=>p.z);r={minX:Math.min(...xs),maxX:Math.max(...xs),minZ:Math.min(...zs),maxZ:Math.max(...zs)};barrierBoxes.set(b,r);return r;
+}
 /** Ordered association, including both visits to an x/z crossing. Never selects by height alone. */
 export function locateRoad(p: Point, track: TrackDefinition, previous?: number, window = 12) {
   const hint = previous ?? p.courseProgress;
@@ -66,7 +72,7 @@ export function locateRoad(p: Point, track: TrackDefinition, previous?: number, 
     if(score<best.score)best={distance:gap,progress,score,point,branchId};
   };
   const cached=segments(track);
-  if(hint===undefined){for(const s of cached.all)consider(s.a,s.b,s.from,s.to,s.branchId);}
+  if(hint===undefined){for(const i of nearbySegments(p,cached.grid)){const s=cached.all[i];consider(s.a,s.b,s.from,s.to,s.branchId);}}
   else {const near=modulo(hint,track.length),span=window+track.roadWidth*2;for(const shift of [-track.length,0,track.length])for(let i=Math.floor((near-span+shift)/16);i<=Math.floor((near+span+shift)/16);i++)for(const s of cached.bins.get(i)??[])consider(s.a,s.b,s.from,s.to,s.branchId);}
   const section=sectionAt(track,best.progress);
   const branch=track.hopShortcuts?.find(h=>h.id===best.branchId);

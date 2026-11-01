@@ -1,4 +1,5 @@
-import { angleDelta, clamp, distance, lerp, modulo, projectToPolyline } from './geometry';
+import { angleDelta, clamp, distance, lerp, modulo } from './geometry';
+import { projectToPolylineNear } from './nearest';
 import { sampleRoute, COMPILER_VERSION } from './route';
 import { barrierContact, blockedRouteSection, sweepVehicle } from './barriers';
 import { DEFAULT_LAPS, validateLapCount } from './race-options';
@@ -21,7 +22,7 @@ export function lateralGrip(grip: number, response: number, speed: number, slip:
 
 /** Surface comes from the physical car footprint, never from its planned line. */
 export function sampleSurface(position: Point, track: TrackDefinition) {
-  const road = track.sections ? locateRoad(position,track) : projectToPolyline(position, track.centerline, track.distances);
+  const road = track.sections ? locateRoad(position,track) : projectToPolylineNear(position, track.centerline, track.distances);
   const branch = track.sections ? undefined : branchProjection(position, track); if (branch && branch.distance < road.distance) road.distance = branch.distance;
   const edge = (track.roadWidth - track.carWidth) / 2;
   const sandAmount = clamp((road.distance - edge) / RULES.surfaceTransition, 0, 1);

@@ -115,11 +115,13 @@ export function assessSupports(points: Point[], track: TrackDefinition): { jumps
   return { jumps: approved.map(j => j.id), unsupported };
 }
 
+const branchLengthCache = new WeakMap<Point[], number[]>();
+const branchLengths = (branch: Point[]) => { let ds = branchLengthCache.get(branch); if (!ds) { ds = cumulative(branch); branchLengthCache.set(branch, ds); } return ds; };
 /** Both branches share the same entry/exit distance for checkpoints and standings. */
 export function branchProjection(p: Point, track: TrackDefinition) {
   let best: (ReturnType<typeof projectToPolyline> & { manualHop: boolean }) | undefined;
   for (const j of [...(track.jumps ?? []), ...(track.hopShortcuts ?? [])]) {
-    const ds = cumulative(j.branch), projection = projectToPolyline(p, j.branch, ds);
+    const ds = branchLengths(j.branch), projection = projectToPolyline(p, j.branch, ds);
     const along = projection.progress / ds.at(-1)!;
     const candidate = { ...projection, progress: lerp(j.entryProgress, j.exitProgress, along), manualHop: 'obstacleId' in j };
     if (!best || candidate.distance < best.distance) best = candidate;

@@ -84,7 +84,7 @@ export function buildYosemite(scene:Scene,track:TrackDefinition,theme:Presentati
  const lateShadowCasters=new Promise<Mesh[]>(resolve=>scene.onAfterRenderObservable.addOnce(()=>{
   void import('./yosemite-landscape').then(({buildYosemiteLandscape})=>{
    if(scene.isDisposed){resolve([]);return;}const built=buildYosemiteLandscape(scene,track,{meadow,stone,forest,detail},groundSurface);base.setEnabled(false);scene.removePendingData(pending);resolve([...built,falling.rim]);
-  }).catch(()=>{if(!scene.isDisposed)scene.removePendingData(pending);resolve([]);});
+  }).catch(error=>{console.warn('Yosemite valley scenery did not load',error);if(!scene.isDisposed)scene.removePendingData(pending);resolve([]);});
  }));
  return{groundSurface,shadowCasterMaterials:casters,lateShadowCasters,refinements:['sculpted granite with mineral seams and lichen','layered cedar and ponderosa forest','feathered packed-earth edges and worn paths','natural creek crossing','hidden fallen-cedar trail','flowing waterfall and valley mist','detailed timber lodges and campground'],update(time:number,reduced:boolean){waterTexture.vOffset=reduced?0:time*art.waterfall.speed*.08;falling.update(time,reduced);atmosphere.update(time,reduced);}};
 }

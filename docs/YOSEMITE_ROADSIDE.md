@@ -39,3 +39,22 @@ fixtures, type checking, the Pages build and a complete production touch race.
 Desktop and both phone orientations retain the original 72-degree camera fit;
 sampled road sight lines are clear. The waterfall remains visible in portrait.
 Active-effect budgets remain 48 Time Trial / 104 four-car scene draws.
+
+## Creek banks and terrain physics speed — 2026-10-31
+
+The core heightfield carves the creek per 4 m grid node (nodes inside the authoritative water
+opening are at -3 m), and the rendered valley copied it, so the water's edge showed square steps.
+The rendered ground near the creek now follows the signed distance to the authoritative banks
+(`src/presentation/yosemite-creek-bank.ts`): a straight slope from the uncarved meadow 6 m out to
+the bed 1 m inside the water, blending back into the core terrain by 9 m. Trees and undergrowth
+use the same rendered ground. The water opening, support, physics heights and records are
+unchanged (`tests/unit/yosemite-creek-bank.test.ts`).
+
+Terrain height and surface-grip lookups without a route hint used to scan every road segment.
+`src/core/nearest.ts` searches a 16 m segment grid outward and scores the candidates in course
+order, so the result is exactly the full scan's (`tests/unit/nearest.test.ts`; `pnpm test:legacy`
+matches all 24 fixtures). Measured on the development sandbox (four practice-line cars, ms per
+60 Hz tick, before → after): Capitan Yosemite 7.5 → 1.8, Snowy Tahoe 6.1 → 1.9, LA nights
+1.9 → 0.7, Santa Monica 1.2 → 0.6, Grand Canyon 1.4 → 1.2; the other venues also roughly halve.
+Physical-phone timing remains pending.
+

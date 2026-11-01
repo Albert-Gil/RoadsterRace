@@ -39,6 +39,8 @@ export interface DeviceSignals {
   screenPixels: number;
   /** User agent mentions a phone/tablet OS. */
   mobileOs: boolean;
+  /** CSS pixels of the shorter screen side (a touch device below 600 is a phone). */
+  shortSide?: number;
 }
 
 /**
@@ -49,6 +51,8 @@ export function detectGraphicsLevel(s: DeviceSignals): GraphicsLevel {
   const r = s.renderer.toLowerCase();
   if (/swiftshader|llvmpipe|softpipe|software|basic render|microsoft basic/.test(r)) return 'low';
   if ((s.memory !== undefined && s.memory <= 2) || s.cores <= 2) return 'low';
+  // Phones start on Medium (no ambient occlusion, MSAA or bloom passes); players can still choose High.
+  if ((s.coarsePointer || s.mobileOs) && (s.shortSide ?? Infinity) < 600) return 'medium';
   if (/apple (gpu|m\d)/.test(r) || r === 'apple gpu') return s.coarsePointer || s.mobileOs ? 'high' : 'ultra';
   if (s.coarsePointer || s.mobileOs) {
     // Recent Android flagships report Adreno 7xx/8xx, Mali-G7xx/G9xx, Immortalis or Xclipse.
@@ -66,7 +70,7 @@ export function readDeviceSignals(renderer: string): DeviceSignals {
   const dpr = window.devicePixelRatio || 1;
   return {
     renderer, coarsePointer: matchMedia('(pointer: coarse)').matches, cores: nav.hardwareConcurrency || 4, memory: nav.deviceMemory,
-    screenPixels: Math.max(screen.width, screen.height) * dpr,
+    screenPixels: Math.max(screen.width, screen.height) * dpr, shortSide: Math.min(screen.width, screen.height),
     // iPadOS reports a desktop Mac user agent; touch points distinguish it.
     mobileOs: /android|iphone|ipad|ipod/i.test(navigator.userAgent) || (/macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints > 1),
   };

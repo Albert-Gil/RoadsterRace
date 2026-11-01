@@ -67,7 +67,10 @@ export function runLandscape(scene: Scene, materials: Map<string, StandardMateri
     if (import.meta.env.DEV) Object.assign(window, { __landscapeTimings: { ...((window as unknown as { __landscapeTimings?: object }).__landscapeTimings ?? {}), [name]: { ...timings, triangles: meshes.map(m => m.getTotalIndices() / 3) } } });
     scene.removePendingData(pending); resolve(meshes);
   };
-  void (props ? loadProps(props).then(build, () => build(null)) : build(null));
+  // A missing chunk (e.g. a tab left open across a deployment) leaves the venue without this scenery, not stuck loading.
+  void (props ? loadProps(props).then(build, () => build(null)) : build(null)).catch(error => {
+    console.warn(`${name} landscape did not load`, error); if (!scene.isDisposed) scene.removePendingData(pending); resolve([]);
+  });
   return { shadowCasters };
 }
 

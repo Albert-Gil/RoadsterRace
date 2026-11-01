@@ -12,9 +12,11 @@ preference (`localStorage` key `roadster-race.graphics.v1`), separate from race 
 *Auto* (`src/presentation/graphics.ts`):
 
 1. **Detects** a starting tier once per session from the WebGL renderer string, pointer type,
-   CPU cores, device memory and screen size. Apple phones/tablets start on High, Apple desktops
-   and discrete desktop GPUs on Ultra, integrated Intel graphics on High (Medium above ~2600 px),
-   unknown mobile GPUs on Medium, software renderers and 2 GB/2-core devices on Low.
+   CPU cores, device memory and screen size. Phones (a touch screen whose short side is under
+   600 CSS px) start on Medium, without the ambient-occlusion, MSAA and bloom passes; players can
+   still choose High. Apple tablets start on High, Apple desktops and discrete desktop GPUs on
+   Ultra, integrated Intel graphics on High (Medium above ~2600 px), other mobile GPUs on Medium
+   (flagship Android tablets on High), software renderers and 2 GB/2-core devices on Low.
    Automated browsers (`navigator.webdriver`: Playwright, CI) start on Low.
 2. **Steps down** one tier when, after a 3 s warm-up, a 4 s window of real frames averages
    slower than 45 fps (`graphicsGovernor` in `themes.ts`). Gaps over 250 ms (tab switches,

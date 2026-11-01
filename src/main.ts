@@ -26,6 +26,7 @@ import { arrivesHome, nextHero } from './app/hero';
 import { installDevApi } from './app/dev-api';
 import { uiScale } from './app/ui-scale';
 import { installZoomGuard } from './app/zoom-guard';
+import { newerBuildDeployed, staleBuildRecovery } from './app/stale-build';
 import { formatTime } from './ui/format';
 import { renderHud } from './ui/hud';
 import { abilityControlsMarkup } from './ui/controls';
@@ -55,6 +56,10 @@ const coarsePointer = matchMedia('(pointer: coarse)');
 /** Larger touch screens get proportionally larger controls; the course rectangle follows via CSS. */
 function applyUiScale() { const scale = uiScale(innerWidth, innerHeight, coarsePointer.matches); playground.style.setProperty('--ui-scale', String(scale)); }
 applyUiScale(); installZoomGuard();
+// A tab left open across a deployment reloads (at a safe moment) when a renamed lazy chunk is missing.
+const staleBuild = staleBuildRecovery({ phase: () => phase, reload: () => location.reload(), storage: (() => { try { return sessionStorage; } catch { return undefined; } })() });
+let checkingBuild = false;
+window.addEventListener('vite:preloadError', () => { if (checkingBuild) return; checkingBuild = true; void newerBuildDeployed().then(stale => { if (stale) staleBuild.failed(); }, () => {}).finally(() => { checkingBuild = false; }); });
 const canvas = document.querySelector<HTMLCanvasElement>('#race-canvas')!;
 const panel = document.querySelector<HTMLElement>('#panel')!, hud = document.querySelector<HTMLElement>('.race-hud')!;
 const countdownElement = document.querySelector<HTMLElement>('.countdown')!, controls = document.querySelector<HTMLElement>('#race-controls')!;
@@ -266,6 +271,7 @@ function setPhase(next: Phase) {
   // Coaching is a frozen race: it keeps the racing layout and is marked separately for the coach styles.
   if (arrivesHome(heroIndex === null ? null : phase, next)) showHero();
   phase = next; playground.dataset.phase = phase === 'coaching' ? 'racing' : phase; playground.dataset.coaching = String(phase === 'coaching'); playground.dataset.players = String(humans()); playground.dataset.mode=sessionOptions.mode; playground.dataset.tournament = String(!!activeTour);
+  staleBuild.phaseChanged();
   const layout = phaseLayout(phase);
   if (!layout.ghostAllowed) world?.setGhost(null);
   if (!layout.driveAudio) audio.mix({ active: false, speed: 0, slip: 0, sand: 0 });

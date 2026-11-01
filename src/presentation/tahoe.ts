@@ -120,7 +120,7 @@ export function buildTahoe(scene:Scene,track:TrackDefinition,theme:PresentationT
         const shade=smoothstep(4,72,h)*.18+Math.min(.4,slope*.23),noise=Math.max(0,fbm2(x/24,z/24,3))*.065;
         return mix(hex('#ffffff'),hex('#9bb0c5'),shade+noise);
       }},snow);groundSurface.setGrid({p:hills.getVerticesData(VertexBuffer.PositionKind)!,indices:hills.getIndices()!,minX:art.extent.minX,minZ:art.extent.minZ,cell:3,cols:Math.ceil((art.extent.maxX-art.extent.minX)/3)+1,rows:Math.ceil((art.extent.maxZ-art.extent.minZ)/3)+1});hills.isPickable=false;hills.receiveShadows=true;hills.freezeWorldMatrix();base.setEnabled(false);scene.removePendingData(pending);resolve([trees,details.moving]);
-    }).catch(()=>{if(!scene.isDisposed)scene.removePendingData(pending);resolve([]);});
+    }).catch(error=>{console.warn('Snowy Tahoe forest did not load',error);if(!scene.isDisposed)scene.removePendingData(pending);resolve([]);});
   }));
   return{groundSurface,shadowCasterMaterials:casters,lateShadowCasters,refinements:['three main-road snow jumps','surface-fitted tyres and shadows','slippery packed snow','detailed rental and rescue chalets','moving ski lift','dense gusting snow and drifting powder','snow-laden firs and granite'],update(time:number,reduced:boolean){waterTexture.uOffset=reduced?0:time*.001;weather.update(time,reduced);details.update(time,reduced);}};
 }

@@ -11,8 +11,12 @@ describe('graphics tier detection', () => {
     expect(detectGraphicsLevel(device({ renderer: 'llvmpipe (LLVM 15.0.7, 256 bits)' }))).toBe('low');
     expect(detectGraphicsLevel(device({ renderer: 'Apple GPU', memory: 2 }))).toBe('low');
   });
-  it('starts Apple phones and tablets on High and Apple desktops on Ultra', () => {
+  it('starts phones on Medium, Apple tablets on High and Apple desktops on Ultra', () => {
+    expect(detectGraphicsLevel(device({ renderer: 'Apple GPU', coarsePointer: true, mobileOs: true, shortSide: 390 }))).toBe('medium');
+    expect(detectGraphicsLevel(device({ renderer: 'Adreno (TM) 740', coarsePointer: true, mobileOs: true, shortSide: 412 }))).toBe('medium');
+    expect(detectGraphicsLevel(device({ renderer: 'Apple GPU', coarsePointer: true, mobileOs: true, shortSide: 820 }))).toBe('high');
     expect(detectGraphicsLevel(device({ renderer: 'Apple GPU', coarsePointer: true, mobileOs: true }))).toBe('high');
+    expect(detectGraphicsLevel(device({ renderer: 'Apple GPU', shortSide: 390 }))).toBe('ultra');
     expect(detectGraphicsLevel(device({ renderer: 'Apple GPU' }))).toBe('ultra');
   });
   it('separates discrete desktop GPUs from integrated ones', () => {
