@@ -26,6 +26,38 @@ Local working revision, 2026-10-27. Uncommitted; no push or deployment.
   lane's named centre is jumpable; end protection remains solid. No signs, activation paint,
   shortcut lights or preview hints.
 
+## Launchsite v10 — 2026-11-01
+
+The owner asked to close the cut from the straight before the S across the sand to the hairpin
+(Launchsite 2, previously kept open), with launch-site objects rather than rocks, and to let a
+manual Hop clear the low wing between the hairpin's two legs (until now an infinitely high part of
+the protected tank parcel).
+
+- **Rocket yard**: closes the cut, and its height decides what a Hop can clear (the owner's
+  follow-up the same day asked for a bigger yard that is tall where it must not be jumped and low
+  near the corner apex where it may be).
+  - The protected `rocket-yard` parcel (1.25 m plinth, `cut-protection`) runs from the tip to
+    0.4 m from the launch complex, 5 m clear of the straight and at least 4 m from the hairpin's
+    outside. It carries a continuous row taller than a Hop: a 9 m propellant tank, a 15 m upper
+    stage (6 m diameter) and a 39 m booster (7 m diameter) on transport stands, 9.6–10.5 m in
+    all, with gaps narrower than a car. Each stands far enough south that the ground hidden
+    behind it at the 42° camera stays off the straight.
+  - The low tip inside the S, nearest the corner apex, is a 1.3 m pipe rack
+    (`rocket-yard-tip-hop-barrier`), 2 m from the x = -2 road: the named obstacle of the
+    `rocket-yard-tip-hop` lane. The lane turns off the straight and crosses the tip heading south
+    into the hairpin's first leg; the practice line saves about 29 m. Without a Hop the car meets
+    it.
+  - Before, the shortest car-width-clear path across the sand saved about 25 m more than any
+    on-road line between the same stations; with the yard (its tip counted as solid) the margin
+    is under 1 m (grid audit in `tests/unit/launchsite-v10.test.ts`). The way round the launch
+    complex is longer than the road.
+- **Hop over the wing** (`utility-wing-hop`, 16 m): the lane continues straight down the x = -2
+  road over the wing and turns onto the hairpin's far leg. The wing (`utility-wing-hop-barrier`) is
+  the 1.25 m curb with a low pipe, 1.65 m in all. Only a compiled forward traversal in manual flight
+  clears it; the tank parcel beside it stays protected. The practice lane saves about 33 m.
+- Neither lane has a surface, paint or worn ground of its own; CPU drivers keep the course.
+- Track version 10 resets Launchsite records and tournaments; rules and compiler stay 18.
+
 ## Confirmed case-by-case choices
 
 The original numbered maps remain at `artifacts/shortcut-review/index.html`; the implemented

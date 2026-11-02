@@ -8,7 +8,7 @@ import type { PresentationTheme } from './themes';
 import { buildLaunchsiteLandscape } from './launchsite';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { buildingGeometry } from './building-geometry';
-import { launchsiteVessels } from '../core/tracks/venue-parcels';
+import { launchsiteRocketStages, launchsiteVessels, launchsiteYardTank } from '../core/tracks/venue-parcels';
 
 /** Original, lightweight launchyard scenery. All substantial structures occupy protected footprints. */
 export function buildSpaceport(scene: Scene, track: TrackDefinition, theme: PresentationTheme, materials: Map<string, StandardMaterial>) {
@@ -69,9 +69,54 @@ export function buildSpaceport(scene: Scene, track: TrackDefinition, theme: Pres
     for(const h of [.3,v.height*.38,v.height*.76])cylinder('vessel-weld-band',v.x,base+h,v.z,.09,diameter,diameter,steel);
     box('vessel-service-valve',v.x,base+.7,v.z+v.radius-.35,.65,.55,.65,red);
   }
-  for(const x of [-9,-5,-1,3]){
-    box('utility-pipe-foot',x,tower.height+.65,43,.15,1.3,.7,steel);
-    const pipe=cylinder('utility-header-pipe',x,tower.height+1.35,43,4.1,.34,.34,metal);pipe.rotation.z=Math.PI/2;
+  // The wing between the hairpin legs is a Hop obstacle drawn with the lane props (hop-obstacles.ts).
+  // v10 rocket yard: a low plinth from the S to the launch complex carrying a tall, continuous row
+  // (a propellant tank and two unbranded stages on transport stands, all taller than a Hop) that
+  // reads as impassable. Its low tip inside the S is a Hop obstacle drawn in hop-obstacles.ts.
+  const yard=track.barriers.find(b=>b.id==='rocket-yard');
+  if(yard){
+    const yardData=buildingGeometry(yard.footprint,yard.height,yard.baseHeight??0).toVertexData(),plinth=new Mesh('rocket-yard-plinth',scene);
+    yardData.colors=null;yardData.uvs=new Float32Array(yardData.positions!.length/3*2);yardData.applyToMesh(plinth);plinth.material=concrete;
+    const base=yard.height, lying=(name:string,x0:number,x1:number,z:number,y:number,from:number,to:number,material:StandardMaterial)=>{
+      const m=cylinder(name,(x0+x1)/2,y,z,x1-x0,from,to,material);m.rotation.z=Math.PI/2;return m;
+    };
+    for(const s of launchsiteRocketStages){
+      const r=s.diameter/2,y=base+s.cradle+r,length=s.to-s.from,stands=s.id==='rocket-yard-booster'?5:3;
+      // Transport stands: a wheeled bogie, two legs and a saddle that wraps the lower body.
+      for(let i=0;i<stands;i++){
+        const x=s.from+length*(stands===5?.08+i*.21:.2+i*.3);
+        box('stage-stand-bogie',x,base+.35,s.z,2.4,.7,s.diameter*.9,steel);
+        for(const side of [-1,1]){
+          box('stage-stand-leg',x,base+(s.cradle+r*.6)/2,s.z+side*r*.62,.7,s.cradle+r*.6,.55,steel);
+          for(const dx of [-.75,.75])box('stage-stand-wheel',x+dx,base+.3,s.z+side*r*.72,.6,.6,.35,metal);
+        }
+        box('stage-stand-saddle',x,base+s.cradle+r*.18,s.z,.9,.5,s.diameter*.86,red);
+      }
+      if(s.id==='rocket-yard-booster'){
+        // Nose end to the west, engines toward the pad.
+        lying('booster-interstage',s.from,s.from+2.4,s.z,y,s.diameter*.94,s.diameter*.94,steel);
+        lying('booster-tank',s.from+2.4,s.to-5,s.z,y,s.diameter*.99,s.diameter*.99,white);
+        for(const t of [.2,.4,.6,.8])lying('booster-weld-band',s.from+2.4+(length-7.4)*t-.07,s.from+2.4+(length-7.4)*t+.07,s.z,y,s.diameter,s.diameter,metal);
+        lying('booster-aft-skirt',s.to-5,s.to-1.9,s.z,y,s.diameter*.96,s.diameter,metal);
+        lying('booster-heat-shield',s.to-1.9,s.to-1.7,s.z,y,s.diameter*.92,s.diameter*.92,steel);
+        for(let k=0;k<9;k++){
+          const a=k/8*Math.PI*2,c=k===8?{y:0,z:0}:{y:Math.sin(a)*2.2,z:Math.cos(a)*2.2};
+          lying('booster-engine-bell',s.to-1.7,s.to,s.z+c.z,y+c.y,1.3,.65,steel);
+        }
+      }else{
+        lying('stage-nose-cone',s.from,s.from+6,s.z,y,.15,s.diameter,white).rotation.z=-Math.PI/2;
+        lying('stage-body',s.from+6,s.to-2,s.z,y,s.diameter*.99,s.diameter*.99,metal);
+        for(const x of [s.from+6,s.from+(length+4)/2])lying('stage-band',x,x+.25,s.z,y,s.diameter,s.diameter,steel);
+        lying('stage-skirt',s.to-2,s.to-1.1,s.z,y,s.diameter*.96,s.diameter,steel);
+        lying('stage-engine-bell',s.to-1.1,s.to,s.z,y,2.2,1.1,steel);
+      }
+    }
+    // Vertical propellant tank closing the row at the tip end.
+    const t=launchsiteYardTank,d=t.radius*2;
+    cylinder('yard-tank',t.x,base+(t.height-.5)/2,t.z,t.height-.5,d,d,white);
+    cylinder('yard-tank-cap',t.x,base+t.height-.25,t.z,.5,d,d*.8,metal);
+    for(const h of [.4,t.height*.35,t.height*.7])cylinder('yard-tank-band',t.x,base+h,t.z,.12,d*1.0,d*1.0,steel);
+    box('yard-tank-ladder',t.x,base+t.height/2,t.z-t.radius+.12,.5,t.height,.12,steel);
   }
   // Launch landmark beyond the driving apron, protected by launch-complex.
   cylinder('landing-pad', 97, 0.26, 20, 0.12, 18, 18, concrete);

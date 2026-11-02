@@ -5,6 +5,7 @@ import { noise2, smoothstep } from './noise';
 import type { LooseRock } from './rocks';
 import type { Plant } from './plants';
 import type { Extent } from './terrain';
+import { pavedHopLanes } from '../lanes';
 
 /**
  * Reusable painting passes for a venue's ground map (presentation only). Colours are given as
@@ -44,7 +45,7 @@ export function washBeds(g: GroundPainter, rand: Rand, washes: readonly (readonl
 export function runoffWear(g: GroundPainter, track: TrackDefinition, colour = '118,104,92', strength = 1) {
   g.stroke([...track.centerline, track.centerline[0]], 2 * 21, `rgb(${colour})`, 0.085 * strength);
   g.stroke([...track.centerline, track.centerline[0]], 2 * 14, `rgb(${colour})`, 0.06 * strength);
-  for (const s of track.hopShortcuts ?? []) g.stroke(s.branch, s.width + 10, `rgb(${colour})`, 0.07 * strength);
+  for (const s of pavedHopLanes(track)) g.stroke(s.branch, s.width + 10, `rgb(${colour})`, 0.07 * strength);
 }
 /** Slide marks where cars ran wide (outside of corners) and, optionally, gravel traps at the tightest. */
 export function cornerMarks(g: GroundPainter, rand: Rand, track: TrackDefinition, corners: readonly { from: number; to: number; side: number; sharpness: number }[], options: { gravel?: boolean; mark?: string; inner?: number } = {}) {

@@ -4,8 +4,8 @@ import { createStartFinish } from '../start-finish';
 import { cumulative, projectToPolyline } from '../geometry';
 import type { HopShortcut, Point, TrackDefinition } from '../types';
 import { outcrop } from './outcrop';
-import { launchsiteVessels } from './venue-parcels';
-import { serviceConduit, obstacleRectangle } from './hop-obstacles';
+import { launchsiteRocketStages, launchsiteVessels, launchsiteYardTank } from './venue-parcels';
+import { serviceConduit, obstacleRectangle, rocketYardTip, utilityWing } from './hop-obstacles';
 
 const centerline = roundedCircuit([
   { x: -38, z: -40 }, { x: -4, z: -40 }, { x: 48, z: -40 },
@@ -25,7 +25,37 @@ const branch: Point[] = [
 const serviceHop: HopShortcut = { id: 'service-hop', branch, width: 16, obstacleId: 'service-hop-barrier',
   entryProgress: projectToPolyline(branch[0], centerline, distances).progress,
   exitProgress: projectToPolyline(branch.at(-1)!, centerline, distances).progress };
+/**
+ * v10: the low wing between the hairpin's two legs (below the storage tanks) may be cleared with a
+ * manual Hop. The lane runs straight on down the x = -2 road over the wing and turns onto the leg
+ * beyond; only the wing itself is jumpable, the tank parcel beside it stays protected.
+ */
+const wingBranch: Point[] = [
+  ...Array.from({ length: 25 }, (_, i) => ({ x: -2, z: 20 + i })),
+  ...Array.from({ length: 13 }, (_, i) => ({ x: -11 + Math.cos(i / 12 * Math.PI / 2) * 9, z: 44 + Math.sin(i / 12 * Math.PI / 2) * 9 })).slice(1),
+];
+const wingHop: HopShortcut = { id: 'utility-wing-hop', branch: wingBranch, width: 16, obstacleId: 'utility-wing-hop-barrier',
+  entryProgress: projectToPolyline(wingBranch[0], centerline, distances).progress,
+  exitProgress: projectToPolyline(wingBranch.at(-1)!, centerline, distances).progress };
+/**
+ * v10: the rocket yard's low tip inside the S may also be cleared with a manual Hop. The lane leaves
+ * the straight turning left, crosses the tip heading south and joins the hairpin's first leg.
+ */
+const tipBranch: Point[] = [
+  ...Array.from({ length: 17 }, (_, i) => ({ x: 24 - Math.sin(i / 16 * Math.PI / 2) * 6, z: 14 - Math.cos(i / 16 * Math.PI / 2) * 6 })),
+  ...Array.from({ length: 30 }, (_, i) => ({ x: 18, z: 15 + i })),
+];
+const tipHop: HopShortcut = { id: 'rocket-yard-tip-hop', branch: tipBranch, width: 16, obstacleId: 'rocket-yard-tip-hop-barrier',
+  entryProgress: projectToPolyline(tipBranch[0], centerline, distances).progress,
+  exitProgress: projectToPolyline(tipBranch.at(-1)!, centerline, distances).progress };
 const rect = (x: number, z: number, w: number, d: number) => [{ x, z }, { x: x + w, z }, { x: x + w, z: z + d }, { x, z: z + d }];
+/**
+ * v10 protected rocket yard: from the low tip inside the S (a Hop obstacle, 2 m from the hairpin and
+ * the x = -2 road) to the launch complex (0.4 m gap), 5 m clear of the straight beside it and at
+ * least 4 m from the hairpin's outside. Lines from that straight across the sand to the hairpin
+ * meet it; going round the launch complex is longer than the road.
+ */
+const rocketYard: Point[] = [[26,21],[86.6,21],[86.6,41],[36,41],[30,35],[26,31]].map(([x,z])=>({x,z}));
 /**
  * Solid desert rock formations (v4). Each keeps at least 13 m from the centerline (5 m of run-off
  * beyond the road edge) and its rendered rock stays inside its footprint, so what you see is what
@@ -49,15 +79,24 @@ const rocks: TrackDefinition['barriers'] = [
 
 /** Flat physical layout; scenery/branding never participate in its rules. */
 export const orbitalTrack: TrackDefinition = {
-  id: 'orbital-launchyard', version: 9, name: 'Launchsite', centerline, distances, length,
+  id: 'orbital-launchyard', version: 10, name: 'Launchsite', centerline, distances, length,
   roadWidth: 16, carWidth: VEHICLE_DIMENSIONS.width, carLength: VEHICLE_DIMENSIONS.length, start: centerline[0], startFinish: createStartFinish(centerline[0], centerline[1], 16),
   barriers: ([
     // Protected utility parcel with low perimeter and separate real-height vessels.
     { id:'utility-storage-tower',kind:'infield',height:1.25,runoffException:'cut-protection',
-      footprint:[[-28,0],[-23,-4],[-13,-3],[-12,28],[-10,39],[2,42.4],[6,42.4],
-        [6,43.6],[-13,43.6],[-26,32],[-26,24],[-27,17]].map(([x,z])=>({x,z})) },
+      footprint:[[-28,0],[-23,-4],[-13,-3],[-12,28],[-10,39],[-10,43.6],[-13,43.6],[-26,32],[-26,24],[-27,17]].map(([x,z])=>({x,z})) },
     ...launchsiteVessels.map(v=>({id:v.id,kind:'building' as const,height:v.height,baseHeight:1.25,runoffException:'cut-protection' as const,
       footprint:Array.from({length:20},(_,i)=>({x:v.x+Math.cos(i/20*Math.PI*2)*v.radius,z:v.z+Math.sin(i/20*Math.PI*2)*v.radius}))})),
+    // The parcel's former wing between the hairpin legs: a low curb and pipe that a manual Hop may clear.
+    { id:'utility-wing-hop-barrier',kind:'service-barrier',height:utilityWing.height,runoffException:'hop-lane',footprint:utilityWing.footprint },
+    // v10 rocket yard: closes the hairpin cut from the inside of the S to the launch complex.
+    { id:'rocket-yard',kind:'infield',height:1.25,runoffException:'cut-protection',footprint:rocketYard },
+    ...launchsiteRocketStages.map(s=>({id:s.id,kind:'building' as const,height:s.cradle+s.diameter,baseHeight:1.25,runoffException:'cut-protection' as const,
+      footprint:rect(s.from,s.z-s.diameter/2,s.to-s.from,s.diameter)})),
+    { id:launchsiteYardTank.id,kind:'building',height:launchsiteYardTank.height,baseHeight:1.25,runoffException:'cut-protection',
+      footprint:Array.from({length:20},(_,i)=>({x:launchsiteYardTank.x+Math.cos(i/20*Math.PI*2)*launchsiteYardTank.radius,z:launchsiteYardTank.z+Math.sin(i/20*Math.PI*2)*launchsiteYardTank.radius})) },
+    // The yard's low tip, which a manual Hop may clear.
+    { id:'rocket-yard-tip-hop-barrier',kind:'service-barrier',height:rocketYardTip.height,runoffException:'hop-lane',footprint:rocketYardTip.footprint },
     { id: 'assembly-island', height: 1.05, footprint: [
       { x: -47, z: -23 }, { x: -30, z: -26 }, { x: 30, z: -26 },
       { x: 34, z: -20 }, { x: 34, z: -5 }, { x: 12, z: -5 },
@@ -75,5 +114,5 @@ export const orbitalTrack: TrackDefinition = {
     { id: 'service-hop-barrier', height: serviceConduit.height, kind: 'service-barrier', runoffException: 'hop-lane',
       footprint: obstacleRectangle(serviceConduit.x,serviceConduit.z,serviceConduit.width,serviceConduit.depth) },
   ] satisfies TrackDefinition['barriers']).map<TrackDefinition['barriers'][number]>(b=>b.id==='assembly-island'?{...b,footprint:b.footprint.map(p=>({x:-8+(p.x+8)*0.96,z:-15+(p.z+15)*0.96}))}:b).concat(rocks),
-  hopShortcuts: [serviceHop],
+  hopShortcuts: [serviceHop, wingHop, tipHop],
 };

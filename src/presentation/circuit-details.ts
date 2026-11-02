@@ -13,6 +13,7 @@ import { insideBarrier } from '../core/barriers';
 import { cumulative, distance, projectToPolyline } from '../core/geometry';
 import type { PresentationTheme } from './themes';
 import { hopPropIds } from '../core/tracks/hop-obstacles';
+import { pavedHopLanes } from './lanes';
 
 /** Walls originate in physical footprints. Every other solid prop is inside a protected island. */
 export function buildCircuitDetails(scene: Scene, track: TrackDefinition, theme: PresentationTheme, materials: Map<string, StandardMaterial>, casters: Set<StandardMaterial>, coastal = true) {
@@ -70,7 +71,7 @@ export function buildCircuitDetails(scene: Scene, track: TrackDefinition, theme:
       if (i % 7 === 0) { const stone = MeshBuilder.CreateSphere('landscaped-limestone', { diameter: 2.3, segments: 4 }, scene); stone.position.set(p.x + 0.4, 0.7, p.z); stone.scaling.set(1.3, 0.7, 1); stone.material = rock; }
     }
   }
-  for (const shortcut of track.hopShortcuts ?? []) {
+  for (const shortcut of pavedHopLanes(track)) {
     for (const side of [-1,1]) {
       const edge=roadEdges(shortcut.branch,shortcut.width-0.5,false)[side===-1?0:1];
       const line=MeshBuilder.CreateRibbon('service-lane-edge',{pathArray:[edge.map(p=>new Vector3(p.x-0.05,0.145,p.z)),edge.map(p=>new Vector3(p.x+0.05,0.145,p.z))],sideOrientation:Mesh.DOUBLESIDE},scene);

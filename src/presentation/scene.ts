@@ -28,6 +28,7 @@ import type { BaseTexture } from '@babylonjs/core/Materials/Textures/baseTexture
 import type { CubeTexture } from '@babylonjs/core/Materials/Textures/cubeTexture';
 import '@babylonjs/core/Culling/ray';
 import { distance, mix, modulo } from '../core/geometry';
+import { pavedHopLanes } from './lanes';
 import { drawingStart, drawingStartBounds, startGate, gatePoint, trimDrawing } from '../core/start-finish';
 import { bridgeAt } from '../core/bridge';
 import { gestureSpeeds } from '../core/route';
@@ -145,7 +146,7 @@ export class GameScene {
     else if (!track.bridges?.length) this.ribbon('road-shoulder', track.centerline, track.roadWidth + 2.5, 0.04).material = shoulder;
     else { let run: Point[] = []; for (const p of track.centerline) { if (bridgeAt(p, track)) { if (run.length > 1) this.openRibbon('road-shoulder', run, track.roadWidth + 2.5, 0.04).material = shoulder; run = []; } else run.push(p); } if (run.length > 1) this.openRibbon('road-shoulder', run, track.roadWidth + 2.5, 0.04).material = shoulder; }
     this.ribbon('asphalt', track.centerline, track.roadWidth, 0.10).material = this.roadMaterial = mat('asphalt', theme.scene.asphalt);
-    for (const shortcut of track.hopShortcuts ?? []) {
+    for (const shortcut of pavedHopLanes(track)) {
       this.openRibbon('service-lane-shoulder', shortcut.branch, shortcut.width + 2.5, 0.04).material = shoulder;
       this.openRibbon('service-lane-asphalt', shortcut.branch, shortcut.width, 0.1).material = this.roadMaterial;
     }

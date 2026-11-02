@@ -22,7 +22,7 @@ Each drawing turn also uses the same backward-section/loop cleanup and expanded 
 - Vehicle positions and headings come from the physical simulation, including sideways drift and sand recovery. Multiplayer starts on an authored physical grid; numbered labels distinguish overlapping cars during the ghost start. Drawing/preview keep only the current driver's numbered chip and compact controls, with no earlier plans or practice-line shortcut exposed.
 - Route progress follows actual movement and ordered proximity gates. A car far from its route cannot finish laps just because time passes. All players use the same asphalt/sand rules and bounded steering response; see `docs/HANDLING.md`.
 - Drawing and racing use the same camera projection. Projection matrices refresh immediately on layout changes so picking and preview markers agree before another rendered frame.
-- The bottom-left/bottom-right corners belong to Players 1/2. Players 3/4 use top-left/top-right controls facing the opposite seats. Solo retains its existing bottom-right control. Desktop alternatives are A/L/Q/P, and Space in solo mode.
+- Seats run counterclockwise: the bottom-left/bottom-right corners belong to Players 1/2, and Players 3/4 use the top-right/top-left controls, facing the opposite seats. Each player's pads are painted in that driver's car colour (the full paint when ready and on the ready screen, a darker shade while recharging). Solo retains its existing bottom-right control. Desktop alternatives are A/L/Q/P, and Space in solo mode.
 - Theme changes preserve routes, readiness, physics and timing. Imported models keep their authored materials until a paint adapter exists; player labels remain independent of the model.
 
 ## Evidence and limits

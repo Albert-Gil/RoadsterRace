@@ -1,9 +1,9 @@
 import { expect, test } from '@playwright/test';
 
-// User-approved choices from the per-venue shortcut review maps.
+// User-approved choices from the per-venue shortcut review maps (Launchsite 2 closed in track v10).
 for (const [circuit, label, from, skip, blocked] of [
   ['coastal-launch', 1, 42, 72, true], ['launchsite', 1, 222, 114, true],
-  ['launchsite', 2, 174, 78, false], ['golden-gate', 1, 54, 102, true],
+  ['launchsite', 2, 174, 78, true], ['golden-gate', 1, 54, 102, true],
   ['golden-gate', 2, 120, 84, true], ['golden-gate', 3, 174, 72, false],
   ['la-nights', 1, 48, 78, false],
 ] as const) test(`${circuit} review ${label} previews ${blocked ? 'a physical hazard' : 'an open cut'}`, async ({ page }) => {

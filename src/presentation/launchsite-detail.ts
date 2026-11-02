@@ -6,6 +6,7 @@ import type { LaunchsiteLayout } from './launchsite';
 import { fbm2, noise2, random, smoothstep } from './landscape/noise';
 import { GroundPainter } from './landscape/paint';
 import { offsetPath } from './landscape/paths';
+import { pavedHopLanes } from './lanes';
 export { buildFormation, looseRocks } from './landscape/rocks';
 export { plantGeometry } from './landscape/plants';
 
@@ -31,7 +32,7 @@ export function* paintGround(scene: Scene, track: TrackDefinition, layout: Launc
   // Run-off apron: compacted, slightly darker sand along the course, worn smoother near the edge.
   g.stroke([...track.centerline, track.centerline[0]], 2 * 21, 'rgb(118,104,92)', 0.085);
   g.stroke([...track.centerline, track.centerline[0]], 2 * 14, 'rgb(118,104,92)', 0.06);
-  for (const s of track.hopShortcuts ?? []) g.stroke(s.branch, s.width + 10, 'rgb(118,104,92)', 0.07);
+  for (const s of pavedHopLanes(track)) g.stroke(s.branch, s.width + 10, 'rgb(118,104,92)', 0.07);
   // Dry washes: pale bed, darker cut banks, braided channels and cobbles.
   for (const wash of layout.washes) {
     g.stroke(wash, 9, 'rgb(250,244,232)', 0.45);

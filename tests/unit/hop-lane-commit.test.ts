@@ -28,8 +28,9 @@ function handDrawnHopLap(track: TrackDefinition, laneId: string, wander: number,
   return samples;
 }
 
-describe.each([laNightsTrack, orbitalTrack, grandCanyonTrack] as TrackDefinition[])('$id Hop lane accepts a hand-drawn line', track => {
-  const lane = track.hopShortcuts![0], obstacle = track.barriers.find(b => b.id === lane.obstacleId)!;
+const lanes = ([laNightsTrack, orbitalTrack, grandCanyonTrack] as TrackDefinition[]).flatMap(track => track.hopShortcuts!.map(lane => ({ track, lane, id: lane.id })));
+describe.each(lanes)('$id Hop lane accepts a hand-drawn line', ({ track, lane }) => {
+  const obstacle = track.barriers.find(b => b.id === lane.obstacleId)!;
   const center = { x: obstacle.footprint.reduce((v, p) => v + p.x, 0) / obstacle.footprint.length, z: obstacle.footprint.reduce((v, p) => v + p.z, 0) / obstacle.footprint.length };
   const obstacleAt = shortcutProjection(center, lane).progress;
   // A player pressing Hop shortly before the obstacle while driving up the lane.

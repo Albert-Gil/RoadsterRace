@@ -102,6 +102,8 @@ test('four simultaneous corner touches on a phone retain ownership, never auto-r
   const points = await page.locator('.racer-pad').evaluateAll(pads => pads.map((pad, i) => { const r = pad.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2, id: i + 1 }; }));
   const hits = await page.evaluate(points => points.map(p => document.elementFromPoint(p.x, p.y)?.closest<HTMLElement>('.racer-pad')?.dataset.racer), points);
   expect(hits).toEqual(['0', '1', '2', '3']);
+  // Seats run counterclockwise from Player 1 at the bottom left.
+  expect(points.map(p => `${p.y > 195 ? 'bottom' : 'top'}-${p.x > 422 ? 'right' : 'left'}`)).toEqual(['bottom-left', 'bottom-right', 'top-right', 'top-left']);
   expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight + 1 && document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: 'artifacts/multiplayer-ready-phone.png' });
   const cdp = await context.newCDPSession(page);

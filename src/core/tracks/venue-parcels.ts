@@ -6,6 +6,19 @@ export const launchsiteVessels = [
   { id: 'utility-vessel-3', x: -17, z: 33, radius: 2.9, height: 7.2 },
 ] as const;
 
+/**
+ * Launchsite v10 rocket yard: two unbranded stages lying on tall transport stands and a vertical
+ * propellant tank on the protected yard plinth (1.25 m). Each stage spans x from `from` to `to`,
+ * centred on `z`; its top is the stand plus the body diameter above the plinth. All three stand
+ * taller than a manual Hop's 8 m peak, with gaps narrower than a car, so the yard reads as (and
+ * is) impassable. The low tip inside the S is a separate Hop obstacle (hop-obstacles.ts).
+ */
+export const launchsiteRocketStages = [
+  { id: 'rocket-yard-booster', from: 47, to: 86, z: 32, diameter: 7, cradle: 2.2 },
+  { id: 'rocket-yard-upper-stage', from: 31, to: 46, z: 31, diameter: 6, cradle: 2.4 },
+] as const;
+export const launchsiteYardTank = { id: 'rocket-yard-tank', x: 28.3, z: 29.5, radius: 2.1, height: 9 } as const;
+
 // Golden Gate's authoring coordinates are mirrored by its existing track/art builders.
 export const goldenMarketFrontage = [
   { id: 'market-frontage-0', x: 5.9, z: -26, width: 7.3, depth: 6.5, height: 4.6 },

@@ -9,10 +9,11 @@ import { flightGravity } from '../../src/core/support';
 import type { TrackDefinition } from '../../src/core/types';
 
 // Numbering matches the user's 2026-10-27 review maps, independently per venue.
+// Launchsite 2 was kept open then; the owner asked on 2026-11-01 to close it (track v10).
 const choices = [
   { id: 'coastal-launch', label: 1, from: 42, skip: 72, blocker: 'apex-rocks' },
   { id: 'orbital-launchyard', label: 1, from: 222, skip: 114, blocker: 'utility-storage-tower' },
-  { id: 'orbital-launchyard', label: 2, from: 174, skip: 78 },
+  { id: 'orbital-launchyard', label: 2, from: 174, skip: 78, blocker: 'rocket-yard' },
   { id: 'golden-gate', label: 1, from: 54, skip: 102, blocker: 'market-annex' },
   { id: 'golden-gate', label: 2, from: 120, skip: 84, blocker: 'median-arcade' },
   { id: 'golden-gate', label: 3, from: 174, skip: 72 },

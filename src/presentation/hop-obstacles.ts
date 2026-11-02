@@ -1,10 +1,12 @@
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
+import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import type { Scene } from '@babylonjs/core/scene';
 import type { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import type { TrackDefinition } from '../core/types';
-import { backlotCaseParts, backlotCases, serviceConduit } from '../core/tracks/hop-obstacles';
+import { backlotCaseParts, backlotCases, rocketYardTip, serviceConduit, utilityWing } from '../core/tracks/hop-obstacles';
+import { buildingGeometry } from './building-geometry';
 
-/** Unmarked, venue-appropriate props for the two authored manual-Hop lanes. */
+/** Unmarked, venue-appropriate props for the authored manual-Hop lanes. */
 export function buildHopObstacles(scene: Scene, track: TrackDefinition, materials: Map<string, StandardMaterial>) {
   const concrete=materials.get('barrier-concrete')!, metal=materials.get('galvanized-rail')!, dark=materials.get('race-charcoal')!;
   const white=materials.get('architecture')!, structure=materials.get('architecture-trim')!, leaf=materials.get('foliage')!, leafLight=materials.get('foliageLight')!;
@@ -21,6 +23,19 @@ export function buildHopObstacles(scene: Scene, track: TrackDefinition, material
       const collar=cylinder('conduit-collar',x,cy,p.z,.14,p.depth,structure);collar.rotation.z=Math.PI/2;
       box('conduit-saddle',x,(p.height-p.depth)/2,p.z,.55,p.height-p.depth,p.depth,concrete);
     }
+    // The hairpin wing (v10): the tank plinth's concrete curb carrying one low pipe on saddles.
+    // The pipe's top is the obstacle height; nothing marks it as a way through.
+    const w=utilityWing, curbData=buildingGeometry(w.footprint,w.curb,0).toVertexData(), curb=new Mesh('utility-wing-curb',scene);
+    curbData.colors=null;curbData.uvs=new Float32Array(curbData.positions!.length/3*2);curbData.applyToMesh(curb);curb.material=materials.get('embankment')??concrete;
+    const d=.34,y=w.height-d/2,wingPipe=cylinder('utility-wing-pipe',-2,y,43,15.5,d,materials.get('orbital-metal')??metal);wingPipe.rotation.z=Math.PI/2;
+    for(const x of [-8,-3,2])box('utility-wing-saddle',x,(w.curb+y)/2,43,.3,y-w.curb,.45,structure);
+    // The rocket yard's low tip (v10): a curb carrying a two-pipe rack, 1.3 m in all, so a Hop clears it.
+    const tip=rocketYardTip.footprint,x0=tip[0].x,x1=tip[1].x,z0=tip[0].z,z1=tip[2].z,tx=(x0+x1)/2,tz=(z0+z1)/2;
+    box('yard-tip-curb',tx,.225,tz,x1-x0,.45,z1-z0,materials.get('embankment')??concrete);
+    for(const [dz,py] of [[-.55,.78],[.55,1.13]] as const){
+      const rack=cylinder('yard-tip-pipe',tx,py,tz+dz,x1-x0-.6,.34,materials.get('orbital-metal')??metal);rack.rotation.z=Math.PI/2;
+    }
+    for(let x=x0+1;x<x1-.5;x+=3.4)box('yard-tip-rack',x,(.45+.96)/2,tz,.25,.96-.45,z1-z0-.4,structure);
   }else if(track.id==='la-nights'){
     const row=backlotCases;
     box('backlot-loading-pallet',row.x+row.width/2,.06,row.z,row.width,.12,row.depth,dark);

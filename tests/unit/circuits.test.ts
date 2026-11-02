@@ -38,16 +38,18 @@ describe('playable circuit registry', () => {
           expect(track.hopShortcuts?.some(lane => barrier.footprint.every(p => shortcutProjection(p, lane).distance <= lane.width / 2 + track.carLength)), barrier.id).toBe(true);
           expect(minimum, `${barrier.id}: main-road clearance`).toBeGreaterThanOrEqual(track.carWidth);
         } else if (barrier.runoffException === 'cut-protection') {
-          const approved: Record<string, string> = { 'coastal-launch': 'apex-rocks', 'orbital-launchyard': 'utility-storage-tower', 'golden-gate': 'market-annex' };
-          const parent=track.barriers.find(b=>b.id===approved[track.id])!;
-          if(barrier!==parent){
+          // Approved protected parcels and the prefix of the solids standing on each.
+          const approved: Record<string, Record<string, string>> = { 'coastal-launch': { 'apex-rocks': '' }, 'orbital-launchyard': { 'utility-storage-tower': 'utility-vessel-', 'rocket-yard': 'rocket-yard-' }, 'golden-gate': { 'market-annex': 'market-frontage-' } };
+          const parcels = approved[track.id] ?? {};
+          if(!(barrier.id in parcels)){
+            const parent=track.barriers.find(b=>b.id in parcels&&parcels[b.id]&&barrier.id.startsWith(parcels[b.id]))!;
+            expect(parent, barrier.id).toBeDefined();
             expect(barrier.kind).toBe('building');
-            expect(barrier.id.startsWith(track.id==='golden-gate'?'market-frontage-':'utility-vessel-')).toBe(true);
             expect(barrier.footprint.every(p=>insideBarrier(p,parent))).toBe(true);
           }
-          // The full asphalt remains clear. Only the Launchsite neck has a
+          // The full asphalt remains clear. Only the Launchsite tank parcel has a
           // sub-metre shoulder, deliberately separating its adjacent roads.
-          expect(minimum, barrier.id).toBeGreaterThanOrEqual(barrier===parent&&track.id==='orbital-launchyard' ? 0.45 : 2);
+          expect(minimum, barrier.id).toBeGreaterThanOrEqual(barrier.id==='utility-storage-tower' ? 0.45 : 2);
         } else if (barrier.runoffException === 'urban-median') {
           expect(track.id).toBe('golden-gate'); expect(barrier.id).toBe('median-arcade');
           expect(barrier.kind).toBe('building');

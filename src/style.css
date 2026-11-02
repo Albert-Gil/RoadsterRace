@@ -303,6 +303,12 @@ p.resume-tour { color: #ffd15a; font-size: 12px; }
 .thrust-inner, .hop-inner { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; width: 100%; height: 100%; border-radius: 50%; background: radial-gradient(circle at 50% 30%, #26323d, #111820 72%); color: var(--text); line-height: 1; transition: background-color 150ms; }
 .ability-control[data-ready="true"]:not(:disabled) :is(.thrust-inner, .hop-inner) { background: var(--identity, var(--fill)); color: var(--identity-ink, #fff); }
 .ability-control[data-ready="false"] :is(.pod-status, .hop-status) { color: var(--muted); }
+/* With two or more cars, each pad is painted in its driver's car colour: the full paint when the
+   ability is ready and on the ready screen, a darker shade of the same paint (white text) while it recharges. */
+.playground:not([data-players="1"]) .ability-control :is(.thrust-inner, .hop-inner) { background: color-mix(in srgb, var(--identity) 62%, #05080b); color: #fff; }
+.playground:not([data-players="1"]) .ability-control[data-ready="false"] :is(.pod-status, .hop-status) { color: inherit; opacity: .8; }
+.playground:not([data-players="1"]):is([data-phase="ready"], [data-phase="countdown"]) .ability-control :is(.thrust-inner, .hop-inner),
+.playground:not([data-players="1"]) .ability-control[data-ready="true"]:not(:disabled) :is(.thrust-inner, .hop-inner) { background: var(--identity); color: var(--identity-ink); }
 .ability-control[data-firing="true"] { box-shadow: 0 0 0 5px rgb(255 255 255 / 25%), 0 0 30px var(--identity, var(--accent)); }
 .ability-control:disabled { opacity: .78; }
 .ability-control:active:not(:disabled) { transform: scale(.97); }
@@ -316,8 +322,9 @@ p.resume-tour { color: #ffd15a; font-size: 12px; }
 .hop-inner svg { width: calc(13px * var(--ui-scale, 1)); height: calc(13px * var(--ui-scale, 1)); }
 .hop-inner strong { font: italic 700 calc(9px * var(--ui-scale, 1))/1 var(--font-display); letter-spacing: .03em; }
 .hop-status { font: 700 calc(8px * var(--ui-scale, 1))/1 var(--font-body); font-variant-numeric: tabular-nums; }
-.playground:not([data-players="1"]) .ability-cluster:is(.racer-0, .racer-2) { left: calc(env(safe-area-inset-left, 0px) + 2px); right: auto; }
-.playground:not([data-players="1"]) .ability-cluster:is(.racer-1, .racer-3) { right: calc(env(safe-area-inset-right, 0px) + 2px); left: auto; }
+/* Seats run counterclockwise: P1 bottom left, P2 bottom right, P3 top right, P4 top left. */
+.playground:not([data-players="1"]) .ability-cluster:is(.racer-0, .racer-3) { left: calc(env(safe-area-inset-left, 0px) + 2px); right: auto; }
+.playground:not([data-players="1"]) .ability-cluster:is(.racer-1, .racer-2) { right: calc(env(safe-area-inset-right, 0px) + 2px); left: auto; }
 .ability-cluster:is(.racer-2, .racer-3) { top: calc(env(safe-area-inset-top, 0px) + 4px); bottom: auto; flex-direction: column; }
 .ability-cluster:is(.racer-2, .racer-3) :is(.thrust-inner, .hop-inner) { transform: rotate(180deg); }
 .ability-control[data-coach="true"] { outline: 3px solid var(--accent); outline-offset: 3px; animation: coach-pulse 1.1s ease-in-out infinite; }
@@ -444,7 +451,7 @@ p.resume-tour { color: #ffd15a; font-size: 12px; }
   .ability-cluster, .ability-cluster:is(.racer-2, .racer-3) { flex-direction: row; width: calc(var(--thrust-size) + var(--hop-size) + var(--ability-gap)); height: var(--thrust-size); bottom: calc(env(safe-area-inset-bottom, 0px) + 2px); }
   .ability-cluster:is(.racer-2, .racer-3) { top: env(safe-area-inset-top, 0px); bottom: auto; }
   .ability-cluster:not(.racer-0), .playground[data-players="1"] .ability-cluster { flex-direction: row-reverse; }
-  .ability-cluster.racer-2 { flex-direction: row; }
+  .ability-cluster.racer-3 { flex-direction: row; }
   .tutorial-coach, .playground[data-coaching="true"] .tutorial-coach { left: calc(env(safe-area-inset-left, 0px) + 8px); right: calc(env(safe-area-inset-right, 0px) + 8px); max-width: none; font-size: 11px; }
   .playground:is([data-phase="countdown"], [data-coaching="true"]) .tutorial-coach { top: calc(env(safe-area-inset-top, 0px) + 50px); }
   .countdown span { font-size: 120px; }
