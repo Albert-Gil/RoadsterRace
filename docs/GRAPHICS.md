@@ -43,6 +43,28 @@ Presets live in `graphicsTiers` (`src/presentation/themes.ts`).
 *Render density* is capped twice: by a pixel ratio and by a megapixel budget, so a 13-inch
 iPad renders below native density on High instead of quadrupling the work of a phone.
 
+### Static shadow cache
+
+The sun and its shadow frustum never move, so scenery shadows are drawn once
+(`src/presentation/static-shadows.ts`). In one ordinary frame the shadow map draws the static
+casters, keeps a framebuffer copy of their depth (and, for PCSS, colour), then draws the moving
+casters (cars, Tahoe's lift chairs) on top. Every later frame starts the map from that copy
+instead of a clear and draws only the moving casters, giving the same map as drawing all of
+them. Scene code registers casters through `castShadow(mesh, dynamic)`; anything that moves or
+animates must be dynamic (`metadata.dynamicScenery` does this for late casters). A static
+caster that is added, shown, hidden, moved or given another material, a light or bias change,
+a new graphics tier or a restored context draws the static part again; a caster whose shadow
+shader is still compiling makes the next frame try again. It needs WebGL 2; WebGPU and WebGL 1
+draw every caster every frame as before. `window.__roadster.getWorld().setStaticShadows(false)`
+on the dev server switches it off for comparisons, and `getGraphics().staticShadows` reports it.
+With one car, Capitan Yosemite's shadow map now draws about 7 k caster triangles per frame
+instead of about 534 k, and scene draw calls fall by the number of static caster batches (a
+paused four-car Yosemite race: 92 → 87; draw-call figures recorded elsewhere predate this).
+On the sandbox, paused race frames with the cache off, the frame that takes the copy and the
+frames drawn from it are pixel-identical at Newport Island (High, PCSS), Santa Monica (Low),
+Snowy Tahoe and Capitan Yosemite (Medium); `tests/browser/graphics.spec.ts` checks Newport
+Island's drawing view on every run.
+
 ### Real-sky lighting
 
 `public/assets/env/*.env` are prefiltered Babylon environment files (128 px cube, about
@@ -102,6 +124,8 @@ The same generators (`src/presentation/landscape/`: `runtime.ts` runs a venue's 
 - **LA nights** (`la-landscape.ts`, visual only): the city ground takes a full-colour painted map (`la-ground`): avenues and side streets with lane markings, intersections with crosswalks, sidewalks, parking lots with stalls, all darker than the circuit; fan palms line the avenues; cars stand in the lots and at the curbs and street lamps (heads among the batched emissive architecture) light the avenues.
 
 Draw calls (Medium, phone landscape, drawing phase; before → after): Newport 58 → 61, Launchsite 45 → 47, Golden Gate 51 → 56, Santa Monica 50 → 51, Grand Canyon 25 → 24, LA nights 64 → 66. Added geometry (triangles, rock / plants): Grand Canyon about 280 k / 110 k, Golden Gate 66 k / 46 k, Santa Monica 7 k / 46 k, Newport 6 k / 7.5 k, LA nights 16 k of palms (cars are batched boxes). Painted maps are 2048 px wide (1536 at Santa Monica).
+
+**Scenery workers.** The two heaviest builds run off the main thread: Snowy Tahoe's snow hills and fir forest and Capitan Yosemite's valley ground, granite skins, forest and undergrowth are generated as plain typed arrays in module workers (`tahoe-landscape.worker.ts`, `yosemite-landscape.worker.ts`, started through `landscape/scenery-worker.ts` while the rest of the venue is built; the generators are `tahoe-landscape-data.ts` and `yosemite-landscape-data.ts`). After the first frame the arrays only become meshes. If workers are unavailable or one fails (for example a tab left open across a deployment), the same functions run on the main thread, with a console warning. On this project's sandbox (dev server, software WebGL, phone landscape, Medium) the main-thread scenery work at Yosemite fell from about 2.1 s to 0.07 s and Tahoe's terrain from about 1.6 s to none; the longest uninterrupted main-thread stretch while loading fell from about 2.8 s to 1.7 s (Yosemite) and 2.7 s to 1.8 s (Tahoe), and is now mostly shader compilation. Each worker is about 320 KB (80–86 KB gzipped) and is downloaded only at its venue. Real-device timings are not yet measured.
 
 ### Grand Canyon trail integration
 

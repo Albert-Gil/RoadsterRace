@@ -6,12 +6,13 @@ import { VertexBuffer } from '@babylonjs/core/Buffers/buffer';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import type { Scene } from '@babylonjs/core/scene';
 import type { Point, TrackDefinition } from '../core/types';
-import { insideBarrier } from '../core/barriers';
 import { roadEdges } from '../core/road-geometry';
-import { terrainElevation,locateRoad,roadGrade } from '../core/elevation';
+import { roadGrade } from '../core/elevation';
 import {samplePolyline}from'../core/geometry';
 import { supported } from '../core/support';
-import { courseDistance, buildTerrain } from './landscape/terrain';
+import { terrainMesh } from './landscape/terrain';
+import { arraysMesh } from './landscape/arrays-mesh';
+import { sceneryWork } from './landscape/scenery-worker';
 import { fbm2,smoothstep } from './landscape/noise';
 import { Geometry,hex,mix } from './landscape/mesh';
 import { snowyTahoeAppearance as art,type PresentationTheme } from './themes';
@@ -19,32 +20,9 @@ import { surfaceTexture } from './textures';
 import { tahoeWeather } from './tahoe-weather';
 import { tahoeDetails } from './tahoe-details';
 import{RenderedSurface}from'./rendered-surface';
+import { tahoeLayout } from './tahoe-layout';
 
-/** Placement is cosmetic; the road, runoff, buildings and hillside share core ground heights. */
-export function tahoeLayout(track:TrackDefinition){
-  const D=courseDistance(track,art.extent,4),height=(x:number,z:number)=>terrainElevation({x,z},track);
-  let seed=173;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
-  const trees:{x:number;z:number;height:number;authored:boolean}[]=[];
-  for(let tries=0;tries<10000&&trees.length<art.treeCount;tries++){
-    const x=-205+random()*340,z=-145+random()*340,h=5+random()*6,p={x,z};
-    if(!supported(p,track)||D(x,z)<34+h*1.1||track.barriers.some(b=>insideBarrier(p,b)))continue;
-    const road=locateRoad(p,track),above=h+Math.max(0,height(x,z)-road.height);
-    if(D(x,z)<track.roadWidth/2+above*1.1)continue;
-    // Leave the lift cable and its station approaches legible.
-    if(x>-173&&x<-146&&z>-66&&z<148)continue;
-    trees.push({x,z,height:h,authored:false});
-  }
-  const reserve=track.barriers.find(b=>b.id==='forest-reserve')!;
-  for(let x=-53;x<34;x+=6.8)for(let z=-17;z<29;z+=7.4){
-    const p={x:x+(random()-.5)*4,z:z+(random()-.5)*4},h=3.2+random()*2.2;
-    if(!insideBarrier(p,reserve)||D(p.x,p.z)<17)continue;
-    const radius=h*.24;
-    if(Array.from({length:8},(_,i)=>({x:p.x+Math.cos(i*Math.PI/4)*radius,z:p.z+Math.sin(i*Math.PI/4)*radius})).some(q=>!insideBarrier(q,reserve)))continue;
-    if(track.barriers.filter(b=>b.kind==='building').some(b=>{const xs=b.footprint.map(q=>q.x),zs=b.footprint.map(q=>q.z);return p.x>Math.min(...xs)-2&&p.x<Math.max(...xs)+2&&p.z>Math.min(...zs)-2&&p.z<Math.max(...zs)+2;}))continue;
-    trees.push({...p,height:h,authored:true});
-  }
-  return{distance:D,height,trees};
-}
+export { tahoeLayout };
 
 /** A genuine alpine circuit: terrain-supported grades, chalets, a working lift and snowfall. */
 export function buildTahoe(scene:Scene,track:TrackDefinition,theme:PresentationTheme,materials:Map<string,StandardMaterial>){
@@ -108,18 +86,14 @@ export function buildTahoe(scene:Scene,track:TrackDefinition,theme:PresentationT
   const details=tahoeDetails(scene,track,{wood,wall,roof,glass,steel,stone,red});
   for(const [z,y]of [[-.35,.32],[.35,.32],[0,.92]]){const log=MeshBuilder.CreateCylinder('fallen-forestry-log',{height:16,diameter:.64,tessellation:12},scene);log.rotation.z=Math.PI/2;log.position.set(68,y,z);log.material=wood;for(const side of [-1,1]){const end=MeshBuilder.CreateCylinder('fresh-cut-timber-end',{height:.025,diameter:.56,tessellation:12},scene);end.rotation.z=Math.PI/2;end.position.set(68+side*8,y,z);end.material=wall;}}
   const weather=tahoeWeather(scene,track),pending={landscape:'snowy-tahoe'};scene.addPendingData(pending);
+  // The forest and snow hills are generated in a worker from now on, while the rest of the venue loads.
+  const work=sceneryWork(()=>new Worker(new URL('./tahoe-landscape.worker.ts',import.meta.url),{type:'module'}),{trackVersion:track.version},()=>import('./tahoe-landscape-data').then(m=>m.tahoeLandscapeData(track,layout)));
+  scene.onDisposeObservable.addOnce(()=>work.cancel());
   const lateShadowCasters=new Promise<Mesh[]>(resolve=>scene.onAfterRenderObservable.addOnce(()=>{
-    void import('./tahoe-forest').then(({tahoeForest})=>{
+    void work.result.then(data=>{
       if(scene.isDisposed){resolve([]);return;}
-      const trees=bake('snow-laden-fir-forest',tahoeForest(layout.trees,layout.height),forest);trees.isPickable=false;trees.receiveShadows=true;trees.freezeWorldMatrix();
-      const {mesh:hills}=buildTerrain('tahoe-snow-hills',scene,{extent:art.extent,cell:3,height(x,z){
-        // Keep the hidden substrate just below the road skin; this avoids
-        // competing triangles between the world grid and the curved ribbon.
-        return layout.height(x,z)-1*(1-smoothstep(7,10,layout.distance(x,z)));
-      },color(x,z,h,slope){
-        const shade=smoothstep(4,72,h)*.18+Math.min(.4,slope*.23),noise=Math.max(0,fbm2(x/24,z/24,3))*.065;
-        return mix(hex('#ffffff'),hex('#9bb0c5'),shade+noise);
-      }},snow);groundSurface.setGrid({p:hills.getVerticesData(VertexBuffer.PositionKind)!,indices:hills.getIndices()!,minX:art.extent.minX,minZ:art.extent.minZ,cell:3,cols:Math.ceil((art.extent.maxX-art.extent.minX)/3)+1,rows:Math.ceil((art.extent.maxZ-art.extent.minZ)/3)+1});hills.isPickable=false;hills.receiveShadows=true;hills.freezeWorldMatrix();base.setEnabled(false);scene.removePendingData(pending);resolve([trees,details.moving]);
+      const trees=arraysMesh('snow-laden-fir-forest',scene,data.forest,forest);
+      const hills=terrainMesh('tahoe-snow-hills',scene,data.hills,snow);groundSurface.setGrid({p:data.hills.positions,indices:data.hills.indices,minX:art.extent.minX,minZ:art.extent.minZ,cell:3,cols:data.hills.cols,rows:data.hills.rows});hills.isPickable=false;hills.receiveShadows=true;hills.freezeWorldMatrix();base.setEnabled(false);scene.removePendingData(pending);resolve([trees,details.moving]);
     }).catch(error=>{console.warn('Snowy Tahoe forest did not load',error);if(!scene.isDisposed)scene.removePendingData(pending);resolve([]);});
   }));
   return{groundSurface,shadowCasterMaterials:casters,lateShadowCasters,refinements:['three main-road snow jumps','surface-fitted tyres and shadows','slippery packed snow','detailed rental and rescue chalets','moving ski lift','dense gusting snow and drifting powder','snow-laden firs and granite'],update(time:number,reduced:boolean){waterTexture.uOffset=reduced?0:time*.001;weather.update(time,reduced);details.update(time,reduced);}};

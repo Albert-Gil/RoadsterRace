@@ -43,6 +43,8 @@ export function nearbySegments(p: Point, g: SegmentGrid): number[] {
       }
     }
     if (best < r * CELL - 1e-6 || (ix - r <= 0 && iz - r <= 0 && ix + r >= g.cols - 1 && iz + r >= g.rows - 1)) break;
+    // Far from the course the rings grow faster than the course: score every segment instead.
+    if ((2 * r + 3) ** 2 > g.stamp.length) return Array.from(g.stamp, (_, index) => index);
   }
   return found.sort((a, b) => a - b);
 }

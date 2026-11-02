@@ -14,6 +14,7 @@ import { ImageProcessingConfiguration } from '@babylonjs/core/Materials/imagePro
 import { HemisphericLight } from '@babylonjs/core/Lights/hemisphericLight';
 import { DirectionalLight } from '@babylonjs/core/Lights/directionalLight';
 import { ShadowGenerator } from '@babylonjs/core/Lights/Shadows/shadowGenerator';
+import { StaticShadowCache } from './static-shadows';
 import { GlowLayer } from '@babylonjs/core/Layers/glowLayer';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
@@ -81,6 +82,8 @@ export class GameScene {
   feedback(point: Point, splash: boolean) { this.jumpFeedback.emit(point, splash); }
   private shadows: ShadowGenerator;
   private shadowCasters = new Set<AbstractMesh>();
+  private dynamicCasters = new Set<AbstractMesh>();
+  private shadowCache?: StaticShadowCache;
   private proceduralSky: BaseTexture;
   private sky: CubeTexture | null = null;
   private skyFailed = false;
@@ -212,7 +215,8 @@ export class GameScene {
         if (this.sceneryRuntime.shadowCasterMaterials.has(material) || material === white || material === accent) this.castShadow(merged);
       }
     }
-    void this.sceneryRuntime.lateShadowCasters?.then(meshes => { for (const mesh of meshes) if (!mesh.isDisposed()) this.castShadow(mesh); });
+    // Moving scenery (e.g. Tahoe's lift chairs) casts every frame; the rest joins the static shadow cache.
+    void this.sceneryRuntime.lateShadowCasters?.then(meshes => { for (const mesh of meshes) if (!mesh.isDisposed()) this.castShadow(mesh, !!mesh.metadata?.dynamicScenery); });
     this.lapGhost = new LapGhost(this.scene,this.track,(x,z)=>this.groundSurface?.height(x,z));
     if(scenery==='night-city'){
       const glow=new GlowLayer('night-architecture-glow',this.scene,{mainTextureFixedSize:nightAppearance.glowTextureSize,blurKernelSize:nightAppearance.glowKernel});
@@ -243,14 +247,21 @@ export class GameScene {
     });
     this.canvasResizeObserver.observe(canvas);
   }
-  private castShadow(mesh: AbstractMesh) { this.shadowCasters.add(mesh); this.shadows?.addShadowCaster(mesh, false); }
+  /** Development comparisons: draw every caster each frame (false) or use the static shadow cache (true). */
+  setStaticShadows(on: boolean) { this.shadowCache?.setEnabled(on); }
+  /** Static casters are drawn into the shadow map once (StaticShadowCache); dynamic ones (cars, moving scenery) every frame. */
+  private castShadow(mesh: AbstractMesh, dynamic = false) {
+    this.shadowCasters.add(mesh); if (dynamic) this.dynamicCasters.add(mesh);
+    if (this.shadowCache) this.shadowCache.add(mesh, dynamic); else this.shadows?.addShadowCaster(mesh, false);
+  }
   private createShadows() {
     const tier = graphicsTiers[this.graphicsLevel], shadows = new ShadowGenerator(tier.shadowMapSize, this.light);
     if (tier.shadowFilter === 'pcss') { shadows.useContactHardeningShadow = true; shadows.contactHardeningLightSizeUVRatio = sceneTuning.lighting.contactHardening; }
     else shadows.usePercentageCloserFiltering = true;
     shadows.filteringQuality = { low: ShadowGenerator.QUALITY_LOW, medium: ShadowGenerator.QUALITY_MEDIUM, high: ShadowGenerator.QUALITY_HIGH }[tier.shadowQuality];
     shadows.bias = 0.0004; shadows.normalBias = 0.08; shadows.setDarkness(sceneTuning.lighting.shadowDarkness);
-    for (const mesh of this.shadowCasters) if (!mesh.isDisposed()) shadows.addShadowCaster(mesh, false);
+    this.shadowCache?.dispose(); this.shadowCache = new StaticShadowCache(this.scene, shadows);
+    for (const mesh of this.shadowCasters) if (!mesh.isDisposed()) this.shadowCache.add(mesh, this.dynamicCasters.has(mesh));
     return shadows;
   }
   /** Sky, surfaces and post-processing for the current tier. Shadows are rebuilt by setGraphicsLevel. */
@@ -407,7 +418,7 @@ export class GameScene {
       if(this.vehicleFill&&!this.vehicleFill.includedOnlyMeshes.includes(mesh))this.vehicleFill.includedOnlyMeshes.push(mesh);
       mesh.receiveShadows = true;
       // Body and aero silhouette suffice at gameplay scale; wheels use the contact shadow.
-      if (mesh.name === 'roadster-paint' || mesh.name === 'roadster-carbon' || mesh.name === 'roadster-metal') this.castShadow(mesh);
+      if (mesh.name === 'roadster-paint' || mesh.name === 'roadster-carbon' || mesh.name === 'roadster-metal') this.castShadow(mesh, true);
     }
     if(this.vehicleFill?.includedOnlyMeshes.length)this.vehicleFill.setEnabled(true);
   }
@@ -474,7 +485,7 @@ export class GameScene {
   }
   showError(point?: Point, section?: Point[]) { this.errorLine?.dispose(); this.errorLine = undefined; this.errorMarker.isVisible = !!point; if (point) this.errorMarker.position.set(point.x, 0.3, point.z); if (section) this.errorLine = new PaceLine(this.scene, section, section.map(() => 9), this.theme, 0, false, true, false, this.track); }
   showStart(show: boolean) { this.marker.isVisible = show; this.approach.isVisible = show; }
-  get depthFeatures() { return { refinements: this.sceneryRuntime.refinements ?? [], hopCores: this.scene.meshes.filter(m=>m.name === 'four-downward-cold-gas-cores' && m.isEnabled() && m.isVisible).length, vehicleScale: sceneTuning.vehicle.racingScale, ghostVisible:this.lapGhost.visible, graphicsLevel: this.graphicsLevel, graphicsChoice: this.graphicsChoice, renderer: this.engine.isWebGPU ? 'webgpu' : 'webgl2', postPasses: this.post.passes, sky: this.scene.environmentTexture?.name ?? null, decorativeMotion: this.scene.meshes.filter(m => m.metadata?.dynamicScenery).map(m => ({name: m.name, rotation: m.rotation.asArray(), position: m.position.asArray()})), perspective: this.camera.mode === Camera.PERSPECTIVE_CAMERA, shadowMapSize: this.shadows.getShadowMap()?.getSize().width ?? 0, shadowCasters: this.shadows.getShadowMap()?.renderList?.length ?? 0, renderReady: this.scene.isReady(), worldReady: this.scene.isReady(), pending: this.scene.meshes.filter(m => !m.isReady(true)).map(m => m.name), carTriangles: this.vehicle.triangleCount, pace: this.theme.pace, lineWidths: this.lines.map(line => line.cssWidths), ignoredStrokeCount: this.ignoredLines.length }; }
+  get depthFeatures() { return { refinements: this.sceneryRuntime.refinements ?? [], hopCores: this.scene.meshes.filter(m=>m.name === 'four-downward-cold-gas-cores' && m.isEnabled() && m.isVisible).length, vehicleScale: sceneTuning.vehicle.racingScale, ghostVisible:this.lapGhost.visible, graphicsLevel: this.graphicsLevel, graphicsChoice: this.graphicsChoice, renderer: this.engine.isWebGPU ? 'webgpu' : 'webgl2', postPasses: this.post.passes, sky: this.scene.environmentTexture?.name ?? null, decorativeMotion: this.scene.meshes.filter(m => m.metadata?.dynamicScenery).map(m => ({name: m.name, rotation: m.rotation.asArray(), position: m.position.asArray()})), perspective: this.camera.mode === Camera.PERSPECTIVE_CAMERA, shadowMapSize: this.shadows.getShadowMap()?.getSize().width ?? 0, shadowCasters: [...this.shadowCasters].filter(m => !m.isDisposed()).length, staticShadows: { enabled: this.shadowCache?.enabled ?? false, ...this.shadowCache?.stats, perFrameCasters: this.shadows.getShadowMap()?.renderList?.length ?? 0 }, renderReady: this.scene.isReady(), worldReady: this.scene.isReady(), pending: this.scene.meshes.filter(m => !m.isReady(true)).map(m => m.name), carTriangles: this.vehicle.triangleCount, pace: this.theme.pace, lineWidths: this.lines.map(line => line.cssWidths), ignoredStrokeCount: this.ignoredLines.length }; }
   render(time: number) {
     const reduced = this.reducedMotion.matches, frameMs = this.lastFrame ? (time - this.lastFrame) * 1000 : 0; this.lastFrame = time;
     if (this.graphicsChoice === 'auto' && this.governor.sample(frameMs)) this.stepDownPending = true;
