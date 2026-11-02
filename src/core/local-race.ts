@@ -23,8 +23,40 @@ export function gridPose(track: TrackDefinition, slot: number, across?: number, 
   const side = across ?? (slot % 2 ? 1 : -1) * Math.max(1.6, track.carWidth / 2 + .2);
   return { x: a.x - Math.sin(heading) * back + Math.cos(heading) * side, z: a.z - Math.cos(heading) * back - Math.sin(heading) * side, heading };
 }
-/** Keep each driver near their own crossing anchor, without overlapping a neighbour. */
+/**
+ * Multi-car races start side by side in one row, every car the same distance behind the line, so
+ * no grid slot starts behind another. Cars keep the lateral order of their drawn gate anchors (ties
+ * follow the tournament rotation) and stay as close to them as a car-width gap allows. If the row is
+ * not clear and supported everywhere, the whole row moves back together; only a gate too cramped
+ * for any row falls back to the staggered placement.
+ */
 export function startingGrid(track: TrackDefinition, routes: CompiledRoute[], rotation = 0) {
+  const gate = startGate(track), right = { x: gate.forward.z, z: -gate.forward.x };
+  const limit = (gate.width - track.carWidth) / 2 - 0.2, gap = track.carWidth + 0.45;
+  const order = routes.map((route, player) => {
+    const anchor = route.points[0];
+    return { player, slot: modulo(player + rotation, routes.length), preferred: clamp((anchor.x - gate.center.x) * right.x + (anchor.z - gate.center.z) * right.z, -limit, limit) };
+  }).sort((a, b) => a.preferred - b.preferred || a.slot - b.slot);
+  // Closest positions to the anchors with at least `gap` between neighbours, inside the gate.
+  const across = order.map(o => o.preferred);
+  for (let i = 1; i < across.length; i++) across[i] = Math.max(across[i], across[i - 1] + gap);
+  across[across.length - 1] = Math.min(across[across.length - 1], limit);
+  for (let i = across.length - 2; i >= 0; i--) across[i] = Math.min(across[i], across[i + 1] - gap);
+  if (across[0] >= -limit - 1e-9) for (let row = 0; row < 4; row++) {
+    const poses = across.map(value => gridPose(track, 0, value, row));
+    if (poses.every(p => clearStart(track, p))) {
+      const result = new Array<ReturnType<typeof gridPose>>(routes.length);
+      order.forEach((o, i) => { result[o.player] = poses[i]; });
+      return result;
+    }
+  }
+  return staggeredGrid(track, routes, rotation);
+}
+function clearStart(track: TrackDefinition, p: ReturnType<typeof gridPose>) {
+  return !barrierContact(p, p.heading, track, 0.15) && vehicleSupported(p, p.heading, track);
+}
+/** Fallback: each driver near their own crossing anchor, in staggered rows, without overlapping a neighbour. */
+function staggeredGrid(track: TrackDefinition, routes: CompiledRoute[], rotation = 0) {
   const gate = startGate(track), right = { x: gate.forward.z, z: -gate.forward.x };
   const limit = (gate.width - track.carWidth) / 2 - 0.2;
   const occupied: ReturnType<typeof gridPose>[] = [], poses = new Array<ReturnType<typeof gridPose>>(routes.length);
@@ -40,7 +72,7 @@ export function startingGrid(track: TrackDefinition, routes: CompiledRoute[], ro
     const options = [...rows.flatMap(row=>near.map(across=>gridPose(track,slot,across,row))), ...rows.flatMap(row=>candidates.map(across=>gridPose(track,slot,across,row)))];
     const pose = options.find(p => {
       const body = { position: p, velocity: { x: 0, z: 0 }, heading: p.heading };
-      return !barrierContact(p, p.heading, track, 0.15) && vehicleSupported(p, p.heading, track)
+      return clearStart(track, p)
         && !occupied.some(other => vehicleContact(body, { position: other, velocity: { x: 0, z: 0 }, heading: other.heading }, { ...track, carWidth: track.carWidth + 0.25 }));
     });
     if (!pose) throw new Error('The starting grid has no safe space for this driver.');

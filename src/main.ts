@@ -30,6 +30,7 @@ import { newerBuildDeployed, staleBuildRecovery } from './app/stale-build';
 import { formatTime } from './ui/format';
 import { renderHud } from './ui/hud';
 import { abilityControlsMarkup } from './ui/controls';
+import { gridLabelPositions, type GridLabelAnchor } from './ui/grid-labels';
 import { welcomePanel } from './ui/panels/welcome';
 import { tourDiscardPanel, tourExitPanel, tourIntroPanel, tourReplacePanel, tournamentResultsMarkup } from './ui/panels/tournament';
 import { settingsPanel } from './ui/panels/settings';
@@ -398,6 +399,7 @@ function updateVehicles(alpha: number) {
     previewGrid = { routes: confirmedRoutes, track: activeTrack, rotation, poses: startingGrid(activeTrack, confirmedRoutes, rotation) };
   }
   const grid = playerCount > 1 && !race ? previewGrid!.poses : null;
+  const chipAnchors: { car: number; anchor: GridLabelAnchor }[] = [];
   confirmedRoutes.forEach((line, i) => {
     const s = race?.racers[i].state, previous = previousPoses[i];
     const pose = s ? {
@@ -418,9 +420,18 @@ function updateVehicles(alpha: number) {
     const absent = !!s && (playerCount > 1 && s.finished || s.time < s.recoveringUntil || s.recoveryWaiting);
     world.vehicles[i].setEnabled(!absent); if (playerCount > 1) labels[i].hidden = absent || !['ready', 'countdown'].includes(phase);
     world.vehicles[i].update(pose, s?.finished ? 0 : s?.speed, !!s && !s.finished && s.time < s.thrustUntil, s?.time, s&&activeTrack.surface?Math.max(.12,s.sandAmount):s?.sandAmount, s?.drifting, s?.steeringRate, s?.acceleration);
-    if (playerCount > 1) { const point=world.project(pose),safe=document.querySelector('#course-space')!.getBoundingClientRect();labels[i].style.left=`${clamp(point.x+(i-(playerCount-1)/2)*13,safe.left+8,safe.right-8)}px`;labels[i].style.top=`${clamp(point.y-17-i%2*13,safe.top+8,safe.bottom-8)}px`; }
-
+    if (playerCount > 1 && !labels[i].hidden) {
+      const back = activeTrack.carLength / 2, tail = { x: pose.x - Math.sin(pose.heading) * back, z: pose.z - Math.cos(pose.heading) * back, y: 'y' in pose ? pose.y : undefined };
+      chipAnchors.push({ car: i, anchor: { car: world.project(pose), tail: world.project(tail) } });
+    }
   });
+  if (chipAnchors.length) {
+    const safe = document.querySelector('#course-space')!.getBoundingClientRect();
+    gridLabelPositions(chipAnchors.map(c => c.anchor)).forEach((p, k) => {
+      const label = labels[chipAnchors[k].car];
+      label.style.left = `${clamp(p.x, safe.left + 8, safe.right - 8)}px`; label.style.top = `${clamp(p.y, safe.top + 8, safe.bottom - 8)}px`;
+    });
+  }
 }
 
 app.addEventListener('click', e => {

@@ -27,6 +27,9 @@ test.each(circuits)('$id starts near each drawn gate anchor and joins forward in
   const gate = startGate(track);
   for (let rotation = 0; rotation < 4; rotation++) {
     const poses = startingGrid(track, routes, rotation);
+    // One row: every car the same distance behind the line (owner request 2026-11-01).
+    const along = poses.map(p => gateCoordinates(p, track).along);
+    expect(Math.max(...along) - Math.min(...along)).toBeLessThan(1e-6); expect(along[0]).toBeLessThan(0);
     poses.forEach((pose, i) => {
       expect(Math.abs(gateCoordinates(pose, track).across - gateCoordinates(routes[i].points[0], track).across)).toBeLessThan(0.3);
       expect(barrierContact(pose, pose.heading, track)).toBeNull();
@@ -46,15 +49,30 @@ test.each(circuits)('$id starts near each drawn gate anchor and joins forward in
   }
 });
 
-test.each(circuits)('$id separates identical edge anchors without sending cars across the road', ({ track }) => {
+test.each(circuits)('$id lines up identical edge anchors side by side, packed toward that edge', ({ track }) => {
   for (const edge of [-7.5, -6, 6, 7.5]) {
     const routes = Array.from({length:4}, () => line(track, edge));
-    const poses = startingGrid(track, routes);
-    expect(poses.every(p => Math.abs(gateCoordinates(p, track).across - edge) < 4)).toBe(true);
+    for (let rotation = 0; rotation < 4; rotation++) {
+      const poses = startingGrid(track, routes, rotation), coordinates = poses.map(p => gateCoordinates(p, track));
+      expect(Math.max(...coordinates.map(c => c.along)) - Math.min(...coordinates.map(c => c.along))).toBeLessThan(1e-6);
+      // Packed against the drawn edge with a car-width gap; the rotation decides who sits nearest it.
+      const sorted = coordinates.map(c => c.across).sort((a, b) => a - b);
+      for (let i = 1; i < 4; i++) expect(sorted[i] - sorted[i - 1]).toBeCloseTo(track.carWidth + 0.45, 6);
+      const anchor = routes[0].points[0], gap = poses.map(p => Math.hypot(p.x - anchor.x, p.z - anchor.z));
+      const nearest = gap.indexOf(Math.min(...gap)), slot = edge < 0 ? 0 : 3;
+      expect(nearest).toBe((slot - rotation + 4) % 4);
+    }
     const race = new LocalRace(routes,track,1);
-    // Four larger cars sharing an edge anchor can occupy four safe staggered
-    // rows. All join before the five-second contact-free start ends.
+    // Cars far from their drawn anchor cross over while the five-second contact-free start lasts.
     for(let tick=0;tick<300;tick++)race.step();
     expect(race.racers.every(car => !car.gridPending && car.state.distance > 2 && car.state.recoveryCount === 0)).toBe(true);
   }
 }, 60000);
+
+test('two to four cars each start the same distance behind the line on every circuit', () => {
+  for (const { track } of circuits) for (const count of [2, 3, 4]) {
+    const routes = Array.from({ length: count }, () => compileRoute(createPracticeSamples(track, 7), track)).map(r => { if (!r.ok) throw Error(r.message); return r.route; });
+    const along = startingGrid(track, routes).map(p => gateCoordinates(p, track).along);
+    expect(Math.max(...along) - Math.min(...along), `${track.id} ${count}`).toBeLessThan(1e-6);
+  }
+});
