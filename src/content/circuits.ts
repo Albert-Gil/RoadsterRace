@@ -10,6 +10,7 @@ import type { TrackDefinition } from '../core/types';
 
 export type SceneryId = 'coastal' | 'spaceport' | 'bay' | 'sunset' | 'canyon' | 'night-city' | 'alpine' | 'yosemite';
 export interface CircuitDefinition {
+  artwork?: string;
   id: string;
   number: string;
   scenery: SceneryId;
@@ -19,7 +20,7 @@ export interface CircuitDefinition {
   description: string;
   features: string[];
 }
-export const circuits: readonly CircuitDefinition[] = [
+const circuitDefinitions: CircuitDefinition[] = [
   { id: coastalTrack.id, number: '01', scenery: 'coastal', track: coastalTrack, difficulty: 'CLUB / 2',
     tagline: 'One circuit. Endless possibilities.', description: 'Open harbour sweepers, a tight inner turn and generous sand runoff.',
     features: ['Harbour sweepers', 'Sand runoff', `${Math.round(coastalTrack.length)} m`] },
@@ -43,6 +44,7 @@ export const circuits: readonly CircuitDefinition[] = [
   { id: yosemiteTrack.id, number:'08', scenery:'yosemite',track:yosemiteTrack,difficulty:'SPORT / 3',
     tagline:'Into the granite valley.',description:'Forest trails, granite foothills and an automatic creek crossing.',features:[`${Math.round(yosemiteTrack.length)} m`] },
 ];
+export const circuits: readonly CircuitDefinition[] = circuitDefinitions.map(circuit => ({ ...circuit, artwork: `assets/circuits/${circuit.id}.webp` }));
 export const defaultCircuit = circuits[0];
 /** Player-facing names that differ from the legacy IDs kept for saved preferences and links. */
 const circuitAliases: Record<string, string> = { launchsite: 'orbital-launchyard', newport: 'coastal-launch', 'newport-island': 'coastal-launch', tahoe:'snowy-tahoe', 'lake-tahoe':'snowy-tahoe',yosemite:'capitan-yosemite','el-capitan':'capitan-yosemite' };

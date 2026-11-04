@@ -21,6 +21,10 @@ export function yosemiteGeology(track: TrackDefinition) {
       color=mix(color,hex(art.granite[3]),joint*.31*(1-smoothstep(.7,.96,t))+exfoliation*.19+Math.max(0,-broad)*.19);
       color=mix(color,hex(art.lichen),(1-smoothstep(.02,.28,t))*(.11+.12*Math.sin(angle*7)**2));
       color=mix(color,hex(art.waterfall.wetRock),waterfallFaceWeight(b,angle)*(1-smoothstep(.72,.84,t))*.5);
+      // Mineral veins and dark weathering at the foot are baked into existing
+      // vertices, retaining the authored silhouette, normals and collider.
+      const seam=Math.pow(.5+.5*Math.sin(p.y*.65+p.x*.12+p.z*.09+index),16);
+      color=mix(color,hex(art.granite[3]),seam*.15+(1-smoothstep(0,.16,t))*.14);
       return g.vertex(p.x,p.y,p.z,color);
     }));
     for(let k=0;k<layers;k++)for(let i=0;i<columns;i++){

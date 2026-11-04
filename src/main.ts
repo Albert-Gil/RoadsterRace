@@ -41,7 +41,7 @@ import { TUTORIAL_COPY, tutorialCoach, tutorialCompletePanel, tutorialIntroPanel
 import { TUTORIAL_CIRCUIT, TUTORIAL_LAPS, answerPrompt, duePrompt, freshTutorial, type TutorialProgress } from './app/tutorial';
 import { GameAudio } from './presentation/audio';
 import { GameScene } from './presentation/scene';
-import { applyPlayerColors, applyTheme, themes, hopEffects, heroImages, heroArtRevision } from './presentation/themes';
+import { applyPlayerColors, applyTheme, themes, hopEffects, heroImages, heroArtRevision, interfaceMotion } from './presentation/themes';
 import { cleanDriverName, escapeHtml, finishFor, loadPreferences, savePreferences } from './presentation/race-settings';
 import { raceSetupMarkup } from './presentation/race-setup';
 import { isGraphicsChoice, isRendererChoice, loadGraphicsPreference, saveGraphicsPreference, type RendererChoice } from './presentation/graphics';
@@ -50,7 +50,11 @@ import { createEngine } from './presentation/engine';
 const app = document.querySelector<HTMLDivElement>('#app')!;
 let theme = new URLSearchParams(location.search).get('theme') === 'graphite' ? themes.graphite : themes.coastal;
 applyTheme(theme);
+document.documentElement.style.setProperty('--motion-ms', `${interfaceMotion.durationMs}ms`);
+document.documentElement.style.setProperty('--row-stagger-ms', `${interfaceMotion.rowStaggerMs}ms`);
 app.innerHTML = appShellMarkup();
+// Thumbnail failures leave the complete circuit map usable; no inline handlers.
+app.addEventListener('error', event => { const image=event.target;if(image instanceof HTMLImageElement&&image.classList.contains('circuit-art'))image.hidden=true; },true);
 
 const playground = app.querySelector<HTMLElement>('.playground')!;
 const coarsePointer = matchMedia('(pointer: coarse)');
@@ -86,6 +90,7 @@ let activeRenderer: RendererChoice = 'webgl2';
 const sessionOptions:SessionOptions={mode:'solo-race',difficulty:'normal',seed:1};
 const humans=()=>humanCount(sessionOptions.mode,playerCount);
 let recorder:LapRecorder|null=null, personalLap:LapRecord|null=null, activeGhost:LapRecord|null=null;
+let sessionLapRecord = false;
 let lapLoad=0;
 /** Guided tutorial progress, and the circuit/laps to restore when it ends. Null outside the tutorial. */
 let tutorial: TutorialProgress | null = null, tutorialReturn: { circuitId: string; laps: number } | null = null;
@@ -311,7 +316,7 @@ function panelMarkup(message?: string): string | null {
       if (!race) return null;
       if (sessionOptions.mode === 'tutorial') return tutorialCompletePanel(race.racers[0].state.finishTime ?? undefined);
       return playerCount === 1
-        ? timeTrialResultsPanel({ state: race.racers[0].state, lapCount, driver: playerName(0), trackName: activeTrack.name, personalBest: personalLap?.duration })
+        ? timeTrialResultsPanel({ state: race.racers[0].state, lapCount, driver: playerName(0), trackName: activeTrack.name, personalBest: personalLap?.duration, newRecord: sessionLapRecord })
         : raceResultsPanel({ standings: race.standings(), lapTimes: race.racers.map(r => r.state.lapTimes), playerName, cpuTag, trackName: activeTrack.name, lapCount });
     case 'error': return errorPanel(message);
     default: return null;
@@ -361,8 +366,9 @@ function enterReady() {
 function startRace(resume = false) {
   if (confirmedRoutes.length !== playerCount) return;
   if (!resume && sessionOptions.mode === 'tutorial') tutorial = freshTutorial();
-  if (!resume) { recorder=sessionOptions.mode==='time-trial'?new LapRecorder(lapRecordKey(activeTrack)):null;activeGhost=personalLap;world.setGhost(null); race = new LocalRace(confirmedRoutes, activeTrack, lapCount, activeTour ? roundIndex % playerCount : 0); recorder?.sample(race.racers[0].state); previousPoses = []; rechargeAnnounced = Array(playerCount).fill(true); world.vehicles.forEach(vehicle => vehicle.clearEffects()); }
+  if (!resume) { sessionLapRecord=false; recorder=sessionOptions.mode==='time-trial'?new LapRecorder(lapRecordKey(activeTrack)):null;activeGhost=personalLap;world.setGhost(null); race = new LocalRace(confirmedRoutes, activeTrack, lapCount, activeTour ? roundIndex % playerCount : 0); recorder?.sample(race.racers[0].state); previousPoses = []; rechargeAnnounced = Array(playerCount).fill(true); world.vehicles.forEach(vehicle => vehicle.clearEffects()); }
   clearRaceInput(); resuming = resume; countdownRemaining = 3; countdownBeat = 3;
+  countdownElement.dataset.lights = '0';
   world.showVehicles(null, playerCount); world.drawRaceLines(sessionOptions.mode==='solo-race'?confirmedRoutes.slice(0,1):confirmedRoutes);
   setPhase('countdown'); updateVehicles(1); audio.cue('countdown');
 }
@@ -565,6 +571,7 @@ try {
     if (phase === 'racing' && tutorial?.awaiting) setPhase('coaching');
     if (phase === 'countdown') {
       countdownRemaining -= Math.min(elapsed, 0.1); document.querySelector('#countdown-value')!.textContent = String(Math.max(1, Math.ceil(countdownRemaining)));
+      countdownElement.dataset.lights = String(Math.max(1, 4 - Math.ceil(countdownRemaining)));
       const beat = Math.ceil(countdownRemaining); if (beat > 0 && beat !== countdownBeat) { countdownBeat = beat; audio.cue('countdown'); }
       document.querySelector('#countdown-label')!.textContent = resuming ? 'BACK TO YOUR LINE.' : playerCount > 1 ? 'YOUR LINES. ONE MOMENT.' : 'YOUR LINE. YOUR MOMENT.';
       if (countdownRemaining <= 0) { clock.reset(); setPhase('racing'); audio.cue('start'); }
@@ -575,7 +582,7 @@ try {
         if(sessionOptions.mode==='solo-race')stepComputers(session,sessionOptions.difficulty);
         session.step();
         const record=recorder?.sample(session.racers[0].state);
-        if(record){if(!personalLap||record.duration<personalLap.duration){personalLap=record;void saveLap(record);}activeGhost=personalLap;}
+        if(record){if(!personalLap||record.duration<personalLap.duration){personalLap=record;sessionLapRecord=true;void saveLap(record);}activeGhost=personalLap;}
  });
       for (const event of session.drainEvents()) {
         audio.cue(event.type, event.intensity); if (event.type === 'thrust') rechargeAnnounced[event.player] = false; const prefix = playerCount > 1 ? `${driverName(event.player)} · ` : '';

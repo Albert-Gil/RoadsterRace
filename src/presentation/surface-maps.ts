@@ -46,6 +46,18 @@ interface DetailRecipe { height: (u: number, v: number) => number; tone: (u: num
 function recipe(kind: SurfaceKind): DetailRecipe {
   const tone = fbm(3, 4, 911);
   switch (kind) {
+    case 'wood': {
+      const grain = fbm(8, 2, 211), knots = fbm(3, 2, 223);
+      const longGrain = (u:number,v:number) => grain(u, .5 + .12 * Math.sin(TAU * v));
+      return { relief: .9, tone: (u,v) => .2 + .6 * longGrain(u,v), height: (u,v) => {
+        const seam = .5 + .5 * Math.cos(TAU * u * 12);
+        return .32 * seam ** 16 + .45 * longGrain(u,v) + .23 * knots(u,v);
+      }};
+    }
+    case 'snow': {
+      const wind = fbm(3, 3, 227), grain = fbm(24, 2, 229);
+      return { relief: .7, tone, height: (u,v) => .65 * wind(u,v) + .25 * grain(u,v) + .10 * (.5 + .5 * Math.sin(TAU * (u * 16 + v * 2))) };
+    }
     case 'asphalt': {
       const patches = fbm(6, 3, 17), grain = fbm(24, 2, 23);
       return { relief: 1.2, tone, height: (u, v) => 0.6 * grain(u, v) + 0.4 * patches(u, v) };

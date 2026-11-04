@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { keyCommand } from '../../src/input/router';
+import { CORNERS, keyCommand } from '../../src/input/router';
 import { modeLabel, phaseLayout } from '../../src/app/phases';
 import { welcomePanel } from '../../src/ui/panels/welcome';
 import { planningPanel } from '../../src/ui/panels/planning';
@@ -19,6 +19,7 @@ import type { RaceState } from '../../src/core/types';
 
 describe('input routing', () => {
   test('solo uses Space/H; multiplayer uses per-player thrust and hop keys', () => {
+    expect(CORNERS).toEqual(['bottom left','bottom right','top right','top left']);
     expect(keyCommand('Space', 1)).toEqual({ player: 0, ability: 'thrust' });
     expect(keyCommand('KeyH', 1)).toEqual({ player: 0, ability: 'hop' });
     expect(keyCommand('KeyA', 1).player).toBe(-1);
@@ -69,10 +70,12 @@ describe('panel markup', () => {
     expect(['retry', 'redraw-all', 'home'].map(action => html.includes(`data-action="${action}"`))).toEqual([true, true, true]);
     expect(html).not.toContain('data-action="configure-race"');
     const state = { lapTimes: [21.5, 20.25], finishTime: 41.75, thrustCount: 1 } as RaceState;
-    const tt = timeTrialResultsPanel({ state, lapCount: 2, driver: 'Ann', trackName: 'Newport Island', personalBest: 20.25 });
+    const tt = timeTrialResultsPanel({ state, lapCount: 2, driver: 'Ann', trackName: 'Newport Island', personalBest: 20.25, newRecord: true });
     expect(['retry', 'redraw', 'home'].map(action => tt.includes(`data-action="${action}"`))).toEqual([true, true, true]);
     expect(tt).toContain('Personal best lap.'); expect(tt).toContain(`<div class="finish-time">${formatTime(20.25)}</div>`); expect(tt).toContain('1 thrust burst');
     expect(timeTrialResultsPanel({ state, lapCount: 2, driver: 'Ann', trackName: 'Newport Island', personalBest: 19 })).toContain('Time trial complete.');
+    expect(timeTrialResultsPanel({ state, lapCount: 2, driver: 'Ann', trackName: 'Newport Island', personalBest: 20.25 })).toContain('Time trial complete.');
+    expect(html).toContain('Shared 1st'); expect(html).toContain('+1.00 s'); expect(html).toContain('<summary>Lap splits</summary>');
   });
   test('tournament intro lists rounds with progress, ready check counts drivers', () => {
     const intro = tourIntroPanel({ roundIndex: 1, roundNames: ['A', 'B', 'C'], trackName: 'B', tagline: 'Go.', playerCount: 2, lapCount: 1, saveFailed: true });

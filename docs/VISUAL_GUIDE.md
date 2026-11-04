@@ -161,3 +161,13 @@ roles. Their source records are in ASSET_RIGHTS.md. `heroImages` owns crop focus
 Keep the full artwork composition and aspect ratio, the existing red UI, and the
 non-repeating Home rotation. See HOME_ART_REFRESH.md for the responsive captures
 and the independently scoped six-lap CI timeout correction.
+
+## Professional presentation pass (2026-11-03)
+
+`venueFinish` and `venueSunDirections` in themes.ts centralize the supported road
+fringes and one-sun venue lighting. Existing `surfaceFinishes` / `sceneryFinishes`
+now include original wood and snow tiles. `interfaceMotion` controls 160 ms motion
+and 40 ms result-row staggering; reduced motion bypasses animation. Circuit-card
+artwork uses optional CircuitDefinition.artwork references and circuitArtRevision,
+with offline regeneration via tools/capture-circuit-art.mjs. See
+PRESENTATION_UPGRADE.md for placement, budgets and the verification workflow.

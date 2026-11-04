@@ -3,8 +3,11 @@ import { tournamentSetupMarkup, type TourSetup } from './tournament-ui';
 import type { RacePreferences } from './race-settings';
 import { cleanDriverName, escapeHtml, finishFor, paintFinishes } from './race-settings';
 import { circuits, circuitMapPath, findCircuit } from '../content/circuits';
+import { assetUrl } from './urls';
+import { circuitArtRevision } from './themes';
+import { CORNERS } from '../input/router';
 
-const corners = ['Bottom left', 'Bottom right', 'Top left', 'Top right'];
+const corners = CORNERS.map(corner => corner[0].toUpperCase() + corner.slice(1));
 const keys = ['A', 'L', 'Q', 'P'], hopKeys = ['Z', 'K', 'W', 'O'];
 const chevron = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';
 const laps = (n: number) => `${n} ${n === 1 ? 'lap' : 'laps'}`;
@@ -22,7 +25,7 @@ export function raceSetupMarkup(preferences: RacePreferences, count: number, tou
   const format = tour && options.mode !== 'time-trial' && racers > 1 ? tournamentSetupMarkup(tour, racers, label('RACE FORMAT', 'Real contact · every position counts')) : '';
   const circuitSection = `<section class="setup-section">${label('CIRCUIT', 'Choose your venue')}
       <div class="circuit-options" role="group" aria-label="Circuit">${circuits.map(circuit => `<button class="circuit-card" data-action="circuit" data-circuit="${circuit.id}" aria-label="${escapeHtml(circuit.track.name)} circuit" aria-pressed="${selected.id === circuit.id}">
-        <span class="circuit-card-meta"><span>${circuit.number} · ${circuit.difficulty}</span><span class="circuit-length">${Math.round(circuit.track.length)} m</span></span><svg viewBox="0 0 180 92" aria-hidden="true"><path class="circuit-map-edge" d="${circuitMapPath(circuit.track)}"/><path class="circuit-map-line" d="${circuitMapPath(circuit.track)}"/></svg><strong>${escapeHtml(circuit.track.name)}</strong>
+        <span class="circuit-card-meta"><span>${circuit.number} · ${circuit.difficulty}</span><span class="circuit-length">${Math.round(circuit.track.length)} m</span></span><span class="circuit-visual">${circuit.artwork ? `<img class="circuit-art" src="${assetUrl(circuit.artwork)}?v=${circuitArtRevision}" loading="lazy" decoding="async" width="480" height="270" alt="" aria-hidden="true">` : ''}<svg viewBox="0 0 180 92" aria-hidden="true"><path class="circuit-map-edge" d="${circuitMapPath(circuit.track)}"/><path class="circuit-map-line" d="${circuitMapPath(circuit.track)}"/></svg></span><strong>${escapeHtml(circuit.track.name)}</strong>
       </button>`).join('')}</div></section>`;
   const grid = options.mode === 'multiplayer'
     ? `${label('GRID', 'One device · 2–4 drivers')}<div class="segmented player-options" role="group" aria-label="Number of players">${[2, 3, 4].map(n => `<button data-action="player-count" data-count="${n}" aria-pressed="${count === n}">${n} players</button>`).join('')}</div>`

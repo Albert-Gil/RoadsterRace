@@ -15,9 +15,9 @@ export const defaultPaintId = 'glacier';
 /** Solo Thrust/Hop keep the standard red interface (`--control-1`) whatever the car paint; with two or more cars the pads use each driver's paint instead (ui/controls.ts). */
 export const abilityControlColors = ['#d51f35', '#3b79e6', '#f1be37', '#45a77b'] as const;
 export const vehicleMaterials = {
-  steel: { metallic: .86, roughness: .28, coat: .32, coatRoughness: .2, brushing: .035 },
+  steel: { metallic: .86, roughness: .32, coat: .28, coatRoughness: .23, brushing: .035 },
   painted: { metallic: .5, roughness: .23, coat: 1, coatRoughness: .1 },
-  glass: { color: '#17252f', metallic: .18, roughness: .105, coat: .85 },
+  glass: { color: '#17252f', metallic: .18, roughness: .14, coat: .8 },
   carbon: { color: '#141a20', metallic: .3, roughness: .4 },
   metal: { color: '#aeb4b8', metallic: .86, roughness: .28 },
   wheels: { metallic: .65, roughness: .32 },
@@ -196,10 +196,10 @@ export const heroImages = [
  * kind selects a procedural tile; scale is metres per tile; normal is the bump strength;
  * variation the broad tonal mottling. Water adds animated waves and sky reflection.
  */
-export type SurfaceKind = 'asphalt' | 'sand' | 'dirt' | 'concrete' | 'grass' | 'rock' | 'water';
+export type SurfaceKind = 'asphalt' | 'sand' | 'dirt' | 'concrete' | 'grass' | 'rock' | 'water' | 'wood' | 'snow';
 export interface SurfaceFinish { kind: SurfaceKind; scale: number; normal: number; variation: number; walls?: boolean; reflection?: number; roughness?: number; specular?: number; gloss?: number }
 export const surfaceFinishes: Record<string, SurfaceFinish> = {
-  asphalt: { kind: 'asphalt', scale: 10, normal: 0.35, variation: 0.1, specular: 0.09, gloss: 28 },
+  asphalt: { kind: 'asphalt', scale: 10, normal: 0.27, variation: 0.13, specular: 0.065, gloss: 22 },
   'asphalt-repair': { kind: 'asphalt', scale: 10, normal: 0.3, variation: 0.08 },
   'rubbered-racing-surface': { kind: 'asphalt', scale: 10, normal: 0.2, variation: 0.06 },
   shoulder: { kind: 'dirt', scale: 12, normal: 0.5, variation: 0.14 },
@@ -208,12 +208,12 @@ export const surfaceFinishes: Record<string, SurfaceFinish> = {
   embankment: { kind: 'grass', scale: 14, normal: 0.55, variation: 0.18 },
   'barrier-concrete': { kind: 'concrete', scale: 8, normal: 0.25, variation: 0.07 },
   'city-paving': { kind: 'concrete', scale: 10, normal: 0.3, variation: 0.1 },
-  'pier-timber': { kind: 'concrete', scale: 8, normal: 0.2, variation: 0.1 },
+  'pier-timber': { kind: 'wood', scale: 8, normal: 0.24, variation: 0.12, specular: .045, gloss: 12 },
   rock: { kind: 'rock', scale: 9, normal: 0.7, variation: 0.14, walls: true },
   'mesa-cap': { kind: 'rock', scale: 14, normal: 0.6, variation: 0.12, walls: true },
   'sandstone-*': { kind: 'rock', scale: 16, normal: 0.6, variation: 0.1, walls: true },
   // Procedural landscape (landscape/): colour lives in the vertices, the finish adds grain and relief.
-  'landscape-rock': { kind: 'rock', scale: 5, normal: 0.55, variation: 0.08, walls: true },
+  'landscape-rock': { kind: 'rock', scale: 5, normal: 0.48, variation: 0.13, walls: true },
   'canyon-trail-rock': { kind: 'rock', scale: 4, normal: 0.6, variation: 0.1, walls: true },
   'landscape-plants': { kind: 'grass', scale: 1.6, normal: 0.8, variation: 0.14, walls: true },
   foliage: { kind: 'grass', scale: 2.5, normal: 0.9, variation: 0.22, walls: true },
@@ -230,8 +230,8 @@ export const surfaceFinishes: Record<string, SurfaceFinish> = {
   'bay-metal': { kind: 'concrete', scale: 40, normal: 0, variation: 0, reflection: 0.3, roughness: 0.35 },
 };
 export const sceneryFinishes: Partial<Record<keyof typeof sceneryLighting, Record<string, SurfaceFinish>>> = {
-  yosemite:{terrain:{kind:'dirt',scale:22,normal:.3,variation:.06},asphalt:{kind:'dirt',scale:12,normal:.4,variation:.1},shoulder:{kind:'dirt',scale:15,normal:.3,variation:.1},'yosemite-granite':{kind:'rock',scale:14,normal:.28,variation:.07,walls:true}},
-  alpine: {terrain:{kind:'sand',scale:18,normal:.18,variation:.04},asphalt:{kind:'dirt',scale:10,normal:.15,variation:.045},shoulder:{kind:'sand',scale:14,normal:.2,variation:.04},'tahoe-granite':{kind:'rock',scale:5,normal:.5,variation:.08,walls:true}},
+  yosemite:{terrain:{kind:'dirt',scale:22,normal:.26,variation:.08},asphalt:{kind:'dirt',scale:12,normal:.32,variation:.12},shoulder:{kind:'dirt',scale:15,normal:.26,variation:.1},'yosemite-granite':{kind:'rock',scale:11,normal:.32,variation:.13,walls:true}},
+  alpine: {terrain:{kind:'snow',scale:18,normal:.16,variation:.035},asphalt:{kind:'snow',scale:10,normal:.2,variation:.055},shoulder:{kind:'snow',scale:14,normal:.19,variation:.04},'tahoe-granite':{kind:'rock',scale:5,normal:.45,variation:.12,walls:true}},
   // Golden Gate paints its land in full colour; the finish adds only fine grain. The shore carries vertex colour.
   bay: { terrain: { kind: 'grass', scale: 16, normal: 0.55, variation: 0.18 }, 'city-ground': { kind: 'dirt', scale: 6, normal: 0.3, variation: 0.05 }, 'golden-shore': { kind: 'dirt', scale: 14, normal: 0.5, variation: 0.1 } },
   // Launchsite paints its own ground; its sand keeps fine, low ripples so the paint reads.
@@ -349,3 +349,22 @@ export const santaBeachLifeAppearance = {
   hull: ['#ffffff', '#f3efe4', '#1f3a5f', '#b8392d'], sail: ['#ffffff', '#f6efe0', '#f2d7c4'], kayak: ['#f2a541', '#e54b4b', '#3fb8af', '#f6dd5c'],
   buoy: ['#f7c948', '#e8432e', '#ffffff'], foam: '#f4fbfb', plant: '#5f8a42', pot: '#c96f4a', bike: ['#2f6fd6', '#e54b4b', '#3fb8af', '#15181c'],
 };
+/** Shared miniature-world ground treatment. Thin opaque geometry joins existing batches. */
+export interface VenueFinish { edge:string; ground:string; grit:string; inset:number; spread:number }
+export const venueFinish = {
+ coastal:{edge:'#b4a384',ground:'#d6c19a',grit:'#e9d9b9',inset:.9,spread:1.2},
+ spaceport:{edge:'#9f9784',ground:'#ceba98',grit:'#e4d4b5',inset:.9,spread:1.2},
+ bay:{edge:'#92998e',ground:'#b0ba9c',grit:'#d6d4be',inset:.9,spread:.9},
+ sunset:{edge:'#bba587',ground:'#dec49f',grit:'#f0dcc0',inset:.9,spread:1.2},
+ canyon:{edge:'#aa885f',ground:'#c09267',grit:'#d9af7f',inset:.18,spread:1.1},
+ 'night-city':{edge:'#394550',ground:'#28384b',grit:'#5b6268',inset:.9,spread:.8},
+ alpine:{edge:'#bacbd5',ground:'#dce7ee',grit:'#f1f6f7',inset:.18,spread:1.15},
+ yosemite:{edge:'#a08e6c',ground:'#84906a',grit:'#bdaf8b',inset:.18,spread:1.05},
+} satisfies Record<string,VenueFinish>;
+export const interfaceMotion = { durationMs:160, rowStaggerMs:40 };
+export const circuitArtRevision = '2026-11-03';
+/** One sun per venue; unchanged shadow-map dimensions and cached caster policy. */
+export const venueSunDirections = {
+ coastal:[.50,-1,.60],spaceport:[.65,-1,.38],bay:[.40,-1,.62],sunset:[.72,-1,.35],
+ canyon:[.68,-1,.44],'night-city':[.55,-1,.45],alpine:[.48,-1,.64],yosemite:[.64,-1,.42],
+} as const;

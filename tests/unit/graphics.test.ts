@@ -73,14 +73,18 @@ describe('frame governor', () => {
 });
 
 describe('procedural surface detail', () => {
-  const kinds: SurfaceKind[] = ['asphalt', 'sand', 'dirt', 'concrete', 'grass', 'rock', 'water'];
+  const kinds: SurfaceKind[] = ['asphalt', 'sand', 'dirt', 'concrete', 'grass', 'rock', 'water', 'wood', 'snow'];
   it('produces seamless tiles with encoded normals and tone', () => {
     for (const kind of kinds) {
       const size = 64, pixels = detailMap(kind, size);
       expect(pixels).toHaveLength(size * size * 4);
       // Opposite edges are neighbours when the tile repeats: their heights stay close.
       let seam = 0; for (let y = 0; y < size; y++) seam = Math.max(seam, Math.abs(pixels[(y * size) * 4 + 2] - pixels[(y * size + size - 1) * 4 + 2]));
-      expect(seam).toBeLessThan(80);
+      expect(seam, kind).toBeLessThan(80);
+      let verticalSeam = 0; for (let x = 0; x < size; x++) verticalSeam = Math.max(verticalSeam, Math.abs(pixels[x * 4 + 2] - pixels[((size - 1) * size + x) * 4 + 2]));
+      // The new low-relief finishes must have quiet joins in both directions;
+      // the older sand recipe deliberately contains sharp transverse ripples.
+      if (kind === 'wood' || kind === 'snow') expect(verticalSeam, `${kind} vertical seam`).toBeLessThan(80);
       // Normals lean in every direction around the flat midpoint, and tone varies.
       const red = Array.from({ length: size * size }, (_, i) => pixels[i * 4]), tone = Array.from({ length: size * size }, (_, i) => pixels[i * 4 + 3]);
       expect(Math.min(...red)).toBeLessThan(128); expect(Math.max(...red)).toBeGreaterThan(128);

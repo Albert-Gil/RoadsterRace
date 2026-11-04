@@ -32,8 +32,8 @@ export function roadsideGeometry(track:TrackDefinition,style:string,palette:Road
   quad([[a,lo,e],[b,lo,e],[b,hi,e],[a,hi,e]],mix(color,hex('#182329'),.15));quad([[b,lo,f],[a,lo,f],[a,hi,f],[b,hi,f]],color);
   quad([[a,lo,f],[a,lo,e],[a,hi,e],[a,hi,f]],mix(color,hex('#182329'),.22));quad([[b,lo,e],[b,lo,f],[b,hi,f],[b,hi,e]],color);quad([[a,hi,e],[b,hi,e],[b,hi,f],[a,hi,f]],mix(color,hex('#ffffff'),.14));};
  const plant=(p:Point,h:number,r:number,seed:number)=>{const y=p.y??groundHeight(p,track),root=hex(palette.plant),tip=hex(seed%7===0?palette.flower:palette.tip);
-  for(let j=0;j<7;j++){const a=j/7*Math.PI*2+seed*.37,dx=Math.cos(a)*r,dz=Math.sin(a)*r,w=style==='spaceport'?.15:.07;
-   const base=g.vertex(p.x,y,p.z,root),l=g.vertex(p.x+dx*.55-dz*w,y+h,p.z+dz*.55+dx*w,root),rr=g.vertex(p.x+dx*.55+dz*w,y+h,p.z+dz*.55-dx*w,root),end=g.vertex(p.x+dx,y+h*.35,p.z+dz,tip);
+  for(let j=0;j<7;j++){const a=j/7*Math.PI*2+seed*.37,dx=Math.cos(a)*r,dz=Math.sin(a)*r,w=style==='spaceport'?.19:.13,lean=.48+.16*Math.sin(j*2.7+seed);
+   const base=g.vertex(p.x,y,p.z,mix(root,hex('#273328'),.22)),l=g.vertex(p.x+dx*lean-dz*w,y+h*(.72+.28*Math.sin(j+seed)**2),p.z+dz*lean+dx*w,root),rr=g.vertex(p.x+dx*lean+dz*w,y+h*(.72+.28*Math.sin(j+seed)**2),p.z+dz*lean-dx*w,root),end=g.vertex(p.x+dx,y+h*.22,p.z+dz,tip);
    g.triangle(base,l,rr);g.triangle(l,end,rr);
   }
  };
@@ -68,9 +68,9 @@ export function roadsideGeometry(track:TrackDefinition,style:string,palette:Road
     // Planter and slatted bench/lounger: coastal, urban and alpine palettes differ.
     if(kind===0){box(x,y,z,2.1,.54,1.05,palette.trim);box(x,y+.54,z,1.85,.05,.82,palette.surface);for(const side of[-1,1])plant({x:x+side*.52,y:y+.61,z},.45,.48,local);}
     else{
-     box(x,y+.45,z,2.4,.14,.62,palette.timber);box(x,y+.67,z+.27,2.4,.48,.09,palette.timber);
+     for(let k=0;k<4;k++)box(x,y+.45,z-.24+k*.16,2.4,.12,.13,palette.timber);
+     for(let k=0;k<2;k++)box(x,y+.74+k*.23,z+.27,2.4,.18,.09,palette.timber);
      for(const side of[-1,1])box(x+side*.86,y,z,.16,.47,.53,palette.metal);
-     for(let k=0;k<5;k++)box(x-.95+k*.47,y+.60,z,.025,.02,.55,palette.metal);
     }
    }
    props.push({...p,y,parcelId:b.id,radius,height:1.3,roof:false});local++;

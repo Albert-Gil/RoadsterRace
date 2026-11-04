@@ -23,8 +23,8 @@ export function yosemiteTreeTemplates(){
       for(let j=0;j<3;j++){
         const a=j*Math.PI*2/3+tier*1.7+seed*.9,px=Math.cos(a)*reach,pz=Math.sin(a)*reach;
         limb(g,[0,y-.05,0],[px,y+.02,pz],.008*(1-tier*.12),.0025,hex(art.bark),5);
-        const foliage=boulder({size:[.19*(1-tier*.14),cedar?.25:.20,.18*(1-tier*.14)],seed:seed*71+tier*13+j,detail:0,roundness:2.1,roughness:.24,flatten:.55,
-          colour:(_x,_y,_z,up,h)=>mix(hex(seed%4?art.forest:art.cedar),hex(art.forestLight),Math.min(.7,.10+h*.35+Math.max(0,up)*.20))});
+        const foliage=boulder({size:[.19*(1-tier*.14)*(.9+.1*Math.sin(seed+j)**2),cedar?.25:.20,.18*(1-tier*.14)],seed:seed*71+tier*13+j,detail:0,roundness:2.5,roughness:.24,flatten:.55,
+          colour:(_x,_y,_z,up,h)=>mix(hex(seed%4?art.forest:art.cedar),hex(art.forestLight),Math.min(.7,.07+h*.35+Math.max(0,up)*.24+(seed%3)*.035))});
         g.instance(foliage,{x:px,y:y-.065,z:pz,heading:a});
       }
     }

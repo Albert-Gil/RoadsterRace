@@ -35,7 +35,7 @@ import { gestureSpeeds } from '../core/route';
 import { prepareDrawingSamples } from '../core/drawing-pace';
 import type { CompiledRoute, DrawSample, DrawingTrim, Point, TrackDefinition } from '../core/types';
 import type { PresentationTheme } from './themes';
-import { sceneTuning, sceneryTheme, sceneryLighting, nightAppearance, graphicsTiers, venueSkies, colorGrade, type GraphicsLevel } from './themes';
+import { sceneTuning, sceneryTheme, sceneryLighting, nightAppearance, graphicsTiers, venueSkies, venueSunDirections, colorGrade, type GraphicsLevel } from './themes';
 import { ColorCurves } from '@babylonjs/core/Materials/colorCurves';
 import { FrameGovernor, lowerAutomaticLevel, renderPixelRatio, resolveGraphics, type GraphicsChoice } from './graphics';
 import { applySurfaceFinishes, SurfaceDetailPlugin } from './surface-detail';
@@ -132,7 +132,8 @@ export class GameScene {
       this.vehicleFill.intensity=nightAppearance.vehicleFill;
       this.vehicleFill.setEnabled(false);
     }
-    this.light = new DirectionalLight('sun', new Vector3(0.55, -1, 0.45).normalize(), this.scene); this.light.position.set(-70, 127, -57); this.light.diffuse = Color3.FromHexString(lighting.sun);
+    const sunDirection = new Vector3(...venueSunDirections[scenery]).normalize();
+    this.light = new DirectionalLight('sun', sunDirection, this.scene); this.light.position.copyFrom(sunDirection.scale(-153)); this.light.diffuse = Color3.FromHexString(lighting.sun);
     this.light.shadowFrustumSize = scenery === 'coastal' ? 210 : 250; this.light.shadowMinZ = 1; this.light.shadowMaxZ = 350; this.light.autoUpdateExtends = false;
     this.shadows = this.createShadows();
     const mat = (role: string, color: string) => { const m = new StandardMaterial(role, this.scene); m.diffuseColor = Color3.FromHexString(color); m.specularColor.setAll(0.04); m.backFaceCulling = false; this.materials.set(role, m); return m; };

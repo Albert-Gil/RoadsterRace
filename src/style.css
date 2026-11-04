@@ -470,3 +470,44 @@ p.resume-tour { color: #ffd15a; font-size: 12px; }
    pads, pause button, HUD, coach card and notices above all scale with it. */
 
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+/* Professional presentation pass: static artwork and compositor-only UI motion. */
+.circuit-visual { position:relative; display:block; isolation:isolate; height:78px; margin:6px -4px; overflow:hidden; border-radius:5px; background:#17232a; }
+.circuit-art { width:100%; height:100%; object-fit:cover; display:block; opacity:.82; }
+.circuit-art[hidden] { display:none; }
+.circuit-visual::after { content:''; position:absolute; inset:0; background:linear-gradient(90deg, transparent 35%, rgb(7 14 19 / 65%)); pointer-events:none; }
+.circuit-card .circuit-visual svg { position:absolute; right:2px; bottom:3px; width:40%; height:65%; margin:0; z-index:1; filter:drop-shadow(0 1px 2px #000); }
+.circuit-card:has(.circuit-art[hidden]) .circuit-visual svg { width:100%; height:85%; }
+.circuit-card { transition:border-color var(--motion-ms,160ms),background-color var(--motion-ms,160ms); }
+.circuit-card[aria-pressed='true'] .circuit-art { opacity:1; }
+.circuit-map-line { stroke:#f3f5f4; }
+.circuit-map-edge { stroke:#18242a; stroke-width:12; }
+.primary-button,.secondary-button,.planning-button,.segmented button { transition:background-color var(--motion-ms,160ms),border-color var(--motion-ms,160ms),transform var(--motion-ms,160ms); }
+button:active:not(:disabled) { transform:translateY(1px); }
+button:focus-visible,summary:focus-visible { outline:2px solid var(--text); outline-offset:3px; }
+.playground[data-phase='results'] .panel { border-top:2px solid var(--accent); }
+.classification-row { animation:classification-in var(--motion-ms,160ms) both; animation-delay:calc(var(--row,0) * var(--row-stagger-ms,40ms)); }
+.finish-gap { display:block; margin-top:3px; font:600 11px/1.2 var(--font-body); letter-spacing:.05em; color:var(--muted); }
+.standings tbody tr:first-child .finish-gap { color:#46535d; }
+.lap-breakdown { margin-top:12px; border-top:1px solid var(--border); }
+.lap-breakdown summary { padding:12px 0; cursor:pointer; font:600 12px/1.3 var(--font-body); text-transform:uppercase; letter-spacing:.12em; }
+.lap-driver { padding:6px 0; font-size:13px; }
+.lap-driver .standing-laps { display:block; padding:6px 0 6px 30px; color:var(--muted); line-height:1.6; }
+.round-points { animation:points-in var(--motion-ms,160ms) both; }
+.countdown::before { display:none; }
+.starting-lights { display:flex; gap:12px; padding:12px 18px; margin-bottom:12px; border:1px solid #52606a; border-radius:9px; background:#111b24; box-shadow:0 8px 24px #0005; }
+.starting-lights i { width:24px;height:24px;border-radius:50%;background:#29343d;box-shadow:inset 0 2px 4px #0008; }
+.countdown[data-lights='1'] .starting-lights i:first-child,.countdown[data-lights='2'] .starting-lights i:nth-child(-n+2),.countdown[data-lights='3'] .starting-lights i { background:var(--accent);box-shadow:inset 0 1px 2px #fff4; }
+.countdown #countdown-value { font-size:clamp(76px,14vh,130px);text-shadow:2px 3px 0 #1119; }
+.countdown small { margin-top:12px; }
+@keyframes classification-in { from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)} }
+@keyframes points-in { from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)} }
+@media(max-height:650px) and (orientation:landscape){
+ .setup-scroll{padding:10px 14px 12px}.setup-footer{padding:6px 14px;gap:10px}.setup-footer .primary-button{min-height:44px}.setup-summary strong{font-size:17px}.setup-summary span{font-size:11px}
+ .circuit-visual{height:60px;margin:4px -3px}.circuit-card{padding:7px 9px}.setup-label{margin-bottom:6px}.setup-columns{gap:12px}
+ .starting-lights{margin-bottom:8px;padding:8px 14px}.starting-lights i{width:20px;height:20px}
+}
+@media(prefers-reduced-motion:reduce){.classification-row,.round-points{animation:none!important}.circuit-card,.primary-button,.secondary-button,.planning-button,.segmented button{transition:none!important}button:active:not(:disabled){transform:none}}
+.circuit-card:not(:has(.circuit-art)) .circuit-visual svg { width:100%;height:85%; }
+.playground:is([data-phase='setup'],[data-phase='handoff'],[data-phase='tour-intro'],[data-phase='paused']) .panel { animation:panel-arrive var(--motion-ms,160ms) both; }
+@keyframes panel-arrive { from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none} }
+@media(prefers-reduced-motion:reduce){.playground .panel{animation:none!important}}

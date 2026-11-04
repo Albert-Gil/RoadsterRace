@@ -16,7 +16,7 @@ export const appShellMarkup = () => `
     </header>
     <section class="race-hud" aria-label="Race timing" hidden><div><small>TIME</small><strong id="race-time">00:00.00</strong></div><span class="hud-divider"></span><div><small id="lap-label">LAP</small><strong id="race-lap">1 <i>/ 2</i></strong></div><span class="hud-divider"></span><div><small id="pace-label">PACE</small><strong id="race-speed">0 <i>km/h</i></strong></div></section>
     <section id="panel" class="panel" aria-live="polite"></section>
-    <div class="countdown" hidden><span id="countdown-value">3</span><small id="countdown-label">YOUR LINE. YOUR MOMENT.</small></div>
+    <div class="countdown" hidden><div class="starting-lights" aria-hidden="true"><i></i><i></i><i></i></div><span id="countdown-value">3</span><small id="countdown-label">YOUR LINE. YOUR MOMENT.</small></div>
     <div class="tutorial-coach" role="status" aria-live="polite" hidden></div><div class="race-notice" role="status"></div><div id="race-controls"></div>
     <button class="pause-button icon-button" data-action="pause" aria-label="Pause race" hidden><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 5v14M15 5v14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>
     <div class="race-progress" hidden><span></span></div>

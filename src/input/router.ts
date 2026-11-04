@@ -4,7 +4,7 @@ import { PointerOwnership } from './ownership';
 /** Desktop bindings by player: thrust A/L/Q/P, hop Z/K/W/O. Solo uses Space and H. */
 export const THRUST_KEYS = ['KeyA', 'KeyL', 'KeyQ', 'KeyP'] as const;
 export const HOP_KEYS = ['KeyZ', 'KeyK', 'KeyW', 'KeyO'] as const;
-export const CORNERS = ['bottom left', 'bottom right', 'top left', 'top right'] as const;
+export const CORNERS = ['bottom left', 'bottom right', 'top right', 'top left'] as const;
 
 export interface FocusedPad { disabled: boolean; racer: number; ability: Ability }
 /** Pure key mapping. A focused ability button takes Space/Enter for assistive and keyboard use. */

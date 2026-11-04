@@ -49,6 +49,7 @@ export function buildYosemite(scene:Scene,track:TrackDefinition,theme:Presentati
     const wear=Math.exp(-(((across-.30)/.085)**2))+Math.exp(-(((across-.70)/.085)**2));
     const brightness=.83+Math.min(1,.48+wear*.4+noise*.12)*.17;
     color=hex(art.road).map(v=>v*brightness) as [number,number,number];
+    color=mix(color,hex(art.shoulder),smoothstep(.82+noise*.20,1,edge)*.72);
    }
    colors.push(...color,1);uvs.push(x/14,z/14);
   }
