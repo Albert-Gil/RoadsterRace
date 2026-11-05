@@ -20,6 +20,7 @@ import{yosemiteAppearance as art,type PresentationTheme}from'./themes';
 import{yosemiteAtmosphere}from'./yosemite-atmosphere';
 import{buildYosemiteWaterfall}from'./yosemite-waterfall';
 import{yosemiteDressing}from'./yosemite-dressing';
+import{buildYosemiteRiverLife}from'./yosemite-river-life';
 import{yosemiteMeadowColor}from'./yosemite-surfaces';
 import { yosemiteRivers } from '../core/tracks/yosemite-terrain';
 import { sceneryWork } from './landscape/scenery-worker';
@@ -68,6 +69,7 @@ export function buildYosemite(scene:Scene,track:TrackDefinition,theme:Presentati
  }
  const base=MeshBuilder.CreateGround('valley-loading-ground',{width:650,height:650},scene);base.position.y=-.1;base.material=meadow;base.metadata={dynamicScenery:true};
  const dressing=new Mesh('yosemite-ranger-dressing',scene);yosemiteDressing(track).toVertexData().applyToMesh(dressing);dressing.material=detail;dressing.isPickable=false;dressing.receiveShadows=true;dressing.metadata={protectedDressing:true};
+ const riverLife=buildYosemiteRiverLife(scene,track,detail);
  const water=mat('water','#ffffff');water.reflectionTexture=scene.environmentTexture;water.specularColor.setAll(.4);water.specularPower=110;
  water.metadata={absoluteVertexColors:true};
  const waterTexture=surfaceTexture(scene,'water');waterTexture.uScale=3;waterTexture.vScale=14;water.diffuseTexture=waterTexture;
@@ -96,5 +98,5 @@ export function buildYosemite(scene:Scene,track:TrackDefinition,theme:Presentati
    if(scene.isDisposed){resolve([]);return;}const built=buildYosemiteLandscape(scene,track,{meadow,stone,forest,detail},groundSurface,data);base.setEnabled(false);scene.removePendingData(pending);resolve([...built,falling.rim]);
   }).catch(error=>{console.warn('Yosemite valley scenery did not load',error);if(!scene.isDisposed)scene.removePendingData(pending);resolve([]);});
  }));
- return{groundSurface,shadowCasterMaterials:casters,lateShadowCasters,refinements:['sculpted granite with mineral seams and lichen','layered cedar and ponderosa forest','feathered packed-earth edges and worn paths','natural creek crossing','hidden fallen-cedar trail','flowing waterfall and valley mist','detailed timber lodges and campground'],update(time:number,reduced:boolean){waterTexture.vOffset=reduced?0:time*art.waterfall.speed*.08;falling.update(time,reduced);atmosphere.update(time,reduced);}};
+ return{groundSurface,shadowCasterMaterials:casters,lateShadowCasters,refinements:['sculpted granite with mineral seams and lichen','layered cedar and ponderosa forest','feathered packed-earth edges and worn paths','natural creek crossing','hidden fallen-cedar trail','flowing waterfall and valley mist','detailed timber lodges and campground','river canoes and paddlers'],update(time:number,reduced:boolean){waterTexture.vOffset=reduced?0:time*art.waterfall.speed*.08;falling.update(time,reduced);atmosphere.update(time,reduced);riverLife.update(time,reduced);}};
 }

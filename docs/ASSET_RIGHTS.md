@@ -265,3 +265,9 @@ The extended river paths, irregular receiving lakes, twin El Capitan falls and
 central cascade are original procedural work. They reuse the existing native
 terrain, granite, water texture and bounded vapor systems. Updated card artwork
 and review captures come from the actual game. No external asset was added.
+
+### Yosemite river canoes — 2026-11-04
+
+The open-hull canoes, seated paddlers, wooden paddles and small wakes in
+presentation/yosemite-river-life.ts are original procedural geometry. They reuse
+the existing native material and have no external image or model dependency.

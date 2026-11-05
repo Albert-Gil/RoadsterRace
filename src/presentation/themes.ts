@@ -322,6 +322,9 @@ export const yosemiteAppearance={
  waterfall:{speed:.8,sprayCount:36,dropletCount:54,gravity:28,opacity:.96,sprayOpacity:.48,wetRock:'#657b7b',lipFraction:.90,lipRadius:.88,waterRadius:.89,halfAngle:.42,curtainWidth:10.8,basinWidth:16,basinDepth:10,basinHeight:.75,angle:Math.PI/2+.04,
   widths:{'granite-falls':10.8,'creek-falls':6.4,'cathedral-falls':7.2,'sentinel-falls':6.6,'sentinel-buttress-falls':7.4,'granite-twin-falls':6.2} as Record<string,number>},
  dressing:{roadWorn:'#b0a07d',roadEdge:'#857d60',barkDark:'#4d3a2c',cutWood:'#c8ab77',stonework:'#a2a18f',trim:'#d6cfac',roofSeam:'#687166'},
+ riverLife:{length:7.2,width:1.8,bob:.045,roll:.012,paddleSpeed:2.6,paddleSwing:.34,
+  hulls:['#f35a40','#ffce43','#f18c41'],wood:'#d4ad75',interior:'#b99567',vest:'#ffd05a',shirt:'#315c74',skin:'#d6a27c',foam:'#c0d9d3',
+  anchors:[{x:12,z:7},{x:18,z:-19},{x:14,z:-45}]},
 };
 
 export const roadsideAppearance = {
