@@ -42,7 +42,8 @@ for (const spec of cases) test(`edge-to-edge ${spec.circuit} ${spec.width}x${spe
   for (const b of plan.controls) { expect(b.width).toBeGreaterThanOrEqual(44); expect(b.height).toBeGreaterThanOrEqual(44); expect(b.x + b.width).toBeLessThanOrEqual(spec.width + 1); expect(b.y + b.height).toBeLessThanOrEqual(spec.height + 1); }
   await page.screenshot({ path: `artifacts/drawing-layout/${spec.circuit}-${spec.width}-drawing.png` });
   const cdp = await context.newCDPSession(page), epoch = Date.now() / 1000;
-  await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
+  // The context already enables touch. A second session-level override is undone
+  // on detach and switches desktop-sized contexts to mouse layouts mid-test.
   const points = plan.points.filter((_: any, i: number) => i % 2 === 0 || i === plan.points.length - 1);
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: points[0].x, y: points[0].y, id: 1 }], timestamp: epoch });
   for (const p of points.slice(1)) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: p.x, y: p.y, id: 1 }], timestamp: epoch + p.time });

@@ -6,6 +6,7 @@ import type { Point, TrackDefinition } from '../core/types';
 import { LA, type LALayout, type Street } from './la-landscape';
 import { random } from './landscape/noise';
 import { GroundPainter } from './landscape/paint';
+import {samplePolyline} from '../core/geometry';
 import { offsetPath } from './landscape/paths';
 import { cornerMarks, runoffWear, tone } from './landscape/ground-paint';
 import { courseCorners } from './landscape/scatter';
@@ -83,6 +84,12 @@ export function* paintGround(scene: Scene, track: TrackDefinition, layout: LALay
   // Worn concrete along the course and slide marks where cars ran wide.
   runoffWear(g, track, shade(base, 0.6), 1.2);
   cornerMarks(g, rand, track, courseCorners(track), { mark: shade(base, 0.4) });
+  // Warm street light is baked once into the existing ground map. The road
+  // remains its own darker/readable material; there are no extra live lights.
+  for(let s=10;s<track.length;s+=28){
+    const p=samplePolyline(track.centerline,track.distances,s),q=samplePolyline(track.centerline,track.distances,s+.5),l=Math.hypot(q.x-p.x,q.z-p.z)||1;
+    for(const side of[-1,1])g.blot(p.x-(q.z-p.z)/l*side*12,p.z+(q.x-p.x)/l*side*12,11,'243,179,105',.13);
+  }
   // Contact shadows under palms and parked cars.
   const { plants, cars } = layout.scatter();
   for (const p of plants) g.blot(p.x, p.z, 1.6, '20,20,28', 0.35);

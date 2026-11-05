@@ -2,6 +2,7 @@ import type { TrackJump } from '../core/types';
 import { jumpPoint } from '../core/support';
 import { Geometry, hex, mix, type Rgb } from './landscape/mesh';
 import { pierRampAppearance as art } from './themes';
+import {CompositionShapes} from './composition-shapes';
 
 /** A weathered, lifted timber pier end. The driving top follows the exact
  * authored linear ramp; carpentry stays beneath it and never bridges the gap.
@@ -39,4 +40,24 @@ export function pierRampGeometry(jump: TrackJump) {
     quad([point(at,across-.035,y-.035),point(at,across+.035,y-.035),point(at,across+.035,y+.035),point(at,across-.035,y+.035)],hex(art.hardware));
   }
   return g;
+}
+
+/** The receiving end is the same timber construction as the takeoff, not a
+ * painted concrete pad. All carpentry is on/under supported landing deck. */
+export function pierLandingGeometry(jump:TrackJump){
+ const g=new CompositionShapes(),start=jump.rampLength+jump.gap,length=Math.min(24,jump.runout),rows=18;
+ for(let row=0;row<rows;row++)for(let col=0;col<4;col++){
+  const a=start+row/rows*length,b=start+(row+1)/rows*length,l=-jump.width/2+col*jump.width/4,r=l+jump.width/4;
+  g.box((a+b)/2,art.surfaceOffset-.095,(l+r)/2,b-a-.022,.19,r-l-.022,art.boards[(row*7+col*3)%art.boards.length]);
+ }
+ for(const side of[-1,1])g.box(start+length/2,-.16,side*(jump.width/2-.12),length,.46,.24,art.fascia);
+ for(const across of[-.39,-.13,.13,.39])g.box(start+length/2,-.36,across*jump.width,length,.55,.28,art.joist);
+ g.box(start+.11,-1.13,0,.22,2.48,jump.width,art.fascia);
+ for(let across=-jump.width/2+.25;across<jump.width/2;across+=1.3)g.box(start+.24,-1.1,across,.19,2.4,.13,art.joist);
+ for(const along of[start+2,start+10,start+20])for(const side of[-1,1])g.beam([along,-2.3,side*(jump.width/2-.9)],[along+2.8,-.2,side*(jump.width/2-.9)],.16,art.joist);
+ for(let i=0;i<g.positions.length;i+=3){const p=jumpPoint(jump,g.positions[i],g.positions[i+2]);g.positions[i]=p.x;g.positions[i+2]=p.z;}
+ // (along,across) uses a reflected horizontal basis. Restore outward winding
+ // before normals/shadow shaders are generated for the shared timber batch.
+ for(let i=0;i<g.indices.length;i+=3)[g.indices[i+1],g.indices[i+2]]=[g.indices[i+2],g.indices[i+1]];
+ return g;
 }

@@ -17,6 +17,7 @@ import { urbanRampGeometry } from './urban-ramp';
 import { buildUrbanArchitecture } from './urban-architecture';
 import {urbanPromenade} from './urban-promenade';
 import {bakeLandmark} from './venue-landmarks';
+import {nightPictureHouse} from './venue-signatures';
 
 /** Night lighting is baked into batched emissive architecture and soft light pools.
  * No per-window lights, transparent skyscrapers, extra collision rules or shortcut signage.
@@ -69,6 +70,7 @@ export function buildLANights(scene:Scene,track:TrackDefinition,theme:Presentati
   }
  }
  buildUrbanArchitecture(scene,laBuildings.map(b=>({...b,width:b.w,depth:b.d,height:b.h,color:b.style})),true,white,windows);
+ const theatre=nightPictureHouse();bakeLandmark('art-deco-picture-house',theatre.paint,scene,white);bakeLandmark('warm-theatre-marquee',theatre.lights,scene,windows);
  bakeLandmark('urban-boulevard-paving',urbanPromenade(track,true,()=>true),scene,white);
  // Original theater marquees, safely within the arts block.
  const signTexture=new DynamicTexture('la-original-signage',{width:1024,height:1024},scene,false),ctx=signTexture.getContext() as CanvasRenderingContext2D;

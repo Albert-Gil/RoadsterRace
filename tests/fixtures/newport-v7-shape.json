@@ -1,0 +1,24 @@
+{
+  "source": "58b3bf1",
+  "version": 7,
+  "length": 305.6018638028781,
+  "shape": "7eaf75dea7dff7255df9079b4f27acc9214f3c0cab581acbc84e1b7e80a3e13a",
+  "barriers": [
+    {
+      "id": "gantry-support",
+      "hash": "c9beceb3c88adc82d022e5d059bec3cc7445e78fb1829e83a3938ff6fc2612b8"
+    },
+    {
+      "id": "grandstand",
+      "hash": "43d5463605cef9d32a0067a8c9fb9b742843b3c8cc9fa161ac7a68122fe4def7"
+    },
+    {
+      "id": "coastal-gardens",
+      "hash": "955573434fa1ce11acf33ccfe51d43422c141033f7ce367120aea303a67d47c6"
+    },
+    {
+      "id": "apex-rocks",
+      "hash": "54ac21a135fbc39d6fd09380bacb1effb0c3e42bb1e53f440efdfe03ea4f071d"
+    }
+  ]
+}

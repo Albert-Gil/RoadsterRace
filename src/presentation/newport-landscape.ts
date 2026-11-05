@@ -7,6 +7,7 @@ import { edgeDistance, hex, insidePolygon } from './landscape/mesh';
 import type { LooseRock, RockPalette, FormationSpec } from './landscape/rocks';
 import type { Plant, PlantPalette } from './landscape/plants';
 import { runLandscape, stopwatch } from './landscape/runtime';
+import {NEWPORT_WORLD_SCALE as S} from '../core/tracks/newport-layout';
 
 /**
  * Newport's island beach and v6 protected palm garden. The scenery never modifies the course:
@@ -16,9 +17,9 @@ import { runLandscape, stopwatch } from './landscape/runtime';
  */
 export const NEWPORT = {
   /** The island mesh's UV extent (u = x / 180 + 0.5, v = z / 135 + 0.5). */
-  map: { minX: -90, maxX: 90, minZ: -67.5, maxZ: 67.5 } satisfies Extent,
-  extent: { minX: -150, maxX: 150, minZ: -120, maxZ: 120 } satisfies Extent,
-  island: { x: 85, z: 62 }, water: -0.46, level: -0.035, corridor: 24,
+  map: { minX: -90*S, maxX: 90*S, minZ: -67.5*S, maxZ: 67.5*S } satisfies Extent,
+  extent: { minX: -150*S, maxX: 150*S, minZ: -120*S, maxZ: 120*S } satisfies Extent,
+  island: { x: 85*S, z: 62*S }, water: -0.46, level: -0.035, corridor: 24,
   /** Shore boulder groups at the old shore stones' angles; a jetty on the grandstand side, where no boats moor. */
   shoreGroups: 20, jetty: { angle: 1.42, from: 0.99, to: 1.22 },
   rock: {
@@ -43,9 +44,9 @@ export function newportLandscapeLayout(track: TrackDefinition, pierAngles: reado
   // Deliberately authored inside a protected parcel; separate from loose beach scatter.
   const garden=track.barriers.find(b=>b.id==='apex-rocks')!, grovePlants: Plant[]=[];
   for(const [i,[x,z,size]] of [[1,-15.2,7.0],[9,-14.6,7.6],[17,-13.7,8.3],[25,-12.2,8.7],[32.5,-11.3,7.4]].entries()){
-    grovePlants.push({kind:'palm',x,z,y:.18,size,heading:i*1.8,seed:241+i*17});
+    grovePlants.push({kind:'palm',x:x*S,z:z*S,y:.18,size,heading:i*1.8,seed:241+i*17});
   }
-  for(let x=-2;x<42;x+=2.1)for(let z=-18;z<-5;z+=2.1){
+  for(let x=-2*S;x<42*S;x+=2.1)for(let z=-18*S;z<-5*S;z+=2.1){
     const p={x:x+.25*Math.sin(z*2),z:z+.25*Math.sin(x)};
     if(!insidePolygon(p,garden.footprint)||edgeDistance(p,garden.footprint)<1.1)continue;
     grovePlants.push({kind:'shrub',...p,y:.18,size:2.0+(.5+.5*Math.sin(x+z))*.9,heading:x+z,seed:700+grovePlants.length});

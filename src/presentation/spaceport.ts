@@ -9,6 +9,7 @@ import { buildLaunchsiteLandscape } from './launchsite';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { buildingGeometry } from './building-geometry';
 import {assemblyHall,launchTowerDetail,bakeLandmark} from './venue-landmarks';
+import {launchOperations} from './venue-signatures';
 import { launchsiteRocketStages, launchsiteVessels, launchsiteYardTank } from '../core/tracks/venue-parcels';
 
 /** Original, lightweight launchyard scenery. All substantial structures occupy protected footprints. */
@@ -115,15 +116,15 @@ export function buildSpaceport(scene: Scene, track: TrackDefinition, theme: Pres
   // Launch landmark beyond the driving apron, protected by launch-complex.
   cylinder('landing-pad', 97, 0.26, 20, 0.12, 18, 18, concrete);
   const ring = MeshBuilder.CreateTorus('pad-ring', { diameter: 14, thickness: 0.15, tessellation: 48 }, scene); ring.position.set(97, 0.36, 20); ring.material = white;
-  cylinder('rocket-engine-skirt', 94, 1.7, 19, 2.7, 3.3, 3.1, steel);
-  cylinder('rocket-body', 94, 10.5, 19, 15, 3.1, 3.1, metal);
-  cylinder('rocket-upper-body', 94, 19.2, 19, 2.4, 3.1, 2.8, white);
-  cylinder('rocket-nose', 94, 22.2, 19, 3.6, 2.8, 0.05, steel);
+  cylinder('rocket-engine-skirt', 94, 1.7, 19, 2.7, 3.7, 4.8, steel);
+  cylinder('rocket-body', 94, 10.5, 19, 15, 4.8, 4.8, white);
+  cylinder('rocket-upper-body', 94, 19.2, 19, 2.4, 4.8, 4.2, white);
+  cylinder('rocket-nose', 94, 22.2, 19, 3.6, 4.2, 0.05, white);
   for (let i = 0; i < 4; i++) {
     const a = i * Math.PI / 2;
     const fin = box('rocket-fin', 94 + Math.sin(a) * 2, 3, 19 + Math.cos(a) * 2, 0.12, 3.8, 2, steel); fin.rotation.y = a; fin.rotation.x = 0.15;
   }
-  for (const x of [101, 104]) for (const z of [23, 26]) box('launch-tower-leg', x, 13, z, 0.35, 25.5, 0.35, steel);
+  for (const x of [101, 104]) for (const z of [23, 26]) box('launch-tower-leg', x, 13, z, 0.55, 25.5, 0.55, red);
   for (let level = 2; level < 26; level += 3) {
     box('tower-floor', 102.5, level, 24.5, 3.7, 0.15, 3.7, metal);
     const brace = box('tower-brace', 102.5, level + 1.4, 22.9, 0.14, 4, 0.14, steel); brace.rotation.z = -0.7;
@@ -131,9 +132,10 @@ export function buildSpaceport(scene: Scene, track: TrackDefinition, theme: Pres
   box('service-arm', 98.5, 19.5, 24.5, 8, 0.45, 0.6, white);
   // Bring the existing landmark away from the control rail, inside its original parcel.
   const launchParts=new Set(['rocket-engine-skirt','rocket-body','rocket-upper-body','rocket-nose','rocket-fin','launch-tower-leg','tower-floor','tower-brace','service-arm']);
-  for(const mesh of scene.meshes)if(launchParts.has(mesh.name))mesh.position.x-=4.5;
+  for(const mesh of scene.meshes)if(launchParts.has(mesh.name))mesh.position.x+=mesh.name.startsWith('rocket-')?1:-4.5;
   for(const mesh of scene.meshes)if(mesh.name==='landing-pad'||mesh.name==='pad-ring')mesh.position.x-=2;
   bakeLandmark('launch-tower-cross-bracing',launchTowerDetail(),scene,white);
+  bakeLandmark('connected-launch-operations',launchOperations(),scene,white);
   // Desert landscape: terrain and painted ground, plants, and the solid rock formations (landscape/).
   const landscape = buildLaunchsiteLandscape(scene, track, materials);
   return { shadowCasterMaterials: casters, lateShadowCasters: landscape.shadowCasters, update: (_time: number, _reduced: boolean) => {} };

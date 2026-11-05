@@ -2,6 +2,7 @@ import { roadEdges } from '../core/road-geometry';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
+import {NEWPORT_WORLD_SCALE as S} from '../core/tracks/newport-layout';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
@@ -93,6 +94,7 @@ export function buildCircuitDetails(scene: Scene, track: TrackDefinition, theme:
   }
   for (let i = 0; i < 9; i++) { const p = track.centerline[20 + i * 23]; if (bridgeAt(p, track)) continue; box('road-repair', p, 0.135, 1 + i % 3, 0.006, 1.8, worn, i * 0.78); }
   if (!coastal) return;
+  const beforeCoastal=new Set(scene.meshes);
   label('clubhouse-fascia','NEWPORT / MOTOR CLUB',20,1.2,{x:-17,z:-10.48},2.45);
   // Gantry spans the full runoff; its inner support is inside the protected island.
   for (const z of [-12, -48]) box('gantry-column', { x: -18, z }, 3.5, 0.7, 7, 0.7, dark);
@@ -107,9 +109,12 @@ export function buildCircuitDetails(scene: Scene, track: TrackDefinition, theme:
   // Layered coastal planting outside the entire driving corridor.
   for (let i = 0; i < 46; i++) {
     const a = i * 2.39996, p = { x: Math.cos(a) * (70 + i % 9), z: Math.sin(a) * (48 + i % 10) };
-    if (projectToPolyline(p, track.centerline, track.distances).distance < 20 || p.z > 47 && p.x > -32 && p.x < 4) continue;
+    if (projectToPolyline({x:p.x*S,z:p.z*S}, track.centerline, track.distances).distance < 20 || p.z > 47 && p.x > -32 && p.x < 4) continue;
     const mound = MeshBuilder.CreateSphere('coastal-bank', { diameter: 4 + i % 4, segments: 5 }, scene); mound.position.set(p.x, -0.5, p.z); mound.scaling.set(1.6, 0.45, 1.1); mound.material = grass;
     const stem = MeshBuilder.CreateCylinder('coastal-tree-trunk', { height: 3.5, diameterTop: 0.17, diameterBottom: 0.5, tessellation: 6 }, scene); stem.position.set(p.x, 1.4, p.z); stem.rotation.z = 0.15; stem.material = materials.get('trunk')!;
     for (let j = 0; j < 3; j++) { const crown = MeshBuilder.CreateSphere('windswept-tree', { diameter: 2.1 + i % 3 * 0.4, segments: 5 }, scene); crown.position.set(p.x + Math.cos(j * 2.4) * 0.9 - 0.3, 3 + j * 0.25, p.z + Math.sin(j * 2.4) * 0.9); crown.scaling.set(1.2, 0.9, 1); crown.material = j % 2 ? leaf : leafLight; }
   }
+  // Only the original island artwork scales; shared road paint uses actual
+  // track dimensions above. Heights, vehicle size and road width stay unchanged.
+  for(const mesh of scene.meshes)if(!beforeCoastal.has(mesh)){mesh.position.x*=S;mesh.position.z*=S;mesh.scaling.x*=S;mesh.scaling.z*=S;}
 }

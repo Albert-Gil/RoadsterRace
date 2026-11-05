@@ -16,7 +16,7 @@ import { santaMonicaAuthoredBuildings as santaMonicaBuildings } from '../content
 import { reflectSantaVenue } from '../core/tracks/santa-monica';
 import { buildSantaMonicaLandscape } from './santa-monica-landscape';
 import { buildSantaBeachLife } from './santa-monica-beach-life';
-import { pierRampGeometry } from './pier-ramp';
+import { pierRampGeometry,pierLandingGeometry } from './pier-ramp';
 import {buildPacificWheel,amusementBoardwalk} from './pacific-wheel';
 import {bakeLandmark} from './venue-landmarks';
 import {pierComposition} from './themes';
@@ -110,26 +110,26 @@ export function buildSantaMonica(scene: Scene, track: TrackDefinition, theme: Pr
     box('umbrella-pole', x + 7, 1.1, z - 1, 0.08, 2.2, 0.08, white);
   }
   const {wheelX:wx,wheelZ:wz,wheelY:wy}=pierComposition;
-  for(const side of[-1,1])tube('wheel-a-frame',[new Vector3(wx-6,.3,wz+side*2.3),new Vector3(wx,wy,wz),new Vector3(wx+6,.3,wz+side*2.3)],.30,white);
+  for(const side of[-1,1])tube('wheel-a-frame',[new Vector3(wx-7,.3,wz+side*2.1),new Vector3(wx,wy,wz),new Vector3(wx+7,.3,wz+side*2.1)],.43,coral);
   const wheel=buildPacificWheel(scene,white);
   bakeLandmark('amusement-boardwalk-district',amusementBoardwalk(),scene,white);
   const coasterPath = Array.from({ length: 97 }, (_, i) => {
-    const a = i / 96 * Math.PI * 2; return new Vector3(105 + Math.cos(a) * 8, 2.8 + (1 + Math.cos(a * 2 + 0.6)) * 3.2, 31 + Math.sin(a) * 4.8);
+    const a = i / 96 * Math.PI * 2,c=pierComposition.coaster; return new Vector3(c.x + Math.cos(a) * c.rx, 2.8 + (1 + Math.cos(a * 2 + 0.6)) * 3.2, c.z + Math.sin(a) * c.rz);
   });
   for (const side of [-1, 1]) {
     const rail = coasterPath.map(p => {
-      const radial = new Vector3(p.x - 105, 0, p.z - 31).normalize().scale(side * .3);
+      const radial = new Vector3(p.x - pierComposition.coaster.x, 0, p.z - pierComposition.coaster.z).normalize().scale(side * .3);
       return p.add(radial);
     });
     tube('sunset-coaster-track', rail, 0.09, gold);
   }
   for (let i = 0; i < 96; i += 3) {
-    const p = coasterPath[i], radial = new Vector3(p.x - 105, 0, p.z - 31).normalize().scale(.43);
+    const p = coasterPath[i], radial = new Vector3(p.x - pierComposition.coaster.x, 0, p.z - pierComposition.coaster.z).normalize().scale(.43);
     tube('coaster-track-tie', [p.subtract(radial), p.add(radial)], .055, white);
   }
   for (let i = 0; i < 96; i += 8) { const p = coasterPath[i]; box('coaster-trestle', p.x, p.y / 2, p.z, 0.18, p.y, 0.18, white); }
   for(let i=0;i<96;i+=6){
-    const p=coasterPath[i],q=coasterPath[(i+6)%96],radial=new Vector3(p.x-105,0,p.z-31).normalize().scale(.65);
+    const p=coasterPath[i],q=coasterPath[(i+6)%96],radial=new Vector3(p.x-pierComposition.coaster.x,0,p.z-pierComposition.coaster.z).normalize().scale(.65);
     for(const side of[-1,1]){
       const base=p.add(radial.scale(side));tube('coaster-braced-leg',[new Vector3(base.x,.18,base.z),new Vector3(base.x,p.y-.12,base.z)],.13,dark);
       tube('coaster-lattice-brace',[new Vector3(base.x,.35,base.z),new Vector3(q.x,q.y-.18,q.z)],.075,white);
@@ -143,8 +143,10 @@ export function buildSantaMonica(scene: Scene, track: TrackDefinition, theme: Pr
   const ramp = new Mesh('physical-jump-ramp',scene),rampGeometry=pierRampGeometry(jump),rampData=rampGeometry.toVertexData();
   rampData.uvs=Float32Array.from({length:rampGeometry.vertexCount*2},(_,i)=>rampGeometry.positions[Math.floor(i/2)*3+(i%2?2:0)]/5);
   rampData.applyToMesh(ramp);ramp.material=wood;
+  const landing=new Mesh('timber-jump-landing',scene),landingGeometry=pierLandingGeometry(jump),landingData=landingGeometry.toVertexData();
+  landingData.uvs=Float32Array.from({length:landingGeometry.vertexCount*2},(_,i)=>landingGeometry.positions[Math.floor(i/2)*3+(i%2?2:0)]/5);landingData.applyToMesh(landing);landing.material=wood;
   const landingAlong = jump.rampLength + jump.gap;
-  for (let along = landingAlong + 2; along < jump.corridorLength; along += 3) {
+  for (let along = landingAlong + 25; along < jump.corridorLength; along += 3) {
     const p = jumpPoint(jump, along); box('landing-deck-seam', p.x, 0.115, p.z, 0.04, 0.01, jump.width - 0.7, white);
   }
 

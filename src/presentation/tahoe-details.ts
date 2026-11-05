@@ -17,13 +17,28 @@ export function tahoeDetails(scene:Scene,track:TrackDefinition,m:Mats){
     const body=h*.5,front=z0+d*.13,back=z1-d*.13,ridge=y+h*.88;
     box('chalet-stone-foundation',x,y+.22,z,w*.95,.44,d*.94,m.stone);
     box('chalet-timber-body',x,y+body/2,z,w*.94,body,d*.74,m.wall);
-    const roof=new Geometry(),color=hex(art.roof);
+    const roof=new Geometry(),color=hex('#ffffff');
     // Long ridge, steep snowy eaves and closed gables: no industrial flat-roof silhouette.
     for(const side of [-1,1]){
       const zz=side<0?z0:z1,a=roof.vertex(x0,y+body,zz,color),bb=roof.vertex(x0,ridge,z,color),c=roof.vertex(x1,ridge,z,color),dd=roof.vertex(x1,y+body,zz,color);
       if(side<0){roof.triangle(a,bb,c);roof.triangle(a,c,dd);}else{roof.triangle(a,c,bb);roof.triangle(a,dd,c);}
     }
     const rm=bake('steep-chalet-snow-roof',roof,m.roof);rm.material!.backFaceCulling=false;
+    // Large snow-capped dormers and timber balconies read at overview distance.
+    for(const side of[-1,1])if(w>9){
+      const dx=x+side*w*.25,dz=z-d*.14,dy=y+body+(ridge-y-body)*.78;
+      box('chalet-snow-dormer',dx,dy,dz,w*.18,h*.18,d*.20,m.wood);
+      box('chalet-dormer-glazing',dx,dy,dz-d*.105,w*.14,h*.11,.06,m.glass);
+      box('chalet-dormer-snow-cap',dx,dy+h*.105,dz,w*.21,.14,d*.23,m.roof);
+    }
+    // Wind-scoured slate along the eaves gives the snow roof a strong readable
+    // edge. It follows the same roof plane and stays inside the building bounds.
+    const slate=new Geometry();
+    for(const side of[-1,1]){
+      const rows=[.70,.96].map(t=>{const zz=z+side*d*.5*t,yy=ridge-(ridge-y-body)*t+.025;return[x0+.12,x1-.12].map(xx=>slate.vertex(xx,yy,zz,hex('#ffffff')));});
+      slate.triangle(rows[0][0],rows[1][0],rows[1][1]);slate.triangle(rows[0][0],rows[1][1],rows[0][1]);
+    }
+    bake('wind-scoured-chalet-eaves',slate,m.steel);
     const gables=new Geometry();for(const side of [-1,1]){const xx=x+side*w*.47,a=gables.vertex(xx,y+body,front,hex(art.cabin)),bb=gables.vertex(xx,ridge,z,hex(art.cabin)),c=gables.vertex(xx,y+body,back,hex(art.cabin));gables.triangle(a,bb,c);}bake('chalet-closed-gables',gables,m.wood);
     for(const side of [-1,1]){
       const zz=side<0?front-.025:back+.025;

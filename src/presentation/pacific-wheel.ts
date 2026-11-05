@@ -11,16 +11,16 @@ export function buildPacificWheel(scene:Scene,material:StandardMaterial){
  const rim=new CompositionShapes(),radius=art.wheelRadius;
  for(const side of[-1,1])for(let i=0;i<48;i++){
   const a=i/48*Math.PI*2,b=(i+1)/48*Math.PI*2;
-  rim.beam([Math.cos(a)*radius,Math.sin(a)*radius,side*.33],[Math.cos(b)*radius,Math.sin(b)*radius,side*.33],.14,art.coral);
+  rim.beam([Math.cos(a)*radius,Math.sin(a)*radius,side*.42],[Math.cos(b)*radius,Math.sin(b)*radius,side*.42],.23,art.coral);
  }
  for(let i=0;i<16;i++){
-  const a=i/16*Math.PI*2;for(const side of[-1,1])rim.beam([0,0,side*.28],[Math.cos(a)*radius,Math.sin(a)*radius,side*.33],.065,art.ivory);
+  const a=i/16*Math.PI*2;for(const side of[-1,1])rim.beam([0,0,side*.38],[Math.cos(a)*radius,Math.sin(a)*radius,side*.42],.11,art.ivory);
   if(i%2===0)rim.beam([Math.cos(a)*radius,Math.sin(a)*radius,-.33],[Math.cos(a)*radius,Math.sin(a)*radius,.33],.09,art.gold);
  }
  const cabins=Array.from({length:12},(_,i)=>{
   const g=new CompositionShapes(),color=art.cabins[i%art.cabins.length];
-  g.box(0,-.72,0,1.5,.67,1.25,color);g.box(0,-.30,0,1.55,.10,1.30,art.ivory);g.box(0,-.05,0,1.63,.12,1.42,color);
-  for(const side of[-1,1]){g.box(side*.66,-.18,0,.08,.49,1.18,art.ivory);g.box(0,-.46,side*.63,1.25,.22,.025,art.glass);}
+  g.box(0,-.88,0,2,.88,1.55,color);g.box(0,-.34,0,2.05,.12,1.60,art.ivory);g.box(0,-.04,0,2.13,.15,1.72,color);
+  for(const side of[-1,1]){g.box(side*.87,-.22,0,.10,.65,1.48,art.ivory);g.box(0,-.56,side*.78,1.65,.28,.03,art.glass);}
   g.beam([0,0,0],[0,.32,0],.055,art.ivory);return g.withNormals();
  });
  const all=new Geometry();all.append(rim);const starts=cabins.map(g=>{const start=all.vertexCount;all.append(g);return start;});
@@ -46,8 +46,8 @@ export function amusementBoardwalk(){
  g.box(95.5,.075,31,38,.05,13.5,art.timber);
  for(let x=77;x<114;x+=1.6)g.box(x,.11,31,.055,.015,13.3,art.deckSeam);
  for(const [i,x]of[79,85,91,97,103,109].entries()){
-  const color=art.cabins[i%art.cabins.length];g.box(x,.82,25.4,4.4,1.35,1.6,color);g.hipRoof(x,25.4,4.6,1.9,1.55,2.28,art.ivory);
-  g.box(x,1.04,26.22,3.35,.55,.04,art.glass);g.box(x,.72,26.22,3.8,.10,.10,art.ivory);
+  const color=art.cabins[i%art.cabins.length];g.box(x,.82,30,4.4,1.35,1.6,color);g.hipRoof(x,30,4.6,1.9,1.55,2.28,art.ivory);
+  g.box(x,1.04,30.82,3.35,.55,.04,art.glass);g.box(x,.72,30.82,3.8,.10,.10,art.ivory);
  }
  return g;
 }

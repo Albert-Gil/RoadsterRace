@@ -5,6 +5,7 @@ import type {TrackDefinition} from '../core/types';
 import {insideBarrier} from '../core/barriers';
 import {CompositionShapes} from './composition-shapes';
 import {venueComposition as art} from './themes';
+import {NEWPORT_WORLD_SCALE as S} from '../core/tracks/newport-layout';
 
 export function bakeLandmark(name:string,g:CompositionShapes,scene:Scene,material:StandardMaterial){
  const mesh=new Mesh(name,scene),v=g.toVertexData();v.uvs=Float32Array.from({length:g.vertexCount*2},(_,i)=>g.positions[Math.floor(i/2)*3+(i%2?2:0)]/12);v.applyToMesh(mesh);mesh.material=material;mesh.isPickable=false;material.backFaceCulling=false;return mesh;
@@ -27,12 +28,13 @@ export function newportClubhouse(track:TrackDefinition){
  g.box(-17,3.02,5.35,24,.17,.25,a.wood);
  for(let x=-28;x<-5;x+=1.15)g.box(x,3.12,3.55,.14,.10,3.6,a.trim);
  for(const [x,z]of[[-31,3],[-25,12],[-10,10]]){
-  const r=2.1;if(Array.from({length:12},(_,i)=>({x:x+Math.cos(i*Math.PI/6)*r,z:z+Math.sin(i*Math.PI/6)*r})).every(p=>insideBarrier(p,parcel)))g.palm(x,.12,z,5.5,r,a.wood,a.leaf);
+  const r=2.1;if(Array.from({length:12},(_,i)=>({x:(x+Math.cos(i*Math.PI/6)*r)*S,z:(z+Math.sin(i*Math.PI/6)*r)*S})).every(p=>insideBarrier(p,parcel)))g.palm(x,.12,z,5.5,r,a.wood,a.leaf);
  }
  // Visible shell-stone patio rather than a field of small industrial props.
- for(const [x,z]of[[-31,-6],[-18,9],[-8,6]])if(insideBarrier({x,z},parcel)){
+ for(const [x,z]of[[-31,-6],[-18,9],[-8,6]])if(insideBarrier({x:x*S,z:z*S},parcel)){
   g.box(x,.06,z,3.5,.06,2.5,a.trim);g.box(x,.55,z,2.7,.14,.65,a.wood);
  }
+ for(let i=0;i<g.positions.length;i+=3){g.positions[i]*=S;g.positions[i+2]*=S;}
  return g;
 }
 

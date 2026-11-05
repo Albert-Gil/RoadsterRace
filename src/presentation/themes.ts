@@ -111,7 +111,7 @@ export const colorGrade = { saturation: 8, highlights: { hue: 38, density: 12, s
 export const sceneryPalettes = {
   yosemite:{terrain:'#61816a',embankment:'#859070',asphalt:'#8f826b',shoulder:'#a5a079',structure:'#5a6552',curb:'#ddd4b9',glass:'#39564b',foliage:'#254f3a',foliageLight:'#658351',rock:'#c5c2b3',trunk:'#795d40',water:'#367f84',foam:'#dfefdd',sky:'#afd5d9',sunlight:1.05},
   alpine: {terrain:'#dce7ee',embankment:'#b9cad6',asphalt:'#8ca6b9',shoulder:'#d2e0e9',structure:'#3b4f59',curb:'#edf5f7',glass:'#304f60',foliage:'#34564e',foliageLight:'#5e7970',rock:'#87959f',trunk:'#716357',water:'#23647f',foam:'#c4e3ec',sky:'#b1d3e3',sunlight:.96},
-  'night-city': { terrain:'#253348',embankment:'#3a4960',asphalt:'#a6b5cf',shoulder:'#41506b',structure:'#24314b',curb:'#c2d4ec',glass:'#15243c',foliage:'#254455',foliageLight:'#416477',rock:'#45546c',trunk:'#4a4658',water:'#122b41',foam:'#668ca2',sky:'#0b1227',sunlight:.42 },
+  'night-city': { terrain:'#34383e',embankment:'#53515a',asphalt:'#b4b4b8',shoulder:'#535058',structure:'#383440',curb:'#ded4c3',glass:'#272a34',foliage:'#344c45',foliageLight:'#637567',rock:'#5c5960',trunk:'#5c4d46',water:'#1c2c33',foam:'#8c9c9b',sky:'#15151f',sunlight:.42 },
   coastal: { terrain: '#dec697', embankment: '#a2ae7c', water: '#277e8d', shallows: '#76b8af', foliage: '#3e644a', foliageLight: '#839757' },
   sunset: { terrain: '#e4c59d', embankment: '#c8a47e', asphalt: '#9ca4ad', shoulder: '#ba9c7c', structure: '#765d60', foliage: '#526e58', foliageLight: '#8d9e68', rock: '#c5ac92', trunk: '#9c735a', water: '#388ca2', shallows: '#6bb5b9', foam: '#f1dbc3', sky: '#e5a3a0', sunlight: 1.08 },
   bay: { terrain: '#b9c2a6', embankment: '#bdbea8', asphalt: '#a7b2b8', shoulder: '#b5aa8f', structure: '#34434d', foliage: '#4c6857', foliageLight: '#879873', rock: '#b4b8ae', trunk: '#7e7769', water: '#3b8196', shallows: '#689b9c', foam: '#d7e8df', sky: '#b1ccd1', sunlight: 1.05 },
@@ -123,7 +123,7 @@ export const sceneryPalettes = {
 export const sceneryLighting = {
   yosemite:{ambient:'#d9e7d9',ground:'#67775b',sun:'#ffdfaa'},
   alpine: {ambient:'#d6e8f5',ground:'#8299aa',sun:'#fff1d9'},
-  'night-city': {ambient:'#a4bce8',ground:'#3e4768',sun:'#9bbaff'},
+  'night-city': {ambient:'#c5c2d0',ground:'#574d55',sun:'#e6d6c4'},
   coastal: { ambient: '#d6e5ed', ground: '#6e6957', sun: '#fff0cf' },
   sunset: { ambient: '#f7c9cb', ground: '#816c77', sun: '#ffd29b' },
   bay: { ambient: '#dcebf1', ground: '#717b6b', sun: '#fff1d5' },
@@ -253,7 +253,7 @@ export const canyonIntegration = {
   cap: '#c49b72', dust: '#b98159', shade: '#6f4437',
   shoulderMapSize: 2048,
 };
-export const nightAppearance={facades:['#384863','#52445c','#354e5e','#61534f','#445c70','#655769'],neon:['#fa5ca8','#49d8ef','#d9a674'],window:'#ffdc9d',darkWindow:'#111d32',signBackground:'#11162b',poolOpacity:.48,glowIntensity:.4,glowTextureSize:256,glowKernel:24,ambientIntensity:.8,vehicleFill:.55,gameExposure:1.12,menuExposure:.65};
+export const nightAppearance={facades:['#645d65','#785a67','#5c7474','#89705c','#6c797e','#826b78'],neon:['#ff93b6','#97d8df','#ffc480'],window:'#ffe0a2',darkWindow:'#29272e',signBackground:'#221e29',poolOpacity:.48,glowIntensity:.4,glowTextureSize:256,glowKernel:24,ambientIntensity:.8,vehicleFill:.55,gameExposure:1.12,menuExposure:.65};
 export function sceneryTheme(theme: PresentationTheme, scenery: keyof typeof sceneryPalettes): PresentationTheme {
   return { ...theme, scene: { ...theme.scene, ...sceneryPalettes[scenery] } };
 }
@@ -292,20 +292,25 @@ export const thrustEffects = { capacity: 96, emission: 120, lifetime: 0.8, exhau
 export const hopEffects = { pulse: 0.22, nozzleHeight: 0.20, puffs: 16, lifetime: 0.6, downwardSpeed: 18, size: 0.65, mounts: [{ x: -0.52, z: -1.8 }, { x: 0.52, z: -1.8 }, { x: -0.52, z: 1.8 }, { x: 0.52, z: 1.8 }], coreColor: '#eef8ff', maxBodyPitch: 0.12 };
 
 /** Shared city materials; architecture placement is authored in content/golden-city.ts. */
-export const cityAppearance = { bridge: '#cb4b36', facades: ['#caba91', '#8aa49a', '#bb8068', '#9daabb', '#d8be8d', '#9b8173'], paving: '#bbb7a6', roof: '#52616a', shop: '#354953', window: '#456575', warmWindow: '#b9bd9d' };
+export const cityAppearance = { bridge: '#e45534', facades: ['#caba91', '#8aa49a', '#bb8068', '#9daabb', '#d8be8d', '#9b8173'], paving: '#d2bfa1', roof: '#52616a', shop: '#354953', window: '#456575', warmWindow: '#b9bd9d' };
 export const sunsetAppearance = { deck: '#a9866b', steel: '#465360', ivory: '#f6e4cc', glass: '#4a7e91', coral: '#e67b77', gold: '#eec575' };
 export const pierRampAppearance = { surfaceOffset:.11,plankLength:.58,boards:['#fff7e8','#e7d9c4','#f6ead7','#d2c9b8','#eee0ca'],shade:'#655c51',fascia:'#c6b9a3',joist:'#a59985',hardware:'#78817f' };
-export const pierComposition={wheelX:86.7,wheelY:11.9,wheelZ:31,wheelRadius:9.3,speed:.11,coral:'#df7a66',ivory:'#f2dfb9',gold:'#e4ba68',glass:'#507987',timber:'#bd9870',deckSeam:'#8d735a',cabins:['#df806a','#83a9a6','#e1b86d','#9c8fad']};
+export const pierComposition={wheelX:95.5,wheelY:18.6,wheelZ:26.6,wheelRadius:16,speed:.075,coral:'#f07359',ivory:'#fff0ce',gold:'#f3c55f',glass:'#507987',timber:'#bd9870',deckSeam:'#8d735a',cabins:['#ef7054','#62b7b0','#edbf49','#ac83bf'],coaster:{x:95.5,z:34.6,rx:15.5,rz:2.6}};
 export const shoreComposition={speed:.065,opacity:.67,foam:'#e7eee2'};
 export const urbanRampAppearance = { concrete:'#e4e7e7',edge:'#c5cdd1',paving:'#dce1e3',drain:'#405058',surfaceOffset:.10 };
 
 /** Large compositions and roofscape colors, tuned in the fixed phone overview. */
 export const venueComposition={
- night:{facades:['#7484a0','#ad7885','#688e9e','#b18e76','#759692','#a18da8'],roofs:['#5c7892','#98735e','#5e8c8b','#8d697d'],foot:'#485b6a',trim:'#c5bca7',window:'#233c51',light:'#ffe2a8',door:'#263344',terrace:'#b2926f',plant:'#376657',paving:'#5b6d7d',neon:['#ffa6d4','#82e5f1','#ffc58d']},
- city:{facades:['#e2c499','#86b4b0','#d58a75','#b5c2cf','#e3c777','#ac9ac0'],roofs:['#b66549','#c88661','#7e9b98','#d2a873'],foot:'#b6b09b',trim:'#eddfc0',window:'#466c7b',light:'#e6d5a4',door:'#52615e',terrace:'#b69b77',plant:'#4f7856',paving:'#c6bda6',neon:['#e4c488']},
+ night:{facades:['#9b8278','#b07879','#899383','#b6976a','#8b9b95','#a78396'],roofs:['#938075','#a97659','#718f82','#a47b87'],foot:'#625b5b',trim:'#dbcaad',window:'#343a41',light:'#ffe3ac',door:'#3b3438',terrace:'#ba956c',plant:'#50725d',paving:'#7d756c',neon:['#ffacbf','#a5dddd','#ffd197']},
+ city:{facades:['#edc583','#69b1b0','#df886b','#9fb7d0','#edc759','#b194c6'],roofs:['#ab5239','#d27d4c','#62948a','#d0a65c'],foot:'#b6b09b',trim:'#fff0cd',window:'#3a697b',light:'#e6d5a4',door:'#52615e',terrace:'#b69b77',plant:'#4f7856',paving:'#c6bda6',neon:['#e4c488']},
  coastal:{roof:'#c98361',wall:'#f0e2c7',wood:'#a77e55',glass:'#527f8a',trim:'#f8edcf',leaf:'#397251',sand:'#dfc99e'},
  industrial:{roof:'#b7c6c8',steel:'#536c78',dark:'#334954',trim:'#e3e7d9',glass:'#72a0aa',accent:'#d48852'},
- mountain:{snowLight:'#f7f6eb',snowShade:'#7f9ebc',snowGully:'#59778f',granite:'#707d82',talus:'#a9ac91',valleyGreen:'#537b55',riparian:'#3d7254',canyonBeds:['#824b3b','#c47b4d','#e0b178','#a65c43','#eed1a0']},
+ mountain:{snowLight:'#fffdf5',snowShade:'#658dae',snowGully:'#3f6482',granite:'#657077',talus:'#a9ac91',valleyGreen:'#537b55',riparian:'#3d7254',canyonBeds:['#824b3b','#c47b4d','#e0b178','#a65c43','#eed1a0']},
+};
+export const venueSignatureAppearance={
+ launch:{orange:'#cc5e33',white:'#edf1df',glass:'#477d8b',steel:'#354954'},
+ bay:{ivory:'#f9e7c5',glass:'#418985',trim:'#c7c9a8',brick:'#ad614b',paving:'#c8bca4'},
+ night:{canopy:'#6d3e45',frame:'#d8b184',amber:'#ffd496',coral:'#ed8c8c',roof:'#b58769',planter:'#d0ac86',leaf:'#537c58'},
 };
 
 /** Decorative density/scale only. All geometry is batched and stays on existing structures. */
@@ -321,7 +326,7 @@ export const snowyTahoeAppearance = {
   snow:'#dce7ee',packed:'#8ca6b9',ruts:'#7e99aa',powder:'#eef5f7',fir:'#304f46',firLight:'#526f63',bark:'#6d5a48',rock:'#87959f',timber:'#8e7254',lodge:'#a28869',roof:'#c9dbe5',window:'#dcb77b',lake:'#23647f',
   extent:{minX:-320,maxX:340,minZ:-270,maxZ:300},corridor:24,treeCount:460,
   cabin:'#a06c45',stone:'#89969f',lift:'#b73f46',steel:'#3e5361',cutTimber:'#cbb087',
-  weather:{flakes:1050,groundWisps:48,size:.95,opacity:.72,fallSpeed:4.4,gustPeriod:19,wind:6,nearCourse:.74,wispSize:5.5,wispOpacity:.11},
+  weather:{flakes:1050,groundWisps:48,size:1.3,opacity:.72,fallSpeed:4.4,gustPeriod:19,wind:6,nearCourse:.74,wispSize:7.5,wispOpacity:.11},
   slopeGrooming:{spacing:6,width:.16,inset:2.3,minimumGrade:.25,surfaceGap:.018},
   liftSpeed:3.8,
 };
@@ -381,7 +386,7 @@ export const venueFinish = {
  yosemite:{edge:'#a08e6c',ground:'#84906a',grit:'#bdaf8b',inset:.18,spread:1.05},
 } satisfies Record<string,VenueFinish>;
 export const interfaceMotion = { durationMs:160, rowStaggerMs:40 };
-export const circuitArtRevision = '2026-11-05-scenery';
+export const circuitArtRevision = '2026-11-05-landmarks';
 /** One sun per venue; unchanged shadow-map dimensions and cached caster policy. */
 export const venueSunDirections = {
  coastal:[.50,-1,.60],spaceport:[.65,-1,.38],bay:[.40,-1,.62],sunset:[.72,-1,.35],

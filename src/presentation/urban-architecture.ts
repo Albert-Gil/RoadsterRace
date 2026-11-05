@@ -18,6 +18,10 @@ export function urbanArchitecture(buildings:readonly UrbanBuilding[],night:boole
   if(!night&&b.style!==2){paint.hipRoof(x,z,w-.04,d-.04,base+wall,top-.05,roof);}
   else{
    paint.box(x,base+wall+.08,z,w-.18,.16,d-.18,roof);
+   if(night)for(const side of[-1,1]){
+    lights.box(x,base+wall+.19,z+side*(d/2-.14),w-.25,.12,.10,palette.light);
+    lights.box(x+side*(w/2-.14),base+wall+.19,z,.10,.12,d-.25,palette.light);
+   }
    const inset=Math.min(w,d)*.08,ph=Math.max(.18,h*.06);
    for(const side of[-1,1]){paint.box(x,base+wall+ph/2,z+side*(d/2-inset/2),w-.06,ph,inset,face);paint.box(x+side*(w/2-inset/2),base+wall+ph/2,z,inset,ph,d-.06,face);}
    if(b.style===0){

@@ -22,9 +22,9 @@ test('new canyon is a separate ninth venue and newly created tours can include b
  expect(canyon.length).toBeGreaterThan(800);expect(canyon.length).toBeLessThan(900);expect(canyon.roadWidth).toBe(16);
  expect(canyon.hopShortcuts).toHaveLength(2);expect(plan(canyon).jumps).toEqual(['south-rim-crossing']);
 });
-test('Newport keeps its gate, scenery parcels and loop while gaining about four percent distance',()=>{
- expect(coastalTrack.version).toBe(7);expect(coastalTrack.length/292.9056164743301).toBeGreaterThan(1.04);expect(coastalTrack.length/292.9056164743301).toBeLessThan(1.06);
- expect(coastalTrack.start).toEqual({x:-18,z:-30});expect(coastalTrack.barriers.map(b=>b.id)).toEqual(['gantry-support','grandstand','coastal-gardens','apex-rocks']);
+test('Newport v8 keeps its original loop shape and scenery parcels at a larger world scale',()=>{
+ expect(coastalTrack.version).toBe(8);expect(coastalTrack.length).toBeCloseTo(351.4,0);expect(coastalTrack.roadWidth).toBe(16);
+ expect(coastalTrack.start.x).toBeCloseTo(-18*1.15);expect(coastalTrack.start.z).toBeCloseTo(-30*1.15);expect(coastalTrack.barriers.map(b=>b.id)).toEqual(['gantry-support','grandstand','coastal-gardens','apex-rocks']);
 });
 test('Yosemite timber trail now saves at least twenty metres and leaves the cedar obstacle meaningful',()=>{
  const normal=plan(yosemite),short=plan(yosemite,'ranger-timber-trail');expect(normal.length-short.length).toBeGreaterThan(20);expect(normal.length-short.length).toBeLessThan(40);

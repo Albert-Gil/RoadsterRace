@@ -10,6 +10,7 @@ import { GroundPainter } from './landscape/paint';
 import { contactShadows, cornerMarks, trails } from './landscape/ground-paint';
 import { courseCorners } from './landscape/scatter';
 import type { Extent } from './landscape/terrain';
+import {venueSignatureAppearance} from './themes';
 export { buildFormation, looseRocks } from './landscape/rocks';
 export { plantGeometry } from './landscape/plants';
 
@@ -48,11 +49,11 @@ export function* paintGround(scene: Scene, track: TrackDefinition, layout: Golde
 
   // Sidewalks along the course: a curb shadow at the lawn's edge, pale paving, joints and drains.
   const loop = [...track.centerline, track.centerline[0]];
-  g.stroke(loop, 2 * 12.9, 'rgb(84,82,70)', 0.5);
-  g.stroke(loop, 2 * 12.5, 'rgb(198,192,178)', 1);
+  g.stroke(loop, 2 * 16.4, 'rgb(84,82,70)', 0.5);
+  g.stroke(loop, 2 * 16, venueSignatureAppearance.bay.paving, 1);
   for (let s = 0; s < track.length; s += 2.4) {
     const a = samplePolyline(track.centerline, track.distances, s), b = samplePolyline(track.centerline, track.distances, Math.min(track.length, s + 0.5)), l = Math.hypot(b.x - a.x, b.z - a.z) || 1, nx = -(b.z - a.z) / l, nz = (b.x - a.x) / l;
-    for (const side of [-1, 1]) g.stroke([P(a.x + nx * side * 8.3, a.z + nz * side * 8.3), P(a.x + nx * side * 12.4, a.z + nz * side * 12.4)], 0.07, 'rgb(120,114,100)', 0.3);
+    for (const side of [-1, 1]) g.stroke([P(a.x + nx * side * 8.3, a.z + nz * side * 8.3), P(a.x + nx * side * 15.9, a.z + nz * side * 15.9)], 0.09, 'rgb(120,114,100)', 0.4);
     if (Math.round(s / 2.4) % 13 === 0) for (const side of [-1, 1]) g.dot(a.x + nx * side * 9, a.z + nz * side * 9, 0.32, 'rgba(70,68,64,0.8)');
   }
   // Plazas around the city blocks: pavers, a curb and lamp bases.

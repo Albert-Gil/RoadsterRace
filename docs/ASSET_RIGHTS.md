@@ -280,3 +280,12 @@ and broad mountain/talus colour treatments are original procedural artwork in
 this repository. They use the existing licensed/native materials and palettes;
 no downloaded models, generated bitmap art, recordings or new external sources
 were added. Updated circuit cards are captures of the actual game scenes.
+
+### Larger venue signatures — 2026-11-05
+
+The enlarged native wheel/gondolas, timber landing, industrial skylights and loading
+equipment, Victorian roof details, theatre marquee, chalet dormers/eaves and baked
+light/ground treatments are original procedural artwork. They reuse existing
+materials, shaders and licensed assets; no external model, image or recording was
+introduced. Newport's scaled scenery retains its existing provenance. Updated
+circuit cards and review media are actual game captures.

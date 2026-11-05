@@ -6,7 +6,7 @@ import type {Scene} from '@babylonjs/core/scene';
 import {Geometry,hex} from './landscape/mesh';
 import {shoreComposition as art} from './themes';
 
-type Shore={kind:'island';water:number}|{kind:'beach';water:number;shoreX:(z:number)=>number;height:(x:number,z:number)=>number};
+type Shore={kind:'island';water:number;scale?:number}|{kind:'beach';water:number;shoreX:(z:number)=>number;height:(x:number,z:number)=>number};
 /** Three coherent, broken wave fronts in one bounded cosmetic batch. */
 export function shoreSurf(scene:Scene,shore:Shore,existing?:StandardMaterial){
  const material=existing??new StandardMaterial('shore-surf-foam',scene);
@@ -24,7 +24,7 @@ export function shoreSurf(scene:Scene,shore:Shore,existing?:StandardMaterial){
     const index=(wave*segments+i)*4+corner,at=index*3,k=i+(corner===1||corner===2?1:0),outer=corner>=2?1:0;
     if(shore.kind==='island'){
      const a=k/segments*Math.PI*2,shape=1+.035*Math.sin(3*a+.7)+.018*Math.cos(7*a),r=1.15-phase*.12+outer*.004;
-     positions[at]=Math.cos(a)*85*shape*r;positions[at+2]=Math.sin(a)*62*shape*r;positions[at+1]=-.16+(shore.water+.05+.16)*(r-.99)/.26+.018;
+     positions[at]=Math.cos(a)*85*(shore.scale??1)*shape*r;positions[at+2]=Math.sin(a)*62*(shore.scale??1)*shape*r;positions[at+1]=-.16+(shore.water+.05+.16)*(r-.99)/.26+.018;
      colors[index*4+3]=fade*(.35+.65*Math.sin(a*7+wave*.8)**2);
     }else{
      const z=-170+k/segments*340,x=shore.shoreX(z)+3.5+(1-phase)*8+outer*.34;

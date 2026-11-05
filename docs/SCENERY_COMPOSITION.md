@@ -122,10 +122,11 @@ for diagnostics; they are not a complete GPU/process-memory or leak measurement.
   has desktop/phone-landscape/portrait before/after views and a 30-second actual
   LA Time Trial excerpt (no captured audio). Gallery images and clip metadata
   load without errors.
-- The canoe milestone is already pushed as `b313bcb`; its GitHub checks passed.
-  The owner approved committing and pushing this verified scenery composition
-  pass on the next request. The further venue-specific revisions are a separate
-  milestone. No promotional post is included.
+- The canoe milestone is pushed as `b313bcb`. The owner subsequently approved
+  committing and pushing this verified scenery composition as **`58b3bf1`**;
+  both GitHub workflows passed. The further venue-specific revisions are a
+  separate milestone documented in `VENUE_SIGNATURES.md`. No promotional post
+  is included.
 
 Physical iPhone/iPad Safari comfort, sustained performance and sound verification
 remain pending hardware testing.

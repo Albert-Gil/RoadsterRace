@@ -164,7 +164,7 @@ The selected circuit is remembered with names, paint and lap count. A deliberate
 
 Circuit metadata lives in `src/content/circuits.ts`, physical Orbital geometry in `src/core/tracks/orbital.ts`, and biome dispatch in `src/presentation/scenery.ts`. Spaceport materials/lighting are centralized alongside the other presentation settings in `themes.ts`. The scene changes reuse one WebGL engine and dispose previous scenes. Physical Safari and sustained mobile performance remain pending.
 
-See [Golden Gate city and drawing guide](docs/GOLDEN_CITY_DRAWING.md) for gate tolerances, lap blending, supported city placement and bridge exceptions.
+See [Golden Gate city and drawing guide](docs/GOLDEN_CITY_DRAWING.md) for gate tolerances, lap blending, supported city placement and bridge exceptions. The [latest venue-signature pass](docs/VENUE_SIGNATURES.md) documents Newport's 351.4 m enlarged loop, Santa Monica's 32 m wheel and timber landing, stronger venue artwork and warmer LA lighting.
 
 Launchsite now includes an optional manually activated Hop service lane. See [heavier flight and shortcut tuning](docs/HEAVY_HOP.md).
 

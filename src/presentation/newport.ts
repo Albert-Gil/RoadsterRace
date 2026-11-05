@@ -7,6 +7,7 @@ import type { StandardMaterial } from '@babylonjs/core/Materials/standardMateria
 import type { Scene } from '@babylonjs/core/scene';
 import { loadProps, propMaterial, propMesh, propVertexData, type PropBox, type PropPlacement } from './props';
 import { newportHarbour } from './themes';
+import {NEWPORT_WORLD_SCALE as S} from '../core/tracks/newport-layout';
 
 /**
  * Newport harbour dressing around the coastal island: marina piers off the beach with boats
@@ -18,7 +19,7 @@ import { newportHarbour } from './themes';
  */
 export interface Harbour { shadowCasters: Promise<AbstractMesh[]>; update(time: number, reducedMotion: boolean): void }
 
-const ISLAND = { x: 85, z: 62 };
+const ISLAND = { x: 85*S, z: 62*S };
 /** A point on the island's ellipse; ring 1 is the shore, 1.25 the outer edge of its shallow shelf. */
 const ellipse = (angle: number, ring: number) => ({ x: Math.cos(angle) * ISLAND.x * ring, z: Math.sin(angle) * ISLAND.z * ring });
 /** Island-relative ring of a point (1 = shore, 1.25 = outer edge of the shallow shelf). */

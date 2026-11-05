@@ -19,6 +19,7 @@ import type { PropPlacement } from './props';
 import { newportHarbour } from './themes';
 import {newportClubhouse,bakeLandmark} from './venue-landmarks';
 import {shoreSurf} from './shore-surf';
+import {NEWPORT_WORLD_SCALE as S} from '../core/tracks/newport-layout';
 
 /** Harbour water level: a calm sea just below the beach, so boats and piers float in the visible water. */
 export const COAST_WATER = -0.46;
@@ -35,7 +36,7 @@ export function buildCoast(scene: Scene, track: TrackDefinition, theme: Presenta
   const wetSand = material('wet-sand', theme.scene.shoulder), foam = material('foam', theme.scene.foam, true);
   const ring = (scale: number, y: number) => Array.from({ length: 129 }, (_, i) => {
     const a = i / 128 * Math.PI * 2, r = 1 + 0.035 * Math.sin(3 * a + 0.7) + 0.018 * Math.cos(7 * a);
-    return new Vector3(Math.cos(a) * 85 * r * scale, y, Math.sin(a) * 62 * r * scale);
+    return new Vector3(Math.cos(a) * 85 * S * r * scale, y, Math.sin(a) * 62 * S * r * scale);
   });
   const band = (name: string, inner: number, outer: number, y1: number, y2: number, mat: StandardMaterial) => {
     const mesh = MeshBuilder.CreateRibbon(name, { pathArray: [ring(inner, y1), ring(outer, y2)], sideOrientation: Mesh.FRONTSIDE }, scene); mesh.material = mat;
@@ -43,11 +44,11 @@ export function buildCoast(scene: Scene, track: TrackDefinition, theme: Presenta
     if (name === 'lagoon-shelf') { mesh.setVerticesData(VertexBuffer.ColorKind, [0.98, 0].flatMap(alpha => Array.from({ length: 129 }, () => [1, 1, 1, alpha]).flat())); mesh.hasVertexAlpha = true; }
   };
   band('lagoon-shelf', 0.99, 1.25, -0.16, COAST_WATER + 0.05, shallow);
-  const surf=shoreSurf(scene,{kind:'island',water:COAST_WATER},foam);
+  const surf=shoreSurf(scene,{kind:'island',water:COAST_WATER,scale:S},foam);
   band('wet-sand-rim', 0.965, 1.037, -0.07, -0.68, wetSand);
   const perimeter = ring(0.975, -0.035), land = new Mesh('sandy-island', scene), data = new VertexData();
   const positions = [0, -0.035, 0], normals = [0, 1, 0], uvs = [0.5, 0.5], indices: number[] = [];
-  perimeter.forEach((p, i) => { positions.push(p.x, p.y, p.z); normals.push(0, 1, 0); uvs.push(p.x / 180 + 0.5, p.z / 135 + 0.5); if (i) indices.push(0, i + 1, i); });
+  perimeter.forEach((p, i) => { positions.push(p.x, p.y, p.z); normals.push(0, 1, 0); uvs.push(p.x / (180*S) + 0.5, p.z / (135*S) + 0.5); if (i) indices.push(0, i + 1, i); });
   data.positions = positions; data.normals = normals; data.uvs = uvs; data.indices = indices;
   data.applyToMesh(land); land.material = sand;
   const embankment = material('embankment', theme.scene.embankment);
@@ -56,7 +57,7 @@ export function buildCoast(scene: Scene, track: TrackDefinition, theme: Presenta
     const texture = new Texture(assetUrl(visualAssets.embankmentTexture), scene, false, true, Texture.TRILINEAR_SAMPLINGMODE, undefined, () => { texture.dispose(); embankment.diffuseTexture = null; rockMaterial.diffuseTexture = null; }); texture.anisotropicFilteringLevel = 4;
     embankment.diffuseTexture = rockMaterial.diffuseTexture = texture;
   }
-  const mounds = [{ x: -16, z: 0, width: 36, depth: 20, height: 0.28 }, { x: -31, z: 0, width: 12, depth: 17, height: 3.2 }, { x: 5, z: -6, width: 9, depth: 9, height: 2.1 }];
+  const mounds = [{ x: -16, z: 0, width: 36, depth: 20, height: 0.28 }, { x: -31, z: 0, width: 12, depth: 17, height: 3.2 }, { x: 5, z: -6, width: 9, depth: 9, height: 2.1 }].map(m=>({...m,x:m.x*S,z:m.z*S,width:m.width*S,depth:m.depth*S}));
   const moundHeight = (x: number, z: number, mound: typeof mounds[number]) => {
     const r2 = ((x - mound.x) / (mound.width / 2)) ** 2 + ((z - mound.z) / (mound.depth / 2)) ** 2;
     return mound.height * Math.max(0, 1 - r2) ** 1.2 * (0.92 + Math.sin(x * 1.3 + z) * 0.08);
@@ -83,29 +84,29 @@ export function buildCoast(scene: Scene, track: TrackDefinition, theme: Presenta
   for (let i = 0; i < 40; i++) {
     const a = i * 2.39996, r = 1.3 + (i % 5) * 0.09;
     const streak = MeshBuilder.CreateBox('sea-glint', { width: 1.5 + i % 4, height: 0.015, depth: 0.12 }, scene);
-    streak.position.set(Math.cos(a) * 85 * r, COAST_WATER + 0.03, Math.sin(a) * 64 * r); streak.rotation.y = -0.25; streak.material = glint;
+    streak.position.set(Math.cos(a) * 85 * S * r, COAST_WATER + 0.03, Math.sin(a) * 64 * S * r); streak.rotation.y = -0.25; streak.material = glint;
   }
   const shade = material('scenery-shadow', '#ffffff', true); shade.diffuseTexture = softShadowTexture(scene); shade.useAlphaFromDiffuseTexture = true; shade.alpha = 0.28;
   shade.emissiveColor.setAll(1);
   const shadow = (x: number, z: number, w: number, d: number) => {
-    const mesh = MeshBuilder.CreateGround('scenery-contact', { width: w, height: d }, scene); mesh.position.set(x + 0.7, 0.01, z - 0.5); mesh.material = shade;
+    const mesh = MeshBuilder.CreateGround('scenery-contact', { width: w*S, height: d*S }, scene); mesh.position.set((x + 0.7)*S, 0.01, (z - 0.5)*S); mesh.material = shade;
   };
   material('foliage', theme.scene.foliage); material('foliageLight', theme.scene.foliageLight); material('trunk', theme.scene.trunk);
   // Palms are CC0 models batched with the harbour props; only their contact shadows are built here.
   const palms: PropPlacement[] = [];
   const palm = (x: number, z: number, height: number, heading: number) => {
-    const elevation = groundHeight(x, z);
-    palms.push({ key: heading % 2 < 1 ? 'palm-detailed-bend' : 'palm-detailed-straight', x, y: elevation, z, heading, scale: height / 4.25 * 1.25 });
+    const elevation = groundHeight(x*S, z*S);
+    palms.push({ key: heading % 2 < 1 ? 'palm-detailed-bend' : 'palm-detailed-straight', x:x*S, y: elevation, z:z*S, heading, scale: height / 4.25 * 1.25 });
     if (elevation < 0.1) shadow(x, z, 7, 6);
   };
   for (const [i, [x, z]] of [[-77, -13], [-77, 8], [-50, 46], [-32, 54], [-10, 55], [12, 55], [48, 33], [72, 11], [78, -19], [48, -50], [-17, -54], [-46, -49], [-28, 3], [-21, 8], [-13, 4]].entries()) {
-    if (!(x > -30 && x < 7 && z > 48) && projectToPolyline({ x, z }, track.centerline, track.distances).distance > track.roadWidth * 1.5 + 3) palm(x, z, 5.2 + i % 3 * 0.6, i * 1.7);
+    if (!(x > -30 && x < 7 && z > 48) && projectToPolyline({ x:x*S, z:z*S }, track.centerline, track.distances).distance > track.roadWidth * 1.5 + 3) palm(x, z, 5.2 + i % 3 * 0.6, i * 1.7);
   }
   // Shore boulders, the jetty, beach plants and the island's painted sand: newport-landscape.ts.
   const white = material('architecture', theme.scene.curb), trim = material('architecture-trim', theme.scene.structure), glass = material('architecture-glass', theme.scene.glass), accent = material('architecture-accent', theme.players[0]);
   glass.specularColor.setAll(0.85); glass.specularPower = 96; glass.reflectionTexture = scene.environmentTexture; glass.roughness = 0.15;
   const box = (name: string, x: number, y: number, z: number, w: number, h: number, d: number, mat: StandardMaterial) => {
-    const mesh = MeshBuilder.CreateBox(name, { width: w, height: h, depth: d }, scene); mesh.position.set(x, y, z); mesh.material = mat; return mesh;
+    const mesh = MeshBuilder.CreateBox(name, { width: w*S, height: h, depth: d*S }, scene); mesh.position.set(x*S, y, z*S); mesh.material = mat; return mesh;
   };
   shadow(-17,-5,30,18);
   bakeLandmark('island-clubhouse',newportClubhouse(track),scene,white);
