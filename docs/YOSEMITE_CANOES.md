@@ -35,6 +35,7 @@ The close capture uses a temporary inspection camera; ordinary play retains the
 same fixed whole-course framing. Tests/logs/captures are in
 `artifacts/yosemite-canoes/`; forced-effect reports are in `artifacts/effects-budget/`.
 
-The larger proposed venue changes are in SCENERY_IMPACT_PLAN.md. They are not
-implemented by this request. This update remains local and uncommitted. Physical
+This milestone was committed and pushed as `b313bcb` on the owner's follow-up
+request; its GitHub checks passed. The subsequent larger venue work is documented
+separately in SCENERY_COMPOSITION.md, following SCENERY_IMPACT_PLAN.md. Physical
 iPhone/iPad Safari verification remains pending hardware testing.

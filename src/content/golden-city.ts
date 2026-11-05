@@ -11,12 +11,12 @@ export const cityBuildings: readonly CityBuilding[] = [
   // Mirrored below, matching the new physical blocks exactly.
   ...goldenMarketFrontage.map((b,i)=>({...b,style:i%3===1?'brick' as const:'painted' as const,color:i+1})),
   {id:'median-arcade',x:79,z:1.75,width:44,depth:4.5,height:8.52,style:'office' as const,color:2},
-  ...[-31, -23, -16].map((x, i) => ({ id: `civic-front-${i}`, x, z: -16, width: 5.5, depth: 8, height: 5 + i * 1.4, style: 'painted' as const, color: i })),
-  ...[-30, -20].map((x, i) => ({ id: `civic-rear-${i}`, x, z: -2, width: 7, depth: 9, height: 7 + i * 2, style: 'brick' as const, color: i + 3 })),
-  ...[6, 13, 20].map((x, i) => ({ id: `market-${i}`, x, z: -16.5, width: 5, depth: 8, height: 4.5 + i, style: 'painted' as const, color: i + 2 })),
-  ...[1, 9, 18].map((x, i) => ({ id: `waterfront-${i}`, x, z: 14, width: 6, depth: 7, height: 4.2 + i * 0.6, style: 'painted' as const, color: i + 1 })),
-  ...[-22, -9, 5].flatMap((z, i) => [104.5, 114.5].map((x, j) => ({ id: `east-${i}-${j}`, x, z, width: 6, depth: 9, height: 6 + (i + j) % 3 * 2, style: 'brick' as const, color: i + j }))),
-  ...[-1, 9, 19].map((z, i) => ({ id: `west-${i}`, x: -110, z, width: 10, depth: 7, height: 6 + i * 1.5, style: 'painted' as const, color: i + 2 })),
+  ...[-31.7,-24.5,-17.3].map((x,i)=>({id:`civic-front-${i}`,x,z:-15.4,width:6.6,depth:13.4,height:6.5+i*1.4,style:'painted' as const,color:i})),
+  ...[-31.7,-24.5,-17.3].map((x,i)=>({id:`civic-rear-${i}`,x,z:-1.2,width:6.6,depth:12.8,height:7+i,style:'brick' as const,color:i+3})),
+  ...[5.7,13,20.3].map((x,i)=>({id:`market-${i}`,x,z:-16.5,width:6.7,depth:11.5,height:5.5+i,style:'painted' as const,color:i+2})),
+  ...[.5,9.5,18.5].map((x,i)=>({id:`waterfront-${i}`,x,z:14,width:8.4,depth:9,height:5+i*.8,style:'painted' as const,color:i+1})),
+  ...[-22.2,-7.2,7.7].flatMap((z,i)=>[105.5,117.5].map((x,j)=>({id:`east-${i}-${j}`,x,z,width:9.5,depth:13.5,height:7+(i+j)%3*2,style:'brick' as const,color:i+j}))),
+  ...[-1,9,19].map((z,i)=>({id:`west-${i}`,x:-110,z,width:14,depth:9,height:6+i*1.5,style:'painted' as const,color:i+2})),
   ...[76, 88, 102].flatMap((x, i) => [76, 94].map((z, j) => ({ id: `skyline-${i}-${j}`, x, z, width: 8, depth: 10, height: 8 + (i + j) % 3 * 4, style: 'office' as const, color: i }))),
 ].map(b => ({ ...b, x: -b.x }));
 export function buildingFootprint(b: CityBuilding): Point[] {

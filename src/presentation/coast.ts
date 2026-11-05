@@ -17,6 +17,8 @@ import { buildNewportHarbour } from './newport';
 import { buildNewportLandscape } from './newport-landscape';
 import type { PropPlacement } from './props';
 import { newportHarbour } from './themes';
+import {newportClubhouse,bakeLandmark} from './venue-landmarks';
+import {shoreSurf} from './shore-surf';
 
 /** Harbour water level: a calm sea just below the beach, so boats and piers float in the visible water. */
 export const COAST_WATER = -0.46;
@@ -41,7 +43,7 @@ export function buildCoast(scene: Scene, track: TrackDefinition, theme: Presenta
     if (name === 'lagoon-shelf') { mesh.setVerticesData(VertexBuffer.ColorKind, [0.98, 0].flatMap(alpha => Array.from({ length: 129 }, () => [1, 1, 1, alpha]).flat())); mesh.hasVertexAlpha = true; }
   };
   band('lagoon-shelf', 0.99, 1.25, -0.16, COAST_WATER + 0.05, shallow);
-  band('shore-break', 1.035, 1.048, -0.185, -0.2, foam);
+  const surf=shoreSurf(scene,{kind:'island',water:COAST_WATER},foam);
   band('wet-sand-rim', 0.965, 1.037, -0.07, -0.68, wetSand);
   const perimeter = ring(0.975, -0.035), land = new Mesh('sandy-island', scene), data = new VertexData();
   const positions = [0, -0.035, 0], normals = [0, 1, 0], uvs = [0.5, 0.5], indices: number[] = [];
@@ -105,15 +107,8 @@ export function buildCoast(scene: Scene, track: TrackDefinition, theme: Presenta
   const box = (name: string, x: number, y: number, z: number, w: number, h: number, d: number, mat: StandardMaterial) => {
     const mesh = MeshBuilder.CreateBox(name, { width: w, height: h, depth: d }, scene); mesh.position.set(x, y, z); mesh.material = mat; return mesh;
   };
-  shadow(-10, -6, 23, 13);
-  box('pavilion-plinth', -10, 0.2, -6, 21, 0.4, 10, white);
-  box('pavilion', -10, 2.4, -5, 17, 4.4, 6, white);
-  box('panoramic-glass', -10, 2.7, -8.05, 15.5, 2.7, 0.1, glass);
-  box('pavilion-floor-band', -10, 2.6, -8.15, 17, 0.12, 0.23, white);
-  for (let i = 0; i < 6; i++) box('window-mullion', -17.5 + i * 3, 2.7, -8.14, 0.12, 2.9, 0.15, trim);
-  box('floating-roof', -10, 4.85, -5.5, 20, 0.3, 8.5, white);
-  box('roof-trim', -10, 4.64, -9.75, 20, 0.14, 0.18, accent);
-  for (let i = 0; i < 7; i++) box('solar-panel', -17 + i * 2.25, 5.06, -5, 1.9, 0.07, 3.8, glass);
+  shadow(-17,-5,30,18);
+  bakeLandmark('island-clubhouse',newportClubhouse(track),scene,white);
   for (const x of [-23, 4]) {
     box('banner-pole', x, 3.5, -4, 0.12, 7, 0.12, trim);
     box('circuit-banner', x + 0.8, 5.7, -4, 1.6, 2.5, 0.06, accent); shadow(x, -4, 2, 3);
@@ -132,5 +127,5 @@ export function buildCoast(scene: Scene, track: TrackDefinition, theme: Presenta
   const harbour = buildNewportHarbour(scene, materials, palms, COAST_WATER);
   const landscape = buildNewportLandscape(scene, track, materials, newportHarbour.piers.map(p => p.angle));
   const shadowCasterMaterials = new Set(['embankment', 'foliage', 'foliageLight', 'trunk', 'rock', 'architecture', 'architecture-trim', 'architecture-glass', 'architecture-accent'].map(role => materials.get(role)!));
-  return { waterTexture: waterGrain, foamMaterial: foam, shadowCasterMaterials, harbour, landscape };
+  return { waterTexture: waterGrain, foamMaterial: foam, shadowCasterMaterials, harbour, landscape, surf };
 }

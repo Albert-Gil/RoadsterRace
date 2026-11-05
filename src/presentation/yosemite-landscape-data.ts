@@ -11,6 +11,7 @@ import { yosemiteGeology } from './yosemite-geology';
 import { yosemiteTreeTemplates, yosemiteUndergrowth } from './yosemite-forest';
 import { yosemiteMeadowColor } from './yosemite-surfaces';
 import { CREEK_BANK, creekSide, yosemiteBankGround } from './yosemite-creek-bank';
+import {valleyApronColor} from './mountain-composition';
 
 export type { MeshArrays };
 export interface TreePlacement { x: number; z: number; height: number; near?: boolean }
@@ -27,7 +28,8 @@ export const transferables = (data: YosemiteLandscapeData) => arrayBuffers(data.
 export function yosemiteLandscapeData(track: TrackDefinition): YosemiteLandscapeData {
   // Smooth creek banks replace the core grid's per-node carving in the rendered ground only.
   const D = courseDistance(track, art.extent, 4), ground = yosemiteBankGround(track), height = (x: number, z: number) => ground(x, z);
-  const land = terrainArrays({ extent: art.extent, cell: 4, height(x, z) { if (!supported({ x, z }, track) && !(creekSide({ x, z },track) < CREEK_BANK.blendTo)) return -3; return ground(x, z) - (1 - smoothstep(7, 10, D(x, z))) * .8; }, color: yosemiteMeadowColor });
+  const apron=valleyApronColor(track);
+  const land = terrainArrays({ extent: art.extent, cell: 4, height(x, z) { if (!supported({ x, z },track) && !(creekSide({ x,z },track)<CREEK_BANK.blendTo))return -3;return ground(x,z)-(1-smoothstep(7,10,D(x,z)))*.8; },color(x,z,h,slope){return apron(x,z,D(x,z),yosemiteMeadowColor(x,z,h,slope));} });
   // The distant extension has very long triangles. Fade its border to one quiet
   // meadow tone and up-normal so copied edge patches cannot become radial stripes.
   // This changes only colours/normals, far outside the entire driving corridor.

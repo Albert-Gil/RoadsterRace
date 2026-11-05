@@ -47,6 +47,7 @@ export function buildScenery(id: SceneryId, scene: Scene, track: TrackDefinition
       result.waterTexture.uOffset = reduced ? 0 : time * 0.003;
       result.foamMaterial.alpha = reduced ? 0.65 : 0.62 + Math.sin(time * 0.8) * 0.12;
       result.harbour.update(time, reduced);
+      result.surf.update(time,reduced);
     } };
   }
   buildCircuitDetails(scene, track, theme, materials, runtime.shadowCasterMaterials, id === 'coastal');

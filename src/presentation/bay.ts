@@ -6,7 +6,10 @@ import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTextur
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import type { Scene } from '@babylonjs/core/scene';
 import type { TrackDefinition } from '../core/types';
-import { cityBuildings, cityLand } from '../content/golden-city';
+import { cityBuildings, cityLand,onCityLand } from '../content/golden-city';
+import { buildUrbanArchitecture } from './urban-architecture';
+import {urbanPromenade} from './urban-promenade';
+import {bakeLandmark} from './venue-landmarks';
 import { cityAppearance, type PresentationTheme } from './themes';
 import { buildGoldenGateLandscape, GOLDEN } from './golden-gate-landscape';
 
@@ -41,29 +44,8 @@ export function buildBay(scene: Scene, track: TrackDefinition, theme: Presentati
   const water = mat('water', theme.scene.water, false); water.specularColor.setAll(0.45);
   const sea = MeshBuilder.CreateGround('bay-water', { width: 2000, height: 2000 }, scene); sea.position.y = -2.08; sea.material = water;
   for (let i = 0; i < 20; i++) box('inlet-water-glint', -35 + i % 5 * 16, -2.06, 57 + Math.floor(i / 5) * 11, 3 + i % 3 * 2, 0.01, 0.08, metal);
-  for (const b of cityBuildings) {
-    const facade = Color3.FromHexString(cityAppearance.facades[b.color % cityAppearance.facades.length]), base = 0.28, top = base + b.height;
-    box(`${b.id}-foundation`, b.x, 0.115, b.z, b.width, 0.3, b.depth, concrete);
-    const body = box(`${b.id}-body`, b.x, base + b.height / 2, b.z, b.width, b.height, b.depth, facadeMaterial);
-    body.setVerticesData(VertexBuffer.ColorKind, Array.from({ length: body.getTotalVertices() }, () => [facade.r, facade.g, facade.b, 1]).flat());
-    body.useVertexColors = true; body.hasVertexAlpha = false;
-    box(`${b.id}-cornice`, b.x, top + 0.12, b.z, b.width + 0.12, 0.24, b.depth + 0.12, white);
-    box(`${b.id}-roof`, b.x, top + 0.27, b.z, b.width - 0.3, 0.08, b.depth - 0.3, steel);
-    const front = b.z - b.depth / 2 - 0.04, cols = Math.max(b.style === 'office' ? 3 : 2, Math.floor(b.width / 4.5));
-    for (let floor = 1.7; floor < b.height - 0.6; floor += 1.9) {
-      for (let c = 0; c < cols; c++) {
-        const x = b.x + (c - (cols - 1) / 2) * b.width / (cols + 0.4);
-        box('city-window-frame', x, base + floor, front, b.width / (cols + 1.5), 1.15, 0.12, white);
-        box('city-window', x, base + floor + 0.03, front - 0.07, b.width / (cols + 1.5) - 0.18, 0.94, 0.06, glass);
-      }
-      for (const side of [-1, 1]) box('city-side-window', b.x + side * (b.width / 2 + 0.03), base + floor, b.z, 0.08, 0.95, b.depth * 0.62, glass);
-    }
-    if (b.style !== 'office') {
-      box('city-shop-glazing', b.x, 0.9, front - 0.01, b.width * 0.8, 1.12, 0.08, glass);
-      box('city-shop-awning', b.x, 1.65, front - 0.18, b.width * 0.9, 0.16, 0.6, shop);
-      box('city-rooftop-vent', b.x + 0.8, top + 0.55, b.z + 0.5, 0.65, 0.5, 0.65, steel);
-    }
-  }
+  buildUrbanArchitecture(scene,cityBuildings.map(b=>({...b,style:b.style==='office'?2:b.style==='brick'?1:0})),false,facadeMaterial,glass);
+  bakeLandmark('city-street-promenade',urbanPromenade(track,false,onCityLand),scene,white);
   for (const barrier of track.barriers.filter(b => b.kind === 'infield' && b.id.endsWith('block'))) {
     const xs = barrier.footprint.map(p => p.x), zs = barrier.footprint.map(p => p.z);
     const x0 = Math.min(...xs), x1 = Math.max(...xs), z0 = Math.min(...zs), z1 = Math.max(...zs);
@@ -99,16 +81,16 @@ export function buildBay(scene: Scene, track: TrackDefinition, theme: Presentati
   box('bridge-deck', 0, -0.27, 42, span, 0.54, bridge.width, concrete);
   for (const x of [-28, 28]) {
     for (const z of [32.5, 51.5]) {
-      box('bridge-supported-pier', x, -0.9, z, 1.6, 2.2, 1.6, concrete); box('bridge-tower-leg', x, 6.7, z, 1.25, 13.4, 1.25, red);
+      box('bridge-supported-pier', x, -0.9, z, 1.6, 2.2, 1.6, concrete); box('bridge-tower-leg', x, 6.7, z, 1.55, 13.4, 1.55, red);
     }
-    box('bridge-tower-crossbeam', x, 13.05, 42, 1.25, 0.65, 20.25, red);
+    box('bridge-tower-crossbeam', x, 13.05, 42, 1.55, 0.85, 20.25, red);
   }
   for (const z of [32.5, 51.5]) {
     const path = Array.from({ length: 49 }, (_, i) => {
       const x = -44 + i / 48 * 88, y = Math.abs(x) <= 28 ? 5.5 + 7.55 * (x / 28) ** 2 : 13.05 - (Math.abs(x) - 28) * 0.72;
       return new Vector3(x, y, z);
     });
-    MeshBuilder.CreateTube('bridge-suspension-cable', { path, radius: 0.105, tessellation: 5 }, scene).material = red;
+    MeshBuilder.CreateTube('bridge-suspension-cable', { path, radius: 0.14, tessellation: 5 }, scene).material = red;
     for (let x = -24; x <= 24; x += 6) {
       const y = 5.5 + 7.55 * (x / 28) ** 2;
       box('bridge-hanger', x, (y + 0.8) / 2, z, 0.055, y - 0.8, 0.055, metal);

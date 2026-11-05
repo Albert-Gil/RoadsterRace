@@ -37,7 +37,7 @@ export const CANYON = {
   /** Grand Canyon beds from the floor up: Tapeats, Bright Angel, Redwall, Supai, Hermit, Coconino, Kaibab. */
   rock: {
     strata: ['#8f6a52', '#a29b84', '#c97c58', '#bd6548', '#d68d63', '#b35a40', '#c26d4f', '#ead2a8', '#e0cbab', '#d8ccb5'].map(hex),
-    stratum: 3.2, talus: hex('#8b5a45'), cap: hex('#d2bd9f'), varnish: hex('#4a3027'),
+    stratum: 4.8, talus: hex('#89513e'), cap: hex('#e2c299'), varnish: hex('#4a3027'),
     granite: [hex('#9c6a50'), hex('#c08a68'), hex('#6f4a3a')], lichen: hex('#a89a5a'), dust: hex('#c8976f'),
   } satisfies RockPalette,
   plants: {
@@ -94,11 +94,11 @@ export function canyonLayout(track: TrackDefinition) {
     c = mix(c, [0.86, 0.74, 0.7], pavement * 0.6);
     const near = rockField.nearest(x, z);
     if (near >= 0) c = mix(c, [1.0, 0.8, 0.7], Math.exp(-Math.max(0, rockField(x, z)) / (0.3 * rocks[near].height + 5)) * 0.5);
-    const dw = W(x, z); c = mix(c, [1.2, 1.12, 1.06], Math.exp(-((dw / 4.4) ** 2)) * 0.65);
+    const dw = W(x, z); c = mix(c, [1.24, 1.16, 1.04], Math.exp(-((dw / 10) ** 2)) * 0.72);
     c = mix(c, [1.0, 0.86, 0.78], smoothstep(0.1, 0.35, slope) * 0.25);
     const exposed = smoothstep(0.06, 0.35, slope) * smoothstep(C.floor + 1.6, C.floor + 4.5, h);
-    const bed = Math.floor((h - C.floor) / 2.1) % 3;
-    c = mix(c, bed === 1 ? [1.08, 0.88, 0.69] : bed === 2 ? [0.83, 0.64, 0.53] : [1.0, 0.73, 0.55], exposed * 0.7);
+    const bed = Math.floor((h - C.floor) / 4.8) % 3;
+    c = mix(c, bed === 1 ? [1.18, 0.95, 0.70] : bed === 2 ? [0.72, 0.49, 0.40] : [1.0, 0.66, 0.44], exposed * 0.86);
     return scale(c, 1 + 0.035 * n2 + 0.015 * (h - C.floor) / 6);
   };
 

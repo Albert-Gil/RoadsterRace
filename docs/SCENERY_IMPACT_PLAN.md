@@ -1,7 +1,10 @@
 # Scenery with a visible impact
 
-Proposal after the owner's feedback, 2026-11-04. Only Yosemite's requested canoes
-are implemented in this change. The larger venue passes below remain proposals.
+Approved after the owner's feedback, 2026-11-04. The canoe milestone was committed
+separately. The 2026-11-05 implementation develops all nine venues below; see
+[SCENERY_COMPOSITION.md](SCENERY_COMPOSITION.md) for the actual scope and evidence.
+The table remains the art-direction brief, not a claim that every proposed detail
+or long-term terrain change has been implemented.
 
 ## Why the previous details felt small
 

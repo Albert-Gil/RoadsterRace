@@ -65,7 +65,7 @@ export function buildCircuitDetails(scene: Scene, track: TrackDefinition, theme:
     // Plant only within the solid islands, leaving the generous sand runoff usable.
     for (let i = 0; coastal && i < 110; i++) {
       const p = { x: cx + Math.sin(i * 17.3) * 26, z: cz + Math.sin(i * 9.71) * 16 };
-      if (!insideBarrier(p, barrier) || track.barriers.some(b => b !== barrier && (b.kind === 'building' || b.kind === 'rock') && insideBarrier(p, b)) || (barrier.id === 'coastal-gardens' && p.x > -24 && p.x < 2 && p.z > -12 && p.z < 3)) continue;
+      if (!insideBarrier(p, barrier) || barrier.id==='coastal-gardens' || track.barriers.some(b => b !== barrier && (b.kind === 'building' || b.kind === 'rock') && insideBarrier(p,b)))continue;
       if (projectToPolyline(p, [...vertices, vertices[0]], cumulative([...vertices, vertices[0]])).distance < 1.7) continue;
       const bush = MeshBuilder.CreateSphere('coastal-scrub', { diameter: 1.3 + (i % 4) * 0.35, segments: 4 }, scene); bush.position.set(p.x, 0.7, p.z); bush.scaling.set(1.3, 0.75, 1); bush.material = i % 3 ? leaf : leafLight;
       if (i % 7 === 0) { const stone = MeshBuilder.CreateSphere('landscaped-limestone', { diameter: 2.3, segments: 4 }, scene); stone.position.set(p.x + 0.4, 0.7, p.z); stone.scaling.set(1.3, 0.7, 1); stone.material = rock; }
@@ -93,15 +93,7 @@ export function buildCircuitDetails(scene: Scene, track: TrackDefinition, theme:
   }
   for (let i = 0; i < 9; i++) { const p = track.centerline[20 + i * 23]; if (bridgeAt(p, track)) continue; box('road-repair', p, 0.135, 1 + i % 3, 0.006, 1.8, worn, i * 0.78); }
   if (!coastal) return;
-  // Pit bays are entirely inside the protected central infield.
-  for (let i = 0; i < 5; i++) {
-    const x = -20 + i * 4;
-    box('pit-roller-door', { x, z: -8.18 }, 1.4, 3.3, 2.3, 0.08, dark);
-    box('pit-bay-header', { x, z: -8.25 }, 2.7, 3.6, 0.18, 0.16, red);
-    for (let j = 0; j < 5; j++) box('roller-door-slat', { x, z: -8.25 }, 0.6 + j * 0.35, 3.2, 0.03, 0.02, rail);
-    box('pit-apron', { x, z: -11 }, 0.19, 3.5, 0.035, 4.8, dark);
-  }
-  label('pit-fascia', 'ROADSTER  /  RACE', 17, 1.45, { x: -10, z: -9.82 }, 4.65);
+  label('clubhouse-fascia','NEWPORT / MOTOR CLUB',20,1.2,{x:-17,z:-10.48},2.45);
   // Gantry spans the full runoff; its inner support is inside the protected island.
   for (const z of [-12, -48]) box('gantry-column', { x: -18, z }, 3.5, 0.7, 7, 0.7, dark);
   box('start-gantry', { x: -18, z: -30 }, 6.8, 0.8, 0.65, 36.5, dark);

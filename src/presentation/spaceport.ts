@@ -8,6 +8,7 @@ import type { PresentationTheme } from './themes';
 import { buildLaunchsiteLandscape } from './launchsite';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { buildingGeometry } from './building-geometry';
+import {assemblyHall,launchTowerDetail,bakeLandmark} from './venue-landmarks';
 import { launchsiteRocketStages, launchsiteVessels, launchsiteYardTank } from '../core/tracks/venue-parcels';
 
 /** Original, lightweight launchyard scenery. All substantial structures occupy protected footprints. */
@@ -37,14 +38,7 @@ export function buildSpaceport(scene: Scene, track: TrackDefinition, theme: Pres
   // Assembly sector, entirely inside assembly-island.
   box('assembly-plinth', -11, 0.38, -16, 40, 0.16, 14, concrete);
   box('assembly-hangar', -11, 3.7, -14, 37, 7, 10, white);
-  box('hangar-roof', -11, 7.4, -14, 39, 0.45, 12, metal);
-  for (let i = 0; i < 5; i++) {
-    const x = -25 + i * 7;
-    box('hangar-door', x, 2.7, -19.1, 5.8, 4.7, 0.12, steel);
-    for (let j = 0; j < 6; j++) box('door-rib', x, 0.7 + j * 0.7, -19.2, 5.8, 0.06, 0.12, metal);
-    box('door-header', x, 5.4, -19.22, 6.1, 0.2, 0.15, red);
-    box('roof-skylight', x, 7.66, -14, 4.4, 0.12, 5.4, glass);
-  }
+  bakeLandmark('assembly-hall-roofscape',assemblyHall(),scene,white);
   sign('assembly-sign', 'ORBITAL / ASSEMBLY', -11, 6.4, -19.3, 28);
   box('mission-control', 23, 3, -17, 12, 5.7, 9, white);
   box('mission-control-glass', 23, 3.8, -21.55, 11, 2.3, 0.12, glass);
@@ -135,6 +129,11 @@ export function buildSpaceport(scene: Scene, track: TrackDefinition, theme: Pres
     const brace = box('tower-brace', 102.5, level + 1.4, 22.9, 0.14, 4, 0.14, steel); brace.rotation.z = -0.7;
   }
   box('service-arm', 98.5, 19.5, 24.5, 8, 0.45, 0.6, white);
+  // Bring the existing landmark away from the control rail, inside its original parcel.
+  const launchParts=new Set(['rocket-engine-skirt','rocket-body','rocket-upper-body','rocket-nose','rocket-fin','launch-tower-leg','tower-floor','tower-brace','service-arm']);
+  for(const mesh of scene.meshes)if(launchParts.has(mesh.name))mesh.position.x-=4.5;
+  for(const mesh of scene.meshes)if(mesh.name==='landing-pad'||mesh.name==='pad-ring')mesh.position.x-=2;
+  bakeLandmark('launch-tower-cross-bracing',launchTowerDetail(),scene,white);
   // Desert landscape: terrain and painted ground, plants, and the solid rock formations (landscape/).
   const landscape = buildLaunchsiteLandscape(scene, track, materials);
   return { shadowCasterMaterials: casters, lateShadowCasters: landscape.shadowCasters, update: (_time: number, _reduced: boolean) => {} };

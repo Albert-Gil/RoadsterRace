@@ -246,10 +246,10 @@ export const sceneryFinishes: Partial<Record<keyof typeof sceneryLighting, Recor
 export const canyonAppearance={cliff:['#a85f43','#bc7850','#d39464','#e1ad79'],mesa:'#c6986b',road:'#aa895d',ruts:'#705c42',dryWash:'#d9b891',scrub:'#68724b',guard:'#96745a'};
 /** Cosmetic trail geology: actual support edges/elevations stay authoritative. */
 export const canyonIntegration = {
-  floor: -2.6, bankLayers: 16, baseSpread: 1.65, bedHeight: 1.15,
+  floor: -2.6, bankLayers: 16, baseSpread: 1.65, bedHeight: 2.6,
   rimRoughness: 1.1, roadRoughness: 0.9, roadFeather: 1.8,
   cliffErosion: 0.55,
-  strata: ['#a65d43', '#bf7852', '#d69b6c', '#bd7350', '#ddb48a', '#ac6347', '#c78b61'],
+  strata: ['#914b38', '#ca8556', '#e6b87f', '#a65d43', '#ecd0a1', '#a4563b', '#c78b61'],
   cap: '#c49b72', dust: '#b98159', shade: '#6f4437',
   shoulderMapSize: 2048,
 };
@@ -295,7 +295,18 @@ export const hopEffects = { pulse: 0.22, nozzleHeight: 0.20, puffs: 16, lifetime
 export const cityAppearance = { bridge: '#cb4b36', facades: ['#caba91', '#8aa49a', '#bb8068', '#9daabb', '#d8be8d', '#9b8173'], paving: '#bbb7a6', roof: '#52616a', shop: '#354953', window: '#456575', warmWindow: '#b9bd9d' };
 export const sunsetAppearance = { deck: '#a9866b', steel: '#465360', ivory: '#f6e4cc', glass: '#4a7e91', coral: '#e67b77', gold: '#eec575' };
 export const pierRampAppearance = { surfaceOffset:.11,plankLength:.58,boards:['#fff7e8','#e7d9c4','#f6ead7','#d2c9b8','#eee0ca'],shade:'#655c51',fascia:'#c6b9a3',joist:'#a59985',hardware:'#78817f' };
+export const pierComposition={wheelX:86.7,wheelY:11.9,wheelZ:31,wheelRadius:9.3,speed:.11,coral:'#df7a66',ivory:'#f2dfb9',gold:'#e4ba68',glass:'#507987',timber:'#bd9870',deckSeam:'#8d735a',cabins:['#df806a','#83a9a6','#e1b86d','#9c8fad']};
+export const shoreComposition={speed:.065,opacity:.67,foam:'#e7eee2'};
 export const urbanRampAppearance = { concrete:'#e4e7e7',edge:'#c5cdd1',paving:'#dce1e3',drain:'#405058',surfaceOffset:.10 };
+
+/** Large compositions and roofscape colors, tuned in the fixed phone overview. */
+export const venueComposition={
+ night:{facades:['#7484a0','#ad7885','#688e9e','#b18e76','#759692','#a18da8'],roofs:['#5c7892','#98735e','#5e8c8b','#8d697d'],foot:'#485b6a',trim:'#c5bca7',window:'#233c51',light:'#ffe2a8',door:'#263344',terrace:'#b2926f',plant:'#376657',paving:'#5b6d7d',neon:['#ffa6d4','#82e5f1','#ffc58d']},
+ city:{facades:['#e2c499','#86b4b0','#d58a75','#b5c2cf','#e3c777','#ac9ac0'],roofs:['#b66549','#c88661','#7e9b98','#d2a873'],foot:'#b6b09b',trim:'#eddfc0',window:'#466c7b',light:'#e6d5a4',door:'#52615e',terrace:'#b69b77',plant:'#4f7856',paving:'#c6bda6',neon:['#e4c488']},
+ coastal:{roof:'#c98361',wall:'#f0e2c7',wood:'#a77e55',glass:'#527f8a',trim:'#f8edcf',leaf:'#397251',sand:'#dfc99e'},
+ industrial:{roof:'#b7c6c8',steel:'#536c78',dark:'#334954',trim:'#e3e7d9',glass:'#72a0aa',accent:'#d48852'},
+ mountain:{snowLight:'#f7f6eb',snowShade:'#7f9ebc',snowGully:'#59778f',granite:'#707d82',talus:'#a9ac91',valleyGreen:'#537b55',riparian:'#3d7254',canyonBeds:['#824b3b','#c47b4d','#e0b178','#a65c43','#eed1a0']},
+};
 
 /** Decorative density/scale only. All geometry is batched and stays on existing structures. */
 export const venueDetail = { floorSpacing: 1.9, rockLayers: 7, mesaStones: 34, stoneScale: 1.15,
@@ -317,7 +328,7 @@ export const snowyTahoeAppearance = {
 
 /** Original granite-valley presentation; all physical heights/footprints come from the track. */
 export const yosemiteAppearance={
- extent:{minX:-280,maxX:300,minZ:-220,maxZ:320},cameraElevation:58,road:'#8f8065',shoulder:'#a3936d',meadow:'#728363',dryMeadow:'#a69d71',forestFloor:'#56644c',forest:'#34553d',forestLight:'#70865a',bark:'#71563e',granite:['#aeb6b1','#c9c8b9','#e2ddce','#737f83'],lichen:'#727b4e',timber:'#896648',roof:'#495548',window:'#b9d5bf',water:'#438c8d',waterDeep:'#285b6c',foam:'#dcebdc',
+ extent:{minX:-280,maxX:300,minZ:-220,maxZ:320},cameraElevation:58,road:'#8f8065',shoulder:'#a3936d',meadow:'#7c9368',dryMeadow:'#b4ab79',forestFloor:'#45624b',forest:'#34553d',forestLight:'#70865a',bark:'#71563e',granite:['#aeb6b1','#c9c8b9','#e2ddce','#737f83'],lichen:'#727b4e',timber:'#896648',roof:'#495548',window:'#b9d5bf',water:'#438c8d',waterDeep:'#285b6c',foam:'#dcebdc',
  treeCount:400,treeHeight:[11,25],nearTreeCount:180,nearTreeHeight:[7,13],nearTreeSetback:14,nearTreeSightline:.45,cedar:'#3c644c',fern:'#426c42',grass:'#8b995a',flowers:'#d4c37c',surfaceOffsets:{road:.12,branch:.13,fringe:.045,branchFringe:.055},mist:{count:18,opacity:.04,speed:.42},
  waterfall:{speed:.8,sprayCount:36,dropletCount:54,gravity:28,opacity:.96,sprayOpacity:.48,wetRock:'#657b7b',lipFraction:.90,lipRadius:.88,waterRadius:.89,halfAngle:.42,curtainWidth:10.8,basinWidth:16,basinDepth:10,basinHeight:.75,angle:Math.PI/2+.04,
   widths:{'granite-falls':10.8,'creek-falls':6.4,'cathedral-falls':7.2,'sentinel-falls':6.6,'sentinel-buttress-falls':7.4,'granite-twin-falls':6.2} as Record<string,number>},
@@ -370,7 +381,7 @@ export const venueFinish = {
  yosemite:{edge:'#a08e6c',ground:'#84906a',grit:'#bdaf8b',inset:.18,spread:1.05},
 } satisfies Record<string,VenueFinish>;
 export const interfaceMotion = { durationMs:160, rowStaggerMs:40 };
-export const circuitArtRevision = '2026-11-04-waterways';
+export const circuitArtRevision = '2026-11-05-scenery';
 /** One sun per venue; unchanged shadow-map dimensions and cached caster policy. */
 export const venueSunDirections = {
  coastal:[.50,-1,.60],spaceport:[.65,-1,.38],bay:[.40,-1,.62],sunset:[.72,-1,.35],

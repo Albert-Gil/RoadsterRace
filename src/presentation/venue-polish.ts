@@ -49,6 +49,7 @@ export function finishVenue(id: SceneryId, scene: Scene, track: TrackDefinition,
   }
   // Layered planting beds in the unused portion of protected islands.
   for (const barrier of track.barriers) {
+    if(id==='coastal'&&barrier.id==='coastal-gardens')continue;
     if (barrier.kind && barrier.kind !== 'infield' || /gantry|grandstand/.test(barrier.id)) continue;
     const p = barrier.footprint, x0 = Math.min(...p.map(p => p.x)), x1 = Math.max(...p.map(p => p.x));
     const z0 = Math.min(...p.map(p => p.z)), z1 = Math.max(...p.map(p => p.z));

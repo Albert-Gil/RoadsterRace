@@ -14,6 +14,9 @@ import { projectToPolyline } from '../core/geometry';
 import { StaticBoxes } from './static-boxes';
 import { buildLALandscape, LA, laLayout } from './la-landscape';
 import { urbanRampGeometry } from './urban-ramp';
+import { buildUrbanArchitecture } from './urban-architecture';
+import {urbanPromenade} from './urban-promenade';
+import {bakeLandmark} from './venue-landmarks';
 
 /** Night lighting is baked into batched emissive architecture and soft light pools.
  * No per-window lights, transparent skyscrapers, extra collision rules or shortcut signage.
@@ -65,55 +68,15 @@ export function buildLANights(scene:Scene,track:TrackDefinition,theme:Presentati
    for(const axle of [-1,1])box('la-parked-wheel',x+axle*1.45,.3,40.6+side*.9,.6,.6,.22,dark);
   }
  }
- for(const [index,b] of laBuildings.entries()){
-  const material=facades[b.style],n=neon[b.style],y=.22+b.h;
-  box('la-building-foundation',b.x,.12,b.z,b.w+.35,.3,b.d+.35,concrete);
-  box('la-building-body',b.x,.22+b.h/2,b.z,b.w,b.h,b.d,material);
-  box('la-building-roof',b.x,y+.15,b.z,b.w+.3,.3,b.d+.3,dark);
-  for(const side of [-1,1]){
-   box('la-roof-parapet',b.x,y+.45,b.z+side*b.d/2,b.w+.3,.6,.18,material);
-   box('la-roof-edge-light',b.x,y+.31,b.z+side*(b.d/2+.13),b.w+.4,.055,.08,n);
-   box('la-roof-parapet',b.x+side*b.w/2,y+.45,b.z,.18,.6,b.d,material);
-  }
-  // Four-sided window grids with deterministic occupied and dark rooms.
-  for(let floor=2;floor<b.h-1;floor+=2.2)for(const side of [-1,1]){
-   for(let x=-b.w/2+1.25;x<b.w/2-.7;x+=2.1){
-    const lit=(Math.floor(floor)+Math.round(x*3)+index*7)%5!==0;
-    box('la-window',b.x+x,floor,b.z+side*(b.d/2+.035),1.05,1.15,.06,lit?windows:unlitWindow);
-   }
-   for(let z=-b.d/2+1.5;z<b.d/2-.7;z+=2.3)box('la-side-window',b.x+side*(b.w/2+.035),floor,b.z+z,.06,1.15,1.1,(Math.round(z)+index)%4?windows:unlitWindow);
-  }
-  for(const side of [-1,1]){
-   box('la-shopfront',b.x,1.15,b.z+side*(b.d/2+.06),b.w-1.5,1.7,.09,glass);
-   box('la-marquee',b.x,2.2,b.z+side*(b.d/2+.35),b.w-.5,.16,.8,n);
-   for(let x=-b.w/2+1;x<b.w/2;x+=1.8)box('la-marquee-bulb',b.x+x,2.05,b.z+side*(b.d/2+.7),.12,.12,.12,windows);
-  }
-  for(let i=0;i<2;i++){
-   const x=b.x+(i?1:-1)*b.w*.25;
-   box('la-rooftop-hvac',x,y+.65,b.z,2.4,1,2,dark);
-   for(let k=0;k<5;k++)box('la-hvac-grille',x-.8+k*.4,y+1.16,b.z,.12,.03,1.5,concrete);
-  }
-  if(index%4===0){
-   const tank=MeshBuilder.CreateCylinder('la-rooftop-water-tank',{height:1.7,diameter:2,tessellation:10},scene);tank.position.set(b.x,y+1.8,b.z+b.d*.24);tank.material=concrete;
-   for(const side of [-1,1])box('la-tank-support',b.x+side*.6,y+.65,b.z+b.d*.24,.12,1.3,.12,dark);
-  }
-  if(b.z<98)patch('la-neon-pavement',b.x,b.z-b.d/2-1,b.w+6,9,pools[b.style],.055);
-  else{
-   box('la-skyline-crown',b.x,y+1.1,b.z,b.w*.7,1.7,b.d*.7,material);
-   for(const side of [-1,1]){
-    box('la-crown-light',b.x,y+1.98,b.z+side*b.d*.36,b.w*.72,.06,.08,n);
-    box('la-crown-light',b.x+side*b.w*.36,y+1.98,b.z,.08,.06,b.d*.72,n);
-   }
-   box('la-roof-antenna',b.x,y+3,b.z,.12,3,.12,dark);
-  }
- }
+ buildUrbanArchitecture(scene,laBuildings.map(b=>({...b,width:b.w,depth:b.d,height:b.h,color:b.style})),true,white,windows);
+ bakeLandmark('urban-boulevard-paving',urbanPromenade(track,true,()=>true),scene,white);
  // Original theater marquees, safely within the arts block.
  const signTexture=new DynamicTexture('la-original-signage',{width:1024,height:1024},scene,false),ctx=signTexture.getContext() as CanvasRenderingContext2D;
  for(const [i,[title,subtitle]] of [['LA NIGHTS','AFTER HOURS MOTOR CLUB'],['ORBIT','MIDNIGHT PICTURE HOUSE'],['ECHO','HOTEL & ROOFTOP'],['VOLT','ELECTRIC SERVICE GARAGE']].entries()){
   ctx.fillStyle=art.signBackground;ctx.fillRect(0,i*256,1024,256);ctx.fillStyle=art.neon[i%3];ctx.font='italic bold 126px sans-serif';ctx.textAlign='center';ctx.fillText(title,512,i*256+155);ctx.fillStyle=art.window;ctx.font='29px sans-serif';ctx.fillText(subtitle,512,i*256+215);
  }signTexture.update();
  const signMat=mat('la-neon-sign',art.window,false,true);signMat.diffuseTexture=signTexture;
- for(const [i,[x,y,z,width]] of [[55,4.3,14.8,14],[80,5.1,16.8,12],[-27,8.2,-4.2,12],[-86,4.5,14.8,12]].entries()){
+ for(const [i,[x,y,z,width]] of [[55,4.3,10.88,20],[81,5.1,10.88,19],[-29.8,7.2,-32.98,15],[-86,4.5,14.4,14]].entries()){
   const sign=MeshBuilder.CreatePlane('la-theater-marquee',{width,height:width/4},scene);sign.position.set(x,y,z);sign.material=signMat;
   const uv=sign.getVerticesData(VertexBuffer.UVKind)!;for(let k=1;k<uv.length;k+=2)uv[k]=(3-i+uv[k])/4;sign.setVerticesData(VertexBuffer.UVKind,uv);
  }

@@ -21,6 +21,7 @@ import { tahoeWeather } from './tahoe-weather';
 import { tahoeDetails } from './tahoe-details';
 import{RenderedSurface}from'./rendered-surface';
 import { tahoeLayout } from './tahoe-layout';
+import {alpineOutcrops} from './mountain-composition';
 
 export { tahoeLayout };
 
@@ -71,14 +72,7 @@ export function buildTahoe(scene:Scene,track:TrackDefinition,theme:PresentationT
   }
   bake('slope-groomer-impressions',grooves,ruts);
   for(const t of layout.trees.filter(t=>t.authored))box('fir-trunk',t.x,layout.height(t.x,t.z)+t.height*.22,t.z,.22,t.height*.44,.22,wood);
-  const stones=new Geometry();
-  // Several uneven, overlapping rock crowns within each authoritative granite footprint.
-  for(const b of track.barriers.filter(b=>b.kind==='rock')){
-    const cx=b.footprint.reduce((s,p)=>s+p.x,0)/b.footprint.length,cz=b.footprint.reduce((s,p)=>s+p.z,0)/b.footprint.length,y=b.baseHeight??0;
-    const rings=[0,.6,1].map((t,layer)=>b.footprint.map((p,i)=>stones.vertex(p.x+(cx-p.x)*t,y+(layer===0?0:layer===1?b.height*(.65+.12*Math.sin(i*2.3)):b.height),p.z+(cz-p.z)*t,hex(layer===2?art.roof:art.rock))));
-    for(let layer=0;layer<2;layer++)for(let i=0;i<b.footprint.length;i++){const j=(i+1)%b.footprint.length;stones.triangle(rings[layer][i],rings[layer+1][i],rings[layer+1][j]);stones.triangle(rings[layer][i],rings[layer+1][j],rings[layer][j]);}
-  }
-  bake('snow-capped-granite-outcrops',stones,stone);
+  bake('snow-capped-granite-outcrops',alpineOutcrops(track),stone);
   const reserve=track.barriers.find(b=>b.id==='forest-reserve')!,cx=-8,cz=5,bank=new Geometry(),rim:Point[]=[];
   for(let i=0;i<reserve.footprint.length;i++){const a=reserve.footprint[i],b=reserve.footprint[(i+1)%reserve.footprint.length],n=Math.ceil(Math.hypot(b.x-a.x,b.z-a.z)/1.5);for(let k=0;k<n;k++)rim.push({x:a.x+(b.x-a.x)*k/n,z:a.z+(b.z-a.z)*k/n});}
   const rings=[0,.8,2.8].map((inset,layer)=>rim.map((p,i)=>{const L=Math.hypot(cx-p.x,cz-p.z);return bank.vertex(p.x+(cx-p.x)/L*inset,layer===1?.5+.3*Math.sin(i*.9)**2:.06,p.z+(cz-p.z)/L*inset,hex(layer===1?art.powder:art.snow));}));

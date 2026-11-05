@@ -1,10 +1,12 @@
 /** Original, fictional LA architecture. Every building stands inside a protected block. */
+import {laCityBlocks} from '../core/tracks/la-city-blocks';
 export const laBuildings = [
-  {x:-28,z:-20,w:16,d:15,h:10,style:0}, {x:-7,z:-19,w:13,d:14,h:7,style:1},
-  {x:-27,z:4,w:17,d:16,h:13,style:2}, {x:-7,z:5,w:12,d:17,h:10,style:0},
-  {x:-27,z:24,w:16,d:12,h:8,style:1}, {x:-7,z:26,w:11,d:10,h:6,style:2},
-  {x:55,z:26,w:18,d:22,h:6,style:1}, {x:80,z:27,w:17,d:20,h:8,style:2},
-  {x:105,z:27,w:18,d:20,h:10,style:0}, {x:-86,z:26,w:16,d:22,h:7,style:2},
+  {x:-29.8,z:-22.8,w:20,d:20.2,h:10,style:0}, {x:-7,z:-22.8,w:20,d:20.2,h:7,style:1},
+  {x:-29.8,z:0,w:20,d:21.6,h:13,style:2}, {x:-7,z:0,w:20,d:21.6,h:10,style:0},
+  {x:-29.8,z:23,w:20,d:21,h:9,style:1}, {x:-7,z:23,w:20,d:21,h:7,style:2},
+  {x:55,z:25,w:24,d:28,h:8,style:1}, {x:81,z:25,w:24,d:28,h:10,style:2},
+  {x:107,z:25,w:24,d:28,h:12,style:0}, {x:-86,z:26,w:18,d:23,h:8,style:2},
   ...Array.from({length:10},(_,i)=>({x:-123+i*30,z:111,w:18+(i%3)*3,d:20,h:17+(i*13%23),style:i%3})),
   {x:23.5,z:29,w:37,d:10,h:9.28,style:1},
+  ...laCityBlocks.map((b,i)=>({id:b.id,x:b.x,z:b.z,w:b.width,d:b.depth,h:b.height,style:i%3})),
 ];

@@ -17,6 +17,10 @@ import { reflectSantaVenue } from '../core/tracks/santa-monica';
 import { buildSantaMonicaLandscape } from './santa-monica-landscape';
 import { buildSantaBeachLife } from './santa-monica-beach-life';
 import { pierRampGeometry } from './pier-ramp';
+import {buildPacificWheel,amusementBoardwalk} from './pacific-wheel';
+import {bakeLandmark} from './venue-landmarks';
+import {pierComposition} from './themes';
+import {shoreSurf} from './shore-surf';
 
 /** Original procedural seaside venue. Every pier slab uses a physical support footprint. */
 export function buildSantaMonica(scene: Scene, track: TrackDefinition, theme: PresentationTheme, materials: Map<string, StandardMaterial>) {
@@ -105,20 +109,12 @@ export function buildSantaMonica(scene: Scene, track: TrackDefinition, theme: Pr
     const canopy = MeshBuilder.CreateCylinder('beach-umbrella', { diameterTop: 0, diameterBottom: 3.8, height: 0.7, tessellation: 10 }, scene); canopy.position.set(x + 7, 2.3, z - 1); canopy.material = color ? gold : coral;
     box('umbrella-pole', x + 7, 1.1, z - 1, 0.08, 2.2, 0.08, white);
   }
-  // The wheel is one moving batched mesh; its support structure remains static.
-  const wheelParts: Mesh[] = [], wx = 85, wz = 31, wy = 10.4, radius = 7.7;
-  for (const side of [-1, 1]) tube('wheel-a-frame', [new Vector3(wx - 5, 0.3, wz + side * 2), new Vector3(wx, wy, wz), new Vector3(wx + 5, 0.3, wz + side * 2)], 0.25, white);
-  const rim = MeshBuilder.CreateTorus('pacific-wheel-rim', { diameter: radius * 2, thickness: 0.3, tessellation: 48 }, scene); rim.rotation.x = Math.PI / 2; rim.position.set(wx, wy, wz); rim.material = coral; wheelParts.push(rim);
-  for (let i = 0; i < 12; i++) {
-    const a = i / 12 * Math.PI * 2, p = new Vector3(wx + Math.cos(a) * radius, wy + Math.sin(a) * radius, wz);
-    wheelParts.push(tube('wheel-spoke', [new Vector3(wx, wy, wz), p], 0.065, coral));
-    wheelParts.push(box('wheel-gondola', p.x, p.y - 0.45, wz, 1.2, 0.85, 1.1, coral));
-  }
-  const wheel = Mesh.MergeMeshes(wheelParts, true, true)!; wheel.name = 'animated-pacific-wheel'; wheel.metadata = { dynamicScenery: true };
-  // Recenter the batched vertices so the local pivot is the wheel's axle.
-  wheel.bakeTransformIntoVertices(Matrix.Translation(-wx, -wy, -wz)); wheel.position.set(wx, wy, wz);
+  const {wheelX:wx,wheelZ:wz,wheelY:wy}=pierComposition;
+  for(const side of[-1,1])tube('wheel-a-frame',[new Vector3(wx-6,.3,wz+side*2.3),new Vector3(wx,wy,wz),new Vector3(wx+6,.3,wz+side*2.3)],.30,white);
+  const wheel=buildPacificWheel(scene,white);
+  bakeLandmark('amusement-boardwalk-district',amusementBoardwalk(),scene,white);
   const coasterPath = Array.from({ length: 97 }, (_, i) => {
-    const a = i / 96 * Math.PI * 2; return new Vector3(105 + Math.cos(a) * 8, 2.6 + (1 + Math.cos(a * 2 + 0.6)) * 2.1, 31 + Math.sin(a) * 4.8);
+    const a = i / 96 * Math.PI * 2; return new Vector3(105 + Math.cos(a) * 8, 2.8 + (1 + Math.cos(a * 2 + 0.6)) * 3.2, 31 + Math.sin(a) * 4.8);
   });
   for (const side of [-1, 1]) {
     const rail = coasterPath.map(p => {
@@ -132,6 +128,13 @@ export function buildSantaMonica(scene: Scene, track: TrackDefinition, theme: Pr
     tube('coaster-track-tie', [p.subtract(radial), p.add(radial)], .055, white);
   }
   for (let i = 0; i < 96; i += 8) { const p = coasterPath[i]; box('coaster-trestle', p.x, p.y / 2, p.z, 0.18, p.y, 0.18, white); }
+  for(let i=0;i<96;i+=6){
+    const p=coasterPath[i],q=coasterPath[(i+6)%96],radial=new Vector3(p.x-105,0,p.z-31).normalize().scale(.65);
+    for(const side of[-1,1]){
+      const base=p.add(radial.scale(side));tube('coaster-braced-leg',[new Vector3(base.x,.18,base.z),new Vector3(base.x,p.y-.12,base.z)],.13,dark);
+      tube('coaster-lattice-brace',[new Vector3(base.x,.35,base.z),new Vector3(q.x,q.y-.18,q.z)],.075,white);
+    }
+  }
   const trainParts = Array.from({ length: 3 }, (_, i) => box('coaster-train-car', -i * 1.2, 0, 0, 1, 0.7, 0.7, coral));
   const train = Mesh.MergeMeshes(trainParts, true, true)!; train.name = 'animated-coaster-train'; train.metadata = { dynamicScenery: true };
 
@@ -147,11 +150,13 @@ export function buildSantaMonica(scene: Scene, track: TrackDefinition, theme: Pr
 
   for (const mesh of scene.meshes) if (!before.has(mesh) && !mesh.parent) mesh.parent = venueRoot;
   const landscape = buildSantaMonicaLandscape(scene, worldTrack, materials);
+  const surf=shoreSurf(scene,{kind:'beach',water:-2.4,shoreX:landscape.layout.shoreX,height:landscape.layout.height});
   // Beach life (v4 structures, crowds, boats, towels) is one world-space batch built from the physical track.
   casters.add(buildSantaBeachLife(scene, worldTrack, landscape.layout, materials).material);
   return { shadowCasterMaterials: casters, lateShadowCasters: landscape.shadowCasters, update(time: number, reduced: boolean) {
     waterTexture.uOffset = reduced ? 0 : time * 0.002;
-    wheel.rotation.z = reduced ? 0 : time * 0.11;
+    wheel.update(time,reduced);
+    surf.update(time,reduced);
     const index = reduced ? 0 : time * 7 % 96, i = Math.floor(index), a = coasterPath[i], b = coasterPath[i + 1];
     train.position.copyFrom(Vector3.Lerp(a, b, index - i)); train.position.y += 0.45; train.rotation.y = -Math.atan2(b.z - a.z, b.x - a.x);
   } };

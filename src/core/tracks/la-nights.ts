@@ -4,6 +4,7 @@ import { cumulative, projectToPolyline } from '../geometry';
 import { createStartFinish } from '../start-finish';
 import type { Point, TrackBarrier, TrackDefinition, TrackJump, HopShortcut } from '../types';
 import { backlotCases, obstacleRectangle } from './hop-obstacles';
+import {laCityBlocks} from './la-city-blocks';
 
 export const laRectangle = (x: number, z: number, w: number, d: number): Point[] =>
   [{ x, z }, { x: x + w, z }, { x: x + w, z: z + d }, { x, z: z + d }];
@@ -24,11 +25,12 @@ const branch = [...arc(-50,48,Math.PI/2,Math.PI), ...Array.from({length:85},(_,i
 const hop: HopShortcut = {id:'backlot-alley',branch,width:16,obstacleId:'backlot-service-divider',entryProgress:progress(branch[0]),exitProgress:progress(branch.at(-1)!)};
 const solid = (id:string,x:number,z:number,w:number,d:number,height=1.1,kind:TrackBarrier['kind']='infield'):TrackBarrier => ({id,height,kind,footprint:laRectangle(x,z,w,d)});
 export const laNightsTrack: TrackDefinition = {
-  id:'la-nights',version:4,name:'LA nights',centerline,distances,length,
+  id:'la-nights',version:5,name:'LA nights',centerline,distances,length,
   roadWidth:16,carWidth: VEHICLE_DIMENSIONS.width,carLength: VEHICLE_DIMENSIONS.length,start:centerline[0],startFinish:createStartFinish(centerline[0],centerline[1],16),
   supports:[{id:'city-ground',footprint:laRectangle(-500,-500,1000,1000)}],
   waterOpenings:[{id:'storm-channel',footprint:laRectangle(62,-27,10,37)}],jumps:[jump],hopShortcuts:[hop],
   barriers:([
+    ...laCityBlocks.map(b=>solid(b.id,b.x-b.width/2-.25,b.z-b.depth/2-.25,b.width+.5,b.depth+.5,b.height+.18,'building')),
     solid('studio-connector',5,24,37,10,9.5,'building'),
     solid('downtown-block',-41,-34,46,69),
     solid('studio-block',-96,12,20,28),

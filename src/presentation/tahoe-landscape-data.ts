@@ -6,6 +6,7 @@ import { fbm2, smoothstep } from './landscape/noise';
 import { snowyTahoeAppearance as art } from './themes';
 import { tahoeForest } from './tahoe-forest';
 import { tahoeLayout } from './tahoe-layout';
+import {alpineGroundColor} from './mountain-composition';
 
 export interface TahoeLandscapeData { hills: TerrainArrays; forest: MeshArrays }
 export const tahoeTransferables = (data: TahoeLandscapeData) => arrayBuffers(data.hills, data.forest);
@@ -23,8 +24,7 @@ export function tahoeLandscapeData(track: TrackDefinition, layout = tahoeLayout(
     // competing triangles between the world grid and the curved ribbon.
     return layout.height(x, z) - 1 * (1 - smoothstep(7, 10, layout.distance(x, z)));
   }, color(x, z, h, slope) {
-    const shade = smoothstep(4, 72, h) * .18 + Math.min(.4, slope * .23), noise = Math.max(0, fbm2(x / 24, z / 24, 3)) * .065;
-    return mix(hex('#ffffff'), hex('#9bb0c5'), shade + noise);
+    return alpineGroundColor(x,z,h,slope,layout.distance(x,z));
   } });
   return { hills, forest };
 }

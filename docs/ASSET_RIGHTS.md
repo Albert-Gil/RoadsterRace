@@ -271,3 +271,12 @@ and review captures come from the actual game. No external asset was added.
 The open-hull canoes, seated paddlers, wooden paddles and small wakes in
 presentation/yosemite-river-life.ts are original procedural geometry. They reuse
 the existing native material and have no external image or model dependency.
+
+### Whole-venue scenery composition — 2026-11-05
+
+The stepped city buildings, storefront windows, roof terraces, island clubhouse,
+hangar/gantry detail, amusement boardwalk, upright wheel gondolas, shoreline surf
+and broad mountain/talus colour treatments are original procedural artwork in
+this repository. They use the existing licensed/native materials and palettes;
+no downloaded models, generated bitmap art, recordings or new external sources
+were added. Updated circuit cards are captures of the actual game scenes.
