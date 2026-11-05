@@ -1,5 +1,5 @@
 import { angleDelta, clamp, cumulative, distance, lerp, mix, modulo, projectToPolyline } from './geometry';
-import { blockedRouteSection } from './barriers';
+import { blockedRouteSection, insideBarrier } from './barriers';
 import type { CompiledRoute, HopShortcut, HopTraversal, Point, RaceState, TrackDefinition } from './types';
 
 export const SHORTCUT_RULES = Object.freeze({ clearance: 0.15, sampleSpacing: 0.35, backwardTolerance: 0.5, commitAlignment: 0.5 });
@@ -25,11 +25,11 @@ function crossing(a: Point, b: Point, shortcut: HopShortcut, exit: boolean) {
 function insideCorridor(p: Point, heading: number, shortcut: HopShortcut, track: TrackDefinition) {
   const q = shortcutProjection(p, shortcut);
   const radius = track.carWidth / 2 + (track.carLength - track.carWidth) / 2 * Math.abs(Math.sin(angleDelta(heading, q.heading))) + SHORTCUT_RULES.clearance;
-  return q.distance + radius <= shortcut.width / 2 + 1e-6;
+  return q.distance + radius <= (shortcut.clearanceWidth ?? shortcut.width) / 2 + 1e-6;
 }
 
 /** Where the line's full vehicle footprint first meets a barrier: the segment index and contact point. */
-function obstacleMeeting(points: Point[], track: TrackDefinition, obstacle: TrackDefinition['barriers'][number]) {
+function obstacleMeeting(points: Point[], track: TrackDefinition, obstacle: TrackDefinition['barriers'][number], centerCrossing = false) {
   const margin = track.carLength / 2 + track.carWidth / 2 + SHORTCUT_RULES.clearance;
   const minX = Math.min(...obstacle.footprint.map(p => p.x)) - margin;
   const maxX = Math.max(...obstacle.footprint.map(p => p.x)) + margin;
@@ -39,6 +39,12 @@ function obstacleMeeting(points: Point[], track: TrackDefinition, obstacle: Trac
   for (let i = 1; i < points.length; i++) {
     const a = points[i - 1], b = points[i];
     if (Math.max(a.x, b.x) < minX || Math.min(a.x, b.x) > maxX || Math.max(a.z, b.z) < minZ || Math.min(a.z, b.z) > maxZ) continue;
+    // A broad flight corridor must not capture normal road lines merely brushing a prop's end.
+    if (centerCrossing) {
+      const n = Math.max(1, Math.ceil(distance(a, b) / SHORTCUT_RULES.sampleSpacing));
+      for (let j = 0; j <= n; j++) { const point = mix(a, b, j / n); if (insideBarrier(point, obstacle)) return { index: i, point }; }
+      continue;
+    }
     const hit = blockedRouteSection([a, b], physical);
     if (hit) return { index: i, point: hit.point };
   }
@@ -107,7 +113,7 @@ export function assessHopShortcuts(points: Point[], track: TrackDefinition): { t
   for (const shortcut of track.hopShortcuts) {
     const obstacle = track.barriers.find(b => b.id === shortcut.obstacleId);
     if (!obstacle) continue;
-    const meeting = obstacleMeeting(points, track, obstacle);
+    const meeting = obstacleMeeting(points, track, obstacle, shortcut.clearanceWidth !== undefined);
     if (!meeting) continue;
     const center = { x: obstacle.footprint.reduce((v, p) => v + p.x, 0) / obstacle.footprint.length, z: obstacle.footprint.reduce((v, p) => v + p.z, 0) / obstacle.footprint.length };
     const obstacleAt = shortcutProjection(center, shortcut).progress;

@@ -8,5 +8,6 @@ import type { TrackDefinition } from '../core/types';
  * marked in any way.
  */
 export function pavedHopLanes(track: TrackDefinition) {
-  return (track.hopShortcuts ?? []).filter(lane => lane.branch.some(p => projectToPolyline(p, track.centerline, track.distances).distance > track.roadWidth / 2 + 6));
+  // T4 crosses the existing tiled quay; it must not acquire a conspicuous extra asphalt fork.
+  return (track.hopShortcuts ?? []).filter(lane => lane.id !== 'quayside-hop' && lane.branch.some(p => projectToPolyline(p, track.centerline, track.distances).distance > track.roadWidth / 2 + 6));
 }

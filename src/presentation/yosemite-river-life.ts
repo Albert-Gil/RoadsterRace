@@ -10,7 +10,14 @@ import {yosemiteAppearance} from './themes';
 
 const art=yosemiteAppearance.riverLife;
 interface Paddle {from:number;to:number;pivot:{x:number;y:number;z:number}}
-export interface RiverCanoe {position:Point;level:number;heading:number;geometry:Geometry;paddles:Paddle[]}
+export interface RiverCanoe {position:Point;level:number;heading:number;geometry:Geometry;paddles:Paddle[];motion:{path:Point[];distances:number[];at:number}}
+
+/** Slow paddled circuits along the river, with continuous turns rather than visible wrap/teleport. */
+export function canoePose(boat:RiverCanoe,time:number){
+ const a=time*Math.PI*2/art.cruisePeriod,along=Math.sin(a)*art.travel,across=.12*(1-Math.cos(a)),m=boat.motion;
+ const p=samplePolyline(m.path,m.distances,m.at+along),b=samplePolyline(m.path,m.distances,m.at+along-.25),f=samplePolyline(m.path,m.distances,m.at+along+.25),heading=Math.atan2(f.x-b.x,f.z-b.z);
+ return{position:{x:p.x+Math.cos(heading)*across,z:p.z-Math.sin(heading)*across},heading:heading+Math.atan2(.12*Math.sin(a),art.travel*Math.cos(a))};
+}
 
 /** Original open-hull canoe, wooden gunwales, two seated paddlers and small wakes. */
 function canoe(paint:string){
@@ -57,7 +64,7 @@ function canoe(paint:string){
  }
  box(0,.36,0,art.width*.87,.07,.13,wood);
  for(const side of[-1,1])for(let i=0;i<3;i++){
-  const z=-art.length/2-.12-i*.40,x=side*(.34+i*.13),color=mix(hex(art.foam),hex(yosemiteAppearance.water),i*.2);
+  const z=-art.length/2+.6-i*.20,x=side*(.34+i*.13),color=mix(hex(art.foam),hex(yosemiteAppearance.water),i*.2);
   quad([[x-.045,.012,z],[x+.045,.012,z],[x+side*.15+.045,.012,z-.32],[x+side*.15-.045,.012,z-.32]].reverse(),color);
  }
  return{geometry:g.withNormals(),paddles};
@@ -68,7 +75,7 @@ export function yosemiteCanoes(track:TrackDefinition):RiverCanoe[]{
  const river=yosemiteRivers(track).find(r=>r.id==='bridalveil-creek')!,distances=cumulative(river.path);
  return art.anchors.map((anchor,index)=>{
   const s=projectToPolyline(anchor,river.path,distances).progress,position=samplePolyline(river.path,distances,s),before=samplePolyline(river.path,distances,s-.5),after=samplePolyline(river.path,distances,s+.5);
-  return{position,level:river.level,heading:Math.atan2(after.x-before.x,after.z-before.z),...canoe(art.hulls[index%art.hulls.length])};
+  return{position,level:river.level,heading:Math.atan2(after.x-before.x,after.z-before.z),motion:{path:river.path,distances,at:s},...canoe(art.hulls[index%art.hulls.length])};
  });
 }
 
@@ -84,13 +91,13 @@ export function buildYosemiteRiverLife(scene:Scene,track:TrackDefinition,materia
  return{mesh,update(time:number,reduced:boolean){
   const t=reduced?0:time;
   for(const [index,{boat,start,bindings}]of spans.entries()){
-   const phase=index*2.1,bob=Math.sin(t*.95+phase)*art.bob,roll=Math.sin(t*1.3+phase)*art.roll,cr=Math.cos(roll),sr=Math.sin(roll),ch=Math.cos(boat.heading),sh=Math.sin(boat.heading);
+   const pose=canoePose(boat,t),phase=index*2.1,bob=Math.sin(t*.95+phase)*art.bob,roll=Math.sin(t*1.3+phase)*art.roll,cr=Math.cos(roll),sr=Math.sin(roll),ch=Math.cos(pose.heading),sh=Math.sin(pose.heading);
    const angles=boat.paddles.map((_,i)=>Math.sin(t*art.paddleSpeed+phase+i*.65)*art.paddleSwing),cos=angles.map(Math.cos),sin=angles.map(Math.sin),base=boat.geometry.positions,bn=boat.geometry.normals!;
    for(let i=0;i<boat.geometry.vertexCount;i++){
     const a=i*3,out=(start+i)*3,p=bindings[i];let x=base[a],y=base[a+1],z=base[a+2],nx=bn[a],ny=bn[a+1],nz=bn[a+2];
     if(p>=0){const pivot=boat.paddles[p].pivot,dy=y-pivot.y,dz=z-pivot.z;y=pivot.y+dy*cos[p]-dz*sin[p];z=pivot.z+dy*sin[p]+dz*cos[p];const yy=ny*cos[p]-nz*sin[p];nz=ny*sin[p]+nz*cos[p];ny=yy;}
     const xx=x*cr-y*sr,yy=x*sr+y*cr,nnx=nx*cr-ny*sr,nny=nx*sr+ny*cr;
-    positions[out]=boat.position.x+xx*ch+z*sh;positions[out+1]=boat.level+bob+yy;positions[out+2]=boat.position.z-xx*sh+z*ch;
+    positions[out]=pose.position.x+xx*ch+z*sh;positions[out+1]=boat.level+bob+yy;positions[out+2]=pose.position.z-xx*sh+z*ch;
     normals[out]=nnx*ch+nz*sh;normals[out+1]=nny;normals[out+2]=-nnx*sh+nz*ch;
    }
   }

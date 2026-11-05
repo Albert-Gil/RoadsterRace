@@ -18,6 +18,12 @@ export const launchsiteRocketStages = [
   { id: 'rocket-yard-upper-stage', from: 31, to: 46, z: 31, diameter: 6, cradle: 2.4 },
 ] as const;
 export const launchsiteYardTank = { id: 'rocket-yard-tank', x: 28.3, z: 29.5, radius: 2.1, height: 9 } as const;
+/** Separate staging pads; solid vehicle silhouettes, away from roads, gates and Hop lanes. */
+export const launchsiteRemoteRockets = [
+  {id:'north-booster-pad',x:-24,z:-58,height:30,radius:2},
+  {id:'north-stage-pad',x:12,z:-56,height:28,radius:1.9},
+  {id:'west-booster-pad',x:-99,z:33,height:26,radius:1.85},
+] as const;
 
 // Golden Gate's authoring coordinates are mirrored by its existing track/art builders.
 export const goldenMarketFrontage = [

@@ -4,7 +4,7 @@ import { createStartFinish } from '../start-finish';
 import { cumulative, projectToPolyline } from '../geometry';
 import type { HopShortcut, Point, TrackDefinition } from '../types';
 import { outcrop } from './outcrop';
-import { launchsiteRocketStages, launchsiteVessels, launchsiteYardTank } from './venue-parcels';
+import { launchsiteRocketStages, launchsiteVessels, launchsiteYardTank, launchsiteRemoteRockets } from './venue-parcels';
 import { serviceConduit, obstacleRectangle, rocketYardTip, utilityWing } from './hop-obstacles';
 
 const centerline = roundedCircuit([
@@ -34,7 +34,7 @@ const wingBranch: Point[] = [
   ...Array.from({ length: 25 }, (_, i) => ({ x: -2, z: 20 + i })),
   ...Array.from({ length: 13 }, (_, i) => ({ x: -11 + Math.cos(i / 12 * Math.PI / 2) * 9, z: 44 + Math.sin(i / 12 * Math.PI / 2) * 9 })).slice(1),
 ];
-const wingHop: HopShortcut = { id: 'utility-wing-hop', branch: wingBranch, width: 16, obstacleId: 'utility-wing-hop-barrier',
+const wingHop: HopShortcut = { id: 'utility-wing-hop', branch: wingBranch, width: 16, clearanceWidth: 22, obstacleId: 'utility-wing-hop-barrier',
   entryProgress: projectToPolyline(wingBranch[0], centerline, distances).progress,
   exitProgress: projectToPolyline(wingBranch.at(-1)!, centerline, distances).progress };
 /**
@@ -45,7 +45,7 @@ const tipBranch: Point[] = [
   ...Array.from({ length: 17 }, (_, i) => ({ x: 24 - Math.sin(i / 16 * Math.PI / 2) * 6, z: 14 - Math.cos(i / 16 * Math.PI / 2) * 6 })),
   ...Array.from({ length: 30 }, (_, i) => ({ x: 18, z: 15 + i })),
 ];
-const tipHop: HopShortcut = { id: 'rocket-yard-tip-hop', branch: tipBranch, width: 16, obstacleId: 'rocket-yard-tip-hop-barrier',
+const tipHop: HopShortcut = { id: 'rocket-yard-tip-hop', branch: tipBranch, width: 16, clearanceWidth: 22, obstacleId: 'rocket-yard-tip-hop-barrier',
   entryProgress: projectToPolyline(tipBranch[0], centerline, distances).progress,
   exitProgress: projectToPolyline(tipBranch.at(-1)!, centerline, distances).progress };
 const rect = (x: number, z: number, w: number, d: number) => [{ x, z }, { x: x + w, z }, { x: x + w, z: z + d }, { x, z: z + d }];
@@ -79,9 +79,13 @@ const rocks: TrackDefinition['barriers'] = [
 
 /** Flat physical layout; scenery/branding never participate in its rules. */
 export const orbitalTrack: TrackDefinition = {
-  id: 'orbital-launchyard', version: 10, name: 'Launchsite', centerline, distances, length,
+  id: 'orbital-launchyard', version: 11, name: 'Launchsite', centerline, distances, length,
   roadWidth: 16, carWidth: VEHICLE_DIMENSIONS.width, carLength: VEHICLE_DIMENSIONS.length, start: centerline[0], startFinish: createStartFinish(centerline[0], centerline[1], 16),
   barriers: ([
+    ...launchsiteRemoteRockets.flatMap(r=>[
+      {id:r.id,kind:'infield' as const,height:1.25,footprint:rect(r.x-r.radius*1.3,r.z-r.radius*1.3,r.radius*2.6,r.radius*2.6)},
+      {id:`${r.id}-rocket`,kind:'building' as const,height:r.height,baseHeight:1.25,footprint:Array.from({length:20},(_,i)=>({x:r.x+Math.cos(i/20*Math.PI*2)*r.radius*1.25,z:r.z+Math.sin(i/20*Math.PI*2)*r.radius*1.25}))},
+    ]),
     // Protected utility parcel with low perimeter and separate real-height vessels.
     { id:'utility-storage-tower',kind:'infield',height:1.25,runoffException:'cut-protection',
       footprint:[[-28,0],[-23,-4],[-13,-3],[-12,28],[-10,39],[-10,43.6],[-13,43.6],[-26,32],[-26,24],[-27,17]].map(([x,z])=>({x,z})) },

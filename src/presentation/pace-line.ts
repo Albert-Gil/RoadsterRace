@@ -4,6 +4,7 @@ import type { GreasedLineMesh } from '@babylonjs/core/Meshes/GreasedLine/greased
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import { Vector2 } from '@babylonjs/core/Maths/math.vector';
 import type { Scene } from '@babylonjs/core/scene';
+import type { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import type { Point } from '../core/types';
 import type { PresentationTheme } from './themes';
 import { planningHeight } from './planning-height';
@@ -19,12 +20,20 @@ export class PaceLine {
   constructor(private scene: Scene, points: Point[], speeds: number[], private theme: PresentationTheme, player = 0, private racing = false, error = false, ignored = false, track?: TrackDefinition) {
     this.meshes = [true, false].map(outline => {
       const mesh = CreateGreasedLine('pace-route', { points: points.flatMap(p => [p.x, (track ? planningHeight(p, track) : 0) + 0.32 + player * 0.012 + (outline ? 0 : 0.005), p.z]) }, {
-        materialType: GreasedLineMeshMaterialType.MATERIAL_TYPE_SIMPLE,
+        materialType: GreasedLineMeshMaterialType.MATERIAL_TYPE_STANDARD,
         sizeAttenuation: true, width: outline ? theme.pace.outlineWidth : theme.pace.width,
         color: outline ? Color3.FromHexString('#111820') : ignored ? Color3.FromHexString('#aebdc5') : error ? Color3.FromHexString('#ff6ce1') : undefined,
         colors: outline || error || ignored ? undefined : speeds.map(speed => paceColor(speed, theme)), useColors: !outline && !error && !ignored,
         useDash: ignored || racing && player > 0, dashCount: ignored ? 22 : player === 1 ? 28 : player === 2 ? 54 : 85, dashRatio: ignored ? 0.45 : player === 3 ? 0.7 : 0.25,
       }, scene) as GreasedLineMesh;
+      // The simple shader can be ready/active yet draw no pixels on desktop ANGLE. The standard
+      // plugin supports both renderer paths; unlit color keeps pace independent of venue lighting.
+      const material=mesh.material as StandardMaterial;
+      material.disableLighting=true;material.emissiveColor=Color3.White();
+      material.metadata = { roadsterOverlay: true };
+      const pre=scene.prePassRenderer;
+      // The new-material observer runs before the metadata is assigned above.
+      if(pre&&!pre.excludedMaterials.includes(material))pre.excludedMaterials.push(material);
       // Both layers use the transparent queue so the outline cannot paint over colored joins.
       mesh.isPickable = false; mesh.alphaIndex = outline ? 0 : 1;
       mesh.material!.alpha = ignored ? outline ? 0.35 : 0.65 : racing ? outline ? 0.35 : 0.66 : outline ? 0.7 : 0.999;

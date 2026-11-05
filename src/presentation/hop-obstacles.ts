@@ -3,7 +3,7 @@ import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import type { Scene } from '@babylonjs/core/scene';
 import type { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import type { TrackDefinition } from '../core/types';
-import { backlotCaseParts, backlotCases, rocketYardTip, serviceConduit, utilityWing } from '../core/tracks/hop-obstacles';
+import { backlotCaseParts, backlotCases, rocketYardTip, serviceConduit, utilityWing, quayPlanter } from '../core/tracks/hop-obstacles';
 import { buildingGeometry } from './building-geometry';
 
 /** Unmarked, venue-appropriate props for the authored manual-Hop lanes. */
@@ -16,7 +16,13 @@ export function buildHopObstacles(scene: Scene, track: TrackDefinition, material
   const cylinder=(name:string,x:number,y:number,z:number,length:number,diameter:number,material:StandardMaterial)=>{
     const m=MeshBuilder.CreateCylinder(name,{height:length,diameter,tessellation:12},scene);m.position.set(x,y,z);m.material=material;return m;
   };
-  if(track.id==='orbital-launchyard'){
+  if(track.id==='golden-gate'){
+    const p=quayPlanter,cx=p.x+p.width/2;
+    box('quay-planter-base',cx,.39,p.z,p.width,.78,p.depth,concrete);
+    box('quay-planter-soil',cx,.77,p.z,p.width-.18,.08,p.depth-.18,dark);
+    for(let x=p.x+.5;x<p.x+p.width;x+=.75){const shrub=MeshBuilder.CreateSphere('quay-planter-shrub',{diameter:.72,segments:6},scene);shrub.position.set(x,.96,p.z);shrub.scaling.set(1,.65,1);shrub.material=Math.floor(x)%2?leaf:leafLight;}
+    return;
+  }else if(track.id==='orbital-launchyard'){
     const p=serviceConduit,cx=p.x+p.width/2,cy=p.height-p.depth/2;
     const pipe=cylinder('service-crossing-conduit',cx,cy,p.z,p.width,p.depth,metal);pipe.rotation.z=Math.PI/2;
     for(const x of [p.x+2,cx,p.x+p.width-2]){

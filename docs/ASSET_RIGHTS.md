@@ -297,3 +297,7 @@ piers, ride geometry, pedestrian entrance, bridge hangers, resort equipment and
 setback night towers are original procedural artwork. They reuse existing
 materials and licensed assets. No third-party model or new external image,
 recording or sky was added. Updated circuit cards are native game captures.
+
+The subsequent remote rocket staging vehicles, denser vapor, Golden Gate quayside
+planter and canoe travel paths are original procedural work using the same material
+and geometry systems. No new external source assets or recordings were introduced.

@@ -144,7 +144,7 @@ describe('authored Golden Gate city and narrow bridge', () => {
     }
   });
   test('the widened city course has an 88 m by 16 m deck and 15.3 m between straight rails', () => {
-    expect(golden.version).toBe(7); expect(golden.length).toBeGreaterThan(430); expect(golden.length).toBeLessThan(520);
+    expect(golden.version).toBe(8); expect(golden.length).toBeGreaterThan(430); expect(golden.length).toBeLessThan(520);
     const b = golden.bridges![0]; expect(distance(b.from, b.to)).toBe(88); expect(b.width).toBe(16);
     const straightRails = golden.barriers.filter(b => b.id.endsWith('-3') && b.kind === 'bridge-rail');
     expect(straightRails).toHaveLength(2);

@@ -132,6 +132,8 @@ Appearance examples: [Coastal Day](artifacts/coastal-day.png) and [Graphite](art
 
 The game uses a hand-refined RoadsterLAB-derived car, graphite/crimson menus with bundled Barlow typography, red-to-green pace lines and protected venue scenery. Lines through walls or unsupported terrain remain drawable and become race hazards; cars physically crash or fall and recover with a time cost. Ordinary drifting has no timed speed debuff. Mountain courses have authoritative elevation and authored natural jumps. See [appearance guide](docs/VISUAL_GUIDE.md), [handling](docs/HANDLING.md), [asset provenance](docs/ASSET_RIGHTS.md) and the [latest scenery composition pass](docs/SCENERY_COMPOSITION.md). Matching recent views are in `artifacts/scenery-impact/`.
 
+The [playability follow-up](docs/PLAYABILITY_FOLLOWUP.md) covers the Launchsite T2 and Golden Gate T4 Hop crossings, remote rocket staging and dense boil-off, moving Yosemite canoes, visible desktop drawing lines and the centered phone pause sheet.
+
 ## Sound
 
 Sound is on by default and starts with your first tap; turn it off or on in **Settings** (Home and race setup) or the **Pause** menu. The electric drive tone follows speed; tire and sand layers follow actual sliding/contact. Thrust, 3–2–1, start, final lap, finish and recharge have distinct cues. Pause/interruption silence play sounds; mute leaves the race running.

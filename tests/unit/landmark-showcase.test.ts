@@ -9,10 +9,10 @@ import {landmarkShowcase,pierComposition} from '../../src/presentation/themes';
 import {edgeDistance,type Geometry} from '../../src/presentation/landscape/mesh';
 import {tahoeLayout} from '../../src/presentation/tahoe-layout';
 const points=(g:Geometry)=>Array.from({length:g.vertexCount},(_,i)=>({x:g.positions[i*3],y:g.positions[i*3+1],z:g.positions[i*3+2]}));
-test('the additional rockets are large and entirely inside the existing launch complex',()=>{
- const t=findCircuit('launchsite').track,b=t.barriers.find(b=>b.id==='launch-complex')!,g=launchFleet();
- expect(landmarkShowcase.rockets).toHaveLength(2);for(const p of points(g))expect(insideBarrier(p,b)||edgeDistance(p,b.footprint)<.001).toBe(true);
- expect(Math.max(...g.positions.filter((_,i)=>i%3===1))).toBeGreaterThan(32);expect(g.triangleCount).toBeLessThan(3000);
+test('five large rockets fit their protected launch and remote staging footprints',()=>{
+ const t=findCircuit('launchsite').track,ids=['launch-complex','north-booster-pad','north-stage-pad','west-booster-pad'],pads=t.barriers.filter(b=>ids.some(id=>b.id===id||b.id===`${id}-rocket`)),g=launchFleet();
+ expect(landmarkShowcase.rockets).toHaveLength(5);for(const p of points(g))expect(pads.some(b=>(insideBarrier(p,b)||edgeDistance(p,b.footprint)<.001)&&(b.id==='launch-complex'||p.y<=(b.baseHeight??0)+b.height+1e-6))).toBe(true);
+ expect(Math.max(...g.positions.filter((_,i)=>i%3===1))).toBeGreaterThan(32);expect(g.triangleCount).toBeLessThan(7500);
  const normals=g.toVertexData().normals!;let checked=0;
  for(let i=0;i<g.vertexCount;i++)for(const r of landmarkShowcase.rockets){const dx=g.positions[i*3]-r.x,dz=g.positions[i*3+2]-r.z,y=g.positions[i*3+1];if(Math.abs(Math.hypot(dx,dz)-r.radius)<1e-5&&y>5&&y<1.25+r.height*.8){expect(normals[i*3]*dx+normals[i*3+2]*dz).toBeGreaterThan(0);checked++;}}
  expect(checked).toBeGreaterThan(30);

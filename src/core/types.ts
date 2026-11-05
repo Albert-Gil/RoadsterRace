@@ -15,6 +15,8 @@ export interface TrackJump {
 /** A manual-hop branch, independent of automatic ramps and water support. */
 export interface HopShortcut {
   id: string; branch: Point[]; width: number; obstacleId: string;
+  /** Wider authored flight allowance at a low obstacle; never exempts neighbouring parcels. */
+  clearanceWidth?: number;
   entryProgress: number; exitProgress: number;
 }
 export interface HopTraversal { id: string; entryDistance: number; exitDistance: number }

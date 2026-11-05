@@ -1,5 +1,6 @@
 import { assetUrl } from './urls';
 import { VEHICLE_DIMENSIONS } from '../core/vehicle-size';
+import { launchsiteRemoteRockets } from '../core/tracks/venue-parcels';
 
 export const paintFinishes = [
   { id: 'glacier', name: 'Stainless steel gray', color: '#aeb4b8' },
@@ -298,8 +299,8 @@ export const pierRampAppearance = { surfaceOffset:.11,plankLength:.58,boards:['#
 export const pierComposition={wheelX:96.5,wheelY:27,wheelZ:15,wheelRadius:24,speed:.055,coral:'#f07359',ivory:'#fff0ce',gold:'#f3c55f',glass:'#507987',timber:'#bd9870',deckSeam:'#8d735a',cabins:['#ef7054','#62b7b0','#edbf49','#ac83bf'],coaster:{x:104,z:30,rx:29,rz:6,base:3,amplitude:11.5}};
 /** Large native attractions, reused material batches and one capped vapor mesh. */
 export const landmarkShowcase={
- rockets:[{x:90,z:10,height:32,radius:1.9},{x:90,z:31,height:28,radius:1.8}],
- boilOff:{capacity:48,period:4.6,opacity:.24,color:'#e6eeee',vents:[{x:95,y:19,z:16.5},{x:90,y:24,z:8},{x:90,y:21,z:29}]},
+ rockets:[{x:90,z:10,height:32,radius:1.9},{x:90,z:31,height:28,radius:1.8},...launchsiteRemoteRockets],
+ boilOff:{capacity:96,period:5.2,opacity:.6,color:'#f2f5ef',sizeStart:1.15,sizeGrowth:6.8,rise:10,drift:7,vents:[{x:95,y:19,z:16.5},{x:90,y:24,z:8},{x:90,y:21,z:29},...launchsiteRemoteRockets.map(r=>({x:r.x,y:r.height*.65,z:r.z-1.8}))]},
  bridge:{hangerSpacing:4,hangerWidth:.18,deckY:1.0},
  tahoe:{snow:'#f4f2e7',shade:'#afc4ce',steel:'#344653',red:'#d35449',glass:'#527784',wood:'#805637',warm:'#f1ca84',cloth:'#ac3e3a',clearings:[{x:-36,z:-8.2,width:24,depth:7.2},{x:24,z:-20,width:9,depth:27},{x:-54,z:16,width:13,depth:9},{x:1,z:24,width:19,depth:5},{x:-55,z:1,width:11,depth:8},{x:-43,z:25,width:12,depth:7},{x:26,z:8,width:10,depth:9}]},
  skyline:{warm:'#efd8ab',cool:'#9ebbc0',facade:'#41434b',roof:'#8e7769'},
@@ -346,9 +347,9 @@ export const yosemiteAppearance={
  waterfall:{speed:.8,sprayCount:36,dropletCount:54,gravity:28,opacity:.96,sprayOpacity:.48,wetRock:'#657b7b',lipFraction:.90,lipRadius:.88,waterRadius:.89,halfAngle:.42,curtainWidth:10.8,basinWidth:16,basinDepth:10,basinHeight:.75,angle:Math.PI/2+.04,
   widths:{'granite-falls':10.8,'creek-falls':6.4,'cathedral-falls':7.2,'sentinel-falls':6.6,'sentinel-buttress-falls':7.4,'granite-twin-falls':6.2} as Record<string,number>},
  dressing:{roadWorn:'#b0a07d',roadEdge:'#857d60',barkDark:'#4d3a2c',cutWood:'#c8ab77',stonework:'#a2a18f',trim:'#d6cfac',roofSeam:'#687166'},
- riverLife:{length:7.2,width:1.8,bob:.045,roll:.012,paddleSpeed:2.6,paddleSwing:.34,
+ riverLife:{length:7.2,width:1.8,bob:.045,roll:.012,paddleSpeed:2.6,paddleSwing:.34,travel:5,cruisePeriod:48,
   hulls:['#f35a40','#ffce43','#f18c41'],wood:'#d4ad75',interior:'#b99567',vest:'#ffd05a',shirt:'#315c74',skin:'#d6a27c',foam:'#c0d9d3',
-  anchors:[{x:12,z:7},{x:18,z:-19},{x:14,z:-45}]},
+  anchors:[{x:14,z:-10},{x:14,z:-30},{x:14,z:-46}]},
 };
 
 export const roadsideAppearance = {

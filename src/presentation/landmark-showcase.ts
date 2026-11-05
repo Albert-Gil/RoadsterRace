@@ -2,7 +2,7 @@ import {CompositionShapes} from './composition-shapes';
 import {landmarkShowcase as art,venueComposition} from './themes';
 import {hex,mix} from './landscape/mesh';
 
-/** Additional launch vehicles inside the existing launch-complex footprint. */
+/** Launch vehicles in the existing complex and authored remote staging footprints. */
 export function launchFleet(){
  const g=new CompositionShapes(),a=venueComposition.industrial;
  for(const [index,r]of art.rockets.entries()){

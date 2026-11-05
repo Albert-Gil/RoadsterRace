@@ -203,7 +203,7 @@ p.resume-tour { color: #ffd15a; font-size: 12px; }
 .ready-actions { display: flex; flex-wrap: wrap; margin-right: -6px; }
 .ready-actions .icon { width: 18px; height: 18px; }
 /* Pause: a centred sheet over the dimmed race. */
-.playground[data-phase="paused"] .panel { left: 50%; top: 50%; bottom: auto; transform: translate(-50%, -50%); width: min(420px, calc(100% - 2 * var(--ability-rail) - 24px)); max-height: calc(100% - 24px); overflow-y: auto; }
+.playground[data-phase="paused"] .panel { inset: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); margin: auto; height: fit-content; transform: none; width: min(420px, calc(100% - 24px)); max-height: calc(100% - max(12px, env(safe-area-inset-top)) - max(12px, env(safe-area-inset-bottom))); overflow-y: auto; overscroll-behavior: contain; }
 .playground[data-phase="paused"] h2 { margin-bottom: 16px; }
 .pause-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .pause-actions .primary-button { grid-column: 1 / -1; justify-content: space-between; }

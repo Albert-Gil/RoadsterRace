@@ -66,6 +66,7 @@ const inExtent = (p: Point, e: Extent, margin = 0) => p.x >= e.minX + margin && 
 export function launchsiteLayout(track: TrackDefinition) {
   const L = LAUNCHSITE, extent = L.extent, D = courseDistance(track, extent, 3);
   const rocks = track.barriers.filter(b => b.kind === 'rock'), solids = track.barriers;
+  const stagingPads=solids.filter(b=>b.id.endsWith('-pad')).map(b=>({minX:Math.min(...b.footprint.map(p=>p.x))-1,maxX:Math.max(...b.footprint.map(p=>p.x))+1,minZ:Math.min(...b.footprint.map(p=>p.z))-1,maxZ:Math.max(...b.footprint.map(p=>p.z))+1}));
   const formations: FormationSpec[] = rocks.map((b, i) => ({ id: b.id, footprint: b.footprint, height: b.height, seed: 101 + i * 37, ...(L.formations[b.id] ?? { style: b.height >= 10 ? 'butte' : 'boulders' }) }));
   const washes = L.washes.map(w => smoothPath(w, 2)), roads = L.roads.map(r => ({ ...r, path: smoothPath(r.points, 2) }));
   const W = distanceField(washes, extent, 3), R = distanceField(roads.map(r => r.path), extent, 3);
@@ -78,6 +79,8 @@ export function launchsiteLayout(track: TrackDefinition) {
   const dune = (x: number, z: number) => { const wx = x + 16 * fbm2(x / 70, z / 70, 2, 51), wz = z + 16 * fbm2(x / 70 + 9, z / 70, 2, 52); return ridged2((wx * 0.8 + wz * 0.6) / 44, (-wx * 0.6 + wz * 0.8) / 90, 2, 9); };
   const nearestRock = (p: Point): { distance: number; barrier: TrackBarrier | null } => { const i = rockField.nearest(p.x, p.z); return { distance: rockField(p.x, p.z), barrier: i >= 0 ? rocks[i] : null }; };
   const height = (x: number, z: number) => {
+    // Staging pads are grounded, not perched on procedural dunes.
+    if(stagingPads.some(b=>x>=b.minX&&x<=b.maxX&&z>=b.minZ&&z<=b.maxZ))return 0;
     const d = D(x, z), r = rise(d), gate = smoothstep(L.flatUntil - 2, 42, d);
     if (gate <= 0) return 0;
     let h = r * (2.9 * (0.5 + 0.5 * fbm2(x / 62, z / 62, 4, 3)) + 1.3 * dune(x, z) ** 1.5);
