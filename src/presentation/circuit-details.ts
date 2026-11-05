@@ -30,6 +30,7 @@ export function buildCircuitDetails(scene: Scene, track: TrackDefinition, theme:
     const sign = MeshBuilder.CreatePlane(name, { width, height }, scene); sign.position.set(p.x, y, p.z); sign.rotation.y = angle; sign.material = m; return sign;
   };
   for (const barrier of track.barriers) {
+    if(barrier.id==='amusement-protected')continue; // Native pier fence and entrance bollards.
     if (hopPropIds.includes(barrier.id)) continue; // Compact native props replace these generic walls.
     if (barrier.id === 'gantry-support' || barrier.id === 'grandstand' || barrier.kind === 'rock' || barrier.kind === 'building') continue; // Native architecture and landscape draw their own authoritative footprints.
     if (barrier.kind === 'bridge-rail' || barrier.kind === 'bridge-support' || barrier.kind === 'pier-rail' || barrier.kind === 'service-barrier') {
@@ -41,7 +42,7 @@ export function buildCircuitDetails(scene: Scene, track: TrackDefinition, theme:
       const data = new VertexData(), normals: number[] = []; data.positions = positions; data.indices = indices; VertexData.ComputeNormals(positions, indices, normals); data.normals = normals; data.uvs = positions.flatMap((_, i) => i % 3 ? [] : [positions[i] / 8, positions[i + 2] / 8]);
       // Polygon winding may be reflected by a venue. Its horizontal cap always faces up.
       for (let i = normals.length - 12; i < normals.length; i += 3) { normals[i] = 0; normals[i + 1] = 1; normals[i + 2] = 0; }
-      const wall = new Mesh(`solid-${barrier.id}`, scene); data.applyToMesh(wall); concrete.backFaceCulling = false; wall.material = concrete;
+      const wall = new Mesh(`solid-${barrier.id}`, scene); data.applyToMesh(wall); concrete.backFaceCulling = false; wall.material = barrier.kind==='bridge-rail'?(materials.get('bridge-red')??concrete):barrier.id.startsWith('amusement-access-')?(materials.get('pier-timber')??concrete):concrete;
       continue;
     }
     const vertices = barrier.footprint, cx = vertices.reduce((s, p) => s + p.x, 0) / vertices.length, cz = vertices.reduce((s, p) => s + p.z, 0) / vertices.length;

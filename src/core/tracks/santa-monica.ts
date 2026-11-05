@@ -11,6 +11,8 @@ export function strip(a: Point, b: Point, width: number): Point[] {
   const len = distance(a, b), nx = -(b.z - a.z) / len * width / 2, nz = (b.x - a.x) / len * width / 2;
   return [{ x: a.x + nx, z: a.z + nz }, { x: b.x + nx, z: b.z + nz }, { x: b.x - nx, z: b.z - nz }, { x: a.x - nx, z: a.z - nz }];
 }
+/** Supported amusement pier; independent of the racing and jump corridors. */
+export const SANTA_AMUSEMENT={deck:{x:70,z:10,width:67,depth:30},protected:{x:71,z:12,width:65,depth:28}};
 // The ordinary route bends around the water opening. The straight fork is optional.
 const centerline = roundedCircuit([
   [-20,-64],[16,-64],[16,-12],[52,-12],[52,-44],[96,-44],[96,-12],[140,-12],
@@ -27,7 +29,7 @@ const jump: TrackJump = {
 };
 const supports: SupportSurface[] = [
   { id: 'beach-land', footprint: [{ x: -350, z: -300 }, ...Array.from({ length: 66 }, (_, i) => ({ x: 32 + 2.5 * Math.sin((-300 + i * 10) / 29), z: -300 + i * 10 })), { x: -350, z: 350 }] },
-  { id: 'amusement-deck', footprint: rectangle(75, 22, 42, 18) },
+  { id: 'amusement-deck', footprint: rectangle(SANTA_AMUSEMENT.deck.x,SANTA_AMUSEMENT.deck.z,SANTA_AMUSEMENT.deck.width,SANTA_AMUSEMENT.deck.depth) },
   { id: 'jump-launch-deck', footprint: rectangle(30, -20, 32, 16) },
   { id: 'jump-landing-deck', footprint: rectangle(72, -20, 62, 16) },
   { id: 'amusement-walkway', footprint: rectangle(93, 38, 4, 8) },
@@ -41,7 +43,7 @@ const barriers: TrackBarrier[] = [
   { id: 'beachfront-hotels', height:0.8,footprint:rectangle(-97,-90,110,12),kind:'infield' },
   { id: 'boulevard-gardens', height: 0.8, footprint: rectangle(-35, -24, 38, 23), kind: 'infield' },
   { id: 'beach-shops', height: 1, footprint: rectangle(-37, 0, 8, 10), kind: 'infield' },
-  { id: 'amusement-protected', height: 0.8, footprint: rectangle(76, 24, 39, 14), kind: 'pier-rail' },
+  { id: 'amusement-protected', height: 0.8, footprint: rectangle(SANTA_AMUSEMENT.protected.x,SANTA_AMUSEMENT.protected.z,SANTA_AMUSEMENT.protected.width,SANTA_AMUSEMENT.protected.depth), kind: 'pier-rail' },
 ];
 // Exterior sides are railed at the fork; the branch mouths stay open.
 for (const [name, path, side] of [
@@ -52,14 +54,17 @@ for (const [name, path, side] of [
   barriers.push({ id: `${name}-rail-${i}`, kind: 'pier-rail', height: 0.85, baseHeight: 0.05, footprint: strip({ x: a.x + nx, z: a.z + nz }, { x: b.x + nx, z: b.z + nz }, 0.35) });
 }
 for (const side of [-1, 1]) barriers.push({ id: `jump-rail-${side}`, kind: 'pier-rail', height: 0.8, footprint: rectangle(114, -12 + side * 7.825 - 0.175, 19, 0.35) });
-barriers.push({ id: 'inbound-inner-rail', kind: 'pier-rail', height: 0.85, footprint: rectangle(84, 42, 32, 0.35) });
+// A real entrance in the return rail connects the existing pedestrian walkway.
+barriers.push({ id: 'inbound-inner-rail', kind: 'pier-rail', height: 0.85, footprint: rectangle(84, 42, 9, 0.35) });
+barriers.push({ id: 'inbound-inner-rail-east', kind: 'pier-rail', height: 0.85, footprint: rectangle(97, 42, 19, 0.35) });
+for(const x of[93,96.82])barriers.push({id:`amusement-access-rail-${x}`,kind:'pier-rail',height:.85,footprint:rectangle(x,40,.18,6)});
 barriers.push({ id: 'landing-edge', kind: 'pier-rail', baseHeight: -2.4, height: 2.4, footprint: rectangle(71.8, -20, 0.2, 16) });
 // v3: the rock groyne's root on the sand beside the hotel row, 12-13 m beyond the road edge (its seaward arm is scenery).
 barriers.push({ id: 'beach-groyne', kind: 'rock', height: 2, footprint: outcrop(24.5, -84, 8.5, 2.8, 0, 2.3) });
 // v4: solid beach structures (lifeguard tower, surf rental, two spectator terraces, food truck, cafe), 6+ m beyond the road edge.
 for (const s of santaBeachStructures) barriers.push({ id: s.id, kind: 'building', height: s.height, footprint: santaBeachFootprint(s) });
 const authoredTrack: TrackDefinition = {
-  id: 'santa-monica', version: 4, name: 'Santa Monica', centerline, distances, length,
+  id: 'santa-monica', version: 5, name: 'Santa Monica', centerline, distances, length,
   roadWidth: 16, carWidth: VEHICLE_DIMENSIONS.width, carLength: VEHICLE_DIMENSIONS.length, start: centerline[0], startFinish: createStartFinish(centerline[0], centerline[1], 16),
   supports, waterOpenings: [{ id: 'pacific-gap', footprint: rectangle(62, -20, 10, 16) }], jumps: [jump], barriers,
 };

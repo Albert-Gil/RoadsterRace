@@ -295,7 +295,15 @@ export const hopEffects = { pulse: 0.22, nozzleHeight: 0.20, puffs: 16, lifetime
 export const cityAppearance = { bridge: '#e45534', facades: ['#caba91', '#8aa49a', '#bb8068', '#9daabb', '#d8be8d', '#9b8173'], paving: '#d2bfa1', roof: '#52616a', shop: '#354953', window: '#456575', warmWindow: '#b9bd9d' };
 export const sunsetAppearance = { deck: '#a9866b', steel: '#465360', ivory: '#f6e4cc', glass: '#4a7e91', coral: '#e67b77', gold: '#eec575' };
 export const pierRampAppearance = { surfaceOffset:.11,plankLength:.58,boards:['#fff7e8','#e7d9c4','#f6ead7','#d2c9b8','#eee0ca'],shade:'#655c51',fascia:'#c6b9a3',joist:'#a59985',hardware:'#78817f' };
-export const pierComposition={wheelX:95.5,wheelY:18.6,wheelZ:26.6,wheelRadius:16,speed:.075,coral:'#f07359',ivory:'#fff0ce',gold:'#f3c55f',glass:'#507987',timber:'#bd9870',deckSeam:'#8d735a',cabins:['#ef7054','#62b7b0','#edbf49','#ac83bf'],coaster:{x:95.5,z:34.6,rx:15.5,rz:2.6}};
+export const pierComposition={wheelX:96.5,wheelY:27,wheelZ:15,wheelRadius:24,speed:.055,coral:'#f07359',ivory:'#fff0ce',gold:'#f3c55f',glass:'#507987',timber:'#bd9870',deckSeam:'#8d735a',cabins:['#ef7054','#62b7b0','#edbf49','#ac83bf'],coaster:{x:104,z:30,rx:29,rz:6,base:3,amplitude:11.5}};
+/** Large native attractions, reused material batches and one capped vapor mesh. */
+export const landmarkShowcase={
+ rockets:[{x:90,z:10,height:32,radius:1.9},{x:90,z:31,height:28,radius:1.8}],
+ boilOff:{capacity:48,period:4.6,opacity:.24,color:'#e6eeee',vents:[{x:95,y:19,z:16.5},{x:90,y:24,z:8},{x:90,y:21,z:29}]},
+ bridge:{hangerSpacing:4,hangerWidth:.18,deckY:1.0},
+ tahoe:{snow:'#f4f2e7',shade:'#afc4ce',steel:'#344653',red:'#d35449',glass:'#527784',wood:'#805637',warm:'#f1ca84',cloth:'#ac3e3a',clearings:[{x:-36,z:-8.2,width:24,depth:7.2},{x:24,z:-20,width:9,depth:27},{x:-54,z:16,width:13,depth:9},{x:1,z:24,width:19,depth:5},{x:-55,z:1,width:11,depth:8},{x:-43,z:25,width:12,depth:7},{x:26,z:8,width:10,depth:9}]},
+ skyline:{warm:'#efd8ab',cool:'#9ebbc0',facade:'#41434b',roof:'#8e7769'},
+};
 export const shoreComposition={speed:.065,opacity:.67,foam:'#e7eee2'};
 export const urbanRampAppearance = { concrete:'#e4e7e7',edge:'#c5cdd1',paving:'#dce1e3',drain:'#405058',surfaceOffset:.10 };
 
@@ -386,7 +394,7 @@ export const venueFinish = {
  yosemite:{edge:'#a08e6c',ground:'#84906a',grit:'#bdaf8b',inset:.18,spread:1.05},
 } satisfies Record<string,VenueFinish>;
 export const interfaceMotion = { durationMs:160, rowStaggerMs:40 };
-export const circuitArtRevision = '2026-11-05-landmarks';
+export const circuitArtRevision = '2026-11-05-attractions';
 /** One sun per venue; unchanged shadow-map dimensions and cached caster policy. */
 export const venueSunDirections = {
  coastal:[.50,-1,.60],spaceport:[.65,-1,.38],bay:[.40,-1,.62],sunset:[.72,-1,.35],

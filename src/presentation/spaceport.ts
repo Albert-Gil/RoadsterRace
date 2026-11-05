@@ -10,6 +10,8 @@ import { Mesh } from '@babylonjs/core/Meshes/mesh';
 import { buildingGeometry } from './building-geometry';
 import {assemblyHall,launchTowerDetail,bakeLandmark} from './venue-landmarks';
 import {launchOperations} from './venue-signatures';
+import {launchFleet} from './landmark-showcase';
+import {rocketBoilOff} from './rocket-boiloff';
 import { launchsiteRocketStages, launchsiteVessels, launchsiteYardTank } from '../core/tracks/venue-parcels';
 
 /** Original, lightweight launchyard scenery. All substantial structures occupy protected footprints. */
@@ -136,7 +138,9 @@ export function buildSpaceport(scene: Scene, track: TrackDefinition, theme: Pres
   for(const mesh of scene.meshes)if(mesh.name==='landing-pad'||mesh.name==='pad-ring')mesh.position.x-=2;
   bakeLandmark('launch-tower-cross-bracing',launchTowerDetail(),scene,white);
   bakeLandmark('connected-launch-operations',launchOperations(),scene,white);
+  bakeLandmark('launchsite-rocket-fleet',launchFleet(),scene,white);
+  const boilOff=rocketBoilOff(scene);
   // Desert landscape: terrain and painted ground, plants, and the solid rock formations (landscape/).
   const landscape = buildLaunchsiteLandscape(scene, track, materials);
-  return { shadowCasterMaterials: casters, lateShadowCasters: landscape.shadowCasters, update: (_time: number, _reduced: boolean) => {} };
+  return { shadowCasterMaterials: casters, lateShadowCasters: landscape.shadowCasters, update: (time: number, reduced: boolean) => {boilOff.update(time,reduced);} };
 }

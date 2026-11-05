@@ -173,3 +173,5 @@ Launchsite now includes an optional manually activated Hop service lane. See [he
 The sixth circuit adds original neon-lit downtown scenery, an optional storm-channel jump and a hidden manual-Hop backlot lane. Open `/?circuit=la-nights`. See [LA nights](docs/LA_NIGHTS.md) for route and art details.
 
 Capitan Yosemite adds an original granite valley with packed-earth climbs, a natural creek jump, ranger lodges, pine groves, a waterfall and mist. See [the circuit guide](docs/CAPITAN_YOSEMITE.md).
+
+The latest [large attractions](docs/ATTRACTIONS.md) add venting launch vehicles, a connected amusement pier, bridge hangers, resort equipment and a taller downtown skyline.

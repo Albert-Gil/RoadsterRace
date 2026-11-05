@@ -27,10 +27,10 @@ test.each([7,10])('the lengthened Newport completes six clean laps at a %s-secon
  for(let i=0;i<20000&&!sim.state.finished;i++)sim.step();
  expect(sim.state.finished).toBe(true);expect(sim.state.recoveryCount).toBe(0);expect(sim.state.lapTimes).toHaveLength(6);
 });
-test('the 32-metre wheel and its frames fit the original protected amusement deck',()=>{
+test('the wheel and its frames fit the protected supported amusement deck',()=>{
  const t=reflectSantaVenue(findCircuit('santa-monica').track),b=t.barriers.find(b=>b.id==='amusement-protected')!,a=pierComposition;
  expect(a.wheelRadius/9.3).toBeGreaterThan(1.7);expect(a.wheelY-a.wheelRadius-1.4).toBeGreaterThan(0);
- for(const x of[a.wheelX-a.wheelRadius-1.07,a.wheelX+a.wheelRadius+1.07])for(const z of[a.wheelZ-2.54,a.wheelZ+2.54])expect(insideBarrier({x,z},b)).toBe(true);
+ for(const x of[a.wheelX-a.wheelRadius-1.28,a.wheelX+a.wheelRadius+1.28])for(const z of[a.wheelZ-2.7,a.wheelZ+2.7])expect(insideBarrier({x,z},b)).toBe(true);
 });
 test('the timber landing is supported, upward-lit and clear of the water opening',()=>{
  const t=reflectSantaVenue(findCircuit('santa-monica').track),j=t.jumps![0],g=pierLandingGeometry(j),v=g.toVertexData();let tops=0;

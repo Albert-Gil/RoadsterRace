@@ -13,11 +13,11 @@ import type { Point, TrackDefinition } from '../core/types';
 import { sunsetAppearance as art, type PresentationTheme } from './themes';
 import { surfaceTexture } from './textures';
 import { santaMonicaAuthoredBuildings as santaMonicaBuildings } from '../content/santa-monica-art';
-import { reflectSantaVenue } from '../core/tracks/santa-monica';
+import { reflectSantaVenue,SANTA_AMUSEMENT } from '../core/tracks/santa-monica';
 import { buildSantaMonicaLandscape } from './santa-monica-landscape';
 import { buildSantaBeachLife } from './santa-monica-beach-life';
 import { pierRampGeometry,pierLandingGeometry } from './pier-ramp';
-import {buildPacificWheel,amusementBoardwalk} from './pacific-wheel';
+import {buildPacificWheel,amusementBoardwalk,amusementAccess,coasterPosition} from './pacific-wheel';
 import {bakeLandmark} from './venue-landmarks';
 import {pierComposition} from './themes';
 import {shoreSurf} from './shore-surf';
@@ -66,7 +66,8 @@ export function buildSantaMonica(scene: Scene, track: TrackDefinition, theme: Pr
   for(const j of track.jumps??[])for(const along of [0,6,24,36,48,60,72])for(const side of [-1,1]){
     const p=jumpPoint(j,along,side*(j.width/2-1));box('jump-deck-pile',p.x,-1.5,p.z,0.65,2.8,0.65,dark);
   }
-  for (let x = 76; x <= 116; x += 8) for (const z of [24, 38]) box('amusement-pile', x, -1.45, z, 0.7, 3.1, 0.7, dark);
+  const deck=SANTA_AMUSEMENT.deck;
+  for (let x=deck.x+1;x<deck.x+deck.width;x+=8)for(const z of[deck.z+1,deck.z+deck.depth-1])box('amusement-pile',x,-1.45,z,.85,3.1,.85,dark);
 
   const sign = (text: string, x: number, z: number, width: number, materialRole: string) => {
     const tex = new DynamicTexture(materialRole, { width: 1024, height: 128 }, scene, false), ctx = tex.getContext() as CanvasRenderingContext2D;
@@ -77,7 +78,7 @@ export function buildSantaMonica(scene: Scene, track: TrackDefinition, theme: Pr
     for (const side of [-1, 1]) box('sign-support', x + side * width * 0.45, 1.8, z, 0.18, 3.6, 0.18, dark);
   };
   sign('SANTA MONICA / SUNSET RUN', -14, -24, 22, 'sunset-title');
-  sign('PACIFIC PIER', 94, 24.1, 12, 'pier-title');
+  sign('PACIFIC PIER', 95, 39.25, 8, 'pier-title');
 
   // Beachfront facades sit inside the protected garden footprint; furniture is protected too.
   const facade = [coral, white, gold];
@@ -110,18 +111,19 @@ export function buildSantaMonica(scene: Scene, track: TrackDefinition, theme: Pr
     box('umbrella-pole', x + 7, 1.1, z - 1, 0.08, 2.2, 0.08, white);
   }
   const {wheelX:wx,wheelZ:wz,wheelY:wy}=pierComposition;
-  for(const side of[-1,1])tube('wheel-a-frame',[new Vector3(wx-7,.3,wz+side*2.1),new Vector3(wx,wy,wz),new Vector3(wx+7,.3,wz+side*2.1)],.43,coral);
+  for(const side of[-1,1])tube('wheel-a-frame',[new Vector3(wx-10,.3,wz+side*2.7),new Vector3(wx,wy,wz),new Vector3(wx+10,.3,wz+side*2.7)],.55,coral);
   const wheel=buildPacificWheel(scene,white);
   bakeLandmark('amusement-boardwalk-district',amusementBoardwalk(),scene,white);
+  bakeLandmark('connected-pedestrian-pier-access',amusementAccess(),scene,white);
   const coasterPath = Array.from({ length: 97 }, (_, i) => {
-    const a = i / 96 * Math.PI * 2,c=pierComposition.coaster; return new Vector3(c.x + Math.cos(a) * c.rx, 2.8 + (1 + Math.cos(a * 2 + 0.6)) * 3.2, c.z + Math.sin(a) * c.rz);
+    const p=coasterPosition(i/96*Math.PI*2);return new Vector3(p.x,p.y,p.z);
   });
   for (const side of [-1, 1]) {
     const rail = coasterPath.map(p => {
       const radial = new Vector3(p.x - pierComposition.coaster.x, 0, p.z - pierComposition.coaster.z).normalize().scale(side * .3);
       return p.add(radial);
     });
-    tube('sunset-coaster-track', rail, 0.09, gold);
+    tube('sunset-coaster-track', rail, 0.18, gold);
   }
   for (let i = 0; i < 96; i += 3) {
     const p = coasterPath[i], radial = new Vector3(p.x - pierComposition.coaster.x, 0, p.z - pierComposition.coaster.z).normalize().scale(.43);
@@ -135,7 +137,7 @@ export function buildSantaMonica(scene: Scene, track: TrackDefinition, theme: Pr
       tube('coaster-lattice-brace',[new Vector3(base.x,.35,base.z),new Vector3(q.x,q.y-.18,q.z)],.075,white);
     }
   }
-  const trainParts = Array.from({ length: 3 }, (_, i) => box('coaster-train-car', -i * 1.2, 0, 0, 1, 0.7, 0.7, coral));
+  const trainParts = Array.from({ length: 5 }, (_, i) => box('coaster-train-car', -i * 1.5, 0, 0, 1.3, 0.9, 1.1, coral));
   const train = Mesh.MergeMeshes(trainParts, true, true)!; train.name = 'animated-coaster-train'; train.metadata = { dynamicScenery: true };
 
   // The physical ramp remains discoverable without shortcut signs or special paint.

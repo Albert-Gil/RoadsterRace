@@ -22,7 +22,7 @@ const gate = startGate(track), touch = (p: Point) => { const q = gateCoordinates
 
 describe('Santa Monica v4 beach structures', () => {
   it('are solid buildings on beach land, outside the loop, 6+ m beyond the road and clear of the start zone', () => {
-    expect(track.version).toBe(4);
+    expect(track.version).toBe(5);
     for (const s of santaBeachStructures) {
       const b = track.barriers.find(b => b.id === s.id)!;
       expect(b, s.id).toBeDefined(); expect(b.kind).toBe('building'); expect(b.height).toBe(s.height); expect(s.height).toBeLessThanOrEqual(4);

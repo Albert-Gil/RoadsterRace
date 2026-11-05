@@ -1,6 +1,7 @@
 import {CompositionShapes} from './composition-shapes';
 import {hex,mix} from './landscape/mesh';
 import {venueComposition as art} from './themes';
+import {nightTower} from './landmark-showcase';
 import {Mesh} from '@babylonjs/core/Meshes/mesh';
 import type {Scene} from '@babylonjs/core/scene';
 import type {StandardMaterial} from '@babylonjs/core/Materials/standardMaterial';
@@ -11,6 +12,7 @@ export interface UrbanBuilding {id?:string;x:number;z:number;width:number;depth:
 export function urbanArchitecture(buildings:readonly UrbanBuilding[],night:boolean){
  const paint=new CompositionShapes(),lights=new CompositionShapes(),palette=night?art.night:art.city;
  for(const [index,b]of buildings.entries()){
+  if(night&&b.height>=32){const tower=nightTower(b,index);paint.append(tower.paint);lights.append(tower.lights);continue;}
   const{x,z,width:w,depth:d,height:h}=b,base=.18,face=palette.facades[b.color%palette.facades.length],roof=palette.roofs[index%palette.roofs.length],wall=h*(night?.80:b.style===2?.90:.74),top=base+h,pad=b.id?.startsWith('avenue-')?.5:0;
   paint.box(x,base+.12,z,w+pad,.24,d+pad,palette.foot);paint.box(x,base+wall/2,z,w-.06,wall,d-.06,face);
   // Strong continuous bands and colored roofs read at the gameplay camera angle.

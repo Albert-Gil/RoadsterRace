@@ -11,7 +11,7 @@ import { buildUrbanArchitecture } from './urban-architecture';
 import {urbanPromenade} from './urban-promenade';
 import {bakeLandmark} from './venue-landmarks';
 import {bayRoofscape} from './venue-signatures';
-import { cityAppearance, type PresentationTheme } from './themes';
+import { cityAppearance, landmarkShowcase, type PresentationTheme } from './themes';
 import { buildGoldenGateLandscape, GOLDEN } from './golden-gate-landscape';
 
 /** Grounded original city blocks and an 88 m suspension span; collision rails are rendered separately. */
@@ -93,9 +93,11 @@ export function buildBay(scene: Scene, track: TrackDefinition, theme: Presentati
       return new Vector3(x, y, z);
     });
     MeshBuilder.CreateTube('bridge-suspension-cable', { path, radius: 0.23, tessellation: 5 }, scene).material = red;
-    for (let x = -24; x <= 24; x += 6) {
-      const y = 5.5 + 7.55 * (x / 28) ** 2;
-      box('bridge-hanger', x, (y + 0.8) / 2, z, 0.055, y - 0.8, 0.055, metal);
+    for (let x = -40; x <= 40; x += landmarkShowcase.bridge.hangerSpacing) {
+      const y = Math.abs(x)<=28?5.5+7.55*(x/28)**2:13.05-(Math.abs(x)-28)*.72,b=landmarkShowcase.bridge;
+      box('bridge-hanger', x, (y + b.deckY) / 2, z, b.hangerWidth, y - b.deckY, b.hangerWidth, red);
+      const inner=z<42?34.175:49.825;
+      box('bridge-hanger-deck-bracket',x,.82,(z+inner)/2,.22,.24,Math.abs(z-inner)+.18,red);
     }
   }
   // Parks, shore, riprap, park boulders and the headlands across the bay.

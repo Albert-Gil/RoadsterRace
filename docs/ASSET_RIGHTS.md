@@ -289,3 +289,11 @@ light/ground treatments are original procedural artwork. They reuse existing
 materials, shaders and licensed assets; no external model, image or recording was
 introduced. Newport's scaled scenery retains its existing provenance. Updated
 circuit cards and review media are actual game captures.
+
+### Large attractions — 2026-11-05
+
+The additional rockets, cryogenic vapor texture/billboards, expanded amusement
+piers, ride geometry, pedestrian entrance, bridge hangers, resort equipment and
+setback night towers are original procedural artwork. They reuse existing
+materials and licensed assets. No third-party model or new external image,
+recording or sky was added. Updated circuit cards are native game captures.

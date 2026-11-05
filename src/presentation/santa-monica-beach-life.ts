@@ -383,8 +383,8 @@ export function santaBeachLife(track: TrackDefinition, layout: SantaLayout) {
   for (const [x, z, h] of [[205, 46, 0.3], [224, -34, 1.9], [150, 86, 2.6], [96, 92, 0.9], [232, 88, -0.4], [190, -66, 2.2]] as const) sailboat(x, z, h);
   for (const [x, z, h] of [[178, 64, -2.4], [214, 6, 0.4], [120, 70, 1.2]] as const) motorboat(x, z, h);
   motorboat(78, 67, 1.6, true);
-  for (const [x, z, h] of [[52, -24, 0.4], [60, -33, 2.1], [134, -18, 1.0], [140, -30, -0.8]] as const) kayak(x, z, h);
-  for (const [x, z, h] of [[47, -12, 2.8], [62, -9, -0.6], [55, -37, 1.4], [128, -34, 0.2], [96, 76, 1.9]] as const) paddleboard(x, z, h);
+  for (const [x, z, h] of [[52, -24, 0.4], [60, -33, 2.1], [184, -20, 1.0], [190, -42, -0.8]] as const) kayak(x, z, h);
+  for (const [x, z, h] of [[47, -12, 2.8], [62, -9, -0.6], [55, -37, 1.4], [196, -16, 0.2], [96, 76, 1.9]] as const) paddleboard(x, z, h);
   for (const [x, z, h, standing] of [[66, 62, -1.6, false], [70, 71, -1.5, true], [64, 75, -1.7, false]] as const) surfer(x, z, h, standing);
   // The swim zone: a buoy line parallel to the shore, swimmers between it and the beach.
   const swimX = 57;

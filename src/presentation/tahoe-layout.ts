@@ -3,7 +3,7 @@ import { insideBarrier } from '../core/barriers';
 import { terrainElevation, locateRoad } from '../core/elevation';
 import { supported } from '../core/support';
 import { courseDistance } from './landscape/terrain-fields';
-import { snowyTahoeAppearance as art } from './themes';
+import { snowyTahoeAppearance as art,landmarkShowcase } from './themes';
 
 /** Placement is cosmetic; the road, runoff, buildings and hillside share core ground heights. */
 export function tahoeLayout(track:TrackDefinition){
@@ -24,6 +24,7 @@ export function tahoeLayout(track:TrackDefinition){
     const p={x:x+(random()-.5)*4,z:z+(random()-.5)*4},h=5.8+random()*2;
     if(!insideBarrier(p,reserve)||D(p.x,p.z)<17)continue;
     const radius=h*.24;
+    if(landmarkShowcase.tahoe.clearings.some(b=>p.x>b.x-radius&&p.x<b.x+b.width+radius&&p.z>b.z-radius&&p.z<b.z+b.depth+radius))continue;
     if(Array.from({length:8},(_,i)=>({x:p.x+Math.cos(i*Math.PI/4)*radius,z:p.z+Math.sin(i*Math.PI/4)*radius})).some(q=>!insideBarrier(q,reserve)))continue;
     if(track.barriers.filter(b=>b.kind==='building').some(b=>{const xs=b.footprint.map(q=>q.x),zs=b.footprint.map(q=>q.z);return p.x>Math.min(...xs)-2&&p.x<Math.max(...xs)+2&&p.z>Math.min(...zs)-2&&p.z<Math.max(...zs)+2;}))continue;
     trees.push({...p,height:h,authored:true});
