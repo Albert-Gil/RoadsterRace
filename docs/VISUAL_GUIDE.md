@@ -171,3 +171,21 @@ and 40 ms result-row staggering; reduced motion bypasses animation. Circuit-card
 artwork uses optional CircuitDefinition.artwork references and circuitArtRevision,
 with offline regeneration via tools/capture-circuit-art.mjs. See
 PRESENTATION_UPGRADE.md for placement, budgets and the verification workflow.
+
+## Circuit craft (2026-11-04)
+
+Venue-specific protected furniture is generated in venue-furniture.ts and shares
+the roadside batch/palette. pierRampAppearance controls the original timber takeoff;
+pier-ramp.ts follows Santa Monica's unchanged physical slope. Masonry finishes are
+assigned by scenery/material role, and parkedVehicleFacades keeps cars outside
+those roles. Offline card capture accepts ART_SOURCE/ART_OUTPUT for staging and
+ART_CIRCUITS for a comma-separated list of registered IDs. See
+CIRCUIT_CRAFT_AND_RIVALS.md and CIRCUIT_CRAFT_VERIFICATION.md for contracts/results.
+
+## Yosemite waterways (2026-11-04)
+
+Yosemite's river/lake authoring and six larger waterfall sites are documented in
+YOSEMITE_WATERWAYS.md. Keep waterfalls attached to their real receiving waters,
+retain the downstream ordering of river UVs, and let outlets continue outside the
+map rather than stopping in the meadow. All receiving pools share existing
+batches; do not add a separate material, light or particle system per fall.

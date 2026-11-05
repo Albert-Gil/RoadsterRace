@@ -9,10 +9,10 @@ import{terrainElevation}from'../../src/core/elevation';
 const compiled=compileRoute(createPracticeSamples(track),track);if(!compiled.ok)throw Error(compiled.message);const route=compiled.route;
 
 test('Capitan Yosemite is a distinct eighth venue with real terrain and a main-road creek crossing',()=>{
- expect(findCircuit('yosemite').id).toBe(track.id);expect(circuits.at(-1)!.track).toBe(track);expect(track.version).toBe(3);expect(track.roadWidth).toBe(16);
+ expect(findCircuit('yosemite').id).toBe(track.id);expect(circuits[7].track).toBe(track);expect(track.version).toBe(5);expect(track.roadWidth).toBe(16);
  expect(track.length).toBeGreaterThan(680);expect(track.length).toBeLessThan(740);
  expect(Math.max(...track.centerline.map(p=>p.y??0))).toBeCloseTo(28,1);expect(track.centerline[0].y).toBe(0);
- expect(route.jumps).toEqual(['valley-creek-crest']);expect(route.hazards).toBeUndefined();
+ expect(route.jumps).toEqual(track.jumps!.map(j=>j.id));expect(route.hazards).toBeUndefined();
  expect(supported({x:14,z:-70},track)).toBe(false);expect(supported({x:9,z:-70},track)).toBe(true);
 });
 
@@ -48,7 +48,7 @@ test('only the full forward timber traversal receives its Hop exemption',()=>{
 },90000);
 
 test.each(['easy','normal','hard']as const)('%s CPU uses the mandatory jump and finishes two laps with no recovery',difficulty=>{
- const r=computerRoute(track,difficulty,0,71);expect(r.jumps).toEqual(['valley-creek-crest']);expect(r.hopShortcuts).toBeUndefined();
+ const r=computerRoute(track,difficulty,0,71);expect(r.jumps).toEqual(track.jumps!.map(j=>j.id));expect(r.hopShortcuts).toBeUndefined();
  const sim=new RaceSimulation(r,track,2);let jumps=0;for(let i=0;i<14000&&!sim.state.finished;i++){sim.step();jumps+=sim.drainEvents().filter(e=>e.type==='takeoff').length;}
- expect(sim.state.finished).toBe(true);expect(sim.state.recoveryCount).toBe(0);expect(jumps).toBe(2);expect(sim.state.speed).toBeLessThanOrEqual(RULES.maxSpeed);
+ expect(sim.state.finished).toBe(true);expect(sim.state.recoveryCount).toBe(0);expect(jumps).toBe(6);expect(sim.state.speed).toBeLessThanOrEqual(RULES.maxSpeed);
 },120000);

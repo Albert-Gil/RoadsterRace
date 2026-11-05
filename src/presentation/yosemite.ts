@@ -11,6 +11,7 @@ import type{Point,TrackDefinition}from'../core/types';
 import{terrainElevation}from'../core/elevation';
 import{supported}from'../core/support';
 import{roadEdges}from'../core/road-geometry';
+import{cumulative}from'../core/geometry';
 import{Geometry,hex,mix,edgeDistance}from'./landscape/mesh';
 import{fbm2,smoothstep}from'./landscape/noise';
 import{RenderedSurface}from'./rendered-surface';
@@ -20,7 +21,7 @@ import{yosemiteAtmosphere}from'./yosemite-atmosphere';
 import{buildYosemiteWaterfall}from'./yosemite-waterfall';
 import{yosemiteDressing}from'./yosemite-dressing';
 import{yosemiteMeadowColor}from'./yosemite-surfaces';
-import { yosemiteCreekBanks } from '../core/tracks/yosemite-terrain';
+import { yosemiteRivers } from '../core/tracks/yosemite-terrain';
 import { sceneryWork } from './landscape/scenery-worker';
 
 /** Terrain and footprints come from core; all dressing and animation remain cosmetic. */
@@ -70,17 +71,21 @@ export function buildYosemite(scene:Scene,track:TrackDefinition,theme:Presentati
  const water=mat('water','#ffffff');water.reflectionTexture=scene.environmentTexture;water.specularColor.setAll(.4);water.specularPower=110;
  water.metadata={absoluteVertexColors:true};
  const waterTexture=surfaceTexture(scene,'water');waterTexture.uScale=3;waterTexture.vScale=14;water.diffuseTexture=waterTexture;
- const creek=track.waterOpenings![0].footprint,g=new Geometry();
+ const g=new Geometry(),flowUVs:number[]=[];
  // Follow the authoritative meandering banks; the straight eight-metre race gap is unchanged.
- const [left,right]=yosemiteCreekBanks,waterRows=left.map((a,i)=>Array.from({length:9},(_,j)=>{
+ for(const river of yosemiteRivers(track)){
+ const distances=cumulative(river.path);
+ const creek=river.footprint,[left,right]=river.banks,waterRows=left.map((a,i)=>Array.from({length:9},(_,j)=>{
   const t=j/8,x=a.x+(right[i].x-a.x)*t,z=a.z+(right[i].z-a.z)*t;
   const depth=smoothstep(.2,3,edgeDistance({x,z},creek)),light=.5+.5*Math.sin(z*.35+x);
-  return g.vertex(x,-2.4,z,mix(hex(art.water),hex(art.waterDeep),Math.min(.88,depth*.75+light*.08)));
+  flowUVs.push(t*river.width/5,-distances[i]/10);
+  return g.vertex(x,river.level,z,mix(hex(art.water),hex(art.waterDeep),Math.min(.88,depth*.75+light*.08)));
  }));
  for(let i=0;i<waterRows.length-1;i++)for(let j=0;j<8;j++){
   g.triangle(waterRows[i][j],waterRows[i+1][j],waterRows[i][j+1]);g.triangle(waterRows[i][j+1],waterRows[i+1][j],waterRows[i+1][j+1]);
  }
- const stream=new Mesh('bridalveil-flowing-creek',scene),v=g.toVertexData();v.normals=Array.from({length:g.vertexCount},()=>[0,1,0]).flat();v.uvs=Array.from({length:g.vertexCount},(_,i)=>[g.positions[i*3]/10,g.positions[i*3+2]/10]).flat();v.applyToMesh(stream);stream.material=water;
+ }
+ const stream=new Mesh('bridalveil-flowing-creek',scene),v=g.toVertexData();v.normals=Array.from({length:g.vertexCount},()=>[0,1,0]).flat();v.uvs=flowUVs;v.applyToMesh(stream);stream.material=water;
  const falling=buildYosemiteWaterfall(scene,track,water,stone);materials.set('yosemite-waterfall',falling.material);
  const atmosphere=yosemiteAtmosphere(scene,track),pending={landscape:'capitan-yosemite'};scene.addPendingData(pending);
  // The valley's arrays are generated in a worker from now on, while the rest of the venue loads.

@@ -1,4 +1,4 @@
-import { angleDelta, clamp, distance } from './geometry';
+import { angleDelta, clamp, distance, modulo } from './geometry';
 import { blockedRouteSection } from './barriers';
 import { flightGravity, groundHeight, vehicleSupported } from './support';
 import { compileRoute, createPracticeSamples, sampleRoute, PACE_RANGE } from './route';
@@ -9,7 +9,24 @@ import type { LocalRace } from './local-race';
 import { trackSurface } from './surfaces';
 
 export const AI_TUNING = { easy: 0.90, normal: 0.97, hard: 1 } as const;
-export const AI_DRIVING = Object.freeze({ decisionTicks: 12, cornerGripShare: 0.64, brakingShare: 0.65, responseSeconds: 0.45, followingSeconds: 0.65, trafficRange: 32, minimumGap: 2.5 });
+/** Planning/controller compatibility is independent of unchanged human vehicle physics. */
+export const COMPUTER_VERSION = 2;
+export const AI_DRIVING = Object.freeze({ decisionTicks: 12, cornerGripShare: 0.64, brakingShare: 0.65, responseSeconds: 0.45, followingSeconds: 0.65, trafficRange: 32, minimumGap: 2.5, lineOffset: 1.8, lineVariation: .22, gripSampleSpacing: 4 });
+const gripProfiles = new WeakMap<CompiledRoute, { track: TrackDefinition; values: Float64Array }>();
+/** Immutable planned terrain is sampled once, not repeatedly on every ability decision.
+ * The lower neighbouring grip is conservative at a surface transition. Curvature
+ * and traffic are still evaluated live, and the simulation always samples reality.
+ */
+function plannedGrip(route: CompiledRoute, track: TrackDefinition, at: number) {
+  let profile = gripProfiles.get(route);
+  if (!profile || profile.track !== track) {
+    const count = Math.ceil(route.length / AI_DRIVING.gripSampleSpacing);
+    profile = { track, values: Float64Array.from({ length: count + 1 }, (_, i) => sampleSurface(sampleRoute(route, i / count * route.length), track).grip) };
+    gripProfiles.set(route, profile);
+  }
+  const index = Math.min(profile.values.length - 2, Math.floor(modulo(at, route.length) / route.length * (profile.values.length - 1)));
+  return Math.min(profile.values[index], profile.values[index + 1]);
+}
 export function computerRoute(track: TrackDefinition, difficulty: Difficulty, opponent: number, seed: number): CompiledRoute {
   const wantsJump = difficulty === 'hard' ? opponent < 2 : difficulty === 'normal' && opponent === 0;
   const raw = createPracticeSamples(track,7,wantsJump);
@@ -17,7 +34,7 @@ export function computerRoute(track: TrackDefinition, difficulty: Difficulty, op
   const varied = raw.map((p,i,a)=>{
     const before=a[Math.max(0,i-1)],after=a[Math.min(a.length-1,i+1)],d=distance(before,after)||1;
     // Independent, modest lane choices make room for passes without following the human.
-    const offset=([-0.65,0.65,0][opponent%3])+Math.sin(i/(a.length-1)*Math.PI*2+phase)*0.2;
+    const offset=([-AI_DRIVING.lineOffset,AI_DRIVING.lineOffset,0][opponent%3])+Math.sin(i/(a.length-1)*Math.PI*2+phase)*AI_DRIVING.lineVariation;
     return {...p,x:p.x-(after.z-before.z)/d*offset,z:p.z+(after.x-before.x)/d*offset};
   });
   let result = compileRoute(varied,track);
@@ -52,6 +69,10 @@ export function computerTraffic(race: LocalRace, player: number): {gap:number;sp
     if(i===player||o.finished||o.recoveryWaiting||o.time<o.recoveringUntil||(!sameHillside&&Math.abs(o.elevation-s.elevation)>1.2))return;
     const x=o.position.x-s.position.x,z=o.position.z-s.position.z,along=x*forward.x+z*forward.z,across=x*forward.z-z*forward.x;
     if(along<=0||along>AI_DRIVING.trafficRange||Math.abs(across)>race.track.carWidth*1.15)return;
+    // A car pulling clear laterally need not hold up both lanes. Keep close
+    // contacts conservative; only ignore a safely separated, opening gap.
+    const sideways=(o.velocity.x-s.velocity.x)*forward.z-(o.velocity.z-s.velocity.z)*forward.x;
+    if(Math.abs(across)>race.track.carWidth+.2&&across*sideways>0&&Math.abs(across+sideways*.4)>race.track.carWidth+.5)return;
     const gap=Math.max(0,along-race.track.carLength),speed=Math.max(0,o.velocity.x*forward.x+o.velocity.z*forward.z);
     if(!nearest||gap<nearest.gap)nearest={gap,speed};
   });
@@ -88,7 +109,7 @@ export function shouldComputerThrust(race:LocalRace,player:number) {
     const p=sampleRoute(route,s.distance+ahead);
     const inFlight=race.track.jumps?.some(j=>route.jumps?.includes(j.id)&&p.courseProgress!==undefined&&p.courseProgress>=j.entryProgress&&p.courseProgress<=j.exitProgress);
     if(inFlight)continue;
-    const grip=sampleSurface(p,race.track).grip;
+    const grip=plannedGrip(route,race.track,s.distance+ahead);
     const corner=Math.min(RULES.maxSpeed,Math.sqrt(grip*.82/Math.max(.0001,Math.abs(p.curvature))));
     const available=Math.max(0,ahead-burstDistance-responseDistance);
     const predicted=ahead<burstDistance?Math.min(boosted,Math.sqrt(s.speed*s.speed+2*(RULES.thrustAcceleration+RULES.acceleration)*ahead)):boosted;
@@ -110,11 +131,20 @@ export function shouldComputerHop(race: LocalRace, player: number) {
       && Math.abs(o.elevation-s.elevation)<1.2 && along > 0 && along <= 10 && Math.abs(across) < track.carWidth * 1.5 && s.speed - o.speed >= 2;
   });
   if (!blocked) return false;
-  const duration = 2 * RULES.hopLaunchSpeed / flightGravity('hop');
-  const samples = Array.from({ length: 25 }, (_, n) => ({ x: s.position.x + s.velocity.x * duration * n / 24, z: s.position.z + s.velocity.z * duration * n / 24 }));
+  const nominalDuration = 2 * RULES.hopLaunchSpeed / flightGravity('hop'), origin = groundHeight(s.position, track);
+  const samples = [{ ...s.position }]; let duration = nominalDuration, landed = false;
+  // Predict contact with the actual hillside rather than requiring sea-level
+  // ground. This also refuses water, cliff-edge flights and a steep rising face.
+  for(let n=1;n<=36;n++){
+    const t=nominalDuration*1.15*n/36,p={x:s.position.x+s.velocity.x*t,z:s.position.z+s.velocity.z*t};
+    if(!vehicleSupported(p,s.heading,track))return false;
+    samples.push(p);
+    const height=origin+RULES.hopLaunchSpeed*t-.5*flightGravity('hop')*t*t;
+    if(height<=groundHeight(p,track)+.03){if(n<16)return false;duration=t;landed=true;break;}
+  }
+  if(!landed)return false;
   const line = Array.from({ length: 9 }, (_, n) => sampleRoute(race.routes[player], s.distance + s.speed * duration * n / 8));
   if (line.some(p => Math.abs(p.curvature) > 0.012 || Math.abs(angleDelta(Math.atan2(forward.x, forward.z), p.heading)) > Math.PI / 18)
-    || samples.some(p => !vehicleSupported(p, s.heading, track) || groundHeight(p, track) > 0)
     || blockedRouteSection(samples, track)) return false;
   const landing = samples.at(-1)!;
   return !race.racers.some((other, i) => {

@@ -21,12 +21,29 @@ test('freefall stays visible from fixed desktop and phone cameras; droplets desc
    const w=(window as any).__roadster.getWorld(),m=w.scene.getMeshByName('bounded-yosemite-mist'),p=m.getVerticesData('position'),n=m.metadata.fallingWaterCount,first=p.length/12-n;
    return{drops:Array.from({length:n},(_,i)=>(p[(first+i)*12+1]+p[(first+i)*12+4]+p[(first+i)*12+7]+p[(first+i)*12+10])/4),enabled:m.isEnabled(),offset:w.scene.getMaterialByName('yosemite-waterfall').diffuseTexture.vOffset,ripples:Array.from(w.scene.getMeshByName('yosemite-impact-ripples').getVerticesData('position'))};
   });
-  const a=await sample();await page.waitForTimeout(180);const b=await sample();
-  expect(b.drops.filter((y:any,i:number)=>y<a.drops[i]).length).toBeGreaterThan(34);expect(a.offset).not.toBe(b.offset);expect(a.ripples).not.toEqual(b.ripples);
+  const a=await sample();let b=a;
+  // Wait for observed animated frames: a cold scenery upload can occupy the
+  // entire old 180 ms window on a busy test host without advancing any frame.
+  await expect.poll(async()=>{b=await sample();return b.drops.filter((y:any,i:number)=>y<a.drops[i]).length;},{timeout:10000,intervals:[100,100,150]}).toBeGreaterThan(34);
+  expect(a.offset).not.toBe(b.offset);expect(a.ripples).not.toEqual(b.ripples);
   await page.emulateMedia({reducedMotion:'reduce'});await page.waitForTimeout(150);const c=await sample();await page.waitForTimeout(200);const d=await sample();expect(d.enabled).toBe(false);expect(d.offset).toBe(c.offset);expect(d.ripples).toEqual(c.ripples);
   expect(errors).toEqual([]);reports.push({viewport,...view,errors});await context.close();
  }
  writeFileSync('artifacts/yosemite-waterfall/visibility.json',JSON.stringify(reports,null,2));
+});
+
+test('all six waterfalls meet visible receiving waters in the fixed gameplay scene',async({page})=>{
+ await page.goto('/?circuit=capitan-yosemite&graphics=medium');await page.getByRole('button',{name:'Time Trial',exact:true}).click();await page.getByRole('button',{name:'Draw racing line',exact:true}).click();
+ await page.waitForFunction(()=>(window as any).__roadster.getGraphics().renderReady);
+ const report=await page.evaluate(async()=>{
+  const path='/src/presentation/yosemite-waterfall-shape.ts',{yosemiteWaterfallSites,waterfallPoint}=await import(path),g=(window as any).__roadster,w=g.getWorld(),c=w.camera,V=c.position.constructor,M=c.getViewMatrix().constructor,canvas=w.engine.getRenderingCanvas(),r=canvas.getBoundingClientRect();
+  return yosemiteWaterfallSites(g.getTrack()).map((site:any)=>{
+   const a=g.project(site.lip),b=g.project(site.impact),p=waterfallPoint(site,.75),screen=g.project(p),ray=w.scene.createPickingRay((screen.x-r.left)*w.engine.getRenderWidth()/r.width*w.engine.getHardwareScalingLevel(),(screen.y-r.top)*w.engine.getRenderHeight()/r.height*w.engine.getHardwareScalingLevel(),M.Identity(),c),hit=w.scene.pickWithRay(ray,(m:any)=>m.name==='weathered-yosemite-granite');
+   return{id:site.id,pixels:Math.hypot(a.x-b.x,a.y-b.y),visible:!hit?.hit||hit.distance>=V.Distance(ray.origin,new V(p.x,p.y,p.z))-.1,level:site.impact.y,lake:site.lake.id};
+  });
+ });
+ expect(report).toHaveLength(6);expect(report.every((f:any)=>f.visible),JSON.stringify(report)).toBe(true);expect(report.every((f:any)=>f.pixels>30)).toBe(true);
+ mkdirSync('artifacts/yosemite-waters',{recursive:true});writeFileSync('artifacts/yosemite-waters/waterfalls.json',JSON.stringify(report,null,2));
 });
 
 test('Yosemite falling water renders on WebGPU or its supported WebGL fallback',async({page})=>{

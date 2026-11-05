@@ -46,7 +46,7 @@ export const CANYON = {
   } satisfies PlantPalette,
 };
 
-const style = (b: TrackBarrier) => CANYON.formations[b.id] ?? (b.id.includes('ledge') ? { style: 'mesa' as const } : b.id.includes('far') ? { style: 'mesa' as const, tiers: 2 as const, lod: 2 } : b.id.includes('wall') ? { style: (b.id.endsWith('2') || b.id.endsWith('4') ? 'butte' : 'mesa') as 'butte' | 'mesa', tiers: (b.height >= 24 ? 2 : 1) as 1 | 2, lod: 1.5 } : { style: 'mesa' as const });
+const style = (b: TrackBarrier) => CANYON.formations[b.id] ?? (b.id.startsWith('south-rim-') ? {style:b.id.includes('hop')?'boulder-row' as const:b.id.includes('temple')||b.id.includes('spire')?'butte' as const:'mesa' as const,tiers:(b.height>30?2:1)as 1|2} : b.id.includes('ledge') ? { style: 'mesa' as const } : b.id.includes('far') ? { style: 'mesa' as const, tiers: 2 as const, lod: 2 } : b.id.includes('wall') ? { style: (b.id.endsWith('2') || b.id.endsWith('4') ? 'butte' : 'mesa') as 'butte' | 'mesa', tiers: (b.height >= 24 ? 2 : 1) as 1 | 2, lod: 1.5 } : { style: 'mesa' as const });
 
 /** The deterministic layout (no rendering): heights, tints, formations, loose rocks and plants. */
 export function canyonLayout(track: TrackDefinition) {

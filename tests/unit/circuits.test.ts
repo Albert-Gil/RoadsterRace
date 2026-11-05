@@ -5,6 +5,7 @@ import { compileRoute, createPracticeSamples } from '../../src/core/route';
 import { RaceSimulation } from '../../src/core/simulation';
 import { LocalRace } from '../../src/core/local-race';
 import { mix, projectToPolyline } from '../../src/core/geometry';
+import { projectToPolylineNear } from '../../src/core/nearest';
 import { shortcutProjection } from '../../src/core/hop-shortcuts';
 import { insideBarrier } from '../../src/core/barriers';
 
@@ -29,7 +30,7 @@ describe('playable circuit registry', () => {
         let minimum = Infinity;
         for (let i = 0; i < barrier.footprint.length; i++) for (let j = 0; j <= 40; j++) {
           const p = mix(barrier.footprint[i], barrier.footprint[(i + 1) % barrier.footprint.length], j / 40);
-          minimum = Math.min(minimum, projectToPolyline(p, track.centerline, track.distances).distance - track.roadWidth / 2);
+          minimum = Math.min(minimum, projectToPolylineNear(p, track.centerline, track.distances).distance - track.roadWidth / 2);
         }
         if (barrier.runoffException === 'hop-lane') {
           // Natural shortcut piles replace the old service barriers, whose limited-space

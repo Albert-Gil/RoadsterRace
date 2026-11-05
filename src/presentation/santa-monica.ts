@@ -16,6 +16,7 @@ import { santaMonicaAuthoredBuildings as santaMonicaBuildings } from '../content
 import { reflectSantaVenue } from '../core/tracks/santa-monica';
 import { buildSantaMonicaLandscape } from './santa-monica-landscape';
 import { buildSantaBeachLife } from './santa-monica-beach-life';
+import { pierRampGeometry } from './pier-ramp';
 
 /** Original procedural seaside venue. Every pier slab uses a physical support footprint. */
 export function buildSantaMonica(scene: Scene, track: TrackDefinition, theme: PresentationTheme, materials: Map<string, StandardMaterial>) {
@@ -136,11 +137,9 @@ export function buildSantaMonica(scene: Scene, track: TrackDefinition, theme: Pr
 
   // The physical ramp remains discoverable without shortcut signs or special paint.
   const jump = track.jumps![0];
-  const rampPaths = [-1, 1].map(side => [0, jump.rampLength].map(along => {
-    const p = jumpPoint(jump, along, side * jump.width / 2);
-    return new Vector3(p.x, 0.11 + jump.lipHeight * along / jump.rampLength, p.z);
-  }));
-  const ramp = MeshBuilder.CreateRibbon('physical-jump-ramp', { pathArray: rampPaths, sideOrientation: Mesh.DOUBLESIDE }, scene); ramp.material = dark;
+  const ramp = new Mesh('physical-jump-ramp',scene),rampGeometry=pierRampGeometry(jump),rampData=rampGeometry.toVertexData();
+  rampData.uvs=Float32Array.from({length:rampGeometry.vertexCount*2},(_,i)=>rampGeometry.positions[Math.floor(i/2)*3+(i%2?2:0)]/5);
+  rampData.applyToMesh(ramp);ramp.material=wood;
   const landingAlong = jump.rampLength + jump.gap;
   for (let along = landingAlong + 2; along < jump.corridorLength; along += 3) {
     const p = jumpPoint(jump, along); box('landing-deck-seam', p.x, 0.115, p.z, 0.04, 0.01, jump.width - 0.7, white);

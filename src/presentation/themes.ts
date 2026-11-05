@@ -196,7 +196,7 @@ export const heroImages = [
  * kind selects a procedural tile; scale is metres per tile; normal is the bump strength;
  * variation the broad tonal mottling. Water adds animated waves and sky reflection.
  */
-export type SurfaceKind = 'asphalt' | 'sand' | 'dirt' | 'concrete' | 'grass' | 'rock' | 'water' | 'wood' | 'snow';
+export type SurfaceKind = 'asphalt' | 'sand' | 'dirt' | 'concrete' | 'grass' | 'rock' | 'water' | 'wood' | 'snow' | 'brick';
 export interface SurfaceFinish { kind: SurfaceKind; scale: number; normal: number; variation: number; walls?: boolean; reflection?: number; roughness?: number; specular?: number; gloss?: number }
 export const surfaceFinishes: Record<string, SurfaceFinish> = {
   asphalt: { kind: 'asphalt', scale: 10, normal: 0.27, variation: 0.13, specular: 0.065, gloss: 22 },
@@ -233,14 +233,14 @@ export const sceneryFinishes: Partial<Record<keyof typeof sceneryLighting, Recor
   yosemite:{terrain:{kind:'dirt',scale:22,normal:.26,variation:.08},asphalt:{kind:'dirt',scale:12,normal:.32,variation:.12},shoulder:{kind:'dirt',scale:15,normal:.26,variation:.1},'yosemite-granite':{kind:'rock',scale:11,normal:.32,variation:.13,walls:true}},
   alpine: {terrain:{kind:'snow',scale:18,normal:.16,variation:.035},asphalt:{kind:'snow',scale:10,normal:.2,variation:.055},shoulder:{kind:'snow',scale:14,normal:.19,variation:.04},'tahoe-granite':{kind:'rock',scale:5,normal:.45,variation:.12,walls:true}},
   // Golden Gate paints its land in full colour; the finish adds only fine grain. The shore carries vertex colour.
-  bay: { terrain: { kind: 'grass', scale: 16, normal: 0.55, variation: 0.18 }, 'city-ground': { kind: 'dirt', scale: 6, normal: 0.3, variation: 0.05 }, 'golden-shore': { kind: 'dirt', scale: 14, normal: 0.5, variation: 0.1 } },
+  bay: { 'city-facade':{kind:'brick',scale:3.6,normal:.20,variation:.12,walls:true}, terrain: { kind: 'grass', scale: 16, normal: 0.55, variation: 0.18 }, 'city-ground': { kind: 'dirt', scale: 6, normal: 0.3, variation: 0.05 }, 'golden-shore': { kind: 'dirt', scale: 14, normal: 0.5, variation: 0.1 } },
   // Launchsite paints its own ground; its sand keeps fine, low ripples so the paint reads.
   spaceport: { terrain: { kind: 'sand', scale: 11, normal: 0.4, variation: 0.1 } },
   // Newport and Santa Monica paint their beaches; fine, low ripples keep the paint readable.
   coastal: { terrain: { kind: 'sand', scale: 11, normal: 0.45, variation: 0.1 } },
   sunset: { terrain: { kind: 'sand', scale: 11, normal: 0.4, variation: 0.1 } },
   canyon: { terrain: { kind: 'dirt', scale: 22, normal: 0.7, variation: 0.18 }, asphalt: { kind: 'dirt', scale: 12, normal: 0.55, variation: 0.14 }, shoulder: { kind: 'dirt', scale: 16, normal: 0.6, variation: 0.16 } },
-  'night-city': { terrain: { kind: 'concrete', scale: 12, normal: 0.3, variation: 0.12 }, 'la-ground': { kind: 'concrete', scale: 12, normal: 0.3, variation: 0.06 }, asphalt: { kind: 'asphalt', scale: 10, normal: 0.35, variation: 0.08, reflection: 0.2, roughness: 0.45, specular: 0.14, gloss: 60 } },
+  'night-city': { 'la-facade-1':{kind:'brick',scale:3.6,normal:.18,variation:.10,walls:true},'la-facade-3':{kind:'brick',scale:4.8,normal:.16,variation:.10,walls:true}, terrain: { kind: 'concrete', scale: 12, normal: 0.3, variation: 0.12 }, 'la-ground': { kind: 'concrete', scale: 12, normal: 0.3, variation: 0.06 }, asphalt: { kind: 'asphalt', scale: 10, normal: 0.35, variation: 0.08, reflection: 0.2, roughness: 0.45, specular: 0.14, gloss: 60 } },
 };
 
 export const canyonAppearance={cliff:['#a85f43','#bc7850','#d39464','#e1ad79'],mesa:'#c6986b',road:'#aa895d',ruts:'#705c42',dryWash:'#d9b891',scrub:'#68724b',guard:'#96745a'};
@@ -294,11 +294,15 @@ export const hopEffects = { pulse: 0.22, nozzleHeight: 0.20, puffs: 16, lifetime
 /** Shared city materials; architecture placement is authored in content/golden-city.ts. */
 export const cityAppearance = { bridge: '#cb4b36', facades: ['#caba91', '#8aa49a', '#bb8068', '#9daabb', '#d8be8d', '#9b8173'], paving: '#bbb7a6', roof: '#52616a', shop: '#354953', window: '#456575', warmWindow: '#b9bd9d' };
 export const sunsetAppearance = { deck: '#a9866b', steel: '#465360', ivory: '#f6e4cc', glass: '#4a7e91', coral: '#e67b77', gold: '#eec575' };
+export const pierRampAppearance = { surfaceOffset:.11,plankLength:.58,boards:['#fff7e8','#e7d9c4','#f6ead7','#d2c9b8','#eee0ca'],shade:'#655c51',fascia:'#c6b9a3',joist:'#a59985',hardware:'#78817f' };
+export const urbanRampAppearance = { concrete:'#e4e7e7',edge:'#c5cdd1',paving:'#dce1e3',drain:'#405058',surfaceOffset:.10 };
 
 /** Decorative density/scale only. All geometry is batched and stays on existing structures. */
 export const venueDetail = { floorSpacing: 1.9, rockLayers: 7, mesaStones: 34, stoneScale: 1.15,
   strataContrast: .12, dirtWearOpacity: .12, dirtTextureScale: 3 };
 
+/** Parked cars share opaque facade batches, but must not inherit masonry detail. */
+export const parkedVehicleFacades = [0, 2, 4, 5] as const;
 export const ghostAppearance = { color: '#a6e5ed', opacity: 0.32 };
 
 export const snowyTahoeAppearance = {
@@ -315,7 +319,8 @@ export const snowyTahoeAppearance = {
 export const yosemiteAppearance={
  extent:{minX:-280,maxX:300,minZ:-220,maxZ:320},cameraElevation:58,road:'#8f8065',shoulder:'#a3936d',meadow:'#728363',dryMeadow:'#a69d71',forestFloor:'#56644c',forest:'#34553d',forestLight:'#70865a',bark:'#71563e',granite:['#aeb6b1','#c9c8b9','#e2ddce','#737f83'],lichen:'#727b4e',timber:'#896648',roof:'#495548',window:'#b9d5bf',water:'#438c8d',waterDeep:'#285b6c',foam:'#dcebdc',
  treeCount:400,treeHeight:[11,25],nearTreeCount:180,nearTreeHeight:[7,13],nearTreeSetback:14,nearTreeSightline:.45,cedar:'#3c644c',fern:'#426c42',grass:'#8b995a',flowers:'#d4c37c',surfaceOffsets:{road:.12,branch:.13,fringe:.045,branchFringe:.055},mist:{count:18,opacity:.04,speed:.42},
- waterfall:{speed:.8,sprayCount:36,dropletCount:54,gravity:28,opacity:.92,sprayOpacity:.48,wetRock:'#657b7b',lipFraction:.84,lipRadius:.88,waterRadius:.89,halfAngle:.29,curtainWidth:7.2,basinWidth:8.6,basinDepth:3.6,basinHeight:.75,angle:Math.PI/2+.04},
+ waterfall:{speed:.8,sprayCount:36,dropletCount:54,gravity:28,opacity:.96,sprayOpacity:.48,wetRock:'#657b7b',lipFraction:.90,lipRadius:.88,waterRadius:.89,halfAngle:.42,curtainWidth:10.8,basinWidth:16,basinDepth:10,basinHeight:.75,angle:Math.PI/2+.04,
+  widths:{'granite-falls':10.8,'creek-falls':6.4,'cathedral-falls':7.2,'sentinel-falls':6.6,'sentinel-buttress-falls':7.4,'granite-twin-falls':6.2} as Record<string,number>},
  dressing:{roadWorn:'#b0a07d',roadEdge:'#857d60',barkDark:'#4d3a2c',cutWood:'#c8ab77',stonework:'#a2a18f',trim:'#d6cfac',roofSeam:'#687166'},
 };
 
@@ -362,7 +367,7 @@ export const venueFinish = {
  yosemite:{edge:'#a08e6c',ground:'#84906a',grit:'#bdaf8b',inset:.18,spread:1.05},
 } satisfies Record<string,VenueFinish>;
 export const interfaceMotion = { durationMs:160, rowStaggerMs:40 };
-export const circuitArtRevision = '2026-11-03';
+export const circuitArtRevision = '2026-11-04-waterways';
 /** One sun per venue; unchanged shadow-map dimensions and cached caster policy. */
 export const venueSunDirections = {
  coastal:[.50,-1,.60],spaceport:[.65,-1,.38],bay:[.40,-1,.62],sunset:[.72,-1,.35],

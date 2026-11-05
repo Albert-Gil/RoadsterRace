@@ -9,11 +9,11 @@ const centerline = roundedCircuit([
   { x: 57, z: -10 }, { x: 44, z: 4 }, { x: 17, z: 4 },
   { x: 17, z: 32 }, { x: -2, z: 38 }, { x: -27, z: 31 },
   { x: -49, z: 20 }, { x: -55, z: -1 }, { x: -43, z: -30 },
-]);
+].map(p => ({ ...p, x: p.x > 16 ? 16 + (p.x - 16) * 1.18 : p.x })));
 const distances = cumulative(centerline);
 const length = distances[distances.length - 1];
 export const coastalTrack: TrackDefinition = {
-  id: 'coastal-launch', version: 6, name: 'Newport Island', centerline, distances, length,
+  id: 'coastal-launch', version: 7, name: 'Newport Island', centerline, distances, length,
   roadWidth: 16, carWidth: VEHICLE_DIMENSIONS.width, carLength: VEHICLE_DIMENSIONS.length, start: centerline[0], startFinish: createStartFinish(centerline[0], centerline[1], 16),
   // Authored infield islands: all faces are also used by the visible retaining walls.
   barriers: ([

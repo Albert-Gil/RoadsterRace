@@ -3,6 +3,7 @@ import { championshipStandings, createTournament, finalizeRound } from '../../sr
 import { circuits, findCircuit } from '../../src/content/circuits';
 import { parseTournament } from '../../src/presentation/tournament-storage';
 import { defaultPreferences } from '../../src/presentation/race-settings';
+import { COMPUTER_VERSION } from '../../src/core/computer';
 const rounds = circuits.map(c => ({ circuitId: c.id, trackVersion: c.track.version }));
 const finishes = (times: number[]) => times.map((finishTime, player) => ({ player, finishTime, rank: 1 + times.filter(t => Math.round(t * 100) < Math.round(finishTime * 100)).length }));
 describe('local championship', () => {
@@ -51,9 +52,11 @@ describe('local championship', () => {
   });
   test('solo save retains CPU controllers, difficulty and seed and rejects contradictory controllers',()=>{
     const drivers=defaultPreferences().drivers.map((d,i)=>({...d,controller:i===0?'human':'computer'}));
-    const saved={state:createTournament(rounds,4,3),drivers,options:{mode:'solo-race',difficulty:'hard',seed:103}};
+    const saved={state:createTournament(rounds,4,3),drivers,options:{mode:'solo-race',difficulty:'hard',seed:103},computerVersion:COMPUTER_VERSION};
     const restored=parseTournament(JSON.stringify(saved));expect(restored?.options).toEqual(saved.options);expect(restored?.drivers).toEqual(drivers);
     expect(parseTournament(JSON.stringify({...saved,drivers:drivers.map(d=>({...d,controller:'computer'}))}))).toBeNull();
     expect(parseTournament(JSON.stringify({...saved,options:{...saved.options,seed:NaN}}))).toBeNull();
+    expect(parseTournament(JSON.stringify({...saved,computerVersion:COMPUTER_VERSION-1}))).toBeNull();
+    expect(parseTournament(JSON.stringify({...saved,computerVersion:undefined}))).toBeNull();
   });
 });

@@ -9,30 +9,33 @@ Conventions: SI units; horizontal plane (x, z) with y up; heading 0 points along
 | Item | Version |
 |---|---:|
 | Vehicle rules (`RULES.version`) | 18 |
+| Computer planning/controller (`COMPUTER_VERSION`) | 2 |
 | Route compiler (`COMPILER_VERSION`) | 18 |
-| Newport Island track (`coastal-launch`) | 6 |
+| Newport Island track (`coastal-launch`) | 7 |
 | Launchsite track (`orbital-launchyard`) | 10 |
 | Golden Gate track (`golden-gate`) | 7 |
 | Santa Monica track (`santa-monica`) | 4 |
 | Grand Canyon track (`grand-canyon`) | 5 |
 | LA nights track (`la-nights`) | 4 |
 | Snowy Tahoe track (`snowy-tahoe`) | 5 |
-| Capitan Yosemite track (`capitan-yosemite`) | 3 |
+| Capitan Yosemite track (`capitan-yosemite`) | 5 |
+| Grand Canyon: South Rim track (`canyon-south-rim`) | 1 |
 
-Records, ghosts, session bests and championships are scoped by these versions. Change a version whenever a value below changes race results.
+Records, ghosts, session bests and championships are scoped by the relevant versions. Computer-version changes invalidate Solo championships only; human Time Trial records and local Multiplayer saves retain their unchanged rules/track compatibility. Change a version whenever a value below changes race results.
 
 ## Courses
 
 | Circuit | ID | Track version | Road width (m) | Centerline (m) | Barriers | Branches |
 |---|---|---:|---:|---:|---:|---|
-| Newport Island | `coastal-launch` | 6 | 16 | 292.9 | 4 | — |
+| Newport Island | `coastal-launch` | 7 | 16 | 305.6 | 4 | — |
 | Launchsite | `orbital-launchyard` | 10 | 16 | 460.6 | 31 | hop lane `service-hop`, hop lane `utility-wing-hop`, hop lane `rocket-yard-tip-hop` |
 | Golden Gate | `golden-gate` | 7 | 16 | 496.4 | 38 | bridge `golden-span` |
 | Santa Monica | `santa-monica` | 4 | 16 | 660.7 | 113 | ramp `pacific-hop` |
 | Grand Canyon | `grand-canyon` | 5 | 16 | 595.0 | 43 | crest `canyon-crest`, hop lane `mesa-service-trail` |
 | LA nights | `la-nights` | 4 | 16 | 734.0 | 12 | ramp `channel-crossing`, hop lane `backlot-alley` |
 | Snowy Tahoe | `snowy-tahoe` | 5 | 16 | 554.8 | 17 | hop lane `forestry-trail` |
-| Capitan Yosemite | `capitan-yosemite` | 3 | 16 | 711.2 | 55 | crest `valley-creek-crest`, hop lane `ranger-timber-trail` |
+| Capitan Yosemite | `capitan-yosemite` | 5 | 16 | 716.6 | 55 | crest `valley-creek-crest`, crest `sentinel-creek-crest`, crest `cathedral-creek-crest`, hop lane `ranger-timber-trail` |
+| Grand Canyon: South Rim | `canyon-south-rim` | 1 | 16 | 850.7 | 24 | crest `south-rim-crossing`, hop lane `juniper-saddle`, hop lane `redwall-traverse` |
 
 Vehicle envelope: 2.9095 m × 6.877 m. Race distance: 1–6 laps (default 2). Championship points by place: 10 / 6 / 4 / 0.
 
@@ -195,3 +198,6 @@ Derived: level-ground manual hop peak 8.028 m and airtime 0.944 s. Santa Monica 
 | `followingSeconds` | 0.65 | s | Following headway and speed-response horizon |
 | `trafficRange` | 32 | m | Furthest same-level car considered ahead |
 | `minimumGap` | 2.5 | m | Minimum bumper-to-bumper following gap |
+| `lineOffset` | 1.8 | m | Validated left/right opponent line offset before curvature smoothing |
+| `lineVariation` | 0.22 | m | Maximum seeded lateral variation around an opponent lane |
+| `gripSampleSpacing` | 4 | m | Maximum spacing of cached planned-surface grip samples |

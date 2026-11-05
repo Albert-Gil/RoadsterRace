@@ -8,7 +8,7 @@ import { yosemiteCreekBanks } from '../../src/core/tracks/yosemite-terrain';
 import { insideBarrier } from '../../src/core/barriers';
 import { yosemiteTreeTemplates } from '../../src/presentation/yosemite-forest';
 
-test('roadside Yosemite preserves the complete v1 road and branch height/support profile',()=>{
+test('Yosemite v4 road and branch height/support fixture stays deterministic',()=>{
  const hash=createHash('sha256'),branches=track.hopShortcuts!.map(h=>({path:h.branch,distances:cumulative(h.branch)}));let count=0;
  for(let z=-130;z<=140;z+=2)for(let x=-150;x<=150;x+=2){
   const p={x,z};let gap=projectToPolyline(p,track.centerline,track.distances).distance;
@@ -16,9 +16,9 @@ test('roadside Yosemite preserves the complete v1 road and branch height/support
   if(gap>8)continue;
   hash.update(`${x},${z},${terrainElevation(p,track).toFixed(5)},${supported(p,track)};`);count++;
  }
- // Recorded from Yosemite v1 at 092b30d, before any valley changes (2 m sample grid).
- // Off-road foundations now intentionally move closer; the full 16 m lane is unchanged.
- expect(count).toBe(3401);expect(hash.digest('hex')).toBe('42c841a87f28354ce4dc308666a25256f6c4e178a2673b6d9f1b9c8f2879ecc8');
+ // v4 intentionally opens the west bend, moves the branch entrance and adds two
+ // physical creeks. Record its full 16 m lanes on the same 2 m fixture grid.
+ expect(count).toBe(3544);expect(hash.digest('hex')).toBe('8f41b76abd3d31963aa2b966246d5a8380b6bc787e7b92dc1d19fadb6cfc438d');
 });
 
 test('new valley geology has authored solid footprints and leaves the road and timber trail clear',()=>{

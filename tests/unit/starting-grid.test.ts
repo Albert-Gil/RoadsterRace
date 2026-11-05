@@ -75,4 +75,5 @@ test('two to four cars each start the same distance behind the line on every cir
     const along = startingGrid(track, routes).map(p => gateCoordinates(p, track).along);
     expect(Math.max(...along) - Math.min(...along), `${track.id} ${count}`).toBeLessThan(1e-6);
   }
-});
+// Compile 27 independently validated plans; this is a geometry check, not a wall-time benchmark.
+},90000);

@@ -73,7 +73,7 @@ describe('frame governor', () => {
 });
 
 describe('procedural surface detail', () => {
-  const kinds: SurfaceKind[] = ['asphalt', 'sand', 'dirt', 'concrete', 'grass', 'rock', 'water', 'wood', 'snow'];
+  const kinds: SurfaceKind[] = ['asphalt', 'sand', 'dirt', 'concrete', 'grass', 'rock', 'water', 'wood', 'snow', 'brick'];
   it('produces seamless tiles with encoded normals and tone', () => {
     for (const kind of kinds) {
       const size = 64, pixels = detailMap(kind, size);

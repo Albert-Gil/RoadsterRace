@@ -32,6 +32,10 @@ export function trailRockColor(x: number, y: number, z: number, top: number): Rg
   const channel = Math.max(0, noise2(x * 0.34, z * 0.34, 17)) ** 2;
   const seam = Math.exp(-(((bed - Math.floor(bed) - 0.08) / 0.07) ** 2));
   c = mix(c, shadow, 0.2 * seam + channel * 0.42);
+  // Exposed mineral shelves and rain-stained joints are baked into the existing
+  // hillside vertices, so close trail foundations gain detail without new draws.
+  const fineBed=.5+.5*Math.sin(y*5.6+noise2(x*.12,z*.12,307)*1.4);
+  c=mix(c,cap,Math.pow(fineBed,12)*.20*(1-smoothstep(top-.7,top,y)));
   c = mix(c, cap, smoothstep(top - 0.7, top + 0.02, y) * 0.7);
   c = mix(c, hex(art.dust), (1 - smoothstep(art.floor, art.floor + 1.1, y)) * 0.35);
   const mineralWash=.96+.055*fbm2(x/17+y*.025,z/17,3,621);

@@ -43,7 +43,9 @@ test.each(circuits)('$id accepts a substantially wider off-road racing line and 
 
 test('a line far off the circuit is accepted as drawn and the car drives it through the sand', () => {
   const track = circuits[0].track;
-  const drawn = excursion(track, 35, -1, 40), result = compileRoute(drawn, track);
+  // Keep the 40 m excursion beyond Newport v7's extended eastern sweeper.
+  // Starting 5 m earlier loops back through the road and is intentionally hook-cleaned.
+  const drawn = excursion(track, 40, -1, 40), result = compileRoute(drawn, track);
   if (!result.ok) throw new Error(result.message);
   // The compiled line keeps the excursion: every drawn sample stays on it.
   const line = result.route.points, along = cumulative(line);

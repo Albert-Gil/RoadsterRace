@@ -7,7 +7,7 @@ import { COMPILER_VERSION, PACE_RANGE, PACE_FILTER } from '../src/core/route';
 import { DRAWING_RULES } from '../src/core/route-cleanup';
 import { GATE_RULES } from '../src/core/start-finish';
 import { SHORTCUT_RULES } from '../src/core/hop-shortcuts';
-import { AI_TUNING, AI_DRIVING } from '../src/core/computer';
+import { AI_TUNING, AI_DRIVING, COMPUTER_VERSION } from '../src/core/computer';
 import { CHAMPIONSHIP_POINTS } from '../src/core/tournament';
 import { DEFAULT_LAPS, MAX_LAPS, MIN_LAPS } from '../src/core/race-options';
 import { circuits } from '../src/content/circuits';
@@ -113,6 +113,9 @@ const documentation: Record<string, Record<string, Unit>> = {
     followingSeconds: ['s', 'Following headway and speed-response horizon'],
     trafficRange: ['m', 'Furthest same-level car considered ahead'],
     minimumGap: ['m', 'Minimum bumper-to-bumper following gap'],
+    lineOffset: ['m', 'Validated left/right opponent line offset before curvature smoothing'],
+    lineVariation: ['m', 'Maximum seeded lateral variation around an opponent lane'],
+    gripSampleSpacing: ['m', 'Maximum spacing of cached planned-surface grip samples'],
   },
 };
 
@@ -149,10 +152,11 @@ Conventions: SI units; horizontal plane (x, z) with y up; heading 0 points along
 | Item | Version |
 |---|---:|
 | Vehicle rules (\`RULES.version\`) | ${RULES.version} |
+| Computer planning/controller (\`COMPUTER_VERSION\`) | ${COMPUTER_VERSION} |
 | Route compiler (\`COMPILER_VERSION\`) | ${COMPILER_VERSION} |
 ${circuits.map(({ track }) => `| ${track.name} track (\`${track.id}\`) | ${track.version} |`).join('\n')}
 
-Records, ghosts, session bests and championships are scoped by these versions. Change a version whenever a value below changes race results.
+Records, ghosts, session bests and championships are scoped by the relevant versions. Computer-version changes invalidate Solo championships only; human Time Trial records and local Multiplayer saves retain their unchanged rules/track compatibility. Change a version whenever a value below changes race results.
 
 ## Courses
 

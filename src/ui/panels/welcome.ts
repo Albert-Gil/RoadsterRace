@@ -21,6 +21,6 @@ export function welcomePanel({ tagline, savedTour, incompatibleTour }: WelcomeVi
   if (savedTour) {
     const lead = savedTour.leader ? ` · ${escapeHtml(savedTour.leader.name.toUpperCase())} LEADS ON ${savedTour.leader.points} PTS` : '';
     html += `<div class="resume-tour" role="group" aria-label="Saved tournament"><span class="tag">Saved</span><span class="resume-text">TOURNAMENT · ${savedTour.completed}/${savedTour.total} RACES${lead}</span><button class="text-button" data-action="tour-discard" aria-label="Discard tournament">Discard</button><button class="resume-button" data-action="tour-resume" aria-label="Resume tournament">Resume${chevronIcon}</button></div>`;
-  } else if (incompatibleTour) html += '<p class="resume-tour save-status">The circuits have changed. Your previous tournament cannot resume; start a new tour.</p>';
+  } else if (incompatibleTour) html += '<p class="resume-tour save-status">The game version has changed. Your previous tournament cannot resume; start a new tour.</p>';
   return html;
 }

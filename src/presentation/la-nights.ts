@@ -8,12 +8,12 @@ import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTextur
 import type { Scene } from '@babylonjs/core/scene';
 import type { TrackDefinition } from '../core/types';
 import { laBuildings } from '../content/la-night-art';
-import { nightAppearance as art, type PresentationTheme } from './themes';
+import { nightAppearance as art, parkedVehicleFacades, type PresentationTheme } from './themes';
 import { surfaceTexture } from './textures';
 import { projectToPolyline } from '../core/geometry';
-import { jumpPoint } from '../core/support';
 import { StaticBoxes } from './static-boxes';
 import { buildLALandscape, LA, laLayout } from './la-landscape';
+import { urbanRampGeometry } from './urban-ramp';
 
 /** Night lighting is baked into batched emissive architecture and soft light pools.
  * No per-window lights, transparent skyscrapers, extra collision rules or shortcut signage.
@@ -44,7 +44,8 @@ export function buildLANights(scene:Scene,track:TrackDefinition,theme:Presentati
  box('west-channel-face',61.85,-1.2,-8.5,.3,2.4,37,concrete);box('east-channel-face',72.15,-1.2,-8.5,.3,2.4,37,concrete);
  for(let z=-25;z<10;z+=3)for(const x of [61.8,72.2])box('channel-concrete-joint',x,-1.1,z,.035,2.1,.035,dark);
  const j=track.jumps![0];
- const ramp=MeshBuilder.CreateRibbon('la-physical-ramp',{pathArray:[-1,1].map(side=>[0,j.rampLength].map(d=>{const p=jumpPoint(j,d,side*j.width/2);return new Vector3(p.x,.11+d/j.rampLength*j.lipHeight,p.z);})),sideOrientation:Mesh.DOUBLESIDE},scene);ramp.material=dark;
+ const ramp=new Mesh('la-channel-maintenance-causeway',scene),geometry=urbanRampGeometry(j),rampData=geometry.toVertexData();
+ rampData.uvs=Float32Array.from({length:geometry.vertexCount*2},(_,i)=>geometry.positions[Math.floor(i/2)*3+(i%2?2:0)]/6);rampData.applyToMesh(ramp);ramp.material=concrete;
  const lightTexture=new DynamicTexture('la-soft-light',64,scene,false),lightContext=lightTexture.getContext() as CanvasRenderingContext2D;
  const gradient=lightContext.createRadialGradient(32,32,0,32,32,32);gradient.addColorStop(0,'rgba(255,255,255,0.6)');gradient.addColorStop(.4,'rgba(255,255,255,0.24)');gradient.addColorStop(1,'rgba(255,255,255,0)');lightContext.fillStyle=gradient;lightContext.fillRect(0,0,64,64);lightTexture.hasAlpha=true;lightTexture.update();
  const pools=neon.map((m,i)=>{const p=mat(`la-light-pool-${i}`,art.neon[i],false,true);p.diffuseTexture=lightTexture;p.useAlphaFromDiffuseTexture=true;p.alpha=art.poolOpacity;return p;});
@@ -57,7 +58,7 @@ export function buildLANights(scene:Scene,track:TrackDefinition,theme:Presentati
   for(let z=z0+4;z<z1;z+=5)box('la-paving-joint',(x0+x1)/2,.045,z,x1-x0,.015,.035,dark);
  }
  for(const [i,x] of [58,82,106].entries()){
-  box('la-parked-service-car',x,.55,40.6,4.5,.75,1.9,facades[i]);
+  box('la-parked-service-car',x,.55,40.6,4.5,.75,1.9,facades[parkedVehicleFacades[i%parkedVehicleFacades.length]]);
   box('la-parked-car-glass',x-.15,1.1,40.6,2.2,.55,1.6,glass);
   for(const side of [-1,1]){
    box('la-parking-bay',x,.065,40.6+side*1.6,5.4,.025,.08,white);
@@ -128,7 +129,7 @@ export function buildLANights(scene:Scene,track:TrackDefinition,theme:Presentati
  // Parked cars in the lots and along the avenues beyond the corridor (batched with the architecture).
  const city=laLayout(track);
  for(const car of city.scatter().cars){
-  const ux=Math.sin(car.heading),uz=Math.cos(car.heading),along=Math.abs(uz)>.5,w=along?1.9:4.5,d=along?4.5:1.9,paint=facades[car.colour%facades.length];
+  const ux=Math.sin(car.heading),uz=Math.cos(car.heading),along=Math.abs(uz)>.5,w=along?1.9:4.5,d=along?4.5:1.9,paint=facades[parkedVehicleFacades[car.colour%parkedVehicleFacades.length]];
   box('la-street-car',car.x,.55,car.z,w,.75,d,car.colour<3?paint:white);box('la-street-car-glass',car.x-ux*.15,1.1,car.z-uz*.15,along?1.6:2.2,.55,along?2.2:1.6,glass);
   for(const axle of [-1,1])for(const side of [-1,1])box('la-street-car-wheel',car.x+ux*axle*1.45+(along?side*.9:0),.3,car.z+uz*axle*1.45+(along?0:side*.9),along?.22:.6,.6,along?.6:.22,dark);
  }

@@ -102,7 +102,7 @@ describe('Newport island and authored apex protection', () => {
   const piers = [0.16, -0.22, Math.PI - 0.2, Math.PI + 0.16, Math.PI + 0.48, -1.3];
   const newport = newportLandscapeLayout(coastalTrack, piers), { loose, plants } = newport.scatter(), exact = courseDistance(coastalTrack, NEWPORT.extent).exact;
   it('versions the protected apex garden and keeps its tropical planting inside it', () => {
-    expect(coastalTrack.version).toBe(6);
+    expect(coastalTrack.version).toBe(7);
     const b = coastalTrack.barriers.find(b => b.id === 'apex-rocks')!;
     expect(b.kind).toBe('infield'); expect(b.height).toBe(1.3);
     expect(newport.formations.find(f=>f.id===b.id)).toBeUndefined();

@@ -38,7 +38,7 @@ function cellular(cells: number, seed: number) {
 }
 const TAU = Math.PI * 2;
 
-interface DetailRecipe { height: (u: number, v: number) => number; tone: (u: number, v: number) => number; relief: number }
+interface DetailRecipe { height: (u: number, v: number) => number; tone: (u: number, v: number) => number; relief: number; sample?: (u:number,v:number,out:Float64Array)=>void }
 /**
  * Height recipes sized for the fixed whole-course camera (roughly 0.2-0.4 m per screen pixel):
  * the visible features are metre-scale ripples, clumps and swell, not millimetre grain.
@@ -46,6 +46,11 @@ interface DetailRecipe { height: (u: number, v: number) => number; tone: (u: num
 function recipe(kind: SurfaceKind): DetailRecipe {
   const tone = fbm(3, 4, 911);
   switch (kind) {
+    case 'brick': {
+      const grain=fbm(24,2,317),weather=fbm(4,2,331);
+      const mortar=(u:number,v:number)=>{const row=Math.floor(v*12),x=(u*6+(row%2)*.5)%1,z=(v*12)%1;return Math.max(0,1-Math.min(x,1-x,z,1-z)/.075);};
+      return {relief:.65,tone:(u,v)=>.25+.5*weather(u,v)+.12*mortar(u,v),height:(u,v)=>.52+.16*grain(u,v)-.16*mortar(u,v)};
+    }
     case 'wood': {
       const grain = fbm(8, 2, 211), knots = fbm(3, 2, 223);
       const longGrain = (u:number,v:number) => grain(u, .5 + .12 * Math.sin(TAU * v));
@@ -56,11 +61,12 @@ function recipe(kind: SurfaceKind): DetailRecipe {
     }
     case 'snow': {
       const wind = fbm(3, 3, 227), grain = fbm(24, 2, 229);
-      return { relief: .7, tone, height: (u,v) => .65 * wind(u,v) + .25 * grain(u,v) + .10 * (.5 + .5 * Math.sin(TAU * (u * 16 + v * 2))) };
+      return { relief: .7, tone:(u,v)=>.35+.35*wind(u,v)+.08*Math.cos(TAU*(u*4+v)), height: (u,v) => .62 * wind(u,v) + .23 * grain(u,v) + .15 * (.5 + .5 * Math.sin(TAU * (u * 16 + v * 2))) };
     }
     case 'asphalt': {
       const patches = fbm(6, 3, 17), grain = fbm(24, 2, 23);
-      return { relief: 1.2, tone, height: (u, v) => 0.6 * grain(u, v) + 0.4 * patches(u, v) };
+      const sample=(u:number,v:number,out:Float64Array)=>{const patch=patches(u,v),crack=Math.max(0,1-Math.abs(patch-.49)*100);out[0]=.59*grain(u,v)+.38*patch-.03*crack;out[1]=.22+.56*patch-.12*crack;},scratch=new Float64Array(2);
+      return { relief: 1.2, sample, tone:(u,v)=>{sample(u,v,scratch);return scratch[1];}, height:(u,v)=>{sample(u,v,scratch);return scratch[0];} };
     }
     case 'sand': {
       // Wind ripples about 2 m apart, bent by a slow warp, over gentle dune swell.
@@ -69,7 +75,7 @@ function recipe(kind: SurfaceKind): DetailRecipe {
     }
     case 'dirt': {
       const lumps = fbm(8, 3, 61), stones = cellular(20, 67);
-      return { relief: 2.4, tone, height: (u, v) => 0.7 * lumps(u, v) + 0.3 * Math.max(0, 1 - stones(u, v) / 0.45) ** 2 };
+      return { relief: 2.4, tone:(u,v)=>.20+.60*lumps(u,v), height: (u, v) => 0.7 * lumps(u, v) + 0.3 * Math.max(0, 1 - stones(u, v) / 0.45) ** 2 };
     }
     case 'concrete': {
       const pores = fbm(24, 2, 83), broad = fbm(4, 2, 89);
@@ -77,7 +83,7 @@ function recipe(kind: SurfaceKind): DetailRecipe {
     }
     case 'grass': {
       const tufts = fbm(20, 2, 101), clumps = fbm(6, 3, 103);
-      return { relief: 2.6, tone, height: (u, v) => 0.55 * tufts(u, v) + 0.45 * clumps(u, v) };
+      return { relief: 2.6, tone:(u,v)=>.2+.65*clumps(u,v), height: (u, v) => 0.55 * tufts(u, v) + 0.45 * clumps(u, v) };
     }
     case 'rock': {
       const ridges = fbm(4, 4, 131), strata = fbm(2, 2, 137);
@@ -95,8 +101,11 @@ const detailPixels = new Map<string, Uint8Array>();
 /** RGBA8 detail map: RG = encoded normal x/z, B = height, A = tone. Cached for the session. */
 export function detailMap(kind: SurfaceKind, size: number) {
   const key = `${kind}:${size}`, cached = detailPixels.get(key); if (cached) return cached;
-  const { height, tone, relief } = recipe(kind), h = new Float32Array(size * size), pixels = new Uint8Array(size * size * 4);
-  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) h[y * size + x] = height((x + 0.5) / size, (y + 0.5) / size);
+  const { height, tone, relief, sample } = recipe(kind), h = new Float32Array(size * size), pixels = new Uint8Array(size * size * 4), tones=sample?new Float64Array(size*size):null,scratch=new Float64Array(2);
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+    const u=(x+.5)/size,v=(y+.5)/size,index=y*size+x;
+    if(sample){sample(u,v,scratch);h[index]=scratch[0];tones![index]=scratch[1];}else h[index]=height(u,v);
+  }
   let lo = Infinity, hi = -Infinity; for (const value of h) { lo = Math.min(lo, value); hi = Math.max(hi, value); }
   const range = hi - lo || 1, k = relief * size / 256 / range;
   for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
@@ -104,7 +113,7 @@ export function detailMap(kind: SurfaceKind, size: number) {
     const sx = (at(1, 0) - at(-1, 0)) * k, sz = (at(0, 1) - at(0, -1)) * k, length = Math.hypot(sx, 1, sz);
     const o = (y * size + x) * 4;
     pixels[o] = Math.round((0.5 - 0.5 * sx / length) * 255); pixels[o + 1] = Math.round((0.5 - 0.5 * sz / length) * 255);
-    pixels[o + 2] = Math.round((h[y * size + x] - lo) / range * 255); pixels[o + 3] = Math.round(Math.min(1, Math.max(0, tone((x + 0.5) / size, (y + 0.5) / size))) * 255);
+    pixels[o + 2] = Math.round((h[y * size + x] - lo) / range * 255); pixels[o + 3] = Math.round(Math.min(1, Math.max(0, tones?tones[y*size+x]:tone((x + 0.5) / size, (y + 0.5) / size))) * 255);
   }
   detailPixels.set(key, pixels); return pixels;
 }

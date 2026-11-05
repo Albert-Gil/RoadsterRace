@@ -38,10 +38,9 @@ export function yosemiteGeology(track: TrackDefinition) {
     const center={x:b.footprint.reduce((s,p)=>s+p.x,0)/b.footprint.length,z:b.footprint.reduce((s,p)=>s+p.z,0)/b.footprint.length};
     for(let i=0;i<blocks;i++){
       const a=i/blocks*Math.PI*2+index*.53,r=rayToEdge(center,a,b.footprint),size=Math.min(b.height*.19,r*.32,5.8)*( .65+.35*Math.sin(i*2.3+index)**2 );
-      const waterfallAngle=b.id==='el-capitan-granite'?art.waterfall.angle:b.id==='bridalveil-granite'?-Math.PI/2:NaN;
       // Leave the entire falling-water/impact sight line clear, including each
       // block's width. The plunge-basin rim already supplies its shoreline rocks.
-      if(Number.isFinite(waterfallAngle)&&Math.abs(Math.atan2(Math.sin(a-waterfallAngle),Math.cos(a-waterfallAngle)))<art.waterfall.halfAngle+.30)continue;
+      if([a-.30,a,a+.30].some(angle=>waterfallFaceWeight(b,angle)>.01))continue;
       const part=boulder({size:[size*1.6,size,size*1.35],seed:341+index*31+i,detail:1,roundness:3.6,roughness:.18,flatten:.84,
         colour:(_x,_y,_z,up,h)=>mix(hex(art.granite[3]),hex(art.granite[1]),.46+Math.max(0,up)*.24+h*.16)});
       const px=center.x+Math.cos(a)*r*.88,pz=center.z+Math.sin(a)*r*.88;

@@ -134,7 +134,7 @@ export class GameScene {
     }
     const sunDirection = new Vector3(...venueSunDirections[scenery]).normalize();
     this.light = new DirectionalLight('sun', sunDirection, this.scene); this.light.position.copyFrom(sunDirection.scale(-153)); this.light.diffuse = Color3.FromHexString(lighting.sun);
-    this.light.shadowFrustumSize = scenery === 'coastal' ? 210 : 250; this.light.shadowMinZ = 1; this.light.shadowMaxZ = 350; this.light.autoUpdateExtends = false;
+    this.light.shadowFrustumSize = scenery === 'coastal' ? 210 : track.id==='canyon-south-rim' ? 330 : 250; this.light.shadowMinZ = 1; this.light.shadowMaxZ = 350; this.light.autoUpdateExtends = false;
     this.shadows = this.createShadows();
     const mat = (role: string, color: string) => { const m = new StandardMaterial(role, this.scene); m.diffuseColor = Color3.FromHexString(color); m.specularColor.setAll(0.04); m.backFaceCulling = false; this.materials.set(role, m); return m; };
     this.sceneryRuntime = buildScenery(scenery, this.scene, track, theme, this.materials);

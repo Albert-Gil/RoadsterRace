@@ -2,7 +2,7 @@
 
 A browser racing game with Solo Race against three computer drivers, local Multiplayer for two to four people, Time Trial with a personal-best ghost, and a guided Tutorial: draw a line and its pace, race one to six laps, and time your rechargeable thrust and hop. Visuals are replaceable through shared settings and assets. No account, backend, or external service is required to play.
 
-Eight venues are available: Newport Island (formerly Newport and, before that, Coastal Launch), Launchsite, Golden Gate, Santa Monica, Grand Canyon, LA nights, Snowy Tahoe and Capitan Yosemite. Grand Canyon adds a 595.0 m packed-dirt figure-eight with elevated trails and an automatic crest jump; LA nights adds a channel jump and a hidden Hop alley. Snowy Tahoe adds a 554.8 m packed-snow forest loop climbing a 60 m mountain, with slippery snow, three automatic snow jumps, a moving ski lift, gusting snowfall, lake and hidden timber Hop trail, with lower grip and unchanged speed limits. Newly created Full Tours include all eight; saved schedules remain unchanged. See the [Grand Canyon guide](docs/GRAND_CANYON.md), [LA nights guide](docs/LA_NIGHTS.md) and [Snowy Tahoe guide](docs/TAHOE_GROUNDING_UPGRADE.md).
+Nine venues are available: Newport Island (formerly Newport and, before that, Coastal Launch), Launchsite, Golden Gate, Santa Monica, Grand Canyon, LA nights, Snowy Tahoe, Capitan Yosemite and Grand Canyon: South Rim. The additional South Rim course keeps the original canyon playable and offers a new elevated dirt layout, one airborne overpass and two hidden Hop trails. Yosemite now has three creek crossings, four waterfalls and a faster timber shortcut; Newport is slightly longer, and LA's launch is integrated into a flood-channel maintenance causeway. Newly created Full Tours include all nine; saved schedules remain unchanged. See the [local venue expansion](docs/VENUE_EXPANSION.md), [original Grand Canyon guide](docs/GRAND_CANYON.md), [LA nights guide](docs/LA_NIGHTS.md) and [Snowy Tahoe guide](docs/TAHOE_GROUNDING_UPGRADE.md).
 
 All roads are now **16 metres wide**, including Golden Gate's bridge and Santa Monica's pier/jump surfaces. The fixed camera fits the actual road tightly, with a phone-friendly orientation and compact controls. See [phone framing, computer drivers and lap ghosts](docs/PHONE_AND_MODES.md).
 
@@ -71,9 +71,9 @@ Solo keeps the bottom-right thrust/hop pads with Space (Thrust) and H (Hop). The
 
 **Touch test** (in Settings) remains available for the 50-cycle input diagnostic.
 
-### Tournaments and seven circuits
+### Tournaments and nine circuits
 
-Choose **Tournament** at the top of Solo Race or Multiplayer setup (01 / RACE FORMAT, above the circuits). **Full Tour** races Newport Island, Launchsite, Golden Gate, Santa Monica, Grand Canyon, LA nights, Snowy Tahoe and Capitan Yosemite in that order. **Custom Tour** supports 2–12 races, repeated venues and up/down reordering. The selected 1–6 laps apply throughout; each round begins with fresh private drawing turns.
+Choose **Tournament** at the top of Solo Race or Multiplayer setup (01 / RACE FORMAT, above the circuits). **Full Tour** races Newport Island, Launchsite, Golden Gate, Santa Monica, Grand Canyon, LA nights, Snowy Tahoe, Capitan Yosemite and Grand Canyon: South Rim in that order. **Custom Tour** supports 2–12 races, repeated venues and up/down reordering. The selected 1–6 laps apply throughout; each round begins with fresh private drawing turns.
 
 First/second/third/fourth receive **10/6/4/0 points**. Race ties share place points and skip following ranks; equal championship totals share the title. Completed points save locally. **Resume tournament** preserves earlier results and restarts the unfinished round with fresh lines. Drivers and schedule lock at tournament start.
 

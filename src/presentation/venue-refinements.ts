@@ -71,6 +71,10 @@ export function refineVenue(id:SceneryId,scene:Scene,track:TrackDefinition,mater
     return ['layered bridge abutments','recessed city storefronts','facade bands and shutters'];
   }
   if(id==='sunset'){
+    // The landing's real solid face is a timber pier bulkhead, not an unrelated
+    // concrete wall. Reuse its authoritative mesh and the existing wood batch.
+    const bulkhead=original.find(m=>m.name==='solid-landing-edge'),timber=materials.get('pier-timber');
+    if(bulkhead&&timber)bulkhead.material=timber;
     const piles=original.filter(m=>m.name==='pier-pile'||m.name==='amusement-pile');
     for(let i=0;i<piles.length;i++){
       const a=piles[i].getBoundingInfo().boundingBox.centerWorld;
@@ -81,7 +85,7 @@ export function refineVenue(id:SceneryId,scene:Scene,track:TrackDefinition,mater
       beam('pier-diagonal-cross-brace',new Vector3(a.x,-1.8,a.z),new Vector3(next.x,-.35,next.z),.11,dark);
       beam('pier-diagonal-cross-brace',new Vector3(a.x,-.35,a.z),new Vector3(next.x,-1.8,next.z),.11,dark);
     }
-    return ['cross-braced pier supports','layered beachfront entrances','weathered structural hardware'];
+    return ['cross-braced pier supports','layered beachfront entrances','weathered timber takeoff and landing bulkhead'];
   }
   if(id==='night-city')return ['layered backlot entrances','varied warm/cool facades','restrained road reflections'];
   return [];

@@ -1,16 +1,19 @@
 import type { Point, TrackDefinition } from '../core/types';
-import { cumulative, projectToPolyline } from '../core/geometry';
+import { cumulative } from '../core/geometry';
+import { projectToPolylineNear as projectToPolyline } from '../core/nearest';
 import { insideBarrier } from '../core/barriers';
 import { groundHeight, supported, jumpCoordinates } from '../core/support';
 import { gateCoordinates, startGate } from '../core/start-finish';
 import { Geometry, hex, mix, edgeDistance, type Rgb } from './landscape/mesh';
 import { random } from './landscape/noise';
 import { cityBuildings, onCityLand } from '../content/golden-city';
+import { venueFurniture } from './venue-furniture';
+import { venueFinish } from './themes';
 
 export interface RoadsidePalette { plant:string; tip:string; flower:string; trim:string; timber:string; metal:string; surface:string; }
 export interface RoadsideConfig { spacing:number; plantingOffset:number; plantHeight:number; maxFurniture:number; }
 export interface RoadsidePlant extends Point { height:number; radius:number; }
-export interface RoadsideProp extends Point { parcelId:string; radius:number; height:number; roof:boolean; }
+export interface RoadsideProp extends Point { parcelId:string; radius:number; height:number; roof:boolean; kind?:string; }
 
 /** Small details placed against the actual course, not a distant scenery envelope.
  * Low soft vegetation is cosmetic. Substantial furniture/equipment stays inside
@@ -19,21 +22,28 @@ export interface RoadsideProp extends Point { parcelId:string; radius:number; he
 export function roadsideGeometry(track:TrackDefinition,style:string,palette:RoadsidePalette,cfg:RoadsideConfig){
  const g=new Geometry(),plants:RoadsidePlant[]=[],props:RoadsideProp[]=[],rnd=random(731+track.id.length*97),gate=startGate(track);
  const paths=[{p:track.centerline,d:track.distances},...(track.hopShortcuts??[]).map(h=>({p:h.branch,d:cumulative(h.branch)})),...(track.jumps??[]).map(h=>({p:h.branch,d:cumulative(h.branch)}))];
+ const hopPaths=(track.hopShortcuts??[]).map(h=>({h,d:cumulative(h.branch)}));
+ const furnitureTemplates=new Map<string,ReturnType<typeof venueFurniture>>();
  const gap=(p:Point)=>Math.min(...paths.map(path=>projectToPolyline(p,path.p,path.d).distance));
  // Golden Gate intentionally has no water-support rules in the flat simulation.
  // Its cosmetic planting must still stand on the actual city land, not the sea.
  const plantSupported=(p:Point,r:number)=>Array.from({length:9},(_,i)=>i===0?p:{...p,x:p.x+Math.cos(i*Math.PI/4)*r,z:p.z+Math.sin(i*Math.PI/4)*r})
   .every(q=>supported(q,track)&&(style!=='bay'||onCityLand(q)));
  const safeGate=(p:Point,margin:number)=>{const q=gateCoordinates(p,track);return !(q.along>-gate.leadIn-margin&&q.along<8+margin&&Math.abs(q.across)<gate.width/2+8+margin);};
- const hiddenLane=(p:Point)=> (track.hopShortcuts??[]).some(h=>projectToPolyline(p,h.branch,cumulative(h.branch)).distance<h.width/2+5)
+ const hiddenLane=(p:Point)=> hopPaths.some(({h,d})=>projectToPolyline(p,h.branch,d).distance<h.width/2+5)
   ||(track.jumps??[]).some(j=>{const q=jumpCoordinates(p,j);return q.along>-12&&q.along<j.rampLength+j.gap+14&&Math.abs(q.across)<j.width/2+6;});
  const quad=(ps:number[][],color:Rgb)=>{const v=ps.map(p=>g.vertex(p[0],p[1],p[2],color));g.triangle(v[0],v[1],v[2]);g.triangle(v[0],v[2],v[3]);};
  const box=(x:number,y:number,z:number,w:number,h:number,d:number,c:string)=>{const a=x-w/2,b=x+w/2,e=z-d/2,f=z+d/2,lo=y,hi=y+h,color=hex(c);
   quad([[a,lo,e],[b,lo,e],[b,hi,e],[a,hi,e]],mix(color,hex('#182329'),.15));quad([[b,lo,f],[a,lo,f],[a,hi,f],[b,hi,f]],color);
   quad([[a,lo,f],[a,lo,e],[a,hi,e],[a,hi,f]],mix(color,hex('#182329'),.22));quad([[b,lo,e],[b,lo,f],[b,hi,f],[b,hi,e]],color);quad([[a,hi,e],[b,hi,e],[b,hi,f],[a,hi,f]],mix(color,hex('#ffffff'),.14));};
- const plant=(p:Point,h:number,r:number,seed:number)=>{const y=p.y??groundHeight(p,track),root=hex(palette.plant),tip=hex(seed%7===0?palette.flower:palette.tip);
-  for(let j=0;j<7;j++){const a=j/7*Math.PI*2+seed*.37,dx=Math.cos(a)*r,dz=Math.sin(a)*r,w=style==='spaceport'?.19:.13,lean=.48+.16*Math.sin(j*2.7+seed);
-   const base=g.vertex(p.x,y,p.z,mix(root,hex('#273328'),.22)),l=g.vertex(p.x+dx*lean-dz*w,y+h*(.72+.28*Math.sin(j+seed)**2),p.z+dz*lean+dx*w,root),rr=g.vertex(p.x+dx*lean+dz*w,y+h*(.72+.28*Math.sin(j+seed)**2),p.z+dz*lean-dx*w,root),end=g.vertex(p.x+dx,y+h*.22,p.z+dz,tip);
+ const plant=(p:Point,h:number,r:number,seed:number)=>{const y=p.y??groundHeight(p,track),root=hex(palette.plant),tip=hex(seed%7===0?palette.flower:palette.tip),fern=style==='yosemite',desert=style==='spaceport'||style==='canyon';
+  // A small supported soil/litter rosette grounds the larger soft crowns. It
+  // adds no hard stones, support or collision to the generous runoff.
+  const ground=hex(venueFinish[style as keyof typeof venueFinish]?.ground??palette.trim),soil=mix(root,ground,.83),center=g.vertex(p.x,y-.025,p.z,soil),rim:number[]=[];
+  for(let j=0;j<7;j++){const a=j/7*Math.PI*2,q={...p,x:p.x+Math.cos(a)*r*.88,z:p.z+Math.sin(a)*r*.88};rim.push(g.vertex(q.x,groundHeight(q,track)+.055,q.z,mix(soil,ground,.72)));}
+  for(let j=0;j<7;j++)g.triangle(center,rim[j],rim[(j+1)%7]);
+  for(let j=0;j<7;j++){const a=j/7*Math.PI*2+seed*.37,dx=Math.cos(a)*r,dz=Math.sin(a)*r,w=fern?.30:desert?.20:.15,lean=(fern?.64:.48)+.16*Math.sin(j*2.7+seed),rise=fern?.62:desert?.96:.8;
+   const base=g.vertex(p.x,y,p.z,mix(root,hex('#273328'),.22)),l=g.vertex(p.x+dx*lean-dz*w,y+h*(rise+(1-rise)*Math.sin(j+seed)**2),p.z+dz*lean+dx*w,root),rr=g.vertex(p.x+dx*lean+dz*w,y+h*(rise+(1-rise)*Math.sin(j+seed)**2),p.z+dz*lean-dx*w,root),end=g.vertex(p.x+dx,y+h*(desert?.42:.18),p.z+dz,tip);
    g.triangle(base,l,rr);g.triangle(l,end,rr);
   }
  };
@@ -42,7 +52,7 @@ export function roadsideGeometry(track:TrackDefinition,style:string,palette:Road
   if(track.distances[i]<next)continue;next=track.distances[i]+cfg.spacing;
   const p=track.centerline[i],a=track.centerline[i-1],dx=p.x-a.x,dz=p.z-a.z,l=Math.hypot(dx,dz)||1,nx=-dz/l,nz=dx/l;
   for(const side of[-1,1]){
-   const q:Point={x:p.x+nx*side*(track.roadWidth/2+cfg.plantingOffset+(rnd()-.5)*1.1),z:p.z+nz*side*(track.roadWidth/2+cfg.plantingOffset+(rnd()-.5)*1.1),courseProgress:track.distances[i]},r=.45+rnd()*.35,h=cfg.plantHeight*(.5+rnd()*.5);
+   const q:Point={x:p.x+nx*side*(track.roadWidth/2+cfg.plantingOffset+(rnd()-.5)*1.1),z:p.z+nz*side*(track.roadWidth/2+cfg.plantingOffset+(rnd()-.5)*1.1),courseProgress:track.distances[i]},r=.58+rnd()*.40,h=cfg.plantHeight*(.5+rnd()*.5);
    if(rnd()>.18&&plantSupported(q,r)&&gap(q)>track.roadWidth/2+r+2&&safeGate(q,2)&&!hiddenLane(q)&&!track.barriers.some(b=>insideBarrier(q,b)||edgeDistance(q,b.footprint)<r+.3)){
     q.y=groundHeight(q,track)+.08;plant(q,h,r,i);plants.push({...q,height:h,radius:r});
    }
@@ -60,20 +70,12 @@ export function roadsideGeometry(track:TrackDefinition,style:string,palette:Road
    const p={x,z},radius=1.5;if(props.length>=cfg.maxFurniture||local>=16||gap(p)<track.roadWidth/2+6||gap(p)>32||!safeGate(p,2)||hiddenLane(p))continue;
    if(!insideBarrier(p,b)||edgeDistance(p,b.footprint)<radius||track.barriers.some(other=>other!==b&&other.kind!=='infield'&&(insideBarrier(p,other)||edgeDistance(p,other.footprint)<radius)))continue;
    if(style==='bay'&&cityBuildings.some(building=>Math.abs(x-building.x)<building.width/2+radius&&Math.abs(z-building.z)<building.depth/2+radius))continue;
-   const y=(b.id==='utility-storage-tower'?(b.baseHeight??0)+b.height:groundHeight(p,track)+.15)+.03,kind=local%3;
-   if(style==='spaceport'){
-    box(x,y,z,1.6,1.18,1.1,palette.trim);box(x,y+1.2,z,1.74,.1,1.2,palette.metal);
-    for(let k=0;k<5;k++)box(x-.55+k*.27,y+.24,z+.56,.10,.63,.035,palette.metal);
-   }else{
-    // Planter and slatted bench/lounger: coastal, urban and alpine palettes differ.
-    if(kind===0){box(x,y,z,2.1,.54,1.05,palette.trim);box(x,y+.54,z,1.85,.05,.82,palette.surface);for(const side of[-1,1])plant({x:x+side*.52,y:y+.61,z},.45,.48,local);}
-    else{
-     for(let k=0;k<4;k++)box(x,y+.45,z-.24+k*.16,2.4,.12,.13,palette.timber);
-     for(let k=0;k<2;k++)box(x,y+.74+k*.23,z+.27,2.4,.18,.09,palette.timber);
-     for(const side of[-1,1])box(x+side*.86,y,z,.16,.47,.53,palette.metal);
-    }
-   }
-   props.push({...p,y,parcelId:b.id,radius,height:1.3,roof:false});local++;
+   const y=(b.id==='utility-storage-tower'?(b.baseHeight??0)+b.height:groundHeight(p,track)+.15)+.03;
+   const height=Math.min(1.3,Math.max(.3,b.height-.18)),key=`${local%6}/${height}`;
+   let cluster=furnitureTemplates.get(key);
+   if(!cluster){cluster=venueFurniture(style,palette,local,height);furnitureTemplates.set(key,cluster);}
+   g.instance(cluster.geometry,{x,y,z,heading:Math.atan2(track.centerline[0].x-x,track.centerline[0].z-z)});
+   props.push({...p,y,parcelId:b.id,radius,height,roof:false,kind:cluster.kind});local++;
   }
  }
  // Inset flat-roof hardware makes the nearby city/industrial blocks read at game scale.

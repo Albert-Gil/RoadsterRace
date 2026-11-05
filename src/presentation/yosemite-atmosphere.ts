@@ -31,7 +31,7 @@ export function yosemiteAtmosphere(scene:Scene,track:TrackDefinition){
     const phase=(time*.07+i*.618)%1;x=6+Math.sin(i*2.3+time*.13)*9;z=12-i/art.mist.count*130+phase*9;y=terrainElevation({x,z},track)+.7+Math.sin(i+time*.2)*.2;
     width=12+3*Math.sin(i);height=width*.18;alpha=art.mist.opacity*Math.sin(phase*Math.PI);
    }else{
-    const index=i-art.mist.count,site=sites[index%4===0?1:0];
+    const index=i-art.mist.count,site=sites[[0,0,1,2,3,4,5,0][index%8]%sites.length];
     if(index<art.waterfall.sprayCount){
      const phase=(time*.85+index*.618)%1,a=index*2.399,pool=waterfallPoolPoint(site,a,.08+phase*.95);
      x=pool.x;y=site.impact.y+Math.sin(phase*Math.PI)*1.8;z=pool.z;width=1+phase*3;height=width*.72;alpha=art.waterfall.sprayOpacity*Math.sin(phase*Math.PI);

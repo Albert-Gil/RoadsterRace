@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import { circuits } from '../../src/content/circuits';
-import { computerRoute, stepComputers, computerPaceLimit, computerTraffic, shouldComputerThrust } from '../../src/core/computer';
+import { computerRoute, stepComputers, computerPaceLimit, computerTraffic, shouldComputerThrust, shouldComputerHop } from '../../src/core/computer';
 import { LocalRace } from '../../src/core/local-race';
 import type { Difficulty } from '../../src/core/session';
 import { RULES } from '../../src/core/simulation';
@@ -36,6 +36,26 @@ test('CPU lifts during a slide and releases its recovery cap once aligned',()=>{
   const race=decisionRace(),s=race.racers[1].state;
   s.speed=26;s.slipAngle=.5;expect(computerPaceLimit(race,1)).toBe(18);expect(shouldComputerThrust(race,1)).toBe(false);
   s.slipAngle=0;s.lineError=0;expect(computerPaceLimit(race,1)).toBe(Infinity);
+});
+
+test('a safely separating adjacent car does not impose a following cap',()=>{
+  const race=decisionRace(),s=race.racers[1].state,o=race.racers[0].state,dx=Math.sin(s.heading),dz=Math.cos(s.heading);
+  o.position={x:s.position.x+dx*14+dz*(race.track.carWidth+.3),z:s.position.z+dz*14-dx*(race.track.carWidth+.3)};
+  o.velocity={x:dx*5+dz*3,z:dz*5-dx*3};o.speed=Math.hypot(o.velocity.x,o.velocity.z);
+  expect(computerTraffic(race,1)).toBeNull();expect(computerPaceLimit(race,1)).toBe(Infinity);
+  o.velocity={x:dx*5-dz*3,z:dz*5+dx*3};expect(computerTraffic(race,1)).not.toBeNull();
+});
+
+test('CPU can pass with a supported hop on an elevated straight, but refuses an occupied landing',()=>{
+  const track=circuits.find(c=>c.id==='grand-canyon')!.track,route=computerRoute(track,'normal',0,71),race=new LocalRace(Array(4).fill(route),track,1);
+  race.tick=360;race.racers.forEach((r,i)=>Object.assign(r.state,{position:{x:1000+i*100,z:1000},time:6,tick:360}));
+  const at=route.points.reduce((a,b)=>Math.hypot(a.x-40,a.z)<Math.hypot(b.x-40,b.z)?a:b),s=race.racers[1].state,o=race.racers[0].state;
+  Object.assign(s,{position:{x:40,z:0,courseProgress:at.courseProgress},distance:at.distance,heading:Math.PI/2,elevation:6,speed:30,velocity:{x:30,z:0},movement:'grounded'});
+  Object.assign(o,{position:{x:48,z:0},elevation:6,speed:4,velocity:{x:4,z:0},movement:'grounded'});
+  expect(shouldComputerHop(race,1)).toBe(true);
+  Object.assign(race.racers[2].state,{position:{x:68,z:0},elevation:6,speed:0,velocity:{x:0,z:0}});
+  expect(shouldComputerHop(race,1)).toBe(false);
+  race.tick=120;expect(shouldComputerHop(race,1)).toBe(false);
 });
 
 for(const{id,track}of circuits)test(`${id} computer plans are safe, deterministic and finish six laps`,()=>{

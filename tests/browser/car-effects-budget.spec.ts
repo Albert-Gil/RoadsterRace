@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { waitForPhase } from './ui';
 
-for (const circuit of ['la-nights','capitan-yosemite']) for (const mode of ['Time Trial', 'Solo Race']) test(`${circuit} ${mode} stays within budget with ground effects, thrust and impact dust`, async ({page}) => {
+for (const circuit of ['la-nights','capitan-yosemite','coastal-launch','canyon-south-rim']) for (const mode of ['Time Trial', 'Solo Race']) test(`${circuit} ${mode} stays within budget with ground effects, thrust and impact dust`, async ({page}) => {
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
   await page.setViewportSize({width:844,height:390});
   await page.goto(`/?circuit=${circuit}&graphics=medium`);
