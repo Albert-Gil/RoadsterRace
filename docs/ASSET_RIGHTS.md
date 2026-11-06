@@ -301,3 +301,8 @@ recording or sky was added. Updated circuit cards are native game captures.
 The subsequent remote rocket staging vehicles, denser vapor, Golden Gate quayside
 planter and canoe travel paths are original procedural work using the same material
 and geometry systems. No new external source assets or recordings were introduced.
+
+The larger steel ships/boosters, their fin and engine details, closed vehicle-shadow
+proxy and exterior Tahoe winter fleet are original procedural geometry. The new
+roadside firs reuse the existing native tree templates. This pass adds no external
+model, texture, recording, logo or licence requirement.

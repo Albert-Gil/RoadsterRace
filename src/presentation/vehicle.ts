@@ -22,6 +22,7 @@ import{ContactShadow}from'./contact-shadow';
 import type{RenderedSurface}from'./rendered-surface';
 import{Texture}from'@babylonjs/core/Materials/Textures/texture';
 import { RawTexture } from '@babylonjs/core/Materials/Textures/rawTexture';
+import {vehicleShadowGeometry} from './vehicle-shadow';
 
 const geometries = new Map<string, ReturnType<typeof buildRoadsterGeometry>>();
 const sharedMeshes = new WeakMap<Scene, Map<string, Mesh>>();
@@ -144,6 +145,13 @@ export class VehicleView {
     this.brakes.setVerticesData(VertexBuffer.PositionKind, this.brakePositions, true);
     this.brakes.setVerticesData(VertexBuffer.NormalKind, this.brakeNormals, true);
     this.triangleCount = triangles;
+    // One watertight caster prevents the separate paint/glass shells looking hollow in shadow.
+    // Layer 0 is absent from the main camera, but explicit shadow render lists retain it.
+    const shadowKey=`${detail}:solid-shadow`,cachedShadow=meshCache.get(shadowKey);
+    const solidShadow=cachedShadow?.clone('roadster-solid-shadow',this.chassis,true)??new Mesh('roadster-solid-shadow',scene);
+    if(!cachedShadow){const shadowData=vehicleShadowGeometry().toVertexData();for(let i=0;i<shadowData.positions!.length;i++)shadowData.positions![i]*=SCALE;shadowData.applyToMesh(solidShadow);meshCache.set(shadowKey,solidShadow);}
+    solidShadow.parent=this.chassis;solidShadow.layerMask=0;solidShadow.isPickable=false;solidShadow.metadata={shadowOnly:true};
+    let solidMaterial=materialCache.get('roadster-solid-shadow');if(!solidMaterial){solidMaterial=new PBRMaterial('roadster-solid-shadow',scene);solidMaterial.backFaceCulling=false;materialCache.set('roadster-solid-shadow',solidMaterial);}solidShadow.material=solidMaterial;
     const jet = new StandardMaterial('cold-gas-thrust', scene); jet.disableLighting = true; jet.emissiveColor = Color3.FromHexString(thrustEffects.coreColor); jet.alpha = thrustEffects.coreOpacity;
     const cores: Mesh[] = [];
     for (const x of vehicleAttachments.rearJets) {

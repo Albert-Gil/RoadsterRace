@@ -299,8 +299,8 @@ export const pierRampAppearance = { surfaceOffset:.11,plankLength:.58,boards:['#
 export const pierComposition={wheelX:96.5,wheelY:27,wheelZ:15,wheelRadius:24,speed:.055,coral:'#f07359',ivory:'#fff0ce',gold:'#f3c55f',glass:'#507987',timber:'#bd9870',deckSeam:'#8d735a',cabins:['#ef7054','#62b7b0','#edbf49','#ac83bf'],coaster:{x:104,z:30,rx:29,rz:6,base:3,amplitude:11.5}};
 /** Large native attractions, reused material batches and one capped vapor mesh. */
 export const landmarkShowcase={
- rockets:[{x:90,z:10,height:32,radius:1.9},{x:90,z:31,height:28,radius:1.8},...launchsiteRemoteRockets],
- boilOff:{capacity:96,period:5.2,opacity:.6,color:'#f2f5ef',sizeStart:1.15,sizeGrowth:6.8,rise:10,drift:7,vents:[{x:95,y:19,z:16.5},{x:90,y:24,z:8},{x:90,y:21,z:29},...launchsiteRemoteRockets.map(r=>({x:r.x,y:r.height*.65,z:r.z-1.8}))]},
+ rockets:[{x:105,z:11,height:36,radius:3.5,form:'ship'},{x:105,z:29,height:40,radius:3.8,form:'booster'},...launchsiteRemoteRockets],
+ boilOff:{capacity:96,period:5.2,opacity:.6,color:'#f2f5ef',sizeStart:1.15,sizeGrowth:6.8,rise:10,drift:7,vents:[{x:95,y:19,z:16.5},{x:105,y:25,z:7},{x:105,y:28,z:26},...launchsiteRemoteRockets.map(r=>({x:r.x,y:r.height*.6,z:r.z-3}))]},
  bridge:{hangerSpacing:4,hangerWidth:.18,deckY:1.0},
  tahoe:{snow:'#f4f2e7',shade:'#afc4ce',steel:'#344653',red:'#d35449',glass:'#527784',wood:'#805637',warm:'#f1ca84',cloth:'#ac3e3a',clearings:[{x:-36,z:-8.2,width:24,depth:7.2},{x:24,z:-20,width:9,depth:27},{x:-54,z:16,width:13,depth:9},{x:1,z:24,width:19,depth:5},{x:-55,z:1,width:11,depth:8},{x:-43,z:25,width:12,depth:7},{x:26,z:8,width:10,depth:9}]},
  skyline:{warm:'#efd8ab',cool:'#9ebbc0',facade:'#41434b',roof:'#8e7769'},
@@ -333,7 +333,7 @@ export const ghostAppearance = { color: '#a6e5ed', opacity: 0.32 };
 export const snowyTahoeAppearance = {
   surfaceOffsets:{road:.12,branch:.13,fringe:.045,branchFringe:.055},
   snow:'#dce7ee',packed:'#8ca6b9',ruts:'#7e99aa',powder:'#eef5f7',fir:'#304f46',firLight:'#526f63',bark:'#6d5a48',rock:'#87959f',timber:'#8e7254',lodge:'#a28869',roof:'#c9dbe5',window:'#dcb77b',lake:'#23647f',
-  extent:{minX:-320,maxX:340,minZ:-270,maxZ:300},corridor:24,treeCount:460,
+  extent:{minX:-320,maxX:340,minZ:-270,maxZ:300},corridor:24,treeCount:460,nearTreeCount:160,nearTreeHeight:[5.5,10] as const,nearTreeOffset:[18,24] as const,
   cabin:'#a06c45',stone:'#89969f',lift:'#b73f46',steel:'#3e5361',cutTimber:'#cbb087',
   weather:{flakes:1050,groundWisps:48,size:1.3,opacity:.72,fallSpeed:4.4,gustPeriod:19,wind:6,nearCourse:.74,wispSize:7.5,wispOpacity:.11},
   slopeGrooming:{spacing:6,width:.16,inset:2.3,minimumGrade:.25,surfaceGap:.018},

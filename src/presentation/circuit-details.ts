@@ -30,6 +30,7 @@ export function buildCircuitDetails(scene: Scene, track: TrackDefinition, theme:
     const sign = MeshBuilder.CreatePlane(name, { width, height }, scene); sign.position.set(p.x, y, p.z); sign.rotation.y = angle; sign.material = m; return sign;
   };
   for (const barrier of track.barriers) {
+    if(['west-rescue-bay','lakeside-winter-parking','upper-service-bay','south-winter-parking'].includes(barrier.id))continue;
     if(barrier.id==='amusement-protected')continue; // Native pier fence and entrance bollards.
     if (hopPropIds.includes(barrier.id)) continue; // Compact native props replace these generic walls.
     if (barrier.id === 'gantry-support' || barrier.id === 'grandstand' || barrier.kind === 'rock' || barrier.kind === 'building') continue; // Native architecture and landscape draw their own authoritative footprints.

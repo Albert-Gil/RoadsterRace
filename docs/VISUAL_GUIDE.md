@@ -189,3 +189,12 @@ YOSEMITE_WATERWAYS.md. Keep waterfalls attached to their real receiving waters,
 retain the downstream ordering of river UVs, and let outlets continue outside the
 map rather than stopping in the meadow. All receiving pools share existing
 batches; do not add a separate material, light or particle system per fall.
+
+## Larger abilities and near-road snow/rocket scenery
+
+`SCALE_AND_SNOW.md` documents the 73.6/66 CSS-pixel abilities, closed car-shadow
+proxy, larger steel launch vehicles and four exterior Tahoe equipment pockets.
+Adjust rocket/forest palettes and count bounds in `themes.ts`; keep solid scenery
+dimensions shared with the core track data. Tahoe's closer firs replace distant
+trees rather than increasing their total. Neither scenery nor shadow refinements
+may alter racing heights, route geometry, fixed framing rules or handling.

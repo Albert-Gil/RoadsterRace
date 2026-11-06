@@ -79,12 +79,12 @@ const rocks: TrackDefinition['barriers'] = [
 
 /** Flat physical layout; scenery/branding never participate in its rules. */
 export const orbitalTrack: TrackDefinition = {
-  id: 'orbital-launchyard', version: 11, name: 'Launchsite', centerline, distances, length,
+  id: 'orbital-launchyard', version: 12, name: 'Launchsite', centerline, distances, length,
   roadWidth: 16, carWidth: VEHICLE_DIMENSIONS.width, carLength: VEHICLE_DIMENSIONS.length, start: centerline[0], startFinish: createStartFinish(centerline[0], centerline[1], 16),
   barriers: ([
     ...launchsiteRemoteRockets.flatMap(r=>[
       {id:r.id,kind:'infield' as const,height:1.25,footprint:rect(r.x-r.radius*1.3,r.z-r.radius*1.3,r.radius*2.6,r.radius*2.6)},
-      {id:`${r.id}-rocket`,kind:'building' as const,height:r.height,baseHeight:1.25,footprint:Array.from({length:20},(_,i)=>({x:r.x+Math.cos(i/20*Math.PI*2)*r.radius*1.25,z:r.z+Math.sin(i/20*Math.PI*2)*r.radius*1.25}))},
+      {id:`${r.id}-rocket`,kind:'building' as const,height:r.height,baseHeight:1.25,footprint:rect(r.x-r.radius*1.3,r.z-r.radius*1.3,r.radius*2.6,r.radius*2.6)},
     ]),
     // Protected utility parcel with low perimeter and separate real-height vessels.
     { id:'utility-storage-tower',kind:'infield',height:1.25,runoffException:'cut-protection',

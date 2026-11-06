@@ -417,10 +417,11 @@ export class GameScene {
   private registerVehicleShadows(vehicle: VehicleView) {
     if (this.scene.isDisposed) return;
     for (const mesh of vehicle.root.getChildMeshes()) if (mesh.material && !mesh.material.needAlphaBlending()) {
+      if(mesh.metadata?.shadowOnly){this.castShadow(mesh,true);continue;}
       if(this.vehicleFill&&!this.vehicleFill.includedOnlyMeshes.includes(mesh))this.vehicleFill.includedOnlyMeshes.push(mesh);
       mesh.receiveShadows = true;
-      // Body and aero silhouette suffice at gameplay scale; wheels use the contact shadow.
-      if (mesh.name === 'roadster-paint' || mesh.name === 'roadster-carbon' || mesh.name === 'roadster-metal') this.castShadow(mesh, true);
+      // The closed hull includes cabin/tyres; retain the detailed raised wing separately.
+      if (mesh.name === 'roadster-metal') this.castShadow(mesh, true);
     }
     if(this.vehicleFill?.includedOnlyMeshes.length)this.vehicleFill.setEnabled(true);
   }

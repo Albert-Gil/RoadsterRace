@@ -11,7 +11,7 @@ import{vehicleContact,sweptContact}from'../../src/core/vehicle-contact';
 import{LocalRace}from'../../src/core/local-race';
 
 test('Tahoe climbs and descends smoothly, retaining a level gate and forestry lane',()=>{
- expect(track.version).toBe(5);expect(Math.max(...track.centerline.map(p=>p.y!))).toBeCloseTo(60.8,1);
+ expect(track.version).toBe(6);expect(Math.max(...track.centerline.map(p=>p.y!))).toBeCloseTo(60.8,1);
  for(const s of [0,10,24,track.length-30,track.length-1])expect(roadHeight(track,s)).toBe(0);
  for(const p of track.hopShortcuts![0].branch)expect(groundHeight(p,track)).toBe(0);
  const grades=Array.from({length:Math.ceil(track.length*2)},(_,i)=>roadGrade(track,i*.5));

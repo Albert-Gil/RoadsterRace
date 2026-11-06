@@ -23,6 +23,7 @@ import{RenderedSurface}from'./rendered-surface';
 import { tahoeLayout } from './tahoe-layout';
 import {alpineOutcrops} from './mountain-composition';
 import {tahoeResortLife} from './landmark-showcase';
+import {tahoeExteriorLife} from './tahoe-roadside';
 import {bakeLandmark} from './venue-landmarks';
 
 export { tahoeLayout };
@@ -81,6 +82,7 @@ export function buildTahoe(scene:Scene,track:TrackDefinition,theme:PresentationT
   for(let layer=0;layer<2;layer++)for(let i=0;i<rim.length;i++){const j=(i+1)%rim.length;bank.triangle(rings[layer][i],rings[layer+1][i],rings[layer+1][j]);bank.triangle(rings[layer][i],rings[layer+1][j],rings[layer][j]);}bake('forest-weathered-snow-bank',bank,caps);
   const details=tahoeDetails(scene,track,{wood,wall,roof,glass,steel,stone,red});
   bakeLandmark('apres-ski-and-resort-fleet',tahoeResortLife(),scene,forest);
+  bakeLandmark('exterior-winter-service-fleet',tahoeExteriorLife(track),scene,forest);
   for(const [z,y]of [[-.35,.32],[.35,.32],[0,.92]]){const log=MeshBuilder.CreateCylinder('fallen-forestry-log',{height:16,diameter:.64,tessellation:12},scene);log.rotation.z=Math.PI/2;log.position.set(68,y,z);log.material=wood;for(const side of [-1,1]){const end=MeshBuilder.CreateCylinder('fresh-cut-timber-end',{height:.025,diameter:.56,tessellation:12},scene);end.rotation.z=Math.PI/2;end.position.set(68+side*8,y,z);end.material=wall;}}
   const weather=tahoeWeather(scene,track),pending={landscape:'snowy-tahoe'};scene.addPendingData(pending);
   // The forest and snow hills are generated in a worker from now on, while the rest of the venue loads.

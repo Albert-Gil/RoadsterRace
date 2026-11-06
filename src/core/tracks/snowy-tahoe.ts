@@ -6,6 +6,8 @@ import type { Point, TrackDefinition } from '../types';
 import { obstacleRectangle } from './hop-obstacles';
 import { buildTahoeTerrain,tahoeLand,TAHOE_CORNICES } from './tahoe-terrain';
 import { annotateRoad } from '../elevation';
+import {terrainElevation} from '../elevation';
+import {tahoeRoadsidePockets} from './tahoe-roadside';
 
 const loop = roundedCircuit([
   [50,-55],[94,-34],[102,16],[70,45],[30,45],[30,73],[-12,86],[-68,63],[-98,24],[-92,-29],[-68,-55],
@@ -17,7 +19,7 @@ const progress=(p:Point)=>projectToPolyline(p,centerline,distances).progress;
 const takeoffs=TAHOE_CORNICES.map(j=>{const center=samplePolyline(centerline,distances,j.progress),ahead=samplePolyline(centerline,distances,j.progress+1),len=distance(center,ahead);return{id:j.id,center,forward:{x:(ahead.x-center.x)/len,z:(ahead.z-center.z)/len},width:16,progress:j.progress,launchBoost:j.launchBoost,launchSlope:j.launchSlope,minimumSpeed:6,planningSpeed:j.planningSpeed};});
 
 export const snowyTahoeTrack: TrackDefinition = {
-  id:'snowy-tahoe',version:5,name:'Snowy Tahoe',surface:'packed-snow',centerline,distances,length,
+  id:'snowy-tahoe',version:6,name:'Snowy Tahoe',surface:'packed-snow',centerline,distances,length,
   roadWidth:16,carWidth: VEHICLE_DIMENSIONS.width,carLength: VEHICLE_DIMENSIONS.length,start:centerline[0],startFinish:createStartFinish(centerline[0],centerline[1],16),
   supports:[{id:'alpine-land',footprint:tahoeLand}],
   terrainTakeoffs:takeoffs,
@@ -43,6 +45,10 @@ export const snowyTahoeTrack: TrackDefinition = {
   ],
 };
 snowyTahoeTrack.terrain=buildTahoeTerrain(snowyTahoeTrack);
+for(const p of tahoeRoadsidePockets){
+ const footprint=obstacleRectangle(p.x-p.width/2,p.z,p.width,p.depth),heights=footprint.map(q=>terrainElevation(q,snowyTahoeTrack)),baseHeight=Math.min(...heights);
+ snowyTahoeTrack.barriers.push({id:p.id,kind:'service-barrier',baseHeight,height:Math.max(...heights)-baseHeight+3.6,footprint});
+}
 snowyTahoeTrack.centerline=annotateRoad(centerline,snowyTahoeTrack);
 snowyTahoeTrack.start=snowyTahoeTrack.centerline[0];
 snowyTahoeTrack.hopShortcuts![0].branch=annotateRoad(branch.map(p=>({...p,courseProgress:progress(p)})),snowyTahoeTrack);

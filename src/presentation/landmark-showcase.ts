@@ -5,18 +5,31 @@ import {hex,mix} from './landscape/mesh';
 /** Launch vehicles in the existing complex and authored remote staging footprints. */
 export function launchFleet(){
  const g=new CompositionShapes(),a=venueComposition.industrial;
- for(const [index,r]of art.rockets.entries()){
+ for(const r of art.rockets){
   const base=1.25;
   g.box(r.x,base-.25,r.z,r.radius*2.6,.5,r.radius*2.6,a.dark);
-  const rings=[[base,r.radius*.72],[base+2.5,r.radius],[base+r.height*.72,r.radius],[base+r.height*.87,r.radius*.92],[base+r.height,.035]];
-  const rows=rings.map(([y,radius])=>Array.from({length:16},(_,i)=>g.vertex(r.x+Math.cos(i/16*Math.PI*2)*radius,y,r.z+Math.sin(i/16*Math.PI*2)*radius,hex(index?'#e6e8dd':'#eef0e8'))));
+  const booster=r.form==='booster',body=base+r.height*(booster?.97:.72);
+  const rings=booster?[[base,r.radius*.91],[base+2.5,r.radius],[body,r.radius],[base+r.height,r.radius*.96]]:[[base,r.radius*.87],[base+2.5,r.radius],[body,r.radius],[base+r.height*.84,r.radius*.86],[base+r.height*.94,r.radius*.45],[base+r.height,.035]];
+  const rows=rings.map(([y,radius])=>Array.from({length:16},(_,i)=>{const angle=i/16*Math.PI*2,tile=!booster&&Math.sin(angle)<-.25&&y>base+3&&y<body;return g.vertex(r.x+Math.cos(angle)*radius,y,r.z+Math.sin(angle)*radius,hex(tile?'#30353a':i%3?'#c8d0d1':'#a1afb5'));}));
   for(let k=1;k<rows.length;k++)for(let i=0;i<16;i++){const j=(i+1)%16;g.triangle(rows[k-1][i],rows[k-1][j],rows[k][j]);g.triangle(rows[k-1][i],rows[k][j],rows[k][i]);}
-  for(const fraction of[.14,.45,.72]){
+  for(const fraction of[.08,.25,.43,.61,.72]){
    const y=base+r.height*fraction;
    for(let i=0;i<16;i++){const a0=i/16*Math.PI*2,b=(i+1)/16*Math.PI*2;g.beam([r.x+Math.cos(a0)*r.radius,y,r.z+Math.sin(a0)*r.radius],[r.x+Math.cos(b)*r.radius,y,r.z+Math.sin(b)*r.radius],.055,a.steel);}
   }
-  for(const side of[-1,1]){g.box(r.x+side*r.radius*.96,base+3.2,r.z,.18,4.1,r.radius*1.2,a.dark);g.box(r.x,base+2.8,r.z+side*r.radius*.96,r.radius*1.3,3.2,.18,a.dark);}
-  for(const z of[-.55,.55])g.beam([r.x,base+.25,r.z+z],[r.x,base+1.0,r.z+z],.4,a.steel,10);
+  if(booster){
+   for(const side of[-1,1])for(const axis of[0,1]){
+    const y=base+r.height*.85,x=r.x+(axis?0:side*r.radius*.94),z=r.z+(axis?side*r.radius*.94:0),span=r.radius*.6;
+    for(let k=-2;k<=2;k++){const d=k*span/4;g.box(x+(axis?d:0),y,z+(axis?0:d),axis?.07:span,.10,axis?span:.07,a.dark);}
+   }
+  }else for(const side of[-1,1])for(const fraction of[.13,.70]){
+   const y=base+r.height*fraction;g.box(r.x+side*r.radius*.99,y,r.z,r.radius*.48,r.height*(fraction<.2?.17:.10),.22,'#899da6');
+  }
+  // Readable engine clusters, without individual lights or runtime particles.
+  for(const [count,spread]of booster?[[1,0],[6,.42],[12,.72]]:[[1,0],[6,.55]])for(let k=0;k<count;k++){
+   const angle=k/count*Math.PI*2,ex=r.x+Math.cos(angle)*r.radius*spread,ez=r.z+Math.sin(angle)*r.radius*spread;
+   g.beam([ex,base+.25,ez],[ex,base+1.35,ez],r.radius*(booster?.14:.19),a.dark,6);
+  }
+  if(booster){const cap=g.vertex(r.x,base+r.height,r.z,hex('#899ba3'));for(let i=0;i<16;i++)g.triangle(cap,rows.at(-1)![i],rows.at(-1)![(i+1)%16]);}
  }
  return g;
 }
