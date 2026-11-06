@@ -14,6 +14,7 @@ import { controllerFor } from '../core/session';
 import type { TutorialProgress } from './tutorial';
 import { distance } from '../core/geometry';
 import { finishFor } from '../presentation/race-settings';
+import type { ChallengeId } from '../core/challenges';
 
 /** Live session values read by the development inspector at call time. */
 export interface DevContext {
@@ -25,6 +26,7 @@ export interface DevContext {
   raceTouches: PointerOwnership; ownership: PointerOwnership; audio: GameAudio;
   usePractice: (jumpBranch?: boolean | string) => void; driverName: (i: number) => string; driverPaint: (i: number) => string;
   tutorial: TutorialProgress | null;
+  activeChallenge: ChallengeId | null;
 }
 
 /**
@@ -35,11 +37,11 @@ export function installDevApi(read: () => DevContext) {
   Object.assign(window, { __roadster: new Proxy({}, { get: (_, key) => (devApi(read()) as Record<string | symbol, unknown>)[key] }) });
 }
 
-function devApi({ phase, pauseReason, sessionOptions, humans, playerCount, personalLap, preferences, activeTour, roundIndex, race, activeCircuit, theme, lapCount, turn, confirmedRoutes, readyPlayers, world, route, drawingTrim, best, stroke, activeTrack, raceTouches, ownership, audio, usePractice, driverName, driverPaint, tutorial }: DevContext) {
+function devApi({ phase, pauseReason, sessionOptions, humans, playerCount, personalLap, preferences, activeTour, roundIndex, race, activeCircuit, theme, lapCount, turn, confirmedRoutes, readyPlayers, world, route, drawingTrim, best, stroke, activeTrack, raceTouches, ownership, audio, usePractice, driverName, driverPaint, tutorial, activeChallenge }: DevContext) {
   return {
     // Test fixture. Players reach the same practice line only through the tutorial's Example button.
     usePracticeLine: usePractice,
-    getState: () => ({ phase,pauseReason,tutorial:tutorial?{...tutorial}:null,mode:sessionOptions.mode,difficulty:sessionOptions.difficulty,humanCount:humans(),controllers:Array.from({length:playerCount},(_,i)=>controllerFor(sessionOptions.mode,i)),personalBestLap:personalLap?.duration??null,ghostEnabled:preferences.ghost!==false, tournament: activeTour ? structuredClone(activeTour.state) : null, roundIndex, contactCount: race?.contactCount ?? 0, circuitId: activeCircuit.id, theme: theme.id, playerCount, lapCount, drivers: preferences.drivers.map((driver, i) => ({ name: driverName(i), paint: driverPaint(i), color: finishFor(driverPaint(i)).color })), turn, confirmedCount: confirmedRoutes.length, readyPlayers: [...readyPlayers], visibleRouteCount: world.visibleRouteCount, route: route ? { length: route.length, drawingDuration: route.drawingDuration, joined: drawingTrim?.joined ?? false, leadInCount: drawingTrim?.leadIn.length ?? 0, tailCount: drawingTrim?.tail.length ?? 0, cleanup: route.cleanup ? { ...route.cleanup } : null } : null, race: race ? { ...race.racers[0].state } : null, best,
+    getState: () => ({ phase,pauseReason,activeChallenge,tutorial:tutorial?{...tutorial}:null,mode:sessionOptions.mode,difficulty:sessionOptions.difficulty,humanCount:humans(),controllers:Array.from({length:playerCount},(_,i)=>controllerFor(sessionOptions.mode,i)),personalBestLap:personalLap?.duration??null,ghostEnabled:preferences.ghost!==false, tournament: activeTour ? structuredClone(activeTour.state) : null, roundIndex, contactCount: race?.contactCount ?? 0, circuitId: activeCircuit.id, theme: theme.id, playerCount, lapCount, drivers: preferences.drivers.map((driver, i) => ({ name: driverName(i), paint: driverPaint(i), color: finishFor(driverPaint(i)).color })), turn, confirmedCount: confirmedRoutes.length, readyPlayers: [...readyPlayers], visibleRouteCount: world.visibleRouteCount, route: route ? { length: route.length, drawingDuration: route.drawingDuration, joined: drawingTrim?.joined ?? false, leadInCount: drawingTrim?.leadIn.length ?? 0, tailCount: drawingTrim?.tail.length ?? 0, cleanup: route.cleanup ? { ...route.cleanup } : null } : null, race: race ? { ...race.racers[0].state } : null, best,
       players: race?.racers.map(racer => ({ ...racer.state })) ?? [], standings: race?.standings() ?? [], ghostStartRemaining: race?.ghostStartRemaining ?? 0,
       renderedPlayers: world.vehicles.slice(0, playerCount).map(vehicle => ({ x: vehicle.root.position.x, y: vehicle.root.position.y, z: vehicle.root.position.z, heading: vehicle.root.rotation.y })),
       raceInputs: { activations: [...raceTouches.activations], cancellations: [...raceTouches.cancellations], active: [0, 1, 2, 3].map(i => raceTouches.active(i)) },

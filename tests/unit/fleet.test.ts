@@ -34,7 +34,7 @@ for(const speed of[20,30,42])test(`all six crossings land with ${speed} m/s mome
  }
 },120000);
 test('finite hulls do not become support across water and old handling constants remain intact',()=>{
- expect(deckAt({x:95,z:-53},t)).toBeUndefined();expect(t.carWidth).toBeCloseTo(2.9095);expect(RULES.hopLaunchSpeed).toBe(34);expect(RULES.maxSpeed).toBe(42);
+ const j=t.jumps![0];expect(deckAt(jumpPoint(j,j.rampLength+j.gap/2),t)).toBeUndefined();expect(t.carWidth).toBeCloseTo(2.9095);expect(RULES.hopLaunchSpeed).toBe(34);expect(RULES.maxSpeed).toBe(42);
  const g=fleetGeometry(t);expect(Object.values(g).reduce((n,x)=>n+x.triangleCount,0)).toBeLessThan(120000);for(const part of Object.values(g))expect(part.toVertexData().normals!.every(Number.isFinite)).toBe(true);
 });
 test('both shortcut variants complete six laps with one legal timed hop per branch per lap',()=>{
@@ -56,7 +56,7 @@ test('concave deck triangulation does not bridge unsupported notches',()=>{
 test('a missed water Hop returns to its pre-crossing carrier without forward credit',()=>{
  const sim=new RaceSimulation(compile('support-a-lane'),t,1);let before=0;
  for(let tick=0;tick<6000&&!sim.state.recoveryCount;tick++){before=sim.state.distance;sim.step();}
- expect(sim.state.recoveryCount).toBe(1);expect(sim.state.distance).toBeLessThanOrEqual(before);expect(sim.state.supportSurfaceId).toBe('carrier-a');expect(sim.state.elevation).toBe(12);
+ expect(sim.state.recoveryCount).toBe(1);expect(sim.state.distance).toBeLessThanOrEqual(before);expect(sim.state.supportSurfaceId).toBe('carrier-a');expect(sim.state.elevation).toBe(24);
 });
 
 test('offline deck-edge rails match the authoritative deck and road geometry',()=>{expect(deriveFleetRails(t.decks!,[t.centerline,...t.hopShortcuts!.map(h=>h.branch)])).toEqual(fleetRails);});

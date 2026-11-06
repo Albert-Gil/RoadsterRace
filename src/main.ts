@@ -15,6 +15,9 @@ import {tourSchedule,type TourSetup} from './presentation/tournament-ui';
 import{ProgressionStore}from'./presentation/progression-storage';
 import{CUPS,badgeChoices,paintUnlocked,type ProgressEvidence}from'./core/progression';
 import{collectionPanel,badgeMarkup}from'./ui/panels/collection';
+import { ChallengeLapTracker, findChallenge, frontierChallengeComplete, type ChallengeId } from './core/challenges';
+import { ChallengeStore } from './presentation/challenge-storage';
+import { challengesPanel, challengeResults } from './ui/panels/challenges';
 import { FixedStepClock, RULES } from './core/simulation';
 import { CONTACT_RULES } from './core/vehicle-contact';
 import { assetUrl } from './presentation/urls';
@@ -86,6 +89,9 @@ let ownership = new PointerOwnership();
 let phase: Phase = 'welcome', returnPhase: Phase = 'welcome', route: CompiledRoute | null = null, race: LocalRace | null = null;
 let playerCount = 1, setupCount = 2, turn = 0, confirmedRoutes: CompiledRoute[] = [], readyPlayers: boolean[] = [];
 const collection=new ProgressionStore();
+const challenges = new ChallengeStore();
+let challengesReturn: Phase = 'welcome', activeChallenge: ChallengeId | null = null, challengeTracker: ChallengeLapTracker | null = null, challengeAttemptComplete = false;
+let challengeReturn: { circuitId: string; laps: number; options: SessionOptions; setupCount: number; tour: TourSetup } | null = null;
 const preferences = loadPreferences();
 for(const d of preferences.drivers){if(!paintUnlocked(d.paint,collection.state))d.paint='glacier';if(d.badge&&!badgeChoices(collection.state).some(b=>b.id===d.badge))delete d.badge;}
 let collectionReturn:Phase='welcome',resultAwards:string[]=[];
@@ -150,7 +156,7 @@ function applyDriverPresentation() {
   applyPlayerColors(colors); world?.setDriverPaints(colors);
   labels.forEach((label,i)=>{label.removeAttribute('title');label.textContent=String(i+1);});
 }
-function saveSettings() { preferences.laps = lapCount; savePreferences(preferences); }
+function saveSettings() { preferences.laps = challengeReturn?.laps ?? lapCount; savePreferences(preferences); }
 /** The automatic tier stepped down after slow frames: keep the Settings sheet truthful. */
 function onGraphicsChange() { refreshSettings(); }
 function refreshSetup(focus?: string) {
@@ -199,7 +205,7 @@ function pauseStatus() {
 }
 function selectCircuit(id: string) {
   const next = findCircuit(id); if (next.id === activeCircuit.id) return;
-  loadCircuit(next.id); setPhase('setup'); panel.querySelector<HTMLElement>(`[data-circuit="${next.id}"]`)?.focus({ preventScroll: true });
+  loadCircuit(next.id, !activeChallenge); setPhase('setup'); panel.querySelector<HTMLElement>(`[data-circuit="${next.id}"]`)?.focus({ preventScroll: true });
 }
 /** Swaps the active course and scene. `persist` stores it as the preferred circuit (the tutorial borrows Newport without doing so). */
 function loadCircuit(id: string, persist = true) {
@@ -253,9 +259,38 @@ function persistTour() {
   if (!activeTour) return;
   savedTour = structuredClone(activeTour); tourSaveFailed = !storeTournament(savedTour);
 }
+/** Challenges borrow settings, never overwrite the player's ordinary circuit, laps or format. */
+function borrowChallenge(id: ChallengeId) {
+  challengeReturn = { circuitId: activeCircuit.id, laps: lapCount, options: { ...sessionOptions }, setupCount, tour: structuredClone(tourSetup) };
+  activeChallenge = id; challengeAttemptComplete = false; challengeTracker = null;
+  const definition = findChallenge(id)!;
+  sessionOptions.mode = definition.mode; sessionOptions.difficulty = 'hard'; sessionOptions.seed = 73149;
+  lapCount = 1; setupCount = 1;
+  tourSetup.enabled = id === 'frontier-champion'; tourSetup.custom = false; tourSetup.preset = id === 'frontier-champion' ? 'frontier' : undefined;
+}
+function leaveChallenge() {
+  const back = challengeReturn;
+  activeChallenge = null; challengeReturn = null; challengeTracker = null; challengeAttemptComplete = false;
+  if (!back) return;
+  Object.assign(sessionOptions, back.options); Object.assign(tourSetup, back.tour); lapCount = back.laps; setupCount = back.setupCount;
+  tourSetup.preset = back.tour.preset;
+  if (back.circuitId !== activeCircuit.id) loadCircuit(back.circuitId, false);
+}
+function launchChallenge(id: ChallengeId) {
+  if (activeTour && activeTour.state.results.length < activeTour.state.rounds.length) persistTour();
+  activeTour = null; exitTutorial(); leaveChallenge(); borrowChallenge(id);
+  if (id === 'frontier-champion') { if (savedTour) setPhase('tour-replace'); else startTournament(); }
+  else { loadCircuit(findChallenge(id)!.circuitId, false); newSession(1); }
+}
+function recordCupChallenge() {
+  if (activeChallenge !== 'frontier-champion' || !activeTour) return;
+  challengeAttemptComplete = activeTour.challengeEligible === true && frontierChallengeComplete(activeTour.state, activeTour.options ?? {}, activeTour.cupId);
+  challenges.record({ id: activeChallenge, human: true, source: activeTour.challengeEligible === true ? 'live' : 'practice', completed: challengeAttemptComplete });
+}
 function startTournament() {
   const ids = tourSchedule(tourSetup);
   activeTour = { state: createTournament(ids.map(id => ({ circuitId: findCircuit(id).id, trackVersion: findCircuit(id).track.version })), racerCount(sessionOptions.mode,setupCount), lapCount), drivers: Array.from({length:racerCount(sessionOptions.mode,setupCount)},(_,i)=>({name:driverName(i),paint:driverPaint(i),...(preferences.drivers[i]?.badge?{badge:preferences.drivers[i].badge}:{}),controller:controllerFor(sessionOptions.mode,i)})), options:{...sessionOptions},...(tourSetup.preset?{cupId:tourSetup.preset,cupVersion:1}: {}) };
+  if (activeChallenge === 'frontier-champion') { activeTour.challengeId = activeChallenge; activeTour.challengeEligible = true; }
   persistTour(); beginTourRound();
 }
 function restoreTourDrivers() {
@@ -272,7 +307,10 @@ function beginTourRound() {
 }
 function resumeTournament() {
   if (!savedTour) return;
+  exitTutorial(); leaveChallenge();
+  if (savedTour.challengeId) borrowChallenge(savedTour.challengeId);
   activeTour = structuredClone(savedTour); restoreTourDrivers();
+  recordCupChallenge();
   if (activeTour.state.results.length === activeTour.state.rounds.length) { roundIndex = activeTour.state.results.length - 1; selectCircuit(activeTour.state.rounds[roundIndex].circuitId); playerCount = activeTour.state.playerCount; renderControls(); world.showVehicles(-1, playerCount); applyDriverPresentation(); setPhase('results'); }
   else beginTourRound();
 }
@@ -307,11 +345,12 @@ function renderPanel(message?: string) {
   const displayedCount = phase === 'setup' ? setupCount : playerCount;
   document.querySelector('#mode-label')!.textContent = modeLabel(sessionOptions.mode, displayedCount);
   const html = panelMarkup(message);
-  if (html !== null) panel.innerHTML = html+(phase==='results'&&sessionOptions.mode!=='tutorial'?('<div class="collection-results">'+(resultAwards.length?'<p role="status">'+resultAwards.map(escapeHtml).join(' · ')+'</p>':'')+'<button class="text-button" data-action="collection">Collection ↗</button></div>'):'');
+  if (html !== null) panel.innerHTML = html+(phase==='results'&&sessionOptions.mode!=='tutorial'?((activeChallenge ? challengeResults(activeChallenge, challengeAttemptComplete, challengeTracker?.vessels ?? 0, practiceTurns.size > 0 || activeTour?.challengeEligible === false, !!activeTour && activeTour.state.results.length === activeTour.state.rounds.length) : '')+'<div class="collection-results">'+(resultAwards.length?'<p role="status">'+resultAwards.map(escapeHtml).join(' · ')+'</p>':'')+'<button class="text-button" data-action="collection">Collection ↗</button><button class="text-button" data-action="challenges">Challenges ↗</button></div>'):'');
 }
 function panelMarkup(message?: string): string | null {
   switch (phase) {
     case 'collection':return collectionPanel(collection.state,collection.persistent);
+    case 'challenges': return challengesPanel(challenges.state, challenges.persistent);
     case 'tutorial-intro': return tutorialIntroPanel();
     case 'welcome': return welcomePanel({ tagline: theme.branding.tagline, savedTour: savedTourSummary(), incompatibleTour: incompatibleTournament() });
     case 'setup': return raceSetupMarkup(preferences, setupCount, tourSetup, sessionOptions, preferences.ghost !== false,collection.state);
@@ -350,6 +389,7 @@ function beginDrawing() {
 function usePractice(jumpBranch: boolean | string = false) {
   if (phase !== 'drawing') return;
   practiceTurns.add(turn);
+  if (activeTour?.challengeId) { activeTour.challengeEligible = false; persistTour(); }
   const result = compileRoute(createPracticeSamples(activeTrack, 7, jumpBranch), activeTrack);
   if (result.ok) showPreview(result.route, result.drawing);
 }
@@ -380,6 +420,10 @@ function enterReady() {
 function startRace(resume = false) {
   if (confirmedRoutes.length !== playerCount) return;
   if (!resume && sessionOptions.mode === 'tutorial') tutorial = freshTutorial();
+  if (!resume) {
+    challengeAttemptComplete = false;
+    challengeTracker = activeChallenge && activeChallenge !== 'frontier-champion' ? new ChallengeLapTracker(activeChallenge, { trackId: activeTrack.id, mode: sessionOptions.mode, laps: lapCount, human: true, source: practiceTurns.size ? 'practice' : 'live' }, confirmedRoutes[0]) : null;
+  }
   if (!resume) { resultAwards=[];sessionLapRecord=false; recorder=sessionOptions.mode==='time-trial'?new LapRecorder(lapRecordKey(activeTrack)):null;activeGhost=personalLap;world.setGhost(null); race = new LocalRace(confirmedRoutes, activeTrack, lapCount, activeTour ? roundIndex % playerCount : 0); recorder?.sample(race.racers[0].state); previousPoses = []; rechargeAnnounced = Array(playerCount).fill(true); world.vehicles.forEach(vehicle => vehicle.clearEffects()); }
   clearRaceInput(); resuming = resume; countdownRemaining = 3; countdownBeat = 3;
   countdownElement.dataset.lights = '0';
@@ -390,7 +434,7 @@ function pauseRace(reason='user') { if (phase !== 'racing' && phase !== 'countdo
 function goHome(force = false) {
   if (activeTour && activeTour.state.results.length < activeTour.state.rounds.length && !force) { exitReturn = phase === 'racing' || phase === 'countdown' ? 'paused' : phase; cancelStroke(); clearRaceInput(); persistTour(); setPhase('tour-exit'); return; }
   if (activeTour && activeTour.state.results.length === activeTour.state.rounds.length) { savedTour = null; discardTournament(); }
-  activeTour = null; exitTutorial();
+  activeTour = null; exitTutorial(); leaveChallenge();
   cancelStroke(); clearRaceInput(); playerCount = 1; turn = 0; route = null; race = null; confirmedRoutes = []; readyPlayers = [];
   renderControls(); world.setPlayers(1); applyDriverPresentation(); world.setPlanningPlayer(null); world.drawLine(null); world.showError(); world.vehicle.update(startPose()); notice.textContent = ''; setPhase('welcome');
 }
@@ -473,8 +517,11 @@ app.addEventListener('click', e => {
   if (action === 'renderer' && settingsDialog.open && isRendererChoice(target!.dataset.renderer) && target!.dataset.renderer !== graphicsPreference.renderer) { graphicsPreference.renderer = target!.dataset.renderer; saveGraphicsPreference(graphicsPreference); const url = new URL(location.href); url.searchParams.delete('renderer'); location.replace(url); }
   if(action==='collection'&&['welcome','setup','results'].includes(phase)){collectionReturn=phase;clearRaceInput();setPhase('collection');}
   if(action==='collection-back'&&phase==='collection')setPhase(collectionReturn);
+  if (action === 'challenges' && ['welcome', 'collection', 'results'].includes(phase)) { challengesReturn = phase; clearRaceInput(); setPhase('challenges'); }
+  if (action === 'challenges-back' && phase === 'challenges') setPhase(challengesReturn);
+  if (action === 'challenge-start' && phase === 'challenges') { const challenge = findChallenge(target!.dataset.challenge); if (challenge) launchChallenge(challenge.id); }
   if(action==='tour-cup'||action==='collection-cup'){
-   const cup=CUPS.find(c=>c.id===target!.dataset.cup);if(cup&&cup.rounds.every(id=>circuits.some(v=>v.id===id))){tourSetup.enabled=true;tourSetup.custom=false;tourSetup.preset=cup.id;if(phase==='collection'){activeTour=null;if(sessionOptions.mode!=='multiplayer'){sessionOptions.mode='solo-race';setupCount=1;}setPhase('setup');}else refreshSetup();}
+   const cup=CUPS.find(c=>c.id===target!.dataset.cup);if(cup&&cup.rounds.every(id=>circuits.some(v=>v.id===id))){if(activeChallenge){activeTour=null;leaveChallenge();}tourSetup.enabled=true;tourSetup.custom=false;tourSetup.preset=cup.id;if(phase==='collection'){activeTour=null;if(sessionOptions.mode!=='multiplayer'){sessionOptions.mode='solo-race';setupCount=1;}setPhase('setup');}else refreshSetup();}
   }
   if (action === 'format-single') { tourSetup.enabled = false; refreshSetup(); }
   if (action === 'format-tournament') { tourSetup.enabled = true; refreshSetup(); }
@@ -486,14 +533,14 @@ app.addEventListener('click', e => {
   if (action === 'tour-draw' && activeTour) newSession(activeTour.state.playerCount);
   if (action === 'tour-next' && activeTour && activeTour.state.results.length > roundIndex) beginTourRound();
   if (action === 'tour-resume') resumeTournament();
-  if (action === 'tour-again' && activeTour) { activeTour = { ...activeTour, state: createTournament(activeTour.state.rounds, activeTour.state.playerCount, activeTour.state.laps) }; persistTour(); beginTourRound(); }
+  if (action === 'tour-again' && activeTour) { activeTour = { ...activeTour, state: createTournament(activeTour.state.rounds, activeTour.state.playerCount, activeTour.state.laps), ...(activeTour.challengeId ? { challengeEligible: true } : {}) }; challengeAttemptComplete = false; persistTour(); beginTourRound(); }
   if (action === 'tour-discard') setPhase('tour-resume');
   if (action === 'tour-discard-cancel') setPhase('welcome');
   if (action === 'tour-discard-confirm') { savedTour = null; discardTournament(); setPhase('welcome'); }
   if (action === 'tour-save-exit') { persistTour(); goHome(true); }
   if (action === 'tour-continue') setPhase(exitReturn);
   if (action === 'tour-replace-confirm') { discardTournament(); savedTour = null; startTournament(); }
-  if (action === 'tour-back-setup') setPhase('setup');
+  if (action === 'tour-back-setup') { if (activeChallenge) { leaveChallenge(); setPhase('challenges'); } else setPhase('setup'); }
   if (action === 'player-count'  && phase === 'setup') { setupCount = Number(target!.dataset.count); refreshSetup(`[data-count="${setupCount}"]`); }
   if (action === 'lap-count' && phase === 'setup') { lapCount = Number(target!.dataset.laps); saveSettings(); refreshSetup(`[data-laps="${lapCount}"]`); }
   if (action === 'driver-paint' && phase === 'setup') {
@@ -503,7 +550,7 @@ app.addEventListener('click', e => {
   if (action === 'start-session') { preferences.drivers.forEach((driver, i) => driver.name = cleanDriverName(driver.name, i)); saveSettings(); if (sessionOptions.mode!=='time-trial' && tourSetup.enabled) { if (savedTour) setPhase('tour-replace'); else startTournament(); } else newSession(setupCount); }
   if (action === 'take-turn' && phase === 'handoff') beginDrawing();
   if (action === 'home') goHome();
-  if (action === 'configure-race') { const count = humans(); goHome(); setupCount = count; setPhase('setup'); }
+  if (action === 'configure-race') { const count = challengeReturn?.setupCount ?? humans(); goHome(); setupCount = count; setPhase('setup'); }
   if (action === 'redraw') { if (phase === 'results') newSession(playerCount); else beginDrawing(); }
   if (action === 'redraw-all') newSession(playerCount);
   if (action === 'confirm' && phase === 'preview') { if (!audio.muted) audio.unlock(); confirmRoute(); }
@@ -605,6 +652,10 @@ try {
         if(record){if(!personalLap||record.duration<personalLap.duration){personalLap=record;sessionLapRecord=true;void saveLap(record);}activeGhost=personalLap;}
  });
       for (const event of session.drainEvents()) {
+        if (event.player === 0 && challengeTracker?.observe(event) && activeChallenge) {
+          challengeAttemptComplete = true;
+          challenges.record({ id: activeChallenge, human: true, source: practiceTurns.size ? 'practice' : 'live', completed: true });
+        }
         if(event.lapSummary)recordProgress({trackId:activeTrack.id,human:controllerFor(sessionOptions.mode,event.player)==='human',source:sessionOptions.mode==='tutorial'?'tutorial':practiceTurns.size?'practice':'live',mode:sessionOptions.mode,lap:event.lapSummary});
         audio.cue(event.type, event.intensity); if (event.type === 'thrust') rechargeAnnounced[event.player] = false; const prefix = playerCount > 1 ? `${driverName(event.player)} · ` : '';
         if ((event.type === 'landing' || event.type === 'splash') && event.point) world.feedback(event.point, event.type === 'splash');
@@ -620,7 +671,7 @@ try {
       const moving = session.racers.map(racer => racer.state).filter(s => !s.finished);
       audio.mix({ active: true, speed: Math.max(0, ...moving.map(s => s.speed)), dirt:!!activeTrack.surface, snow:activeTrack.surface==='packed-snow', slip: Math.max(0, ...moving.map(s => s.drifting ? clamp(Math.abs(s.slipAngle) * 2, 0.1, 1) : 0)), sand: Math.max(0, ...moving.map(s => s.sandAmount)) });
       session.racers.forEach((racer, i) => { if (!rechargeAnnounced[i] && !racer.state.finished && racer.state.time >= racer.state.thrustReadyAt) { rechargeAnnounced[i] = true; audio.cue('ready'); } });
-      if (session.finished) { if (activeTour && activeTour.state.results.length === roundIndex) { activeTour.state = finalizeRound(activeTour.state, roundIndex, { circuitId: activeTrack.id, trackVersion: activeTrack.version }, session.standings().map(r => ({ player: r.player, rank: r.rank, finishTime: r.finishTime! }))); persistTour(); } recordRaceProgress(session);if (playerCount === 1 && sessionOptions.mode !== 'tutorial') { best = Math.min(best ?? Infinity, session.racers[0].state.finishTime!); bestTimes.set(bestKey(), best); } notice.textContent = ''; clearRaceInput(); setPhase('results'); }
+      if (session.finished) { if (activeTour && activeTour.state.results.length === roundIndex) { activeTour.state = finalizeRound(activeTour.state, roundIndex, { circuitId: activeTrack.id, trackVersion: activeTrack.version }, session.standings().map(r => ({ player: r.player, rank: r.rank, finishTime: r.finishTime! }))); persistTour(); } recordRaceProgress(session); recordCupChallenge(); if (playerCount === 1 && sessionOptions.mode !== 'tutorial') { best = Math.min(best ?? Infinity, session.racers[0].state.finishTime!); bestTimes.set(bestKey(), best); } notice.textContent = ''; clearRaceInput(); setPhase('results'); }
       else if (tutorial && phase === 'racing') {
         const due = duePrompt(tutorial, session.racers[0].state, confirmedRoutes[0]);
         if (due) { tutorial.awaiting = due; clearRaceInput(); audio.cue('ready'); setPhase('coaching'); }
@@ -628,7 +679,7 @@ try {
     } else if (phase === 'ready' || phase === 'countdown' || phase === 'paused' || phase === 'coaching') updateVehicles(1);
     if (now > noticeUntil) notice.textContent = ''; world.render(now / 1000);
   });
-  if (import.meta.env.DEV) installDevApi(() => ({ phase, pauseReason, sessionOptions, humans, playerCount, personalLap, preferences, activeTour, roundIndex, race, activeCircuit, theme, lapCount, turn, confirmedRoutes, readyPlayers, world, route, drawingTrim, best, stroke, activeTrack, raceTouches: input.touches, ownership, audio, usePractice, driverName, driverPaint, tutorial }));
+  if (import.meta.env.DEV) installDevApi(() => ({ phase, pauseReason, sessionOptions, humans, playerCount, personalLap, preferences, activeTour, roundIndex, race, activeCircuit, theme, lapCount, turn, confirmedRoutes, readyPlayers, world, route, drawingTrim, best, stroke, activeTrack, raceTouches: input.touches, ownership, audio, usePractice, driverName, driverPaint, tutorial, activeChallenge }));
 } catch (error) { console.error(error); canvas.hidden = true; setPhase('error'); renderPanel(error instanceof Error ? error.message : undefined); }
 }
 void start();

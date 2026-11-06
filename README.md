@@ -2,6 +2,10 @@
 
 A browser racing game with Solo Race against three computer drivers, local Multiplayer for two to four people, Time Trial with a personal-best ghost, and a guided Tutorial: draw a line and its pace, race one to six laps, and time your rechargeable thrust and hop. Visuals are replaceable through shared settings and assets. No account, backend, or external service is required to play.
 
+Choose **Challenges** from Home for three curated sessions: both Fleet support-vessel sequences in one lap, a clean Snowy Tahoe lap, or the Frontier Cup title against Hard opponents. Completions save locally, independently of venue medals. Ordinary settings return when you leave. See [challenge rules](docs/CHALLENGES.md).
+
+San Diego Fleet v2 replaces the platform-like course with sculpted ship hulls, higher flight decks, deck sweepers, larger naval command islands and visible water gaps. See the [ship rebuild guide](docs/FLEET_REBUILD.md).
+
 Ten venues are available: Newport Island, Launchsite, Golden Gate, Santa Monica, Grand Canyon, LA nights, Snowy Tahoe, Capitan Yosemite, Grand Canyon: South Rim and San Diego Fleet. Both canyon courses remain playable. Newly created Full Tours include all ten; saved schedules remain unchanged. San Diego Fleet adds stationary ship decks, automatic crossings and two discoverable support-vessel alternatives. See the [fleet production guide](docs/FLEET_PRODUCTION.md), [local Collection rules](docs/PROGRESSION.md), [venue expansion](docs/VENUE_EXPANSION.md), [Grand Canyon guide](docs/GRAND_CANYON.md), [LA nights guide](docs/LA_NIGHTS.md) and [Snowy Tahoe guide](docs/TAHOE_GROUNDING_UPGRADE.md).
 
 All roads are now **16 metres wide**, including Golden Gate's bridge and Santa Monica's pier/jump surfaces. The fixed camera fits the actual road tightly, with a phone-friendly orientation and compact controls. See [phone framing, computer drivers and lap ghosts](docs/PHONE_AND_MODES.md).
@@ -71,9 +75,9 @@ Solo keeps the bottom-right thrust/hop pads with Space (Thrust) and H (Hop). The
 
 **Touch test** (in Settings) remains available for the 50-cycle input diagnostic.
 
-### Tournaments and nine circuits
+### Tournaments and ten circuits
 
-Choose **Tournament** at the top of Solo Race or Multiplayer setup (01 / RACE FORMAT, above the circuits). **Full Tour** races Newport Island, Launchsite, Golden Gate, Santa Monica, Grand Canyon, LA nights, Snowy Tahoe, Capitan Yosemite and Grand Canyon: South Rim in that order. **Custom Tour** supports 2–12 races, repeated venues and up/down reordering. The selected 1–6 laps apply throughout; each round begins with fresh private drawing turns.
+Choose **Tournament** at the top of Solo Race or Multiplayer setup (01 / RACE FORMAT, above the circuits). **Full Tour** races Newport Island, Launchsite, Golden Gate, Santa Monica, Grand Canyon, LA nights, Snowy Tahoe, Capitan Yosemite, Grand Canyon: South Rim and San Diego Fleet in that order. **Custom Tour** supports 2–12 races, repeated venues and up/down reordering. The selected 1–6 laps apply throughout; each round begins with fresh private drawing turns.
 
 First/second/third/fourth receive **10/6/4/0 points**. Race ties share place points and skip following ranks; equal championship totals share the title. Completed points save locally. **Resume tournament** preserves earlier results and restarts the unfinished round with fresh lines. Drivers and schedule lock at tournament start.
 

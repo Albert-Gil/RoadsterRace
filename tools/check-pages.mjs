@@ -16,7 +16,7 @@ const fullRaces = process.env.PAGES_FULL_RACES === '1';
 const tournamentOnly = process.env.PAGES_ONLY === 'tournament';
 const circuits = ['coastal-launch', 'launchsite', 'golden-gate', 'santa-monica', 'grand-canyon', 'la-nights', 'snowy-tahoe', 'capitan-yosemite', 'canyon-south-rim','san-diego-fleet'];
 const selection = process.env.PAGES_ONLY;
-assert.ok(!selection || ['tournament', 'sessions', 'phone', 'multiplayer', 'solo'].includes(selection) || circuits.includes(selection), 'Unknown PAGES_ONLY group');
+assert.ok(!selection || ['tournament', 'sessions', 'phone', 'multiplayer', 'solo', 'challenges'].includes(selection) || circuits.includes(selection), 'Unknown PAGES_ONLY group');
 const selectedCircuits = selection ? circuits.filter(id => id === selection) : circuits;
 const sessionChecks = !selection || selection === 'sessions';
 const output = new URL('../artifacts/pages/', import.meta.url);
@@ -224,6 +224,27 @@ try {
       assert.equal(await page.getByRole('button', { name: 'Cobalt blue', exact: true }).getAttribute('aria-pressed'), 'true');
       await page.locator('.brand').click();
       assert.equal(page.url(), productionURL);
+    } finally { await context.close(); }
+  }
+  if (sessionChecks || selection === 'challenges') {
+    console.log('Checking production challenges without development hooks');
+    const points = await fixture('snowy-tahoe');
+    const { context, page } = await productionPage();
+    try {
+      await page.goto(productionURL); await page.getByRole('button', { name: 'Challenges', exact: true }).click();
+      assert.equal(await page.locator('.challenge-card').count(), 3);
+      await page.locator('[data-challenge="alpine-precision"]').click(); await ready(page);
+      await draw(page, context, points); await page.getByRole('button', { name: 'Race this line' }).click(); await racing(page);
+      if (fullRaces) { await finish(page); assert.ok((await page.locator('.challenge-result').textContent()).includes('Challenge complete')); }
+      else await page.keyboard.press('Escape');
+      await page.locator('#panel [data-action="home"]').click();
+      await page.getByRole('button', { name: 'Challenges', exact: true }).click(); await page.locator('[data-challenge="frontier-champion"]').click();
+      await page.getByRole('button', { name: 'Draw your lines', exact: false }).waitFor();
+      const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('roadster-race.tournament.v1')));
+      assert.equal(saved.challengeId, 'frontier-champion'); assert.equal(saved.challengeEligible, true);
+      assert.equal(saved.options.mode, 'solo-race'); assert.equal(saved.options.difficulty, 'hard'); assert.equal(saved.state.rounds.length, 4); assert.equal(saved.state.laps, 1);
+      assert.equal(await page.evaluate(() => typeof window.__roadster), 'undefined');
+      report.checks.push({ challenges: true, realTouchChallengeDrawing: true, challengeRaceStarted: true, hardFrontierPreset: true, productionInspectorAbsent: true });
     } finally { await context.close(); }
   }
   // Alternate presentation and portrait layout, including standalone metadata.

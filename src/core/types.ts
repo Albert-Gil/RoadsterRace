@@ -4,7 +4,7 @@ export interface TrackBarrier { deckSurfaceId?:string; id: string; footprint: Po
 export interface RoadSection { id: string; from: number; to: number; heights: [number, number][]; supportWidth: number; /** Optional distance/width profile for continuous shoulders, relative to section.from. */ supportWidths?: [number, number][]; flight?: boolean }
 export interface SupportSurface { id: string; footprint: Point[] }
 /** Stationary physical deck. A transfer can grade continuously between two heights. */
-export interface DeckSurface extends SupportSurface {elevation:number;toElevation?:number;from?:Point;to?:Point;kind:'carrier'|'destroyer'|'support-ship'|'transfer'}
+export interface DeckSurface extends SupportSurface {elevation:number;toElevation?:number;from?:Point;to?:Point;kind:'carrier'|'destroyer'|'support-ship'|'transfer'; /** Stationary vessel axes for hull/deck construction. Does not add support. */ vessel?:{origin:Point;forward:Point}}
 export interface TrackJump {
   id: string; from: Point; forward: Point; width: number; rampLength: number; lipHeight: number;
   gap: number; runout: number; corridorLength: number;
@@ -84,7 +84,7 @@ export interface DrawingTrim { leadIn: DrawSample[]; tail: DrawSample[]; joined:
 export type RouteResult = { ok: true; route: CompiledRoute; drawing?: DrawingTrim } | { ok: false; message: string; point?: Point; section?: Point[] };
 export type Ability = 'thrust' | 'hop';
 export interface LapSummary {lap:number;duration:number;barrierContacts:number;carContacts:number;recoveries:number}
-export type RaceEvent = { type: 'thrust' | 'hop' | 'drift' | 'lap' | 'finish' | 'collision' | 'car-impact' | 'scrape' | 'recovery' | 'takeoff' | 'landing' | 'splash'; time: number; point?: Point; intensity?: number; otherPlayer?: number; lapSummary?:LapSummary; /** Extra reset hold (s) after crashing into a hazard. */ penalty?: number };
+export type RaceEvent = { type: 'thrust' | 'hop' | 'drift' | 'lap' | 'finish' | 'collision' | 'car-impact' | 'scrape' | 'recovery' | 'takeoff' | 'landing' | 'splash'; time: number; point?: Point; intensity?: number; otherPlayer?: number; lapSummary?:LapSummary; /** Successful landing provenance; telemetry only, never used to drive physics. */ crossingId?: string; flightOrigin?: RaceState['flightOrigin']; /** Extra reset hold (s) after crashing into a hazard. */ penalty?: number };
 export interface RaceState {
   tick: number;
   time: number;

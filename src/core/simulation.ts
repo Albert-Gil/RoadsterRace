@@ -317,7 +317,7 @@ export class RaceSimulation {
       this.events.push({ type: 'collision', time: now, point: collision.point, intensity: collision.impact });
     }
     if (lands && vehicleSupported(s.position, s.heading, this.track)) {
-      this.events.push({ type: 'landing', time: now + fraction * dt, point: { ...at }, intensity: Math.abs(s.verticalVelocity) });
+      this.events.push({ type: 'landing', time: now + fraction * dt, point: { ...at }, intensity: Math.abs(s.verticalVelocity), crossingId: s.activeJump ?? undefined, flightOrigin: s.flightOrigin });
       s.movement = 'grounded'; s.activeJump = null; s.intendedLandingSurfaceId=undefined; s.flightOrigin = null; s.verticalVelocity = 0; s.elevation = groundHeight(s.position, this.track); if(this.track.decks)s.supportSurfaceId=deckAt(s.position,this.track)?.id; this.invalidFlight = false;
     }
     if(this.track.sections && !this.track.decks && !lands && (this.invalidFlight && now-s.flightStartedAt>.15 || jump?.kind==='crest'&&height<landingHeight&&s.verticalVelocity<0)){

@@ -22,7 +22,8 @@ export const defaultPaintId = 'glacier';
 /** Native production kit colours; baked into existing venue batches. */
 export const productionSurfaceTuning={rockFoot:.79,strata:.025,plantFoot:.76,crown:.05,snowFoot:.91,structureFoot:.83,top:.035};
 export const productionAppearance={roofInset:'#59676a',bayGlass:'#315b68',foundation:'#848475',eaveShadow:'#525c59',awnings:['#467f7a','#a15e50','#c6a65f'],contact:'#5a6054'};
-export const fleetAppearance={hull:'#81939c',hullShade:'#637781',waterline:'#414a4e',deck:'#818e91',supportDeck:'#8a9996',asphalt:'#59666c',coping:'#b9c8ca',ribs:'#5a6d76',line:'#ddd6b2',aircraft:'#bfc9c7',glass:'#294955',dark:'#28343a',equipment:'#ca9e48',water:'#337e91'};
+export const fleetAppearance={hull:'#8d9da6',hullShade:'#637a89',hullFill:'#344b58',waterline:'#435968',bootTop:'#273d49',deck:'#6b7b83',supportDeck:'#73888d',asphalt:'#485b65',coping:'#c0cdd1',ribs:'#536c7c',line:'#e2dbbd',aircraft:'#c3cecc',glass:'#294955',dark:'#28343a',equipment:'#ca9e48',water:'#246779',foam:'#70a3aa'};
+export const fleetCamera={desktopElevation:42,phoneElevation:50};
 /** Solo Thrust/Hop keep the standard red interface (`--control-1`) whatever the car paint; with two or more cars the pads use each driver's paint instead (ui/controls.ts). */
 export const abilityControlColors = ['#d51f35', '#3b79e6', '#f1be37', '#45a77b'] as const;
 export const vehicleMaterials = {
@@ -120,7 +121,7 @@ export const colorGrade = { saturation: 8, highlights: { hue: 38, density: 12, s
 
 /** Biome colors stay independent of interface branding and the driver's selected paint. */
 export const sceneryPalettes = {
-  naval:{terrain:'#387f93',water:'#387f93',asphalt:'#a6b2b8',structure:'#637c87',sky:'#c6d9de',sunlight:1.06},
+  naval:{terrain:fleetAppearance.water,water:fleetAppearance.water,asphalt:'#a6b2b8',structure:'#637c87',sky:'#c6d9de',sunlight:1.06},
   yosemite:{terrain:'#61816a',embankment:'#859070',asphalt:'#8f826b',shoulder:'#a5a079',structure:'#5a6552',curb:'#ddd4b9',glass:'#39564b',foliage:'#254f3a',foliageLight:'#658351',rock:'#c5c2b3',trunk:'#795d40',water:'#367f84',foam:'#dfefdd',sky:'#afd5d9',sunlight:1.05},
   alpine: {terrain:'#dce7ee',embankment:'#b9cad6',asphalt:'#8ca6b9',shoulder:'#d2e0e9',structure:'#3b4f59',curb:'#edf5f7',glass:'#304f60',foliage:'#34564e',foliageLight:'#5e7970',rock:'#87959f',trunk:'#716357',water:'#23647f',foam:'#c4e3ec',sky:'#b1d3e3',sunlight:.96},
   'night-city': { terrain:'#34383e',embankment:'#53515a',asphalt:'#b4b4b8',shoulder:'#535058',structure:'#383440',curb:'#ded4c3',glass:'#272a34',foliage:'#344c45',foliageLight:'#637567',rock:'#5c5960',trunk:'#5c4d46',water:'#1c2c33',foam:'#8c9c9b',sky:'#15151f',sunlight:.42 },
@@ -244,6 +245,7 @@ export const surfaceFinishes: Record<string, SurfaceFinish> = {
   'bay-metal': { kind: 'concrete', scale: 40, normal: 0, variation: 0, reflection: 0.3, roughness: 0.35 },
 };
 export const sceneryFinishes: Partial<Record<keyof typeof sceneryLighting, Record<string, SurfaceFinish>>> = {
+  naval:{terrain:{kind:'water',scale:90,normal:.10,variation:.035,reflection:.35,roughness:.32,specular:.12,gloss:80},'fleet-hull':{kind:'concrete',scale:14,normal:.08,variation:.045,walls:true,reflection:.12,roughness:.6},'fleet-deck':{kind:'asphalt',scale:9,normal:.12,variation:.07},'fleet-equipment':{kind:'concrete',scale:6,normal:.08,variation:.04,walls:true}},
   yosemite:{terrain:{kind:'dirt',scale:22,normal:.26,variation:.08},asphalt:{kind:'dirt',scale:12,normal:.32,variation:.12},shoulder:{kind:'dirt',scale:15,normal:.26,variation:.1},'yosemite-granite':{kind:'rock',scale:11,normal:.32,variation:.13,walls:true}},
   alpine: {terrain:{kind:'snow',scale:18,normal:.16,variation:.035},asphalt:{kind:'snow',scale:10,normal:.2,variation:.055},shoulder:{kind:'snow',scale:14,normal:.19,variation:.04},'tahoe-granite':{kind:'rock',scale:5,normal:.45,variation:.12,walls:true}},
   // Golden Gate paints its land in full colour; the finish adds only fine grain. The shore carries vertex colour.
@@ -410,7 +412,7 @@ export const venueFinish = {
  yosemite:{edge:'#a08e6c',ground:'#84906a',grit:'#bdaf8b',inset:.18,spread:1.05},
 } satisfies Record<string,VenueFinish>;
 export const interfaceMotion = { durationMs:160, rowStaggerMs:40 };
-export const circuitArtRevision = '2026-11-06-production';
+export const circuitArtRevision = '2026-11-06-fleet-ships';
 /** One sun per venue; unchanged shadow-map dimensions and cached caster policy. */
 export const venueSunDirections = {
  naval:[.55,-1,.5],

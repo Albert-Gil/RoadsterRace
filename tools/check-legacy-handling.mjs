@@ -29,9 +29,12 @@ async function runtime(ref) {
   return { circuits: entries[0].circuits, ...entries[1], ...entries[2] };
 }
 const old = await runtime(baseline), current = await runtime();
-for(const circuit of old.circuits){const present=current.circuits.find(c=>c.id===circuit.id);assert.ok(present,`${circuit.id}: original venue removed`);assert.deepEqual(JSON.parse(JSON.stringify(present.track)),JSON.parse(JSON.stringify(circuit.track)),`${circuit.id}: baseline geometry/version changed`);}
+// A layout revision can explicitly select the unchanged venues; the default still audits every course.
+const selected=process.env.LEGACY_CIRCUITS?.split(',');if(selected)for(const id of selected)assert.ok(old.circuits.some(c=>c.id===id),`Unknown legacy circuit: ${id}`);
+const unchanged=old.circuits.filter(c=>!selected||selected.includes(c.id));assert.ok(unchanged.length,'No legacy circuits selected');
+for(const circuit of unchanged){const present=current.circuits.find(c=>c.id===circuit.id);assert.ok(present,`${circuit.id}: original venue removed`);assert.deepEqual(JSON.parse(JSON.stringify(present.track)),JSON.parse(JSON.stringify(circuit.track)),`${circuit.id}: baseline geometry/version changed`);}
 
-for (const circuit of old.circuits) for (const count of [1, 2, 4]) {
+for (const circuit of unchanged) for (const count of [1, 2, 4]) {
   const run = runtime => {
     const track = old.circuits.find(c => c.id === circuit.id).track;
     const compiled = runtime.compileRoute(runtime.createPracticeSamples(track), track); assert.equal(compiled.ok, true);
@@ -51,5 +54,5 @@ for (const circuit of old.circuits) for (const count of [1, 2, 4]) {
   records.push({ circuit: circuit.id, count, before, after });
 }
 await mkdir('artifacts/legacy-handling', { recursive: true });
-await writeFile('artifacts/legacy-handling/report.json', JSON.stringify({ baseline, passed: true, records }, null, 2));
+await writeFile('artifacts/legacy-handling/report.json', JSON.stringify({ baseline, circuits:unchanged.map(c=>c.id), passed: true, records }, null, 2));
 console.log(`All ${records.length} handling fixtures (1/2/4 cars, every circuit) match ${baseline}.`);

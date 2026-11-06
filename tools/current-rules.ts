@@ -133,6 +133,7 @@ function table(name: string, values: Record<string, number>) {
 }
 
 export function currentRulesMarkdown() {
+  const fleetHeights = [...new Set(circuits.find(c => c.id === 'san-diego-fleet')!.track.decks!.map(d => d.elevation))].sort((a, b) => b - a).join('/');
   const peak = RULES.hopLaunchSpeed ** 2 / (2 * flightGravity('hop')), airtime = 2 * RULES.hopLaunchSpeed / flightGravity('hop');
   const crest = circuits.find(c => c.id === 'grand-canyon')!.track.jumps!.find(j => j.kind === 'crest')!;
   const courses = ['| Circuit | ID | Track version | Road width (m) | Centerline (m) | Barriers | Branches |', '|---|---|---:|---:|---:|---:|---|',
@@ -174,7 +175,7 @@ ${ski.join('\n')}
 
 ## Fleet deck crossings and local Collection
 
-San Diego Fleet owns named stationary 12/10/8 m decks. Physical support comes only from those footprints; interpolated drawing guides across a gap provide no support. Normal automatic crossings use an 8 m approach, 1.2 m lip, 10 m opening and 60 m receiving straight. Support-vessel alternatives pair a manual 6 m water Hop with an automatic 6 m exit; incomplete or unsupported drawings remain penalized hazards. Intended receiving-deck ownership is required at landing. CPU drivers use the normal route.
+San Diego Fleet owns named stationary ${fleetHeights} m decks. Physical support comes only from those footprints; interpolated drawing guides across a gap provide no support. Normal automatic crossings use an 8 m approach, 1.2 m lip, 10 m opening and 60 m receiving straight. Support-vessel alternatives pair a manual 6 m water Hop with an automatic 6 m exit; incomplete or unsupported drawings remain penalized hazards. Intended receiving-deck ownership is required at landing. CPU drivers use the normal route.
 
 Human-only Finish (selected distance), Clean (one lap without barrier/car contact or recovery) and Rival (shared first in Solo Normal/Hard) are independent historical achievements. Drifting, off-road driving and abilities do not spoil Clean. Tutorial, CPU, ghosts and practice cannot award progress. Cup completion and cosmetic rewards are installation-local, idempotent and independent of race preferences/versions; there is no synchronization or gameplay advantage.
 

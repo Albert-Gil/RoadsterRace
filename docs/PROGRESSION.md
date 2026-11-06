@@ -47,3 +47,7 @@ Completed rounds stay committed once, and interrupted rounds restart with new dr
 Full Tours now contain ten venues; existing compatible schedules remain as originally saved.
 Rules 19/compiler 20 reject prior incompatible championships without deleting ordinary
 names, finishes, laps or Collection awards.
+
+Three independent, replayable challenges are available from Home/Collection/Results.
+Their completion stamps use separate storage and do not change medal totals or reward
+thresholds. See [CHALLENGES.md](CHALLENGES.md) for evidence, settings and save behavior.

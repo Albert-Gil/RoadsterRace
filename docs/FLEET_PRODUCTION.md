@@ -1,5 +1,9 @@
 # Visual production, Collection and San Diego Fleet
 
+The subsequent owner-requested **Fleet v2 ship rebuild** supersedes the original
+Fleet geometry/heights below. See [FLEET_REBUILD.md](FLEET_REBUILD.md) for the current
+714.8 m course, 24/22/16 m decks, naval artwork and compatibility requirements.
+
 Approved implementation, based on 1bd5e8c. The owner authorized commit and push
 on 2026-11-06. Pages publication remains gated by the verified-main workflow.
 Unity migration, online accounts and paid assets/services are outside this milestone.

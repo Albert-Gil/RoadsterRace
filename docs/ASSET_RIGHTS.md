@@ -323,3 +323,13 @@ original surface textures are reused, with their prior attribution unchanged.
 
 Collection badges are original inline SVG geometry. The four reward finishes use
 existing native vehicle materials and add no external artwork or subscriptions.
+
+### Fleet v2 ship rebuild (2026-11-06)
+
+Layered hulls, aircraft/helicopters, naval bridge/island/turret parts, hull stencils,
+life-raft capsules, deck tractors, anchors and gangways in `fleet-model.ts` / `fleet.ts`
+are original procedural geometry. No downloaded ship models or reference images are
+bundled. The USS Midway Museum source above and the Naval History and Heritage Command's
+[USS Indianapolis photograph collection](https://www.history.navy.mil/content/history/museums/nmusn/explore/photography/ships-us/ships-usn-i/uss-indianapolis-ca-35.html)
+were visual references only. Vessel names, markings, game dimensions and layout remain
+fictional; no real ship's detailed plans or protected logos were reproduced.
