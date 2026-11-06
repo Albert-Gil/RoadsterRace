@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "packageManager": "pnpm@11.25.0",
-  "engines": { "node": ">=22.12.0" },
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
@@ -19,7 +21,8 @@
     "bake:props": "node tools/bake-props.mjs",
     "build:app": "tsc --noEmit && vite build --mode app",
     "ios:sync": "pnpm build:app && cap sync ios",
-    "test:legacy": "node --experimental-vm-modules tools/check-legacy-handling.mjs"
+    "test:legacy": "node --experimental-vm-modules tools/check-legacy-handling.mjs",
+    "bake:production": "node tools/bake-native-production.mjs"
   },
   "dependencies": {
     "@babylonjs/core": "9.31.0",

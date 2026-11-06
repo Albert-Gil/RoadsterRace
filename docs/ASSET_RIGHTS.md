@@ -306,3 +306,20 @@ The larger steel ships/boosters, their fin and engine details, closed vehicle-sh
 proxy and exterior Tahoe winter fleet are original procedural geometry. The new
 roadside firs reuse the existing native tree templates. This pass adds no external
 model, texture, recording, logo or licence requirement.
+
+## Native visual production kit and San Diego Fleet
+
+All new roof forms, facade bays, baked contact/strata colour treatment, naval hulls,
+flight decks, fictional parked aircraft, equipment and radar geometry in this
+milestone are original procedural Roadster Race artwork. Source generators remain
+in `src/presentation/production-kit.ts`, `production-finish.ts` and `fleet.ts`.
+No third-party model, photograph, marking, logo or texture was copied.
+
+USS Midway Museum's [flight-deck exhibit reference](https://www.midway.org/visit/our-exhibits/flight-deck-exhibits)
+was consulted for broad visual organization (parked aircraft and carrier island).
+San Diego Fleet is fictional; its game dimensions and layout do not represent
+USS Midway or an operational naval installation. Existing CC0 coastal sky and
+original surface textures are reused, with their prior attribution unchanged.
+
+Collection badges are original inline SVG geometry. The four reward finishes use
+existing native vehicle materials and add no external artwork or subscriptions.

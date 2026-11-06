@@ -44,6 +44,9 @@ export function barrierContact(position: Point, heading: number, track: TrackDef
   const a = sub(position, axis), b = { x: position.x + axis.x, z: position.z + axis.z };
   let result: { depth: number; normal: Point; point: Point; barrier: TrackBarrier } | null = null;
   for (const barrier of track.barriers) {
+    // A hull top is walkable support, not a horizontal wall on a graded deck transfer.
+    // Airborne queries retain its true vertical bounds for landing-edge impacts.
+    if(barrier.deckSurfaceId&&!protectFlight&&track.decks)continue;
     // Above-road obstacles protect the infield/rails in this milestone. Submerged
     // landing faces retain their real height so an approved jump can pass above.
     if(barrier.kind==='cliff-face'&&barrier.sectionId===position.sectionId)continue;

@@ -2,9 +2,9 @@ import { DEFAULT_LAPS, MAX_LAPS, MIN_LAPS } from '../core/race-options';
 import { defaultCircuit, findCircuit } from '../content/circuits';
 
 /** Presentation preferences never enter the route compiler or vehicle physics. */
-import { defaultPaintId, paintFinishes } from './themes';
+import { defaultPaintId, paintFinishes,rewardPaintFinishes } from './themes';
 export { paintFinishes } from './themes';
-export interface DriverProfile { name: string; paint: string }
+export interface DriverProfile { name: string; paint: string;badge?:string }
 export interface RacePreferences { version: 1; laps: number; drivers: DriverProfile[]; circuitId: string; ghost?: boolean }
 export const PREFERENCES_KEY = 'roadster-race.preferences.v1';
 const defaults = [defaultPaintId, 'cobalt', 'solar', 'verdant'];
@@ -13,7 +13,7 @@ export function cleanDriverName(value: string, index: number) {
   const name = Array.from(value.replace(/[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g, '').trim().replace(/\s+/g, ' ')).slice(0, 18).join('');
   return name || defaultDriverName(index);
 }
-export const finishFor = (id: string) => paintFinishes.find(paint => paint.id === id) ?? paintFinishes.find(paint => paint.id === defaultPaintId)!;
+export const finishFor = (id: string) => [...paintFinishes,...rewardPaintFinishes].find(paint => paint.id === id) ?? paintFinishes.find(paint => paint.id === defaultPaintId)!;
 export function defaultPreferences(): RacePreferences {
   return { version: 1, ghost: true, laps: DEFAULT_LAPS, circuitId: defaultCircuit.id, drivers: defaults.map((paint, index) => ({ name: defaultDriverName(index), paint })) };
 }
@@ -26,7 +26,8 @@ export function parsePreferences(serialized: string | null): RacePreferences {
     return { version: 1, laps, ghost: data.ghost !== false, circuitId: findCircuit(data.circuitId).id, drivers: defaults.drivers.map((driver, index) => {
       const saved = Array.isArray(data.drivers) ? data.drivers[index] : null;
       return { name: typeof saved?.name === 'string' ? cleanDriverName(saved.name, index) : driver.name,
-        paint: paintFinishes.some(paint => paint.id === saved?.paint) ? saved.paint : driver.paint };
+        paint: [...paintFinishes,...rewardPaintFinishes].some(paint => paint.id === saved?.paint) ? saved.paint : driver.paint,
+        ...(typeof saved?.badge==='string'?{badge:saved.badge}:{}) };
     }) };
   } catch { return defaults; }
 }

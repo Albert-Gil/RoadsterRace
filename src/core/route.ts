@@ -3,14 +3,16 @@ import type { CompiledRoute, DrawSample, Point, RouteResult, TrackDefinition } f
 import { cleanDrawnRoute, DRAWING_RULES, projectCourse } from './route-cleanup';
 import { canStartDrawing, trimDrawing, joinLap, gateCoordinates, gatePoint } from './start-finish';
 import { routeContacts } from './barriers';
-import { assessSupports } from './support';
+import { assessSupports,vehicleSupported } from './support';
+const vehicleSupportedForRoute=(ps:Point[],i:number,t:TrackDefinition)=>{const a=ps[Math.max(0,i-1)],b=ps[Math.min(ps.length-1,i+1)];return vehicleSupported(ps[i],Math.atan2(b.x-a.x,b.z-a.z),t);};
 import { assessHopShortcuts } from './hop-shortcuts';
 import { annotateRoad } from './elevation';
+import{deckCrossings}from'./decks';
 import { hazardSpans } from './hazards';
 import { compressDrawingPauses, gestureSpeeds, PACE_FILTER, prepareDrawingSamples } from './drawing-pace';
 export { gestureSpeeds, paceToSpeed, PACE_RANGE, PACE_FILTER } from './drawing-pace';
 
-export const COMPILER_VERSION = 19;
+export const COMPILER_VERSION = 20;
 
 /**
  * Lap-level checks only: the right direction, enough of the circuit and one lap. Barriers,
@@ -137,8 +139,9 @@ export function compileRoute(input: DrawSample[], track: TrackDefinition): Route
   // Accept the line as drawn. Stretches the car cannot drive become hazards: it crashes or
   // falls there and is reset just past them (see RaceSimulation.recover).
   const support = assessSupports(points, track), shortcuts = assessHopShortcuts(points, track);
+  if(track.decks){const retained=new Set(deckCrossings(samples,track).map(c=>c.id));support.jumps=support.jumps.filter(id=>retained.has(id));const final=deckCrossings(points,track).filter(c=>support.jumps.includes(c.id));for(let i=0;i<points.length;i++)if(!support.unsupported[i]&&!vehicleSupportedForRoute(points,i,track)&&!final.some(c=>points[i].distance>=c.entryDistance-track.carLength&&points[i].distance<=c.exitDistance))support.unsupported[i]=true;}
   const hazards = hazardSpans(points, routeContacts(points, track, shortcuts.obstacles), support.unsupported, lap.course, track, smoothLength);
-  return { ok: true, drawing: { leadIn: trimmed.leadIn, tail: trimmed.tail, joined: connection.joined }, route: { version: COMPILER_VERSION, trackId: track.id, trackVersion: track.version, points, length: smoothLength, drawingDuration: rawDuration, ...(support.jumps.length ? { jumps: support.jumps } : {}), ...(shortcuts.traversals.length ? { hopShortcuts: shortcuts.traversals } : {}), ...(hazards.length ? { hazards } : {}), ...(cleaned.removedPoints ? { cleanup: { removedPoints: cleaned.removedPoints, removedSeconds: cleaned.removedSeconds } } : {}) } };
+  return { ok: true, drawing: { leadIn: trimmed.leadIn, tail: trimmed.tail, joined: connection.joined }, route: { version: COMPILER_VERSION, trackId: track.id, trackVersion: track.version, points, length: smoothLength, drawingDuration: rawDuration, ...(support.jumps.length ? { jumps: support.jumps } : {}),...(track.decks?{crossings:deckCrossings(points,track).filter(c=>support.jumps.includes(c.id))}:{}), ...(shortcuts.traversals.length ? { hopShortcuts: shortcuts.traversals } : {}), ...(hazards.length ? { hazards } : {}), ...(cleaned.removedPoints ? { cleanup: { removedPoints: cleaned.removedPoints, removedSeconds: cleaned.removedSeconds } } : {}) } };
 }
 
 export function sampleRoute(route: CompiledRoute, value: number) {

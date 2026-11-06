@@ -3,8 +3,9 @@ import { circuits } from '../content/circuits';
 import { createTournament, finalizeRound, type TournamentState } from '../core/tournament';
 import { cleanDriverName, finishFor, type DriverProfile } from './race-settings';
 import { COMPUTER_VERSION } from '../core/computer';
+import {CUPS} from '../core/progression';
 
-export interface SavedTournament { state: TournamentState; drivers: (DriverProfile & {controller?: DriverController})[]; options?: SessionOptions; computerVersion?: number }
+export interface SavedTournament { state: TournamentState; drivers: (DriverProfile & {controller?: DriverController})[]; options?: SessionOptions; computerVersion?: number;cupId?:string;cupVersion?:number }
 export const TOURNAMENT_KEY = 'roadster-race.tournament.v1';
 export function parseTournament(value: string | null): SavedTournament | null {
   try {
@@ -20,9 +21,10 @@ export function parseTournament(value: string | null): SavedTournament | null {
     const drivers = data.drivers.map((driver, i) => {
       if (driver.controller!==undefined&&driver.controller!==controllerFor(options.mode,i))throw new Error('Invalid controller');
       if (typeof driver.name !== 'string' || finishFor(driver.paint).id !== driver.paint) throw new Error('Invalid driver');
-      return { name: cleanDriverName(driver.name, i), paint: driver.paint, controller:controllerFor(options.mode,i) };
+      return { name: cleanDriverName(driver.name, i), paint: driver.paint, ...(typeof driver.badge==='string'?{badge:driver.badge}:{}), controller:controllerFor(options.mode,i) };
     });
-    return { state, drivers, options, ...(options.mode==='solo-race'?{computerVersion:COMPUTER_VERSION}:{}) };
+    const cup=CUPS.find(c=>c.id===data.cupId&&data.cupVersion===1&&c.rounds.length===state.rounds.length&&c.rounds.every((id,i)=>id===state.rounds[i].circuitId));
+    return { state, drivers, options, ...(options.mode==='solo-race'?{computerVersion:COMPUTER_VERSION}:{}),...(cup?{cupId:cup.id,cupVersion:1}:{}) };
   } catch { return null; }
 }
 export function loadTournament(): SavedTournament | null { try { return parseTournament(localStorage.getItem(TOURNAMENT_KEY)); } catch { return null; } }

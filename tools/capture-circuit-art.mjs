@@ -7,7 +7,7 @@ import { browserOptions } from './browser-options.mjs';
 const base = process.env.ART_URL || 'http://127.0.0.1:5181/';
 const ffmpeg = process.env.FFMPEG_PATH || (process.platform === 'win32' ? 'C:/Program Files/ffmpeg/bin/ffmpeg.exe' : 'ffmpeg');
 const source = process.env.ART_SOURCE || 'artifacts/pro-polish/thumbnails', destination = process.env.ART_OUTPUT || 'public/assets/circuits';
-const registered = ['coastal-launch','orbital-launchyard','golden-gate','santa-monica','grand-canyon','la-nights','snowy-tahoe','capitan-yosemite','canyon-south-rim'];
+const registered = ['coastal-launch','orbital-launchyard','golden-gate','santa-monica','grand-canyon','la-nights','snowy-tahoe','capitan-yosemite','canyon-south-rim','san-diego-fleet'];
 const ids = process.env.ART_CIRCUITS ? process.env.ART_CIRCUITS.split(',') : registered;
 if(ids.some(id=>!registered.includes(id)))throw new Error('Unknown circuit requested for artwork');
 await mkdir(source, { recursive: true });

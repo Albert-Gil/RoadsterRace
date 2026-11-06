@@ -18,7 +18,7 @@ import type {TrackDefinition} from '../../src/core/types';
 const plan=(t:TrackDefinition,id:boolean|string=false,seconds=6.5)=>{const r=compileRoute(createPracticeSamples(t,seconds,id),t);if(!r.ok)throw Error(r.message);expect(r.route.hazards).toBeUndefined();return r.route;};
 test('new canyon is a separate ninth venue and newly created tours can include both canyons',()=>{
  expect(findCircuit(canyon.id).track).toBe(canyon);expect(findCircuit('grand-canyon').track).toBe(original);
- expect(original.version).toBe(5);expect(circuits.at(-1)?.id).toBe(canyon.id);expect(canyon.version).toBe(1);
+ expect(original.version).toBe(5);expect(circuits[8]?.id).toBe(canyon.id);expect(canyon.version).toBe(1);
  expect(canyon.length).toBeGreaterThan(800);expect(canyon.length).toBeLessThan(900);expect(canyon.roadWidth).toBe(16);
  expect(canyon.hopShortcuts).toHaveLength(2);expect(plan(canyon).jumps).toEqual(['south-rim-crossing']);
 });

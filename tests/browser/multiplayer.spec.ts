@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { resultRows, waitForPhase } from './ui';
+import{CONTACT_RULES}from'../../src/core/vehicle-contact';
 import { formatTime } from '../../src/ui/format';
 
 const state = (page: Page) => page.evaluate(() => (window as any).__roadster.getState());
@@ -30,7 +31,7 @@ async function planFriends(page: Page, count: number, steelPaint = false) {
 test('four-player ghost start uses race time, survives pause and resets on rematch', async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   await planFriends(page, 4);
-  await expect(page.locator('#panel')).toContainText('first 3 seconds');
+  await expect(page.locator('#panel')).toContainText(`first ${CONTACT_RULES.ghostStartSeconds} s`);
   await page.waitForFunction(() => (window as any).__roadster.getGraphics().renderReady);
   for (const key of ['KeyA', 'KeyL', 'KeyQ', 'KeyP']) await page.keyboard.press(key);
   await page.waitForFunction(() => { const s = (window as any).__roadster.getState(); return s.phase === 'racing' && s.race.time > 0.4; });
@@ -53,7 +54,7 @@ test('four-player ghost start uses race time, survives pause and resets on remat
   await page.getByRole('button', { name: 'Restart', exact: false }).click();
   for (const key of ['KeyA', 'KeyL', 'KeyQ', 'KeyP']) await page.keyboard.press(key);
   await page.waitForFunction(() => { const s = (window as any).__roadster.getState(); return s.phase === 'racing' && s.race.time > 0.1; });
-  expect((await state(page)).ghostStartRemaining).toBeGreaterThan(2);
+  expect((await state(page)).ghostStartRemaining).toBeGreaterThan(CONTACT_RULES.ghostStartSeconds-1);
   expect((await state(page)).contactCount).toBe(0); expect(errors).toEqual([]);
 });
 

@@ -10,9 +10,19 @@ export const paintFinishes = [
   { id: 'verdant', name: 'Verdant green', color: '#45a77b' },
   { id: 'ultraviolet', name: 'Ultraviolet', color: '#a477e5' },
 ] as const;
+export const rewardPaintFinishes=[
+ {id:'reward-pearl',name:'Pearl White',color:'#e6e6de'},
+ {id:'reward-obsidian',name:'Obsidian',color:'#252b32'},
+ {id:'reward-copper',name:'Copper Alloy',color:'#b57a52'},
+ {id:'reward-titanium',name:'Champagne Titanium',color:'#bcb19a'},
+] as const;
 
 /** Stable paint IDs preserve saved choices. Steel is the fresh-install/default finish. */
 export const defaultPaintId = 'glacier';
+/** Native production kit colours; baked into existing venue batches. */
+export const productionSurfaceTuning={rockFoot:.79,strata:.025,plantFoot:.76,crown:.05,snowFoot:.91,structureFoot:.83,top:.035};
+export const productionAppearance={roofInset:'#59676a',bayGlass:'#315b68',foundation:'#848475',eaveShadow:'#525c59',awnings:['#467f7a','#a15e50','#c6a65f'],contact:'#5a6054'};
+export const fleetAppearance={hull:'#81939c',hullShade:'#637781',waterline:'#414a4e',deck:'#818e91',supportDeck:'#8a9996',asphalt:'#59666c',coping:'#b9c8ca',ribs:'#5a6d76',line:'#ddd6b2',aircraft:'#bfc9c7',glass:'#294955',dark:'#28343a',equipment:'#ca9e48',water:'#337e91'};
 /** Solo Thrust/Hop keep the standard red interface (`--control-1`) whatever the car paint; with two or more cars the pads use each driver's paint instead (ui/controls.ts). */
 export const abilityControlColors = ['#d51f35', '#3b79e6', '#f1be37', '#45a77b'] as const;
 export const vehicleMaterials = {
@@ -110,6 +120,7 @@ export const colorGrade = { saturation: 8, highlights: { hue: 38, density: 12, s
 
 /** Biome colors stay independent of interface branding and the driver's selected paint. */
 export const sceneryPalettes = {
+  naval:{terrain:'#387f93',water:'#387f93',asphalt:'#a6b2b8',structure:'#637c87',sky:'#c6d9de',sunlight:1.06},
   yosemite:{terrain:'#61816a',embankment:'#859070',asphalt:'#8f826b',shoulder:'#a5a079',structure:'#5a6552',curb:'#ddd4b9',glass:'#39564b',foliage:'#254f3a',foliageLight:'#658351',rock:'#c5c2b3',trunk:'#795d40',water:'#367f84',foam:'#dfefdd',sky:'#afd5d9',sunlight:1.05},
   alpine: {terrain:'#dce7ee',embankment:'#b9cad6',asphalt:'#8ca6b9',shoulder:'#d2e0e9',structure:'#3b4f59',curb:'#edf5f7',glass:'#304f60',foliage:'#34564e',foliageLight:'#5e7970',rock:'#87959f',trunk:'#716357',water:'#23647f',foam:'#c4e3ec',sky:'#b1d3e3',sunlight:.96},
   'night-city': { terrain:'#34383e',embankment:'#53515a',asphalt:'#b4b4b8',shoulder:'#535058',structure:'#383440',curb:'#ded4c3',glass:'#272a34',foliage:'#344c45',foliageLight:'#637567',rock:'#5c5960',trunk:'#5c4d46',water:'#1c2c33',foam:'#8c9c9b',sky:'#15151f',sunlight:.42 },
@@ -122,6 +133,7 @@ export const sceneryPalettes = {
   canyon: { terrain:'#bd8963',embankment:'#c69c72',asphalt:'#805d43',shoulder:'#b58b62',rock:'#ae6344',foliage:'#68724b',foliageLight:'#8c9565',trunk:'#765640',water:'#98785d',sky:'#e5c6a5',sunlight:1.08 },
 } satisfies Record<string, Partial<PresentationTheme['scene']>>;
 export const sceneryLighting = {
+  naval:{ambient:'#dbe8eb',ground:'#647779',sun:'#ffe2b5'},
   yosemite:{ambient:'#d9e7d9',ground:'#67775b',sun:'#ffdfaa'},
   alpine: {ambient:'#d6e8f5',ground:'#8299aa',sun:'#fff1d9'},
   'night-city': {ambient:'#c5c2d0',ground:'#574d55',sun:'#e6d6c4'},
@@ -136,6 +148,7 @@ export const sceneryLighting = {
  * public/assets/env/. The sky is turned so its brightest direction agrees with the sun.
  */
 export const venueSkies = {
+  naval:{file:'sky',intensity:.85,waterReflection:.8},
   yosemite:{file:'sky',intensity:.85,waterReflection:.7},
   alpine: {file:'sky',intensity:.8,waterReflection:.65},
   coastal: { file: 'sky', intensity: 0.85, waterReflection: 0.75 },
@@ -356,6 +369,7 @@ export const roadsideAppearance = {
  spacing:3.8,plantingOffset:3.4,plantHeight:.65,maxFurniture:48,
  palettes:{
   coastal:{plant:'#496c40',tip:'#9bab68',flower:'#e58bb5',trim:'#d2c5a1',timber:'#ae8f64',metal:'#5a7070',surface:'#3f4848'},
+  naval:{plant:'#527e68',tip:'#adc6bb',flower:'#d5bf79',trim:'#b9c8ca',timber:'#858b82',metal:'#637781',surface:'#818e91'},
   spaceport:{plant:'#6d7651',tip:'#b5ae78',flower:'#d5bf79',trim:'#b8c4c6',timber:'#858b82',metal:'#4e626b',surface:'#514d45'},
   bay:{plant:'#3e6b4c',tip:'#82a469',flower:'#d6a673',trim:'#c7c1ad',timber:'#896f55',metal:'#53616a',surface:'#535d61'},
   sunset:{plant:'#6d8551',tip:'#b8b47d',flower:'#e9a197',trim:'#e3ccaa',timber:'#b78f66',metal:'#57686a',surface:'#5d5349'},
@@ -386,6 +400,7 @@ export const santaBeachLifeAppearance = {
 export interface VenueFinish { edge:string; ground:string; grit:string; inset:number; spread:number }
 export const venueFinish = {
  coastal:{edge:'#b4a384',ground:'#d6c19a',grit:'#e9d9b9',inset:.9,spread:1.2},
+ naval:{edge:'#81939c',ground:'#81939c',grit:'#a7b5b7',inset:.9,spread:.5},
  spaceport:{edge:'#9f9784',ground:'#ceba98',grit:'#e4d4b5',inset:.9,spread:1.2},
  bay:{edge:'#92998e',ground:'#b0ba9c',grit:'#d6d4be',inset:.9,spread:.9},
  sunset:{edge:'#bba587',ground:'#dec49f',grit:'#f0dcc0',inset:.9,spread:1.2},
@@ -395,9 +410,10 @@ export const venueFinish = {
  yosemite:{edge:'#a08e6c',ground:'#84906a',grit:'#bdaf8b',inset:.18,spread:1.05},
 } satisfies Record<string,VenueFinish>;
 export const interfaceMotion = { durationMs:160, rowStaggerMs:40 };
-export const circuitArtRevision = '2026-11-05-attractions';
+export const circuitArtRevision = '2026-11-06-production';
 /** One sun per venue; unchanged shadow-map dimensions and cached caster policy. */
 export const venueSunDirections = {
+ naval:[.55,-1,.5],
  coastal:[.50,-1,.60],spaceport:[.65,-1,.38],bay:[.40,-1,.62],sunset:[.72,-1,.35],
  canyon:[.68,-1,.44],'night-city':[.55,-1,.45],alpine:[.48,-1,.64],yosemite:[.64,-1,.42],
 } as const;

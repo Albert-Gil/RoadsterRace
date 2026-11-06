@@ -48,6 +48,7 @@ export function stepRacers(racers: readonly RaceSimulation[], track: TrackDefini
         let contact = vehicleContact(a, b, track);
         if (!contact && sweep && sweep.t > 0) { a.position = sweep.a; b.position = sweep.b; contact = sweep; }
         if (!contact) continue;
+        racers[i].markLapIncident('carContacts');racers[j].markLapIncident('carContacts');
         const impact = contactImpulse(a, b, contact.normal), depth = Math.min(contact.depth + 0.002, track.carWidth) / 2;
         a.position.x -= contact.normal.x * depth; a.position.z -= contact.normal.z * depth;
         b.position.x += contact.normal.x * depth; b.position.z += contact.normal.z * depth;

@@ -8,9 +8,9 @@ Conventions: SI units; horizontal plane (x, z) with y up; heading 0 points along
 
 | Item | Version |
 |---|---:|
-| Vehicle rules (`RULES.version`) | 18 |
+| Vehicle rules (`RULES.version`) | 19 |
 | Computer planning/controller (`COMPUTER_VERSION`) | 2 |
-| Route compiler (`COMPILER_VERSION`) | 19 |
+| Route compiler (`COMPILER_VERSION`) | 20 |
 | Newport Island track (`coastal-launch`) | 8 |
 | Launchsite track (`orbital-launchyard`) | 12 |
 | Golden Gate track (`golden-gate`) | 8 |
@@ -20,6 +20,7 @@ Conventions: SI units; horizontal plane (x, z) with y up; heading 0 points along
 | Snowy Tahoe track (`snowy-tahoe`) | 6 |
 | Capitan Yosemite track (`capitan-yosemite`) | 5 |
 | Grand Canyon: South Rim track (`canyon-south-rim`) | 1 |
+| San Diego Fleet track (`san-diego-fleet`) | 1 |
 
 Records, ghosts, session bests and championships are scoped by the relevant versions. Computer-version changes invalidate Solo championships only; human Time Trial records and local Multiplayer saves retain their unchanged rules/track compatibility. Change a version whenever a value below changes race results.
 
@@ -36,6 +37,7 @@ Records, ghosts, session bests and championships are scoped by the relevant vers
 | Snowy Tahoe | `snowy-tahoe` | 6 | 16 | 554.8 | 21 | hop lane `forestry-trail` |
 | Capitan Yosemite | `capitan-yosemite` | 5 | 16 | 716.6 | 55 | crest `valley-creek-crest`, crest `sentinel-creek-crest`, crest `cathedral-creek-crest`, hop lane `ranger-timber-trail` |
 | Grand Canyon: South Rim | `canyon-south-rim` | 1 | 16 | 850.7 | 24 | crest `south-rim-crossing`, hop lane `juniper-saddle`, hop lane `redwall-traverse` |
+| San Diego Fleet | `san-diego-fleet` | 1 | 16 | 719.4 | 62 | ramp `carrier-a-crossing`, ramp `carrier-b-crossing`, water Hop `support-a-hop`, ramp `support-a-return`, water Hop `support-b-hop`, ramp `support-b-return`, hop lane `support-a-lane`, hop lane `support-b-lane` |
 
 Vehicle envelope: 2.9095 m × 6.877 m. Race distance: 1–6 laps (default 2). Championship points by place: 10 / 6 / 4 / 0.
 
@@ -54,11 +56,17 @@ Main-road ski crests keep continuous terrain support and use automatic-flight gr
 | Snowy Tahoe | `valley-snow-roll` | 36 | 16 | 5.5 + forward speed × 0.08 | 6 | 21 |
 | Snowy Tahoe | `lakeside-snow-roll` | 146 | 16 | 5.5 + forward speed × 0.08 | 6 | 21 |
 
+## Fleet deck crossings and local Collection
+
+San Diego Fleet owns named stationary 12/10/8 m decks. Physical support comes only from those footprints; interpolated drawing guides across a gap provide no support. Normal automatic crossings use an 8 m approach, 1.2 m lip, 10 m opening and 60 m receiving straight. Support-vessel alternatives pair a manual 6 m water Hop with an automatic 6 m exit; incomplete or unsupported drawings remain penalized hazards. Intended receiving-deck ownership is required at landing. CPU drivers use the normal route.
+
+Human-only Finish (selected distance), Clean (one lap without barrier/car contact or recovery) and Rival (shared first in Solo Normal/Hard) are independent historical achievements. Drifting, off-road driving and abilities do not spoil Clean. Tutorial, CPU, ghosts and practice cannot award progress. Cup completion and cosmetic rewards are installation-local, idempotent and independent of race preferences/versions; there is no synchronization or gameplay advantage.
+
 ## RULES
 
 | Key | Value | Unit | Meaning |
 |---|---:|---|---|
-| `version` | 18 | — | Vehicle rules version; stored with records and championships |
+| `version` | 19 | — | Vehicle rules version; stored with records and championships |
 | `dt` | 0.0166667 | s | Fixed simulation step (two equal substeps per step) |
 | `laps` | 2 | laps | Default race distance |
 | `acceleration` | 6 | m/s² | Maximum pace-following acceleration |

@@ -2,7 +2,7 @@ import type { Ability } from '../core/types';
 import type { GameMode } from '../core/session';
 
 /** Every interface phase of a session. Transitions are coordinated by main.ts. */
-export type Phase = 'welcome' | 'setup' | 'handoff' | 'drawing' | 'preview' | 'ready' | 'countdown' | 'racing' | 'paused' | 'results' | 'diagnostics' | 'error' | 'tour-intro' | 'tour-resume' | 'tour-exit' | 'tour-replace' | 'tutorial-intro' | 'coaching';
+export type Phase = 'welcome' | 'setup' | 'handoff' | 'drawing' | 'preview' | 'ready' | 'countdown' | 'racing' | 'paused' | 'results' | 'diagnostics' | 'error' | 'tour-intro' | 'tour-resume' | 'tour-exit' | 'tour-replace' | 'tutorial-intro' | 'coaching' | 'collection';
 
 /** `coaching` freezes a tutorial race until the player tries the prompted ability. */
 
@@ -22,10 +22,10 @@ export function phaseLayout(phase: Phase) {
     /** Numbered pre-start labels; floating tags stay hidden while racing. */
     labelsVisible: among(phase, ['ready', 'countdown']),
     startGateVisible: among(phase, ['welcome', 'tutorial-intro', 'drawing', 'preview']),
-    sceneLayout: phase.startsWith('tour-') ? 'results' : phase === 'tutorial-intro' ? 'welcome' : phase === 'coaching' ? 'racing' : phase,
+    sceneLayout: phase==='collection'?'setup':phase.startsWith('tour-') ? 'results' : phase === 'tutorial-intro' ? 'welcome' : phase === 'coaching' ? 'racing' : phase,
     ghostAllowed: among(phase, ['racing', 'paused', 'countdown', 'coaching']),
     driveAudio: phase === 'racing',
-    menuMusic: among(phase, ['welcome', 'tutorial-intro', 'setup', 'results', 'tour-intro', 'tour-resume', 'tour-exit', 'tour-replace']),
+    menuMusic: among(phase, ['welcome', 'tutorial-intro', 'setup', 'results', 'tour-intro', 'tour-resume', 'tour-exit', 'tour-replace','collection']),
     silence: among(phase, ['paused', 'welcome', 'drawing', 'diagnostics', 'error']),
   };
 }

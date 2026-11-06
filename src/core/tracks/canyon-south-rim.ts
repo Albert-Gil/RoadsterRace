@@ -50,7 +50,7 @@ for(const [index,h]of hops.entries()){
  const ds=cumulative(h.branch),s=ds.at(-1)!*.52,p=samplePolyline(h.branch,ds,s),a=samplePolyline(h.branch,ds,s-.5),b=samplePolyline(h.branch,ds,s+.5),d=distance(a,b),forward={x:(b.x-a.x)/d,z:(b.z-a.z)/d};
  const y=roadHeight(track,lerp(h.entryProgress,h.exitProgress,.52));
  const outline=(points:number[][])=>points.map(([u,v])=>({x:p.x+forward.z*u+forward.x*v,z:p.z-forward.x*u+forward.z*v}));
- barriers.push({id:h.obstacleId,kind:'rock',height:2.8,baseHeight:y,runoffException:'hop-lane',footprint:outline([[-8,-.5],[-6,-1.2],[-3,-.8],[0,-1.3],[3,-.7],[6,-1.2],[8,-.5],[8,.6],[5,1.1],[2,.8],[-1,1.2],[-4,.7],[-7,1.1],[-8,.6]])});
+ barriers.push({id:h.obstacleId!,kind:'rock',height:2.8,baseHeight:y,runoffException:'hop-lane',footprint:outline([[-8,-.5],[-6,-1.2],[-3,-.8],[0,-1.3],[3,-.7],[6,-1.2],[8,-.5],[8,.6],[5,1.1],[2,.8],[-1,1.2],[-4,.7],[-7,1.1],[-8,.6]])});
  for(const side of[-1,1])barriers.push({id:`south-rim-${index}-hop-end-${side}`,kind:'rock',height:3.2,baseHeight:y,runoffException:'hop-lane',footprint:outline([[7.8,-.7],[9.5,-1.5],[11,-.7],[10.9,1],[9.4,1.7],[7.8,.8]].map(([u,v])=>[u*side,v]))});
 }
 track.centerline=annotateRoad(path,track);track.start=track.centerline[0];

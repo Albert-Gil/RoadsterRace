@@ -113,7 +113,7 @@ describe.each(lanes)('Hop lane $id', ({ id, press, rearm, over, beside, besideId
     expect(permittedHopBarriers({ ...s, flightOrigin: 'ramp' }, route, track)).toEqual([]);
     expect(permittedHopBarriers({ ...s, velocity: { x: 0, z: -22 } }, route, track)).toEqual([]);
     expect(permittedHopBarriers(s, plan(false), track)).toEqual([]);
-    const permit = [lane.obstacleId];
+    const permit = [lane.obstacleId!];
     expect(barrierContact(over, 0, track, 0, hopPeak, true, permit)).toBeNull();
     expect(barrierContact(over, 0, track, 0, hopPeak, true)?.barrier.id).toBe(lane.obstacleId);
     // The protected parcel beside the lane stays solid, even in an approved flight.

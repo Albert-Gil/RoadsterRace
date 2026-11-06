@@ -1,3 +1,4 @@
+import{deckCrossings}from'./decks';
 import { angleDelta, clamp, cumulative, distance, lerp, mix, modulo, projectToPolyline } from './geometry';
 import { blockedRouteSection, insideBarrier } from './barriers';
 import type { CompiledRoute, HopShortcut, HopTraversal, Point, RaceState, TrackDefinition } from './types';
@@ -111,6 +112,7 @@ export function assessHopShortcuts(points: Point[], track: TrackDefinition): { t
   if (!track.hopShortcuts?.length || points.length < 2) return { traversals, obstacles };
   const ds = cumulative(points);
   for (const shortcut of track.hopShortcuts) {
+    if(shortcut.crossings){const crossings=deckCrossings(points,track),a=crossings.find(c=>c.id===shortcut.crossings![0]),b=crossings.find(c=>c.id===shortcut.crossings![1]);if(a&&b&&a.exitDistance<b.entryDistance)traversals.push({id:shortcut.id,entryDistance:a.entryDistance,exitDistance:b.exitDistance});continue;}
     const obstacle = track.barriers.find(b => b.id === shortcut.obstacleId);
     if (!obstacle) continue;
     const meeting = obstacleMeeting(points, track, obstacle, shortcut.clearanceWidth !== undefined);
@@ -118,7 +120,7 @@ export function assessHopShortcuts(points: Point[], track: TrackDefinition): { t
     const center = { x: obstacle.footprint.reduce((v, p) => v + p.x, 0) / obstacle.footprint.length, z: obstacle.footprint.reduce((v, p) => v + p.z, 0) / obstacle.footprint.length };
     const obstacleAt = shortcutProjection(center, shortcut).progress;
     const traversal = strictTraversal(points, ds, shortcut, track, obstacleAt) ?? committedTraversal(points, ds, shortcut, track, meeting, obstacleAt);
-    if (traversal) { traversals.push(traversal); obstacles.push(shortcut.obstacleId); }
+    if (traversal&&shortcut.obstacleId) { traversals.push(traversal); obstacles.push(shortcut.obstacleId); }
   }
   return { traversals, obstacles };
 }
@@ -129,7 +131,7 @@ export function permittedHopBarriers(state: RaceState, route: CompiledRoute, tra
   const progress = modulo(state.distance, route.length);
   return (route.hopShortcuts ?? []).flatMap(traversal => {
     const shortcut = track.hopShortcuts?.find(s => s.id === traversal.id);
-    if (!shortcut || progress < traversal.entryDistance - track.carLength || progress > traversal.exitDistance + track.carLength) return [];
+    if (!shortcut || !shortcut.obstacleId || progress < traversal.entryDistance - track.carLength || progress > traversal.exitDistance + track.carLength) return [];
     const heading = state.speed > 0.05 ? Math.atan2(state.velocity.x, state.velocity.z) : state.heading;
     const q = shortcutProjection(state.position, shortcut);
     return Math.cos(angleDelta(heading, q.heading)) > 0 && insideCorridor(state.position, heading, shortcut, track)

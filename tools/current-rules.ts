@@ -137,7 +137,7 @@ export function currentRulesMarkdown() {
   const crest = circuits.find(c => c.id === 'grand-canyon')!.track.jumps!.find(j => j.kind === 'crest')!;
   const courses = ['| Circuit | ID | Track version | Road width (m) | Centerline (m) | Barriers | Branches |', '|---|---|---:|---:|---:|---:|---|',
     ...circuits.map(({ track }) => `| ${track.name} | \`${track.id}\` | ${track.version} | ${format(track.roadWidth)} | ${track.length.toFixed(1)} | ${track.barriers.length} | ${[
-      ...(track.jumps ?? []).map(j => `${j.kind === 'crest' ? 'crest' : 'ramp'} \`${j.id}\``), ...(track.hopShortcuts ?? []).map(h => `hop lane \`${h.id}\``), ...(track.bridges ?? []).map(b => `bridge \`${b.id}\``),
+      ...(track.jumps ?? []).map(j => `${j.activation==='hop'?'water Hop':j.kind === 'crest' ? 'crest' : 'ramp'} \`${j.id}\``), ...(track.hopShortcuts ?? []).map(h => `hop lane \`${h.id}\``), ...(track.bridges ?? []).map(b => `bridge \`${b.id}\``),
     ].join(', ') || '—'} |`)];
   const terrains=['| Circuit | Road elevation (m) | Ground grid cell (m) |', '|---|---:|---:|',...circuits.filter(c=>c.track.terrain).map(({track})=>`| ${track.name} | ${format(Math.min(...track.terrain!.roadHeights.map(p=>p[1])))}–${format(Math.max(...track.terrain!.roadHeights.map(p=>p[1])))} | ${format(track.terrain!.cell)} |`)];
   const ski=['| Circuit | Main-road takeoff | Station (m) | Width (m) | Upward velocity (m/s) | Minimum forward speed (m/s) | CPU reference pace (m/s) |','|---|---|---:|---:|---|---:|---:|',...circuits.flatMap(({track})=>(track.terrainTakeoffs??[]).map(j=>`| ${track.name} | \`${j.id}\` | ${format(j.progress)} | ${format(j.width)} | ${format(j.launchBoost)} + forward speed × ${format(j.launchSlope)} | ${format(j.minimumSpeed)} | ${format(j.planningSpeed)} |`))];
@@ -171,6 +171,12 @@ ${terrains.join('\n')}
 Main-road ski crests keep continuous terrain support and use automatic-flight gravity. They are not branches, ramps or water exemptions; takeoff is forward-only and does not stack with manual Hop.
 
 ${ski.join('\n')}
+
+## Fleet deck crossings and local Collection
+
+San Diego Fleet owns named stationary 12/10/8 m decks. Physical support comes only from those footprints; interpolated drawing guides across a gap provide no support. Normal automatic crossings use an 8 m approach, 1.2 m lip, 10 m opening and 60 m receiving straight. Support-vessel alternatives pair a manual 6 m water Hop with an automatic 6 m exit; incomplete or unsupported drawings remain penalized hazards. Intended receiving-deck ownership is required at landing. CPU drivers use the normal route.
+
+Human-only Finish (selected distance), Clean (one lap without barrier/car contact or recovery) and Rival (shared first in Solo Normal/Hard) are independent historical achievements. Drifting, off-road driving and abilities do not spoil Clean. Tutorial, CPU, ghosts and practice cannot award progress. Cup completion and cosmetic rewards are installation-local, idempotent and independent of race preferences/versions; there is no synchronization or gameplay advantage.
 
 ${table('RULES', RULES)}
 Derived: level-ground manual hop peak ${peak.toFixed(3)} m and airtime ${airtime.toFixed(3)} s. Santa Monica ramp launch upward velocity is \`rampLaunchBoost + max(0, forward speed) × lipHeight / rampLength\`. Grand Canyon uses its authored natural crest: \`${format(crest.launchBoost!)} + max(0, forward speed) × ${format(crest.launchSlope!)}\` from ${format(crest.takeoffElevation!)} m to the ${format(crest.landingElevation!)} m receiving surface, across a ${format(crest.gap)} m unsupported opening. Grounded elevation changes do not add slope acceleration.

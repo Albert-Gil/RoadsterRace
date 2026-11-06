@@ -7,9 +7,10 @@ import { laNightsTrack } from '../core/tracks/la-nights';
 import { snowyTahoeTrack } from '../core/tracks/snowy-tahoe';
 import { yosemiteTrack } from '../core/tracks/yosemite';
 import { canyonSouthRimTrack } from '../core/tracks/canyon-south-rim';
+import { sanDiegoFleetTrack } from '../core/tracks/san-diego-fleet';
 import type { TrackDefinition } from '../core/types';
 
-export type SceneryId = 'coastal' | 'spaceport' | 'bay' | 'sunset' | 'canyon' | 'night-city' | 'alpine' | 'yosemite';
+export type SceneryId = 'coastal' | 'spaceport' | 'bay' | 'sunset' | 'canyon' | 'night-city' | 'alpine' | 'yosemite' | 'naval';
 export interface CircuitDefinition {
   artwork?: string;
   id: string;
@@ -46,6 +47,7 @@ const circuitDefinitions: CircuitDefinition[] = [
     tagline:'Into the granite valley.',description:'Forest trails, granite foothills and an automatic creek crossing.',features:[`${Math.round(yosemiteTrack.length)} m`] },
   { id:canyonSouthRimTrack.id,number:'09',scenery:'canyon',track:canyonSouthRimTrack,difficulty:'SPORT / 3',
     tagline:'Follow the sandstone.',description:'A South Rim trail, airborne crossing and two hidden saddles.',features:[`${Math.round(canyonSouthRimTrack.length)} m`] },
+  {id:sanDiegoFleetTrack.id,number:'10',scenery:'naval',track:sanDiegoFleetTrack,difficulty:'EXPERT / 4',tagline:'Across the fleet.',description:'Stationary flight decks and ship-to-ship crossings in a Pacific harbor.',features:[`${Math.round(sanDiegoFleetTrack.length)} m`]},
 ];
 export const circuits: readonly CircuitDefinition[] = circuitDefinitions.map(circuit => ({ ...circuit, artwork: `assets/circuits/${circuit.id}.webp` }));
 export const defaultCircuit = circuits[0];

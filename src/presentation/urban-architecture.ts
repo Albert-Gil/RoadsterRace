@@ -2,6 +2,7 @@ import {CompositionShapes} from './composition-shapes';
 import {hex,mix} from './landscape/mesh';
 import {venueComposition as art} from './themes';
 import {nightTower} from './landmark-showcase';
+import {productionCrown,productionFacade} from './production-kit';
 import {Mesh} from '@babylonjs/core/Meshes/mesh';
 import type {Scene} from '@babylonjs/core/scene';
 import type {StandardMaterial} from '@babylonjs/core/Materials/standardMaterial';
@@ -17,7 +18,7 @@ export function urbanArchitecture(buildings:readonly UrbanBuilding[],night:boole
   paint.box(x,base+.12,z,w+pad,.24,d+pad,palette.foot);paint.box(x,base+wall/2,z,w-.06,wall,d-.06,face);
   // Strong continuous bands and colored roofs read at the gameplay camera angle.
   paint.box(x,base+wall-.12,z,w,.24,d,palette.trim);
-  if(!night&&b.style!==2){paint.hipRoof(x,z,w-.04,d-.04,base+wall,top-.05,roof);}
+  if(!night&&b.style!==2){paint.append(productionCrown(x,z,w,d,base+wall,top-.025,roof,palette.trim,index));}
   else{
    paint.box(x,base+wall+.08,z,w-.18,.16,d-.18,roof);
    if(night)for(const side of[-1,1]){
@@ -56,6 +57,7 @@ export function urbanArchitecture(buildings:readonly UrbanBuilding[],night:boole
     for(const sx of[-1,1])lights.box(x+sx*(w/2-.20),base+wall*.56,front,.10,wall*.63,.05,palette.neon[(index+1)%palette.neon.length]);
    }
   }
+  if(!night)paint.append(productionFacade(x,z,w,d,wall,palette.trim,index));
   // Larger bay windows on the narrow sides and a recessed door on the front.
   for(const side of[-1,1])for(let i=0;i<Math.max(1,Math.floor(d/3));i++){
    const zz=z-d*.38+(i+.5)/Math.max(1,Math.floor(d/3))*d*.76;

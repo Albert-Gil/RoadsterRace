@@ -531,3 +531,19 @@ button:focus-visible,summary:focus-visible { outline:2px solid var(--text); outl
 .playground:is([data-phase='setup'],[data-phase='handoff'],[data-phase='tour-intro'],[data-phase='paused']) .panel { animation:panel-arrive var(--motion-ms,160ms) both; }
 @keyframes panel-arrive { from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none} }
 @media(prefers-reduced-motion:reduce){.playground .panel{animation:none!important}}
+/* Local collection: entirely menu/result UI; no canvas, shader or race overlay. */
+.collection-link { margin-top:10px; }
+.playground[data-phase="collection"] .panel { inset:calc(env(safe-area-inset-top,0px) + 18px) calc(env(safe-area-inset-right,0px) + 18px) calc(env(safe-area-inset-bottom,0px) + 18px) calc(env(safe-area-inset-left,0px) + 18px); transform:none; width:auto; max-width:1100px; max-height:none; margin:auto; overflow:auto; padding:24px; }
+.playground[data-phase="collection"] .topbar { display:none; }
+.collection-heading { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; }
+.collection-heading h2 { margin:8px 0; }.collection-heading p,.collection-note { color:var(--muted); font-size:13px; }
+.collection-section { margin-top:28px; }.collection-section h3 { font:700 italic 25px var(--font-heading); margin:0 0 12px; text-transform:uppercase; }
+.medal-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }.medal-card,.reward-card,.cup-card { padding:14px; border:1px solid var(--border); background:#121e28; }
+.medal-card>strong { font:700 italic 21px var(--font-heading); }.venue-medals { display:flex; gap:16px; margin-top:12px; }.medal { display:grid; justify-items:center; gap:3px; font-size:10px; color:#677582; }.medal i { font-size:24px; font-style:normal; }.medal.earned { color:#f1ce82; }
+.reward-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }.reward-card { display:flex; flex-direction:column; gap:7px; opacity:.6; }.reward-card.unlocked,.cup-card.unlocked { opacity:1; border-color:#a88b53; }.reward-card>span:last-child { font-size:12px; color:var(--muted); }.reward-finish { width:64px;height:30px; background:linear-gradient(155deg,#ffffff90,var(--finish) 45%,#0008); border:1px solid #ffffff35; transform:skewX(-14deg); }
+.driver-badge { display:inline-flex; vertical-align:middle; color:#e6c47b; }.driver-badge svg { width:22px; height:22px; fill:currentColor; }.driver-badge svg path+path { fill:#1c2832; }.reward-card .driver-badge svg,.cup-card .driver-badge svg { width:32px;height:32px; }
+.badge-selector { display:flex; gap:8px; align-items:center; font-size:11px; margin-top:8px; }.badge-selector select { font-size:16px; min-height:44px; max-width:calc(100% - 60px); background:#142330; color:var(--text); border:1px solid var(--border); }.cup-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }.cup-card h4 { margin:8px 0;font:700 italic 24px var(--font-heading); }.cup-card p,.cup-card>span { font-size:12px;color:var(--muted); }.cup-card button { display:block;margin-top:12px;min-height:44px; }.tour-editor>.segmented { flex-wrap:wrap; }.tour-editor>.segmented button { flex:1 1 85px; }.collection-results { margin-top:14px; border-top:1px solid var(--border);padding-top:10px; }.collection-results p { color:#e7cd91;font-size:13px; }
+@media(max-width:700px){.medal-grid,.reward-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.cup-grid{grid-template-columns:1fr}.playground[data-phase="collection"] .panel{padding:16px;inset:8px}.collection-heading h2{font-size:32px}.venue-medals{gap:10px}}
+@media(max-height:450px){.playground[data-phase="collection"] .panel{inset:8px;padding:14px}.collection-heading h2{font-size:30px}.collection-section{margin-top:18px}.collection-heading p{margin:4px 0}}
+
+.collection-navigation{display:flex;gap:8px}.collection-navigation button{min-width:64px;min-height:44px;padding:10px 14px}

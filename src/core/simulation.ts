@@ -1,3 +1,4 @@
+import{deckAt,deckVehicleSupported}from'./decks';
 import { angleDelta, clamp, distance, lerp, modulo } from './geometry';
 import { projectToPolylineNear } from './nearest';
 import { sampleRoute, COMPILER_VERSION } from './route';
@@ -33,6 +34,8 @@ export function sampleSurface(position: Point, track: TrackDefinition) {
 export class RaceSimulation {
   readonly state: RaceState;
   readonly events: RaceEvent[] = [];
+  private lapIncidents={barrierContacts:0,carContacts:0,recoveries:0};
+  markLapIncident(kind:'barrierContacts'|'carContacts'|'recoveries'){this.lapIncidents[kind]++;}
   private queuedThrust = false;
   private queuedHop = false;
   private lastSafeDistance = 0;
@@ -53,7 +56,7 @@ export class RaceSimulation {
     const start = sampleRoute(route, 0);
     this.state = { tick: 0, time: 0, distance: 0, speed: 0, lap: 1, lapTimes: [], lapStartedAt: 0, thrustUntil: -1, thrustReadyAt: 0,
       hopReadyAt: 0, hopCount: 0, flightOrigin: null, flightStartedAt: -1,
-      position: { x: start.x, z: start.z }, elevation: 0, verticalVelocity: 0, movement: 'grounded', activeJump: null, velocity: { x: 0, z: 0 }, heading: start.heading, steeringRate: 0, acceleration: 0, desiredSpeed: start.desiredSpeed,
+      position: { x: start.x, z: start.z }, elevation: track.decks?groundHeight(start,track):0, ... (track.decks?{supportSurfaceId:deckAt(start,track)?.id}:{}), verticalVelocity: 0, movement: 'grounded', activeJump: null, velocity: { x: 0, z: 0 }, heading: start.heading, steeringRate: 0, acceleration: 0, desiredSpeed: start.desiredSpeed,
       slipAngle: 0, lineError: 0, drifting: false, driftCount: 0, sandAmount: 0, surface: 'asphalt', checkpoint: 1,
       thrustCount: 0, finished: false, finishTime: null, collisionCount: 0, recoveryCount: 0, recoveringUntil: -1, recoveryWaiting: false };
   }
@@ -94,6 +97,7 @@ export class RaceSimulation {
    * can trap a car. Anywhere else the car returns to its last safe position.
    */
   private recover(now: number) {
+    this.markLapIncident('recoveries');
     const s = this.state;
     const hazard = this.hazardAhead(s.distance);
     const repeated = !hazard && Math.abs(s.distance - this.lastRecoveryDistance) < RULES.repeatRecoveryWindow ? this.clearAhead(s.distance + 2) : null;
@@ -118,7 +122,7 @@ export class RaceSimulation {
   private settleAfterRecovery(now: number, hold: number) {
     const s = this.state;
     s.velocity = { x: 0, z: 0 }; s.speed = 0; s.acceleration = 0; s.steeringRate = 0;
-    s.elevation = groundHeight(s.position, this.track); if(this.track.sections)s.supportSectionId=s.position.sectionId; s.verticalVelocity = 0; s.movement = 'grounded'; s.activeJump = null; s.flightOrigin = null; s.flightStartedAt = -1; this.invalidFlight = false; this.clearCommands();
+    s.elevation = groundHeight(s.position, this.track); if(this.track.sections)s.supportSectionId=s.position.sectionId;if(this.track.decks)s.supportSurfaceId=deckAt(s.position,this.track)?.id; s.verticalVelocity = 0; s.movement = 'grounded'; s.activeJump = null;s.intendedLandingSurfaceId=undefined; s.flightOrigin = null; s.flightStartedAt = -1; this.invalidFlight = false; this.clearCommands();
     s.thrustUntil = now; s.recoveringUntil = now + hold; s.recoveryCount++; s.drifting = false;
     s.recoveryWaiting = false; this.stuckTicks = 0; this.gridPending = false;
   }
@@ -213,6 +217,7 @@ export class RaceSimulation {
     s.position = roadPoint(collision.position,this.track,proposed.courseProgress); s.velocity = collision.velocity; s.speed = speed = Math.hypot(s.velocity.x, s.velocity.z);
     vx = s.velocity.x; vz = s.velocity.z;
     if (collision.collided) {
+      this.markLapIncident('barrierContacts');
       this.collisionNearbyUntil = now + 3;
       if (collision.impact > 1.5 && s.tick - this.lastCollisionTick > 24) {
         s.collisionCount++; this.lastCollisionTick = s.tick;
@@ -223,12 +228,12 @@ export class RaceSimulation {
       const takeoff = takeoffCrossing(oldPosition, s.position, this.track);
       const ski=terrainTakeoffCrossing(oldPosition,s.position,this.track);
       if (takeoff) {
-        s.activeJump = takeoff.jump.id; this.invalidFlight = !this.route.jumps?.includes(takeoff.jump.id);
+        s.activeJump = takeoff.jump.id;s.intendedLandingSurfaceId=takeoff.jump.landingSurfaceId; this.invalidFlight = !this.route.jumps?.includes(takeoff.jump.id);
         s.flightOrigin = takeoff.jump.kind==='crest'?'crest':'ramp'; s.flightStartedAt = now + dt * takeoff.t;
         this.assistFlight(RULES.flightLaunchCorrection);
         s.movement = 'airborne'; s.verticalVelocity = (takeoff.jump.launchBoost ?? FLIGHT_RULES.rampLaunchBoost) + Math.max(0, s.velocity.x * takeoff.jump.forward.x + s.velocity.z * takeoff.jump.forward.z) * (takeoff.jump.launchSlope ?? takeoff.jump.lipHeight / takeoff.jump.rampLength);
         const remaining = dt * (1 - takeoff.t);
-        s.elevation = (takeoff.jump.takeoffElevation ?? takeoff.jump.lipHeight) + s.verticalVelocity * remaining - FLIGHT_RULES.gravity * remaining * remaining / 2;
+        s.elevation = (this.track.decks?(takeoff.jump.takeoffElevation??0)+takeoff.jump.lipHeight:(takeoff.jump.takeoffElevation ?? takeoff.jump.lipHeight)) + s.verticalVelocity * remaining - FLIGHT_RULES.gravity * remaining * remaining / 2;
         s.verticalVelocity -= FLIGHT_RULES.gravity * remaining;
         s.acceleration = 0; s.drifting = false;
         this.events.push({ type: 'takeoff', time: now + dt * takeoff.t, point: { ...s.position } });
@@ -279,41 +284,43 @@ export class RaceSimulation {
         // Claim the natural-crest corridor before the airborne car's nose leaves
         // support. Waiting for its centre to cross the lip falsely invalidates
         // a manual hop made just before the crest. Ordinary ramps keep their gate.
-        && jumpCoordinates(old, j).along <= 0 && jumpCoordinates(proposed, j).along > (j.kind==='crest' ? -this.track.carLength : 0)
+        && jumpCoordinates(old, j).along <= 0 && jumpCoordinates(proposed, j).along > (j.kind==='crest'||j.activation==='hop' ? -this.track.carLength : 0)
         && Math.abs(jumpCoordinates(proposed, j).across) <= (j.width - this.track.carWidth) / 2);
-      if (entry) s.activeJump = entry.id;
+      if (entry) {s.activeJump = entry.id;s.intendedLandingSurfaceId=entry.landingSurfaceId;}
     }
     const jump = this.track.jumps?.find(j => j.id === s.activeJump), corridor = jump ? jumpCoordinates(proposed, jump) : null;
-    const approved = !!jump && !!corridor && !!this.route.jumps?.includes(jump.id)
+    const normalApproved = !!jump && !!corridor && !!this.route.jumps?.includes(jump.id)
       && corridor.along >= (s.flightOrigin === 'hop' ? -this.track.carLength : jump.rampLength - 0.1)
       && corridor.along <= jump.corridorLength && Math.abs(corridor.across) <= (jump.width - this.track.carWidth) / 2;
+    const approved=normalApproved||!!this.track.decks&&!!jump&&!!this.route.jumps?.includes(jump.id)&&deckVehicleSupported(proposed,s.heading,this.track,jump.landingSurfaceId);
     if (s.flightOrigin === 'fall' || jump && !approved || !vehicleSupported(proposed, s.heading, this.track) && !approved) this.invalidFlight = true;
     const gravity = flightGravity(s.flightOrigin);
     let height = oldHeight + s.verticalVelocity * dt - gravity * dt * dt / 2;
     // A heightfield crest lands on its actual local terrain. The canyon overpass
     // retains its explicit receiving level so it cannot land on the lower road.
-    const fixedLanding=jump?.kind==='crest'&&!this.track.terrain;
+    const fixedLanding=!!jump&&(!!this.track.decks||jump.kind==='crest'&&!this.track.terrain);
     const landingHeight = fixedLanding ? jump.landingElevation! : groundHeight(proposed, this.track);
     // Check the support at the actual crossing, not merely at the end of the step.
     const oldGround = fixedLanding ? jump.landingElevation! : groundHeight(old, this.track);
     const crossing = oldHeight >= oldGround && height <= landingHeight && (s.verticalVelocity - gravity * dt < 0 || landingHeight > oldGround);
     const fraction = crossing ? clamp((oldHeight - oldGround) / Math.max(1e-9, oldHeight - oldGround - height + landingHeight), 0, 1) : 1;
     const at = this.track.sections ? roadPoint({x:lerp(old.x,proposed.x,fraction),z:lerp(old.z,proposed.z,fraction)},this.track,proposed.courseProgress) : { x: lerp(old.x, proposed.x, fraction), z: lerp(old.z, proposed.z, fraction) };
-    const lands = !this.invalidFlight && crossing && vehicleSupported(at, s.heading, this.track);
+    const lands = !this.invalidFlight && crossing && vehicleSupported(at, s.heading, this.track)&&(!this.track.decks||!jump?.landingSurfaceId||deckVehicleSupported(at,s.heading,this.track,jump.landingSurfaceId));
     if (lands) height = landingHeight;
     // Only a compiled manual-hop corridor can grant actual-height clearance of its authored obstacle.
     const collision = sweepVehicle(old, proposed, oldHeading, s.heading, { x: vx, z: vz }, this.track, oldHeight, height, true, this.allowedHopBarriers(proposed));
     s.position = roadPoint(collision.position,this.track,proposed.courseProgress); s.velocity = collision.velocity; s.elevation = height; s.verticalVelocity -= gravity * dt;
     s.speed = Math.hypot(s.velocity.x, s.velocity.z); s.drifting = false; s.sandAmount = 0; s.acceleration = 0; s.steeringRate = 0;
+    if(collision.collided)this.markLapIncident('barrierContacts');
     if (collision.collided && collision.impact > 1.5 && s.tick - this.lastCollisionTick > 24) {
       this.lastCollisionTick = s.tick; s.collisionCount++; this.markContact(now);
       this.events.push({ type: 'collision', time: now, point: collision.point, intensity: collision.impact });
     }
     if (lands && vehicleSupported(s.position, s.heading, this.track)) {
       this.events.push({ type: 'landing', time: now + fraction * dt, point: { ...at }, intensity: Math.abs(s.verticalVelocity) });
-      s.movement = 'grounded'; s.activeJump = null; s.flightOrigin = null; s.verticalVelocity = 0; s.elevation = groundHeight(s.position, this.track); this.invalidFlight = false;
+      s.movement = 'grounded'; s.activeJump = null; s.intendedLandingSurfaceId=undefined; s.flightOrigin = null; s.verticalVelocity = 0; s.elevation = groundHeight(s.position, this.track); if(this.track.decks)s.supportSurfaceId=deckAt(s.position,this.track)?.id; this.invalidFlight = false;
     }
-    if(this.track.sections && !lands && (this.invalidFlight && now-s.flightStartedAt>.15 || jump?.kind==='crest'&&height<landingHeight&&s.verticalVelocity<0)){
+    if(this.track.sections && !this.track.decks && !lands && (this.invalidFlight && now-s.flightStartedAt>.15 || jump?.kind==='crest'&&height<landingHeight&&s.verticalVelocity<0)){
       this.events.push({type:'collision',time:now+dt,point:{...s.position},intensity:8});this.recover(now+dt);return null;
     }
     if (this.invalidFlight && height <= 0 && vehicleSupported(s.position, s.heading, this.track)) {
@@ -326,7 +333,7 @@ export class RaceSimulation {
   }
   /** Credit only final physical movement, after every contact has been resolved. */
   commitMotion(oldPosition: Point, dt: number, now: number, motionBudget = distance(oldPosition, this.state.position)) {
-    const s = this.state; if(this.track.sections||this.track.terrain){s.position=roadPoint(s.position,this.track,sampleRoute(this.route,s.distance).courseProgress);s.supportSectionId=s.position.sectionId;} const surface = sampleSurface(s.position, this.track);
+    const s = this.state; if(this.track.sections||this.track.terrain){s.position=roadPoint(s.position,this.track,sampleRoute(this.route,s.distance).courseProgress);s.supportSectionId=s.position.sectionId;if(this.track.decks&&s.movement==='grounded')s.supportSurfaceId=deckAt(s.position,this.track)?.id;} const surface = sampleSurface(s.position, this.track);
     s.speed = Math.hypot(s.velocity.x, s.velocity.z);
     s.slipAngle = s.speed > 0.05 ? angleDelta(Math.atan2(s.velocity.x, s.velocity.z), s.heading) : 0;
     const wasDrifting = s.drifting;
@@ -370,12 +377,14 @@ export class RaceSimulation {
     if (s.distance >= boundary) {
       // A crash reset can carry the car past the line; the lap then counts when it drives on.
       const crossing = previous >= boundary ? now : now + (boundary - previous) / Math.max(1e-9, movement) * dt;
+      const lapSummary={lap:s.lap,duration:crossing-s.lapStartedAt,...this.lapIncidents};
+      this.lapIncidents={barrierContacts:0,carContacts:0,recoveries:0};
       s.lapTimes.push(crossing - s.lapStartedAt);
       s.lapStartedAt = crossing;
       if (s.lap === this.lapCount) {
         s.finished = true; s.finishTime = crossing; s.distance = boundary;
-        this.events.push({ type: 'finish', time: crossing });
-      } else { s.lap++; this.events.push({ type: 'lap', time: crossing }); }
+        this.events.push({ type: 'finish', time: crossing,lapSummary });
+      } else { s.lap++; this.events.push({ type: 'lap', time: crossing,lapSummary }); }
     }
   }
 }

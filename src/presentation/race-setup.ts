@@ -1,4 +1,8 @@
 import type { SessionOptions } from '../core/session';
+import {badgeChoices,paintUnlocked,emptyProgression,type Progression} from '../core/progression';
+import{rewardPaintFinishes}from'./themes';
+import{badgeMarkup}from'../ui/panels/collection';
+import{tourSchedule}from'./tournament-ui';
 import { tournamentSetupMarkup, type TourSetup } from './tournament-ui';
 import type { RacePreferences } from './race-settings';
 import { cleanDriverName, escapeHtml, finishFor, paintFinishes } from './race-settings';
@@ -16,7 +20,7 @@ const laps = (n: number) => `${n} ${n === 1 ? 'lap' : 'laps'}`;
  * Race setup in two columns (one in narrow portrait): format and circuit, then grid, distance and drivers,
  * with a summary and the start button in a fixed footer. Home lives in the header; device settings in Settings.
  */
-export function raceSetupMarkup(preferences: RacePreferences, count: number, tour?: TourSetup, options: SessionOptions = { mode: 'multiplayer', difficulty: 'normal', seed: 1 }, ghost = true) {
+export function raceSetupMarkup(preferences: RacePreferences, count: number, tour?: TourSetup, options: SessionOptions = { mode: 'multiplayer', difficulty: 'normal', seed: 1 }, ghost = true,progression:Progression=emptyProgression()) {
   const selected = findCircuit(preferences.circuitId);
   // Sections are numbered in screen order; Solo Race and Multiplayer open with the race format.
   let section = 0;
@@ -33,22 +37,22 @@ export function raceSetupMarkup(preferences: RacePreferences, count: number, tou
       ? `${label('GRID', 'Three computer rivals')}<div class="segmented difficulty-options" role="group" aria-label="Computer difficulty">${(['easy', 'normal', 'hard'] as const).map(d => `<button data-action="difficulty" data-difficulty="${d}" aria-pressed="${options.difficulty === d}">${d[0].toUpperCase() + d.slice(1)}</button>`).join('')}</div><p class="cpu-opponents">Apex · Vector · Pulse <span class="cpu-tag">CPU</span></p>`
       : `${label('GHOST', 'Race your fastest lap')}<button class="setting-row ghost-toggle" data-action="ghost-toggle" aria-pressed="${ghost}"><span class="setting-name">Best-lap ghost ${ghost ? 'on' : 'off'}</span><span class="switch" aria-hidden="true"><i></i></span></button>`;
   const distance = `${label('RACE DISTANCE', touring ? 'Laps in every round' : 'One drawn line, repeated each lap')}<div class="segmented lap-options" role="group" aria-label="Race laps">${[1, 2, 3, 4, 5, 6].map(n => `<button data-action="lap-count" data-laps="${n}" aria-label="${laps(n)}" aria-pressed="${preferences.laps === n}">${n}</button>`).join('')}</div>`;
-  const drivers = `${label(count === 1 ? 'DRIVER & PAINT' : 'DRIVERS & PAINT', 'Six signature finishes')}<div class="driver-grid">${preferences.drivers.slice(0, count).map((driver, index) => {
+  const drivers = `${label(count === 1 ? 'DRIVER & PAINT' : 'DRIVERS & PAINT', 'Signature finishes')}<div class="driver-grid">${preferences.drivers.slice(0, count).map((driver, index) => {
     const finish = finishFor(driver.paint), name = escapeHtml(cleanDriverName(driver.name, index));
     return `<section class="driver-card" aria-label="Driver ${index + 1}" style="--driver-paint:${finish.color}">
         <div class="driver-card-top"><span class="driver-card-number">${String(index + 1).padStart(2, '0')}</span><input id="driver-${index}-name" class="driver-name-input" data-driver-name="${index}" aria-label="Driver ${index + 1} name" value="${name}" maxlength="18" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="done"></div>
-        <div class="paint-options" role="group" aria-label="Driver ${index + 1} paint">${paintFinishes.map(paint => `<button class="paint-swatch" data-action="driver-paint" data-driver="${index}" data-paint="${paint.id}" aria-label="${paint.name}" title="${paint.name}" aria-pressed="${driver.paint === paint.id}" style="--swatch:${paint.color}"><span></span></button>`).join('')}</div>
-        <div class="paint-caption"><span>${escapeHtml(finish.name)}</span><span>${count === 1 ? 'Solo driver' : corners[index]} · <kbd title="Thrust">${count === 1 ? 'Space' : keys[index]}</kbd> <kbd title="Hop">${count === 1 ? 'H' : hopKeys[index]}</kbd></span></div>
+        <div class="paint-options" role="group" aria-label="Driver ${index + 1} paint">${[...paintFinishes,...rewardPaintFinishes].filter(p=>paintUnlocked(p.id,progression)).map(paint => `<button class="paint-swatch" data-action="driver-paint" data-driver="${index}" data-paint="${paint.id}" aria-label="${paint.name}" title="${paint.name}" aria-pressed="${driver.paint === paint.id}" style="--swatch:${paint.color}"><span></span></button>`).join('')}</div>
+        <label class="badge-selector">Badge<select data-driver-badge="${index}" aria-label="Driver ${index+1} badge">${badgeChoices(progression).map(b=>`<option value="${b.id}" ${driver.badge===b.id?'selected':''}>${b.name}</option>`).join('')}</select>${badgeMarkup(driver.badge)}</label><div class="paint-caption"><span>${escapeHtml(finish.name)}</span><span>${count === 1 ? 'Solo driver' : corners[index]} · <kbd title="Thrust">${count === 1 ? 'Space' : keys[index]}</kbd> <kbd title="Hop">${count === 1 ? 'H' : hopKeys[index]}</kbd></span></div>
       </section>`;
   }).join('')}</div>`;
-  const rounds = tour?.custom ? tour.schedule.length : circuits.length;
+  const rounds = tour ? tourSchedule(tour).length : circuits.length;
   const detail = touring
-    ? `${tour!.custom ? 'Custom' : 'Full'} tour · ${rounds} rounds · ${laps(preferences.laps)} per round`
+    ? `${tour!.preset ? 'Cup' : tour!.custom ? 'Custom tour' : 'Full tour'} · ${rounds} rounds · ${laps(preferences.laps)} per round`
     : options.mode === 'solo-race' ? `Solo race · ${laps(preferences.laps)} · ${options.difficulty[0].toUpperCase() + options.difficulty.slice(1)} rivals`
       : options.mode === 'time-trial' ? `Time trial · ${laps(preferences.laps)} · ghost ${ghost ? 'on' : 'off'}`
         : `${count} drivers · ${laps(preferences.laps)}`;
   const start = touring ? 'Start tournament' : count === 1 ? 'Draw racing line' : 'Plan your lines';
   return `<div class="setup-scroll"><div class="setup-columns"><div class="setup-main">${format}${circuitSection}</div>
       <div class="setup-side"><section class="setup-section">${grid}</section><section class="setup-section">${distance}</section><section class="setup-section">${drivers}</section></div></div></div>
-    <div class="setup-footer"><div class="setup-summary"><strong>${escapeHtml(selected.track.name.toUpperCase())}</strong><span>${detail}</span></div><div class="panel-actions"><button class="primary-button" data-action="start-session">${start} ${chevron}</button></div></div>`;
+    <div class="setup-footer"><div class="setup-summary"><strong>${escapeHtml(selected.track.name.toUpperCase())}</strong><span>${detail}</span></div><div class="panel-actions"><button class="text-button" data-action="collection">Collection</button><button class="primary-button" data-action="start-session">${start} ${chevron}</button></div></div>`;
 }

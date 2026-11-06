@@ -21,9 +21,10 @@ describe('playable circuit registry', () => {
     test('solid footprints preserve at least five metres of deliberate runoff', () => {
       const track = circuit.track;
       for (const barrier of track.barriers) {
+        if(barrier.deckSurfaceId){expect(track.decks?.find(d=>d.id===barrier.deckSurfaceId)?.footprint).toEqual(barrier.footprint);continue;}
         if(barrier.kind==='cliff-rail'||barrier.kind==='cliff-face'){expect(track.sections?.length).toBeGreaterThan(0);continue;}
         if (barrier.kind === 'service-barrier') { expect(track.hopShortcuts?.length).toBeGreaterThan(0); continue; }
-        if (barrier.kind === 'pier-rail') { expect(track.supports?.length).toBeGreaterThan(0); continue; }
+        if (barrier.kind === 'pier-rail') { expect((track.supports??track.decks)?.length).toBeGreaterThan(0); continue; }
         if (barrier.kind === 'bridge-rail' || barrier.kind === 'bridge-support') {
           expect(track.bridges?.some(b => b.id === barrier.bridgeId)).toBe(true); continue;
         }

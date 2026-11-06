@@ -5,7 +5,7 @@ import { supported } from '../../src/core/support';
 import { insideBarrier } from '../../src/core/barriers';
 import { venueFringe } from '../../src/presentation/venue-fringe';
 
-for (const { track, scenery } of circuits) test(`${track.name}: cosmetic ground transitions stay supported, outside the road and out of solids`, () => {
+for (const { track, scenery } of circuits.filter(c=>!c.track.decks)) test(`${track.name}: cosmetic ground transitions stay supported, outside the road and out of solids`, () => {
   const original = JSON.stringify(track), result = venueFringe(track, scenery), { geometry: g } = result;
   expect(result.patches).toBeGreaterThan(0);
   expect(g.triangleCount).toBeLessThan(5000);

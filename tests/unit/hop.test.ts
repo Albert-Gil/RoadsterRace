@@ -5,7 +5,7 @@ import { COMPILER_VERSION, compileRoute, createPracticeSamples, sampleRoute } fr
 import { FixedStepClock, RaceSimulation, RULES } from '../../src/core/simulation';
 import { LocalRace } from '../../src/core/local-race';
 import { shouldComputerHop, stepComputers } from '../../src/core/computer';
-import { flightGravity, FLIGHT_RULES, jumpPoint, vehicleSupported } from '../../src/core/support';
+import { groundHeight, flightGravity, FLIGHT_RULES, jumpPoint, vehicleSupported } from '../../src/core/support';
 import { vehicleContact } from '../../src/core/vehicle-contact';
 import { LapRecorder, lapRecordKey, replayPose } from '../../src/core/lap-replay';
 import { PointerOwnership } from '../../src/input/ownership';
@@ -42,8 +42,8 @@ test.each([0, 20, 30, 42])('a %i m/s hop doubles height without adding flight di
 test.each(circuits)('$id supports an independent manual hop without new support metadata', ({ track }) => {
   const r = compileRoute(createPracticeSamples(track, 7), track); if (!r.ok) throw Error(r.message);
   const sim = new RaceSimulation(r.route, track), events: string[] = []; sim.pressHop();
-  let peak = 0, airtime = 0;
-  for (let tick = 0; tick < 80; tick++) { sim.step(); peak = Math.max(peak, sim.state.elevation); events.push(...sim.drainEvents().map(e => e.type)); if (events.includes('landing')) { airtime = sim.state.time; break; } }
+  const origin=groundHeight(track.start,track); let peak = 0, airtime = 0;
+  for (let tick = 0; tick < 80; tick++) { sim.step(); peak = Math.max(peak, sim.state.elevation-origin); events.push(...sim.drainEvents().map(e => e.type)); if (events.includes('landing')) { airtime = sim.state.time; break; } }
   expect(events).toContain('hop'); expect(events).toContain('landing'); expect(airtime).toBeCloseTo(0.95, 1);
   expect(peak).toBeCloseTo(8.028, 2); expect(sim.state.hopReadyAt).toBe(7); expect(sim.state.hopCount).toBe(1); expect(sim.state.thrustCount).toBe(0);
 });

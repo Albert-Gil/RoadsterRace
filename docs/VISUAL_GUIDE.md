@@ -198,3 +198,18 @@ Adjust rocket/forest palettes and count bounds in `themes.ts`; keep solid scener
 dimensions shared with the core track data. Tahoe's closer firs replace distant
 trees rather than increasing their total. Neither scenery nor shadow refinements
 may alter racing heights, route geometry, fixed framing rules or handling.
+
+## Production kit and Collection
+
+The central colours for the Golden Gate architectural kit are `productionAppearance`
+and `productionSurfaceTuning` in `src/presentation/themes.ts`. Roof variants, recessed
+bays and the once-baked shading treatment keep existing physical footprints and
+material batches. `fleetAppearance` controls hull, flight deck, painted course,
+waterline, aircraft and equipment colours. `pnpm bake:production` exports checked
+original geometry and its triangle/material catalog into `artifacts/production-kit/`.
+It is an offline inspection/export step; source generators remain editable.
+
+Keep all original six entries in `paintFinishes`; cosmetic unlock colours are separate
+in `rewardPaintFinishes`. Changing either array cannot change grip, collision size,
+ability timing or records. Badges and reward thresholds live in `core/progression.ts`.
+The small Collection store is separate from preferences, records and tournaments.

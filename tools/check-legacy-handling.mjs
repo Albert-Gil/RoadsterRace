@@ -29,6 +29,8 @@ async function runtime(ref) {
   return { circuits: entries[0].circuits, ...entries[1], ...entries[2] };
 }
 const old = await runtime(baseline), current = await runtime();
+for(const circuit of old.circuits){const present=current.circuits.find(c=>c.id===circuit.id);assert.ok(present,`${circuit.id}: original venue removed`);assert.deepEqual(JSON.parse(JSON.stringify(present.track)),JSON.parse(JSON.stringify(circuit.track)),`${circuit.id}: baseline geometry/version changed`);}
+
 for (const circuit of old.circuits) for (const count of [1, 2, 4]) {
   const run = runtime => {
     const track = old.circuits.find(c => c.id === circuit.id).track;

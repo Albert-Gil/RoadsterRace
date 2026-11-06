@@ -1,0 +1,17 @@
+import {circuits,findCircuit} from '../../content/circuits';
+import {CUPS,MEDALS,REWARDS,medalCount,type Progression} from '../../core/progression';
+import {finishFor,escapeHtml} from '../../presentation/race-settings';
+export function badgeMarkup(id:string|undefined){
+ const name=REWARDS.find(r=>r.kind==='badge'&&r.id===id)?.name??CUPS.find(c=>`cup-${c.id}`===id)?.name;
+ const glyph=id==='explorer'?'M12 5 16 12 12 19 8 12Z M12 8 10 12 12 11Z':id==='precision'?'M11 5h2v4h4v2h-4v4h-2v-4H7V9h4Z M9 16h6v2H9Z':id==='cup-pacific'?'M5 11q3-4 7 0t7 0v3q-3 4-7 0t-7 0Z':id==='cup-frontier'?'m5 16 5-9 3 5 2-3 4 7Z':id==='cup-fleet'?'M11 5h2v9l4-3v3l-5 4-5-4v-3l4 3Z':'m12 6 1.8 3.7 4.2.6-3 2.9.7 4.1-3.7-2-3.7 2 .7-4.1-3-2.9 4.2-.6Z';
+ return name?` <span class="driver-badge" title="${name}" aria-label="${name} badge"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 21 6v8l-9 8-9-8V6Z"/><path d="${glyph}"/></svg></span>`:'';
+}
+export function collectionPanel(p:Progression,persistent:boolean){
+ const count=medalCount(p),cups=CUPS.filter(c=>c.rounds.every(id=>circuits.some(v=>v.id===id)));
+ const requirements:Record<string,string>={finish:'Complete a race',clean:'Complete a lap without contact or recovery',rival:'Win Solo Race on Normal or Hard'};
+ return `<div class="collection-heading"><div><span class="eyebrow">YOUR COLLECTION</span><h2>Earn your place.</h2><p>${count} / ${circuits.length*3} medals · shared on this installation</p></div><div class="collection-navigation"><button class="secondary-button" data-action="collection-back">Back</button><button class="secondary-button" data-action="home">Home</button></div></div>
+ ${persistent?'':'<p class="save-status" role="status">Progress is available for this session. Browser storage is unavailable.</p>'}
+ <section class="collection-section"><h3>Venue medals</h3><div class="medal-grid">${circuits.map(c=>`<article class="medal-card"><strong>${escapeHtml(c.track.name)}</strong><div class="venue-medals">${MEDALS.map(m=>`<span class="medal ${p.medals[c.id]?.includes(m)?'earned':''}" aria-label="${m}: ${p.medals[c.id]?.includes(m)?'earned':'not earned'}" title="${requirements[m]}"><i aria-hidden="true">${m==='finish'?'⚑':m==='clean'?'◇':'★'}</i>${m[0].toUpperCase()+m.slice(1)}</span>`).join('')}</div></article>`).join('')}</div><p class="collection-note">Finish a race. Complete a clean lap. Win against Normal or Hard rivals. Each medal is independent.</p></section>
+ <section class="collection-section"><h3>Signature rewards</h3><div class="reward-grid">${REWARDS.map(r=>`<article class="reward-card ${count>=r.medals?'unlocked':''}">${r.kind==='finish'?`<span class="reward-finish" style="--finish:${finishFor(r.id).color}" aria-hidden="true"></span>`:badgeMarkup(r.id)}<strong>${r.name}</strong><span>${count>=r.medals?'Unlocked':`${r.medals} medals`}</span></article>`).join('')}</div></section>
+ <section class="collection-section"><h3>Championship badges</h3><div class="cup-grid">${cups.map(c=>`<article class="cup-card ${p.cups.includes(c.id)?'unlocked':''}">${badgeMarkup(`cup-${c.id}`)}<h4>${c.name}</h4><p>${c.rounds.map(id=>escapeHtml(findCircuit(id).track.name)).join(' → ')}</p><span>${p.cups.includes(c.id)?'Badge earned':'Complete every round'}</span><button class="secondary-button" data-action="collection-cup" data-cup="${c.id}">Race this cup</button></article>`).join('')}</div></section>`;
+}

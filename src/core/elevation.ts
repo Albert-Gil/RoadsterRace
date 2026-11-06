@@ -1,4 +1,5 @@
-import { clamp, cumulative, distance, lerp, modulo } from './geometry';
+import { clamp, cumulative, distance, lerp, modulo,samplePolyline } from './geometry';
+import{deckPlanningHeight,deckAt,deckElevation}from'./decks';
 import type { HopShortcut, Point, RoadSection, TrackBarrier, TrackDefinition } from './types';
 import { sampleTerrain,terrainRoadHeight } from './terrain';
 import { insideBarrier } from './barriers';
@@ -21,6 +22,7 @@ export function sectionAt(track: TrackDefinition, progress: number): RoadSection
   return track.sections?.find(s => p >= s.from - 1e-6 && p < s.to - 1e-6) ?? track.sections?.[0];
 }
 export function roadHeight(track: TrackDefinition, progress: number) {
+  if(track.decks)return deckPlanningHeight(samplePolyline(track.centerline,track.distances,modulo(progress,track.length)),track)??0;
   if(track.terrain)return terrainRoadHeight(track,progress);
   const section = sectionAt(track, progress); if (!section) return 0;
   const p = clamp(modulo(progress, track.length) - section.from, 0, section.to - section.from), h = section.heights;
@@ -76,12 +78,12 @@ export function locateRoad(p: Point, track: TrackDefinition, previous?: number, 
   else {const near=modulo(hint,track.length),span=window+track.roadWidth*2;for(const shift of [-track.length,0,track.length])for(let i=Math.floor((near-span+shift)/16);i<=Math.floor((near+span+shift)/16);i++)for(const s of cached.bins.get(i)??[])consider(s.a,s.b,s.from,s.to,s.branchId);}
   const section=sectionAt(track,best.progress);
   const branch=track.hopShortcuts?.find(h=>h.id===best.branchId);
-  return {...best,section,height:(branch?track.terrain?.branchHeights?.[branch.id]:undefined)??roadHeight(track,best.progress),supportWidth:branch?branch.width+2:section?roadSupportWidth(track,best.progress):0};
+  return {...best,section,height:(track.decks?deckPlanningHeight(p,track):undefined)??(branch?track.terrain?.branchHeights?.[branch.id]:undefined)??roadHeight(track,best.progress),supportWidth:branch?branch.width+2:section?roadSupportWidth(track,best.progress):0};
 }
 export function roadPoint(p: Point, track: TrackDefinition, previous?: number): Point {
   if(!track.sections&&!track.terrain)return p;
   const location=locateRoad(p,track,previous);
-  return {...p,y:track.terrain?terrainElevation(p,track):location.height,sectionId:location.section?.id,courseProgress:location.progress};
+  return {...p,y:track.terrain?terrainElevation(p,track):location.height,sectionId:track.decks?deckAt(p,track)?.id??location.section?.id:location.section?.id,courseProgress:location.progress};
 }
 export function annotateRoad<T extends Point>(points: T[], track: TrackDefinition): T[] {
   if(!track.sections&&!track.terrain)return points;
@@ -94,6 +96,7 @@ export function roadSupported(p: Point, track: TrackDefinition) {
 }
 /** Highest physical trail beneath the car; excludes the invisible flight planning surface. */
 export function supportBelow(p:Point,elevation:number,track:TrackDefinition){
+ if(track.decks){const d=deckAt(p,track,elevation);if(!d)return undefined;const h=deckPlanningHeight(p,track)??deckElevation(p,d);return h<=elevation+.05?h:deckElevation(p,d);}
  if(track.terrain){const h=terrainElevation(p,track);return h<=elevation+.05?h:undefined;}
  let height:number|undefined;
  for(let i=1;i<track.centerline.length;i++){
@@ -132,14 +135,14 @@ export function drawingRay(ray:{origin:{x:number;y:number;z:number};direction:{x
  const hint=previous?.courseProgress??0;let best:{score:number;point:Point}|undefined;
  const candidate=(a:Point,b:Point,from:number,to:number)=>{
   let middle=(from+to)/2;middle+=Math.round((hint-middle)/track.length)*track.length;if(Math.abs(middle-hint)>64)return;
-  const dx=b.x-a.x,dz=b.z-a.z,len=Math.hypot(dx,dz)||1,ha=roadHeight(track,from),hb=roadHeight(track,to),grade=(hb-ha)/len;
+  const dx=b.x-a.x,dz=b.z-a.z,len=Math.hypot(dx,dz)||1,ha=track.decks?deckPlanningHeight(a,track)??roadHeight(track,from):roadHeight(track,from),hb=track.decks?deckPlanningHeight(b,track)??roadHeight(track,to):roadHeight(track,to),grade=(hb-ha)/len;
   const nx=-grade*dx/len,nz=-grade*dz/len,den=nx*ray.direction.x+ray.direction.y+nz*ray.direction.z;if(Math.abs(den)<1e-8)return;
   const hit=(nx*(a.x-ray.origin.x)+ha-ray.origin.y+nz*(a.z-ray.origin.z))/den;if(hit<0)return;
   const p={x:ray.origin.x+ray.direction.x*hit,z:ray.origin.z+ray.direction.z*hit};
   const t=clamp(((p.x-a.x)*dx+(p.z-a.z)*dz)/(len*len),0,1),gap=Math.hypot(p.x-lerp(a.x,b.x,t),p.z-lerp(a.z,b.z,t));
   let progress=lerp(from,to,t);progress+=Math.round((hint-progress)/track.length)*track.length;
   const budget=previous?distance(p,previous)*1.75+2:16,score=gap+Math.max(0,Math.abs(progress-hint)-budget)*.8;
-  if(!best||score<best.score)best={score,point:{...p,y:roadHeight(track,progress),courseProgress:progress,sectionId:sectionAt(track,progress)!.id}};
+  if(!best||score<best.score)best={score,point:{...p,y:track.decks?deckPlanningHeight(p,track)??lerp(ha,hb,t):roadHeight(track,progress),courseProgress:progress,sectionId:track.decks?deckAt(p,track)?.id??'fleet-road':sectionAt(track,progress)!.id}};
  };
  for(let i=1;i<track.centerline.length;i++)candidate(track.centerline[i-1],track.centerline[i],track.distances[i-1],track.distances[i]);
  for(const h of track.hopShortcuts??[]){const ds=cumulative(h.branch),n=ds.at(-1)!;for(let i=1;i<h.branch.length;i++)candidate(h.branch[i-1],h.branch[i],lerp(h.entryProgress,h.exitProgress,ds[i-1]/n),lerp(h.entryProgress,h.exitProgress,ds[i]/n));}

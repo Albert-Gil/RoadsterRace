@@ -1,6 +1,7 @@
 import { LapGhost } from './lap-ghost';
 import type { ReplayFrame } from '../core/lap-replay';
 import { drawingRay, roadHeight,terrainElevation } from '../core/elevation';
+import {deckPlanningHeight} from '../core/decks';
 import { hiddenTerrainRoadPoints,terrainDrawingOcclusion } from './terrain-framing';
 import { roadEdges } from '../core/road-geometry';
 import type { AbstractEngine } from '@babylonjs/core/Engines/abstractEngine';
@@ -173,16 +174,17 @@ export class GameScene {
     }
     const black = mat('checker', '#303d40');
     const gate = startGate(track);
+    const gateHeight=track.decks?(deckPlanningHeight(gate.center,track)??0):0;
     const startHeading = Math.atan2(gate.forward.x, gate.forward.z), startX = Math.sin(startHeading), startZ = Math.cos(startHeading);
     for (let row = 0; row < 2; row++) for (let col = 0; col < 10; col++) {
       const tile = MeshBuilder.CreateBox('start-checker', { width: 0.85, depth: gate.width / 10, height: 0.02 }, this.scene);
       const side = (col - 4.5) * gate.width / 10;
-      tile.position.set(gate.center.x + startX * row * 0.85 + startZ * side, 0.145, gate.center.z + startZ * row * 0.85 - startX * side); tile.rotation.y = startHeading - Math.PI / 2; tile.material = (row + col) % 2 ? white : black;
+      tile.position.set(gate.center.x + startX * row * 0.85 + startZ * side, gateHeight+0.145, gate.center.z + startZ * row * 0.85 - startX * side); tile.rotation.y = startHeading - Math.PI / 2; tile.material = (row + col) % 2 ? white : black;
     }
     const startMat = mat('start-glow', theme.players[0]); startMat.emissiveColor = Color3.FromHexString(theme.players[0]).scale(0.5);
-    this.marker = MeshBuilder.CreateGround('start-finish-gate', { width: gate.width, height: 1.6 }, this.scene); this.marker.position.set(gate.center.x, 0.24, gate.center.z); this.marker.rotation.y = startHeading; this.marker.material = startMat; startMat.alpha = 0.32;
+    this.marker = MeshBuilder.CreateGround('start-finish-gate', { width: gate.width, height: 1.6 }, this.scene); this.marker.position.set(gate.center.x, gateHeight+0.24, gate.center.z); this.marker.rotation.y = startHeading; this.marker.material = startMat; startMat.alpha = 0.32;
     const guides: Vector3[][] = [];
-    const at = (across: number, along: number) => { const p = gatePoint(track, across, along); return new Vector3(p.x, 0.26, p.z); };
+    const at = (across: number, along: number) => { const p = gatePoint(track, across, along); return new Vector3(p.x, gateHeight+0.26, p.z); };
     const zone = drawingStartBounds(track);
     for (const side of [-1, 1]) for (let along = zone.from; along < zone.to; along += 1.4) guides.push([at(side * zone.halfWidth, along), at(side * zone.halfWidth, Math.min(zone.to, along + 0.8))]);
     for (const along of [zone.from, zone.to]) for (let across = -zone.halfWidth; across < zone.halfWidth; across += 1.4) guides.push([at(across, along), at(Math.min(zone.halfWidth, across + 0.8), along)]);
@@ -194,8 +196,8 @@ export class GameScene {
     for (const fraction of [10, 45, 95, 150, 195].map(value => value / 216)) {
       const i = Math.min(n - 1, Math.floor(fraction * n));
       const a = p[i], b = p[i + 1], angle = Math.atan2(b.x - a.x, b.z - a.z);
-      const dx = Math.sin(angle), dz = Math.cos(angle);
-      const tri = MeshBuilder.CreateLines('direction-arrow', { points: [new Vector3(a.x - dx - dz * 0.8, (a.y??0)+0.2, a.z - dz + dx * 0.8), new Vector3(a.x + dx, (a.y??0)+0.2, a.z + dz), new Vector3(a.x - dx + dz * 0.8, (a.y??0)+0.2, a.z - dz - dx * 0.8)] }, this.scene);
+      const dx = Math.sin(angle), dz = Math.cos(angle), arrowHeight=track.decks?(deckPlanningHeight(a,track)??0):(a.y??0);
+      const tri = MeshBuilder.CreateLines('direction-arrow', { points: [new Vector3(a.x - dx - dz * 0.8, arrowHeight+0.2, a.z - dz + dx * 0.8), new Vector3(a.x + dx, arrowHeight+0.2, a.z + dz), new Vector3(a.x - dx + dz * 0.8, arrowHeight+0.2, a.z - dz - dx * 0.8)] }, this.scene);
       tri.color = Color3.FromHexString(track.surface==='packed-snow'?theme.scene.structure:'#edf4e8');
     }
     // Bake static scenery by material: curbs and foliage should not each cost a draw call.
@@ -338,13 +340,13 @@ export class GameScene {
     const elevation = Math.max(this.scenery==='yosemite'?yosemiteAppearance.cameraElevation:0,Math.min(w,h)<=500?sceneTuning.camera.compactElevationDegrees:sceneTuning.camera.elevationDegrees) * Math.PI / 180;
     const tangent = Math.tan(this.camera.fov / 2);
     const paths = [this.track.centerline,...(this.track.jumps??[]).map(j=>j.branch),...(this.track.hopShortcuts??[]).map(j=>j.branch)];
-    const fitted = paths.flatMap((path,i)=>roadEdges(path,this.track.roadWidth,i===0).flatMap(side=>side.map((p,n)=>new Vector3(p.x,this.track.terrain?terrainElevation(p,this.track):this.track.sections?roadHeight(this.track,path[n].courseProgress??0):0,p.z))));
+    const fitted = paths.flatMap((path,i)=>roadEdges(path,this.track.roadWidth,i===0).flatMap(side=>side.map((p,n)=>new Vector3(p.x,this.track.decks?(deckPlanningHeight(p,this.track)??0):this.track.terrain?terrainElevation(p,this.track):this.track.sections?roadHeight(this.track,path[n].courseProgress??0):0,p.z))));
     const sightPoints=fitTerrain?[...fitted.filter((_,i)=>i%8===0).map(p=>({x:p.x,y:p.y,z:p.z})),...paths.flatMap(path=>path.filter((_,i)=>i%4===0))]:[];
-    for(const p of drawingStartBounds(this.track).corners) fitted.push(new Vector3(p.x,0,p.z));
+    for(const p of drawingStartBounds(this.track).corners) fitted.push(new Vector3(p.x,this.track.decks?(deckPlanningHeight(p,this.track)??0):0,p.z));
     // Reserve the complete manual-hop height envelope, including a ramp launch.
     const hopEnvelope = RULES.hopLaunchSpeed ** 2 / (2 * flightGravity('hop')) + FLIGHT_RULES.carHeight + 0.3;
     for (const p of [...fitted]) fitted.push(new Vector3(p.x, p.y+hopEnvelope, p.z));
-    for(const j of this.track.jumps??[]) for(const along of [8,25,45]) fitted.push(new Vector3(j.from.x+j.forward.x*along,hopEnvelope+j.lipHeight,j.from.z+j.forward.z*along));
+    for(const j of this.track.jumps??[]) for(const along of [8,25,45]) fitted.push(new Vector3(j.from.x+j.forward.x*along,hopEnvelope+j.lipHeight+(this.track.decks?(j.takeoffElevation??0):0),j.from.z+j.forward.z*along));
     for(const j of this.track.jumps??[])if(j.kind==='crest'){const v=j.launchBoost!+RULES.maxSpeed*j.launchSlope!,at=RULES.maxSpeed*v/FLIGHT_RULES.gravity;fitted.push(new Vector3(j.from.x+j.forward.x*at,j.takeoffElevation!+v*v/(2*FLIGHT_RULES.gravity)+FLIGHT_RULES.carHeight+.3,j.from.z+j.forward.z*at));}
     const courseCenter = new Vector3((Math.min(...fitted.map(p=>p.x))+Math.max(...fitted.map(p=>p.x)))/2,0,(Math.min(...fitted.map(p=>p.z))+Math.max(...fitted.map(p=>p.z)))/2);
     const cx = (left-rightInset)/w, cy=(bottom-top)/h;
@@ -486,7 +488,7 @@ export class GameScene {
       this.lines.push(new PaceLine(this.scene, route.points, route.points.map(p => p.desiredSpeed), this.theme, player, true, false, false, this.track));
     });
   }
-  showError(point?: Point, section?: Point[]) { this.errorLine?.dispose(); this.errorLine = undefined; this.errorMarker.isVisible = !!point; if (point) this.errorMarker.position.set(point.x, 0.3, point.z); if (section) this.errorLine = new PaceLine(this.scene, section, section.map(() => 9), this.theme, 0, false, true, false, this.track); }
+  showError(point?: Point, section?: Point[]) { this.errorLine?.dispose(); this.errorLine = undefined; this.errorMarker.isVisible = !!point; if (point) this.errorMarker.position.set(point.x, (this.track.decks?planningHeight(point,this.track):0)+0.3, point.z); if (section) this.errorLine = new PaceLine(this.scene, section, section.map(() => 9), this.theme, 0, false, true, false, this.track); }
   showStart(show: boolean) { this.marker.isVisible = show; this.approach.isVisible = show; }
   get depthFeatures() { return { refinements: this.sceneryRuntime.refinements ?? [], hopCores: this.scene.meshes.filter(m=>m.name === 'four-downward-cold-gas-cores' && m.isEnabled() && m.isVisible).length, vehicleScale: sceneTuning.vehicle.racingScale, ghostVisible:this.lapGhost.visible, graphicsLevel: this.graphicsLevel, graphicsChoice: this.graphicsChoice, renderer: this.engine.isWebGPU ? 'webgpu' : 'webgl2', postPasses: this.post.passes, sky: this.scene.environmentTexture?.name ?? null, decorativeMotion: this.scene.meshes.filter(m => m.metadata?.dynamicScenery).map(m => ({name: m.name, rotation: m.rotation.asArray(), position: m.position.asArray()})), perspective: this.camera.mode === Camera.PERSPECTIVE_CAMERA, shadowMapSize: this.shadows.getShadowMap()?.getSize().width ?? 0, shadowCasters: [...this.shadowCasters].filter(m => !m.isDisposed()).length, staticShadows: { enabled: this.shadowCache?.enabled ?? false, ...this.shadowCache?.stats, perFrameCasters: this.shadows.getShadowMap()?.renderList?.length ?? 0 }, renderReady: this.scene.isReady(), worldReady: this.scene.isReady(), pending: this.scene.meshes.filter(m => !m.isReady(true)).map(m => m.name), carTriangles: this.vehicle.triangleCount, pace: this.theme.pace, lineWidths: this.lines.map(line => line.cssWidths), ignoredStrokeCount: this.ignoredLines.length }; }
   render(time: number) {

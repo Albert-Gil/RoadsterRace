@@ -9,7 +9,7 @@ import { edgeDistance } from '../../src/presentation/landscape/mesh';
 import { roadsideAppearance } from '../../src/presentation/themes';
 import { onCityLand } from '../../src/content/golden-city';
 
-describe.each(circuits)('$id visible roadside dressing', ({ track, scenery }) => {
+describe.each(circuits.filter(c=>!c.track.decks))('$id visible roadside dressing', ({ track, scenery }) => {
   it('keeps soft plants clear of every road, obstacle, touch gate and hidden ability lane', () => {
     const before = JSON.stringify(track);
     const { plants, geometry, edgeMarks, props } = roadsideGeometry(track, scenery, roadsideAppearance.palettes[scenery], roadsideAppearance);

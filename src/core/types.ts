@@ -1,8 +1,10 @@
 export interface Point { x: number; z: number; y?: number; sectionId?: string; courseProgress?: number }
 export interface DrawSample extends Point { time: number }
-export interface TrackBarrier { id: string; footprint: Point[]; height: number; baseHeight?: number; /** Resolve a level foundation from the authored terrain before baking its ground grid. */ terrainAnchor?:boolean; sectionId?: string; kind?: 'infield' | 'building' | 'bridge-rail' | 'bridge-support' | 'pier-rail' | 'service-barrier' | 'cliff-rail' | 'cliff-face' | 'rock'; bridgeId?: string; /** Explicit constrained lane, city median or approved broad infield protection. */ runoffException?: 'hop-lane' | 'urban-median' | 'cut-protection'; /** A real sloping cliff, not an extruded invisible wall. */ slopedFace?: { lip: Point; toe: Point; lipWidth: number; toeWidth: number; lipHeight: number; toeHeight: number } }
+export interface TrackBarrier { deckSurfaceId?:string; id: string; footprint: Point[]; height: number; baseHeight?: number; /** Resolve a level foundation from the authored terrain before baking its ground grid. */ terrainAnchor?:boolean; sectionId?: string; kind?: 'infield' | 'building' | 'bridge-rail' | 'bridge-support' | 'pier-rail' | 'service-barrier' | 'cliff-rail' | 'cliff-face' | 'rock'; bridgeId?: string; /** Explicit constrained lane, city median or approved broad infield protection. */ runoffException?: 'hop-lane' | 'urban-median' | 'cut-protection'; /** A real sloping cliff, not an extruded invisible wall. */ slopedFace?: { lip: Point; toe: Point; lipWidth: number; toeWidth: number; lipHeight: number; toeHeight: number } }
 export interface RoadSection { id: string; from: number; to: number; heights: [number, number][]; supportWidth: number; /** Optional distance/width profile for continuous shoulders, relative to section.from. */ supportWidths?: [number, number][]; flight?: boolean }
 export interface SupportSurface { id: string; footprint: Point[] }
+/** Stationary physical deck. A transfer can grade continuously between two heights. */
+export interface DeckSurface extends SupportSurface {elevation:number;toElevation?:number;from?:Point;to?:Point;kind:'carrier'|'destroyer'|'support-ship'|'transfer'}
 export interface TrackJump {
   id: string; from: Point; forward: Point; width: number; rampLength: number; lipHeight: number;
   gap: number; runout: number; corridorLength: number;
@@ -11,10 +13,14 @@ export interface TrackJump {
   kind?: 'crest'; takeoffElevation?: number; landingElevation?: number; launchBoost?: number; launchSlope?: number;
   /** Main-road crossing, included by every legal main route and every CPU difficulty. */
   mandatory?:boolean;
+  activation?:'automatic'|'hop';
+  takeoffSurfaceId?:string;landingSurfaceId?:string;
 }
 /** A manual-hop branch, independent of automatic ramps and water support. */
 export interface HopShortcut {
-  id: string; branch: Point[]; width: number; obstacleId: string;
+  id: string; branch: Point[]; width: number; obstacleId?: string;
+  /** An alternate water sector: manual entry and automatic return, in this order. */
+  crossings?:[string,string];
   /** Wider authored flight allowance at a low obstacle; never exempts neighbouring parcels. */
   clearanceWidth?: number;
   entryProgress: number; exitProgress: number;
@@ -48,6 +54,7 @@ export interface TrackDefinition {
   surface?: 'packed-dirt' | 'packed-snow';
   terrain?: TerrainSurface;
   terrainTakeoffs?:TerrainTakeoff[];
+  decks?:DeckSurface[];
 }
 export interface RoutePoint extends Point {
   distance: number;
@@ -71,11 +78,13 @@ export interface CompiledRoute {
   jumps?: string[];
   hopShortcuts?: HopTraversal[];
   hazards?: RouteHazard[];
+  crossings?:{id:string;entryDistance:number;exitDistance:number;activation:'automatic'|'hop'}[];
 }
 export interface DrawingTrim { leadIn: DrawSample[]; tail: DrawSample[]; joined: boolean }
 export type RouteResult = { ok: true; route: CompiledRoute; drawing?: DrawingTrim } | { ok: false; message: string; point?: Point; section?: Point[] };
 export type Ability = 'thrust' | 'hop';
-export type RaceEvent = { type: 'thrust' | 'hop' | 'drift' | 'lap' | 'finish' | 'collision' | 'car-impact' | 'scrape' | 'recovery' | 'takeoff' | 'landing' | 'splash'; time: number; point?: Point; intensity?: number; otherPlayer?: number; /** Extra reset hold (s) after crashing into a hazard. */ penalty?: number };
+export interface LapSummary {lap:number;duration:number;barrierContacts:number;carContacts:number;recoveries:number}
+export type RaceEvent = { type: 'thrust' | 'hop' | 'drift' | 'lap' | 'finish' | 'collision' | 'car-impact' | 'scrape' | 'recovery' | 'takeoff' | 'landing' | 'splash'; time: number; point?: Point; intensity?: number; otherPlayer?: number; lapSummary?:LapSummary; /** Extra reset hold (s) after crashing into a hazard. */ penalty?: number };
 export interface RaceState {
   tick: number;
   time: number;
@@ -107,6 +116,7 @@ export interface RaceState {
   sandAmount: number;
   surface: 'asphalt' | 'sand' | 'packed-dirt' | 'packed-snow' | 'deep-snow';
   supportSectionId?: string;
+  supportSurfaceId?:string;intendedLandingSurfaceId?:string;
   checkpoint: number;
   thrustCount: number;
   finished: boolean;

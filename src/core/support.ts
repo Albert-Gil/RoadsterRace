@@ -3,6 +3,7 @@ import { insideBarrier } from './barriers';
 import { annotateRoad, locateRoad, roadHeight, roadSupported, sectionAt,terrainElevation } from './elevation';
 import type { Point, RaceState, TrackDefinition, TrackJump } from './types';
 import { VEHICLE_DIMENSIONS } from './vehicle-size';
+import{deckAt,deckPlanningHeight,deckVehicleSupported,deckCrossings,crossingCoords}from'./decks';
 
 export const FLIGHT_RULES = Object.freeze({ gravity: 36, hopGravity: 72, rampLaunchBoost: 8, carHeight: VEHICLE_DIMENSIONS.height, waterHeight: -2.4 });
 /** A manual hop keeps its gravity even when crossing an automatic ramp lip. */
@@ -24,18 +25,21 @@ export function rampAt(p: Point, track: TrackDefinition) {
   return track.jumps?.find(j => { const c = jumpCoordinates(p, j); return j.kind!=='crest' && c.along >= 0 && c.along <= j.rampLength && Math.abs(c.across) <= j.width / 2; });
 }
 export function groundHeight(p: Point, track: TrackDefinition) {
+  if(track.decks)return deckPlanningHeight(p,track)??0;
   if(track.terrain)return terrainElevation(p,track);
   if(track.sections)return roadHeight(track,locateRoad(p,track).progress);
   const ramp = rampAt(p, track);
   return ramp ? clamp(jumpCoordinates(p, ramp).along / ramp.rampLength, 0, 1) * ramp.lipHeight : 0;
 }
 export function supported(p: Point, track: TrackDefinition) {
+  if(track.decks)return !!deckAt(p,track);
   if(track.sections)return roadSupported(p,track);
   if (!track.supports) return true;
   return !track.waterOpenings?.some(s => inFootprint(p, s.footprint)) && track.supports.some(s => inFootprint(p, s.footprint));
 }
 /** Four footprint probes prevent a sideways car hanging safely over a deck edge. */
 export function vehicleSupported(p: Point, heading: number, track: TrackDefinition) {
+  if(track.decks)return deckVehicleSupported(p,heading,track);
   if(track.sections){const half=track.carLength/2-.15,side=track.carWidth/2-.1;return [-1,1].every(f=>[-1,1].every(s=>supported({...p,x:p.x+Math.sin(heading)*half*f+Math.cos(heading)*side*s,z:p.z+Math.cos(heading)*half*f-Math.sin(heading)*side*s},track)));}
   if (!track.supports) return true;
   const half = track.carLength / 2 - 0.15, side = track.carWidth / 2 - 0.1;
@@ -44,6 +48,7 @@ export function vehicleSupported(p: Point, heading: number, track: TrackDefiniti
 /** Forward takeoff is interpolated inside the substep, including sparse/high-speed movement. */
 export function takeoffCrossing(a: Point, b: Point, track: TrackDefinition) {
   for (const jump of track.jumps ?? []) {
+    if(jump.activation==='hop')continue;
     if(jump.kind==='crest'&&Math.abs((a.courseProgress??0)-jump.entryProgress)>track.roadWidth+70)continue;
     const aa = jumpCoordinates(a, jump), bb = jumpCoordinates(b, jump);
     if (aa.along <= jump.rampLength && bb.along > jump.rampLength && bb.along > aa.along) {
@@ -90,6 +95,10 @@ function crestTraversal(located: Point[], track: TrackDefinition) {
  * takes forward inside their corridor are approved and excused over their gap.
  */
 export function assessSupports(points: Point[], track: TrackDefinition): { jumps: string[]; unsupported: boolean[] } {
+  if(track.decks){const crossings=deckCrossings(points,track),jumps=crossings.map(c=>c.id);return{jumps,unsupported:points.map((p,i)=>{
+    if(deckVehicleSupported(p,headingAt(points,i),track))return false;
+    return !track.jumps?.some(j=>{const c=crossingCoords(p,j);return jumps.includes(j.id)&&c.along>=-track.carLength&&c.along<=j.rampLength+j.gap+track.carLength/2&&Math.abs(c.across)<=(j.width-track.carWidth)/2;});
+  })};}
   if (track.sections) {
     const located = annotateRoad(points, track), crest = crestTraversal(located, track), jump = track.jumps?.find(j => j.kind === 'crest');
     const unsupported = located.map((p, i) => {
@@ -120,10 +129,10 @@ const branchLengths = (branch: Point[]) => { let ds = branchLengthCache.get(bran
 /** Both branches share the same entry/exit distance for checkpoints and standings. */
 export function branchProjection(p: Point, track: TrackDefinition) {
   let best: (ReturnType<typeof projectToPolyline> & { manualHop: boolean }) | undefined;
-  for (const j of [...(track.jumps ?? []), ...(track.hopShortcuts ?? [])]) {
+  for (const j of [...(track.decks?[]:track.jumps ?? []), ...(track.hopShortcuts ?? [])]) {
     const ds = branchLengths(j.branch), projection = projectToPolyline(p, j.branch, ds);
     const along = projection.progress / ds.at(-1)!;
-    const candidate = { ...projection, progress: lerp(j.entryProgress, j.exitProgress, along), manualHop: 'obstacleId' in j };
+    const candidate = { ...projection, progress: lerp(j.entryProgress, j.exitProgress, along), manualHop: !('rampLength' in j) };
     if (!best || candidate.distance < best.distance) best = candidate;
   }
   return best;
