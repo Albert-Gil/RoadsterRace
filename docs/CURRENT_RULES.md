@@ -8,7 +8,7 @@ Conventions: SI units; horizontal plane (x, z) with y up; heading 0 points along
 
 | Item | Version |
 |---|---:|
-| Vehicle rules (`RULES.version`) | 19 |
+| Vehicle rules (`RULES.version`) | 20 |
 | Computer planning/controller (`COMPUTER_VERSION`) | 2 |
 | Route compiler (`COMPILER_VERSION`) | 20 |
 | Newport Island track (`coastal-launch`) | 8 |
@@ -21,6 +21,7 @@ Conventions: SI units; horizontal plane (x, z) with y up; heading 0 points along
 | Capitan Yosemite track (`capitan-yosemite`) | 5 |
 | Grand Canyon: South Rim track (`canyon-south-rim`) | 1 |
 | San Diego Fleet track (`san-diego-fleet`) | 6 |
+| LAX track (`lax`) | 1 |
 
 Records, ghosts, session bests and championships are scoped by the relevant versions. Computer-version changes invalidate Solo championships only; human Time Trial records and local Multiplayer saves retain their unchanged rules/track compatibility. Change a version whenever a value below changes race results.
 
@@ -38,6 +39,7 @@ Records, ghosts, session bests and championships are scoped by the relevant vers
 | Capitan Yosemite | `capitan-yosemite` | 5 | 16 | 716.6 | 55 | crest `valley-creek-crest`, crest `sentinel-creek-crest`, crest `cathedral-creek-crest`, hop lane `ranger-timber-trail` |
 | Grand Canyon: South Rim | `canyon-south-rim` | 1 | 16 | 850.7 | 24 | crest `south-rim-crossing`, hop lane `juniper-saddle`, hop lane `redwall-traverse` |
 | San Diego Fleet | `san-diego-fleet` | 6 | 16 | 736.8 | 114 | ramp `carrier-a-crossing`, ramp `destroyer-a-return`, ramp `carrier-b-crossing`, ramp `destroyer-b-return`, water Hop `support-a-hop`, ramp `support-a-return`, water Hop `support-b-hop`, ramp `support-b-return`, hop lane `support-a-lane`, hop lane `support-b-lane` |
+| LAX | `lax` | 1 | 16 | 1256.2 | 190 | hop lane `center-way`, bridge `lax-departures` |
 
 Vehicle envelope: 2.9095 m × 6.877 m. Race distance: 1–6 laps (default 2). Championship points by place: 10 / 6 / 4 / 0.
 
@@ -55,6 +57,12 @@ Main-road ski crests keep continuous terrain support and use automatic-flight gr
 | Snowy Tahoe | `summit-ski-crest` | 364 | 16 | 8 + forward speed × 0.1 | 6 | 24 |
 | Snowy Tahoe | `valley-snow-roll` | 36 | 16 | 5.5 + forward speed × 0.08 | 6 | 21 |
 | Snowy Tahoe | `lakeside-snow-roll` | 146 | 16 | 5.5 + forward speed × 0.08 | 6 | 21 |
+| LAX | `west-service-crest` | 39.7794 | 16 | 6.5 + forward speed × 0.09 | 6 | 27 |
+| LAX | `east-service-crest` | 484.264 | 16 | 6.5 + forward speed × 0.09 | 6 | 27 |
+
+## Recovery and ability readiness
+
+Every completed car recovery restores both Hop and Thrust. An active burst ends and queued commands are cleared. Both ready times are set to the end of the recovery hold, including any drawn-hazard penalty; occupied respawns remain unavailable until their safe position is clear. Race time, recovery penalties, route/checkpoint rules and cumulative ability counts are preserved. Ordinary ability cooldowns apply again after the next activation. This shared rule applies to humans and computer drivers in every mode.
 
 ## Fleet deck crossings and local Collection
 
@@ -77,7 +85,7 @@ Human-only Finish (selected distance), Clean (one lap without barrier/car contac
 
 | Key | Value | Unit | Meaning |
 |---|---:|---|---|
-| `version` | 19 | — | Vehicle rules version; stored with records and championships |
+| `version` | 20 | — | Vehicle rules version; stored with records and championships |
 | `dt` | 0.0166667 | s | Fixed simulation step (two equal substeps per step) |
 | `laps` | 2 | laps | Default race distance |
 | `acceleration` | 6 | m/s² | Maximum pace-following acceleration |

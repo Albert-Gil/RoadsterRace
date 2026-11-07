@@ -62,17 +62,21 @@ describe('solid track boundaries', () => {
     const r = compileRoute(createPracticeSamples(coastalTrack), coastalTrack); if (!r.ok) throw new Error(r.message);
     expect(() => new RaceSimulation({ ...r.route, trackVersion: 1 }, coastalTrack)).toThrow('older circuit');
   });
-  test('blocked cars recover without gaining progress or refilling thrust', () => {
+  test('blocked cars recover without gaining progress and refill both abilities after the hold', () => {
     const recoveryTrack={...coastalTrack,barriers:[{id:'recovery-fixture',height:1,footprint:[{x:-25,z:-15.5},{x:-10,z:-15.5},{x:-10,z:-10},{x:-25,z:-10}]}]};
     const r = compileRoute(createPracticeSamples(coastalTrack), coastalTrack); if (!r.ok) throw new Error(r.message);
     const sim = new RaceSimulation(r.route, recoveryTrack);
     const state = sim.state; state.position = { x: -18, z: -18.11 }; state.heading = 0; state.speed = 0;
-    state.thrustReadyAt = 50;
+    state.thrustReadyAt = 50; state.hopReadyAt = 50;
     // Hold the body into a wall to reproduce an otherwise unrecoverable impact.
     for (let i = 0; i < 180 && !state.recoveryCount; i++) { state.position = { x: -18, z: -18.11 }; state.heading = 0; state.velocity = { x: 0, z: 10 }; state.speed = 10; sim.step(); }
-    expect(state.recoveryCount).toBe(1); expect(state.distance).toBe(0); expect(state.thrustReadyAt).toBe(50);
+    expect(state.recoveryCount).toBe(1); expect(state.distance).toBe(0);
+    expect(state.thrustReadyAt).toBe(state.recoveringUntil); expect(state.hopReadyAt).toBe(state.recoveringUntil);
     const at = state.time; sim.pressThrust(); sim.step(); expect(state.time).toBeGreaterThan(at); expect(state.speed).toBe(0); expect(state.thrustCount).toBe(0);
     expect(distance(state.position, coastalTrack.start)).toBeLessThan(0.1);
+    while(state.time<state.recoveringUntil+RULES.dt)sim.step();
+    expect(state.thrustCount).toBe(0);expect(state.hopCount).toBe(0);
+    sim.pressThrust();sim.pressHop();sim.step();expect(state.thrustCount).toBe(1);expect(state.hopCount).toBe(1);
   });
 });
 test('live pace uses shared timing and keeps faster strokes faster', () => {

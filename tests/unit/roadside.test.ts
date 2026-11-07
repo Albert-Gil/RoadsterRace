@@ -9,7 +9,8 @@ import { edgeDistance } from '../../src/presentation/landscape/mesh';
 import { roadsideAppearance } from '../../src/presentation/themes';
 import { onCityLand } from '../../src/content/golden-city';
 
-describe.each(circuits.filter(c=>!c.track.decks))('$id visible roadside dressing', ({ track, scenery }) => {
+// Fleet and LAX provide their own native scene kits; generic roadside scatter is not rendered there.
+describe.each(circuits.filter(c=>!c.track.decks&&c.scenery!=='airport'))('$id visible roadside dressing', ({ track, scenery }) => {
   it('keeps soft plants clear of every road, obstacle, touch gate and hidden ability lane', () => {
     const before = JSON.stringify(track);
     const { plants, geometry, edgeMarks, props } = roadsideGeometry(track, scenery, roadsideAppearance.palettes[scenery], roadsideAppearance);

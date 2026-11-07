@@ -86,7 +86,7 @@ test('an unauthorized water hop recovers without awarding course progress or que
   const sim = new RaceSimulation(line, track); moving(sim, 20); sim.pressHop(); sim.pressThrust();
   for (let i = 0; i < 110 && sim.state.recoveryCount === 0; i++) sim.step();
   expect(sim.state.recoveryCount).toBe(1); expect(sim.state.distance).toBe(0); expect(sim.state.checkpoint).toBe(1);
-  expect(sim.state.hopReadyAt).toBe(7); expect(sim.state.thrustReadyAt).toBe(5); expect(sim.state.time).toBeGreaterThanOrEqual(0.9); expect(sim.state.speed).toBe(0);
+  expect(sim.state.hopReadyAt).toBe(sim.state.recoveringUntil); expect(sim.state.thrustReadyAt).toBe(sim.state.recoveringUntil); expect(sim.state.time).toBeGreaterThanOrEqual(0.9); expect(sim.state.speed).toBe(0);
 });
 test.each([20, 30, 42].flatMap(speed => [-20, 0, 20].map(yaw => ({ speed, yaw }))))('ramp guidance lands at $speed m/s with body yaw $yaw degrees and sideways drift', ({ speed, yaw }) => {
   const track = circuits[3].track, jump = track.jumps![0], r = compileRoute(createPracticeSamples(track, 7, true), track); if (!r.ok) throw Error(r.message);
@@ -124,15 +124,16 @@ test('simultaneous recoveries sharing a safe point admit one car, then release t
   for (const sim of race.racers) {
     sim.gridPending = false;
     Object.assign(sim.state, { position: { x: 0, z: 0 }, velocity: { x: 0, z: 0 }, heading: 0, speed: 0, time: 6, tick: race.tick,
-      recoveringUntil: 6, recoveryWaiting: true, recoveryCount: 1, hopReadyAt: 10, thrustReadyAt: 8 });
+      recoveringUntil: 6, recoveryWaiting: true, recoveryCount: 1, hopReadyAt: 6, thrustReadyAt: 6 });
   }
   race.step(); expect(race.racers.filter(r => !r.state.recoveryWaiting)).toHaveLength(1);
-  expect(race.racers.every(r => r.state.distance < 0.01 && r.state.hopReadyAt === 10 && r.state.thrustReadyAt === 8)).toBe(true);
+  expect(race.racers.every(r => r.state.distance < 0.01 && r.state.hopReadyAt <= r.state.time && r.state.thrustReadyAt <= r.state.time)).toBe(true);
   for (let i = 0; i < 180; i++) {
     race.step(); const [a, b] = race.racers.map(r => r.state);
     if (!a.recoveryWaiting && !b.recoveryWaiting) expect(vehicleContact(a, b, flat)?.depth ?? 0).toBeLessThan(0.01);
   }
   expect(race.racers.every(r => !r.state.recoveryWaiting)).toBe(true);
+  expect(race.racers.every(r => r.state.hopReadyAt <= r.state.time && r.state.thrustReadyAt <= r.state.time)).toBe(true);
 });
 test('50 overlapping cycles per corner preserve both ability owners and cancellation', () => {
   const owners = new PointerOwnership();

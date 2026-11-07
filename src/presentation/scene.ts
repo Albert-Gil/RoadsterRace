@@ -46,7 +46,7 @@ import { assetUrl } from './urls';
 import { VehicleView } from './vehicle';
 import { buildScenery, type SceneryRuntime } from './scenery';
 import type { SceneryId } from '../content/circuits';
-import { yosemiteAppearance, fleetCamera } from './themes';
+import { yosemiteAppearance, fleetCamera, laxAppearance } from './themes';
 import { surfaceTexture } from './textures';
 import { createReflectionSky, loadSky } from './environment';
 import { PaceLine } from './pace-line';
@@ -337,7 +337,7 @@ export class GameScene {
     const fitTerrain=!!this.track.terrain&&interactive,key=[w,h,left,rightInset,top,bottom,aspect].map(n=>n.toFixed(5)).join('/');
     const cached=fitTerrain?this.terrainCameraFits.get(key):undefined;
     if(cached){this.applyCameraFit(cached.position,cached.target,cached.distance);return;}
-    const elevation = (this.scenery==='naval'?(w<h?fleetCamera.portraitElevation:Math.min(w,h)<=500?fleetCamera.phoneElevation:fleetCamera.desktopElevation):Math.max(this.scenery==='yosemite'?yosemiteAppearance.cameraElevation:0,Math.min(w,h)<=500?sceneTuning.camera.compactElevationDegrees:sceneTuning.camera.elevationDegrees)) * Math.PI / 180;
+    const elevation = (this.scenery==='airport'?laxAppearance.cameraElevation:this.scenery==='naval'?(w<h?fleetCamera.portraitElevation:Math.min(w,h)<=500?fleetCamera.phoneElevation:fleetCamera.desktopElevation):Math.max(this.scenery==='yosemite'?yosemiteAppearance.cameraElevation:0,Math.min(w,h)<=500?sceneTuning.camera.compactElevationDegrees:sceneTuning.camera.elevationDegrees)) * Math.PI / 180;
     const tangent = Math.tan(this.camera.fov / 2);
     const paths = [this.track.centerline,...(this.track.jumps??[]).map(j=>j.branch),...(this.track.hopShortcuts??[]).map(j=>j.branch)];
     const fitted = paths.flatMap((path,i)=>roadEdges(path,this.track.roadWidth,i===0).flatMap(side=>side.map((p,n)=>new Vector3(p.x,this.track.decks?(deckPlanningHeight(p,this.track)??0):this.track.terrain?terrainElevation(p,this.track):this.track.sections?roadHeight(this.track,path[n].courseProgress??0):0,p.z))));

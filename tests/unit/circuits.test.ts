@@ -65,7 +65,7 @@ describe('playable circuit registry', () => {
       const result = compileRoute(createPracticeSamples(circuit.track, seconds), circuit.track);
       expect(result.ok).toBe(true); if (!result.ok) throw new Error(result.message);
       const race = new RaceSimulation(result.route, circuit.track);
-      if(circuit.track.sections&&seconds>=14){for(let i=0;i<10000&&!race.state.recoveryCount;i++)race.step();expect(race.state.recoveryCount).toBeGreaterThan(0);expect(race.state.finished).toBe(false);return;}
+      if(circuit.track.jumps?.some(j=>j.kind==='crest'&&j.mandatory)&&seconds>=14){for(let i=0;i<10000&&!race.state.recoveryCount;i++)race.step();expect(race.state.recoveryCount).toBeGreaterThan(0);expect(race.state.finished).toBe(false);return;}
       for (let i = 0; i < 18000 && !race.state.finished; i++) race.step();
       expect(race.state.finished).toBe(true); expect(race.state.lapTimes).toHaveLength(2);
       expect(Number.isFinite(race.state.position.x + race.state.position.z)).toBe(true);
@@ -86,7 +86,8 @@ describe('playable circuit registry', () => {
       const result = compileRoute(createPracticeSamples(circuit.track, 7), circuit.track);
       if (!result.ok) throw new Error(result.message);
       const race = new LocalRace(Array(4).fill(result.route), circuit.track, 6);
-      for (let i = 0; i < 18000 && !race.finished; i++) race.step();
+      const tickBudget=Math.max(18000,Math.ceil(result.route.length*6/15*60));
+      for (let i = 0; i < tickBudget && !race.finished; i++) race.step();
       expect(race.finished).toBe(true); expect(race.racers.every(r => r.state.lapTimes.length === 6)).toBe(true);
       const other = circuits.find(c => c.id !== circuit.id)!;
       expect(() => new LocalRace([result.route], other.track)).toThrow('same circuit');

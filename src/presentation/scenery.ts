@@ -19,6 +19,7 @@ import { buildYosemite } from './yosemite';
 import { refineVenue } from './venue-refinements';
 import { buildRoadsideDetails } from './roadside-details';
 import type{RenderedSurface}from'./rendered-surface';
+import {buildLax} from './lax';
 import {buildFleet} from './fleet';
 import {finishProduction} from './production-finish';
 
@@ -31,6 +32,7 @@ export interface SceneryRuntime {
   update(time: number, reducedMotion: boolean): void;
 }
 export function buildScenery(id: SceneryId, scene: Scene, track: TrackDefinition, theme: PresentationTheme, materials: Map<string, StandardMaterial>): SceneryRuntime {
+  if(id==='airport')return buildLax(scene,track,theme,materials);
   if(id==='naval')return buildFleet(scene,track,theme,materials);
   const withRoadside = (runtime: SceneryRuntime) => {
     buildRoadsideDetails(scene, track, id, materials);

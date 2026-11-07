@@ -5,7 +5,7 @@ It does not synchronize between browsers, devices, the website and the installed
 The key `roadster-race.progression.v1` is separate from preferences, lap records and
 championships. Storage failures fall back to memory and never stop a race.
 
-Every venue has three independent medals (ten venues, thirty medals):
+Every venue has three independent medals. The Fleet milestone had ten venues and thirty medals; the local LAX preview has eleven venues and thirty-three medals. Existing cosmetic unlock thresholds remain unchanged:
 
 | Medal | Qualifying live human achievement |
 |---|---|
@@ -44,7 +44,7 @@ Cup presets reuse ordinary Solo/Multiplayer championships, laps and 10/6/4/0 sco
 Complete every round to earn the corresponding badge. Saves retain the preset ID,
 version and actual schedule; reload never reconstructs or rewrites the schedule.
 Completed rounds stay committed once, and interrupted rounds restart with new drawings.
-Full Tours now contain ten venues; existing compatible schedules remain as originally saved.
+New Full Tours include all registered venues (eleven in the local LAX preview); existing compatible schedules remain as originally saved.
 Rules 19/compiler 20 reject prior incompatible championships without deleting ordinary
 names, finishes, laps or Collection awards.
 

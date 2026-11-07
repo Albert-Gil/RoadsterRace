@@ -175,6 +175,10 @@ Main-road ski crests keep continuous terrain support and use automatic-flight gr
 
 ${ski.join('\n')}
 
+## Recovery and ability readiness
+
+Every completed car recovery restores both Hop and Thrust. An active burst ends and queued commands are cleared. Both ready times are set to the end of the recovery hold, including any drawn-hazard penalty; occupied respawns remain unavailable until their safe position is clear. Race time, recovery penalties, route/checkpoint rules and cumulative ability counts are preserved. Ordinary ability cooldowns apply again after the next activation. This shared rule applies to humans and computer drivers in every mode.
+
 ## Fleet deck crossings and local Collection
 
 San Diego Fleet owns named stationary ${fleetHeights} m decks. Every vessel and ramp deck has uniform dry-asphalt grip over its entire physical footprint; leaving the historical centreline applies no sand penalty. Substantial equipment and rails remain collidable. Physical support comes only from those footprints and the explicit sloping ramp decks; interpolated drawing guides across a gap provide no support. All four main transfers are automatic jumps across open water, with six visible 3 m raised steel ramps including auxiliary exits; there are no connecting gangways. Launch tuning is authored per crossing in the table below. Support-vessel alternatives require manual Hop at the unmarked entry and an automatic exit in order. Their working decks match their parent carriers at 24/22 m, have road grip throughout and no painted alternate lane; compact protected wheelhouses sit at the edge with the full central driving corridor clear. Incomplete or unsupported drawings remain penalized hazards. Intended receiving-deck ownership and full vehicle clearance are required at landing. CPU drivers use the normal route. The staggered formation's crossing dimensions are:

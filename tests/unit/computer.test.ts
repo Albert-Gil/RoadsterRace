@@ -73,7 +73,7 @@ for(const{id,track}of circuits)test(`${id} computer plans are safe, deterministi
     }).sort((a,b)=>a-b);
     medians.push(times[1]);
 
-    expect(routes.filter(r=>r.jumps?.length).length).toBe(track.sections||track.jumps?.some(j=>j.mandatory)?3:track.jumps?.length?(difficulty==='easy'?0:difficulty==='normal'?1:2):0);
+    expect(routes.filter(r=>r.jumps?.length).length).toBe(track.jumps?.some(j=>j.mandatory||j.kind==='crest')?3:track.jumps?.length?(difficulty==='easy'?0:difficulty==='normal'?1:2):0);
   }
   expect(medians[0]).toBeGreaterThan(medians[1]);expect(medians[1]).toBeGreaterThan(medians[2]);
 // Nine six-lap races on heightfields or multi-deck courses are bounded by simulation ticks;

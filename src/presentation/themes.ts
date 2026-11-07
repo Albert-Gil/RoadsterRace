@@ -22,6 +22,7 @@ export const defaultPaintId = 'glacier';
 /** Native production kit colours; baked into existing venue batches. */
 export const productionSurfaceTuning={rockFoot:.79,strata:.025,plantFoot:.76,crown:.05,snowFoot:.91,structureFoot:.83,top:.035};
 export const productionAppearance={roofInset:'#59676a',bayGlass:'#315b68',foundation:'#848475',eaveShadow:'#525c59',awnings:['#467f7a','#a15e50','#c6a65f'],contact:'#5a6054'};
+export const laxAppearance={cameraElevation:60,aircraft:'#e8ebe6',aircraftShade:'#abbac0',joint:'#878f8b',kerb:'#a65247',skylight:'#77a2ac',ground:'#718268',apron:'#a5a79b',runway:'#303b41',asphalt:'#3f4648',concrete:'#c1c0b2',fascia:'#858d8c',marking:'#eee9d7',yellow:'#dcb958',blue:'#548aac',wing:'#c3cdd0',engine:'#acb7bb',dark:'#25333c',glass:'#3b6675',terminal:'#d1cdbd',roof:'#aebbbc',frame:'#71858c',metal:'#8c999e',parking:'#7c8581',tower:'#d9d6c5',service:'#8c9391',cargo:'#a6afa9',hangar:'#4b5b62',rescue:'#d2a844',plant:'#446653',trunk:'#837763',livery:['#4285a2','#bd564b','#6e7d91']};
 export const fleetAppearance={deckOffset:.015,drivingOffset:.035,deckApron:'#3b4b54',superstructure:'#a6b6bc',navy:'#34516b',hangar:'#202f3a',oxide:'#aa6048',rescueOrange:'#ef873b',rescueYellow:'#edbc46',helmet:'#f2e8cc',jetBlue:'#59788b',hull:'#8d9da6',hullShade:'#637a89',hullFill:'#344b58',waterline:'#435968',bootTop:'#273d49',deck:'#39464e',supportDeck:'#39464e',rampSurface:'#48565e',rampEdge:'#d9b764',rampRibs:'#b2c0c2',asphalt:'#485b65',coping:'#c0cdd1',ribs:'#536c7c',line:'#e2dbbd',aircraft:'#c3cecc',glass:'#294955',dark:'#28343a',equipment:'#ca9e48',emergencyRed:'#b94d3d',navalHelicopter:'#95a9ad',water:'#246779',foam:'#70a3aa'};
 // Authored overview angles keep the normal route visible behind the tall islands.
 // Refit distance to the safe rectangle, but never rotate or follow cars during play.
@@ -125,6 +126,7 @@ export const colorGrade = { saturation: 8, highlights: { hue: 38, density: 12, s
 
 /** Biome colors stay independent of interface branding and the driver's selected paint. */
 export const sceneryPalettes = {
+ airport:{terrain:'#718268',asphalt:'#aeb7bc',sky:'#bad1d8',sunlight:1.05},
   naval:{terrain:fleetAppearance.water,water:fleetAppearance.water,asphalt:'#a6b2b8',structure:'#637c87',sky:'#c6d9de',sunlight:1.06},
   yosemite:{terrain:'#61816a',embankment:'#859070',asphalt:'#8f826b',shoulder:'#a5a079',structure:'#5a6552',curb:'#ddd4b9',glass:'#39564b',foliage:'#254f3a',foliageLight:'#658351',rock:'#c5c2b3',trunk:'#795d40',water:'#367f84',foam:'#dfefdd',sky:'#afd5d9',sunlight:1.05},
   alpine: {terrain:'#dce7ee',embankment:'#b9cad6',asphalt:'#8ca6b9',shoulder:'#d2e0e9',structure:'#3b4f59',curb:'#edf5f7',glass:'#304f60',foliage:'#34564e',foliageLight:'#5e7970',rock:'#87959f',trunk:'#716357',water:'#23647f',foam:'#c4e3ec',sky:'#b1d3e3',sunlight:.96},
@@ -138,6 +140,7 @@ export const sceneryPalettes = {
   canyon: { terrain:'#bd8963',embankment:'#c69c72',asphalt:'#805d43',shoulder:'#b58b62',rock:'#ae6344',foliage:'#68724b',foliageLight:'#8c9565',trunk:'#765640',water:'#98785d',sky:'#e5c6a5',sunlight:1.08 },
 } satisfies Record<string, Partial<PresentationTheme['scene']>>;
 export const sceneryLighting = {
+ airport:{ambient:'#d9e6eb',ground:'#758475',sun:'#ffe7be'},
   naval:{ambient:'#dbe8eb',ground:'#647779',sun:'#ffe2b5'},
   yosemite:{ambient:'#d9e7d9',ground:'#67775b',sun:'#ffdfaa'},
   alpine: {ambient:'#d6e8f5',ground:'#8299aa',sun:'#fff1d9'},
@@ -153,6 +156,7 @@ export const sceneryLighting = {
  * public/assets/env/. The sky is turned so its brightest direction agrees with the sun.
  */
 export const venueSkies = {
+ airport:{file:'sky',intensity:.85,waterReflection:.6},
   naval:{file:'sky',intensity:.85,waterReflection:.8},
   yosemite:{file:'sky',intensity:.85,waterReflection:.7},
   alpine: {file:'sky',intensity:.8,waterReflection:.65},
@@ -249,6 +253,7 @@ export const surfaceFinishes: Record<string, SurfaceFinish> = {
   'bay-metal': { kind: 'concrete', scale: 40, normal: 0, variation: 0, reflection: 0.3, roughness: 0.35 },
 };
 export const sceneryFinishes: Partial<Record<keyof typeof sceneryLighting, Record<string, SurfaceFinish>>> = {
+  airport:{terrain:{kind:'sand',scale:90,normal:.05,variation:.025},'airport-concrete':{kind:'concrete',scale:10,normal:.08,variation:.035},'airport-structure':{kind:'concrete',scale:9,normal:.04,variation:.02,walls:true}},
   naval:{terrain:{kind:'water',scale:90,normal:.10,variation:.035,reflection:.35,roughness:.32,specular:.12,gloss:80},'fleet-hull':{kind:'concrete',scale:14,normal:.045,variation:.035,walls:true,reflection:.18,roughness:.56},'fleet-deck':{kind:'asphalt',scale:9,normal:.10,variation:.055,reflection:.08,roughness:.80},'fleet-equipment':{kind:'concrete',scale:6,normal:.05,variation:.025,walls:true,reflection:.12,roughness:.48}},
   yosemite:{terrain:{kind:'dirt',scale:22,normal:.26,variation:.08},asphalt:{kind:'dirt',scale:12,normal:.32,variation:.12},shoulder:{kind:'dirt',scale:15,normal:.26,variation:.1},'yosemite-granite':{kind:'rock',scale:11,normal:.32,variation:.13,walls:true}},
   alpine: {terrain:{kind:'snow',scale:18,normal:.16,variation:.035},asphalt:{kind:'snow',scale:10,normal:.2,variation:.055},shoulder:{kind:'snow',scale:14,normal:.19,variation:.04},'tahoe-granite':{kind:'rock',scale:5,normal:.45,variation:.12,walls:true}},
@@ -375,6 +380,7 @@ export const roadsideAppearance = {
  spacing:3.8,plantingOffset:3.4,plantHeight:.65,maxFurniture:48,
  palettes:{
   coastal:{plant:'#496c40',tip:'#9bab68',flower:'#e58bb5',trim:'#d2c5a1',timber:'#ae8f64',metal:'#5a7070',surface:'#3f4848'},
+  airport:{plant:'#446653',tip:'#9dab7a',flower:'#c9bd82',trim:'#c2c5b8',timber:'#8c8a74',metal:'#71858c',surface:'#a8ada1'},
   naval:{plant:'#527e68',tip:'#adc6bb',flower:'#d5bf79',trim:'#b9c8ca',timber:'#858b82',metal:'#637781',surface:'#818e91'},
   spaceport:{plant:'#6d7651',tip:'#b5ae78',flower:'#d5bf79',trim:'#b8c4c6',timber:'#858b82',metal:'#4e626b',surface:'#514d45'},
   bay:{plant:'#3e6b4c',tip:'#82a469',flower:'#d6a673',trim:'#c7c1ad',timber:'#896f55',metal:'#53616a',surface:'#535d61'},
@@ -406,6 +412,7 @@ export const santaBeachLifeAppearance = {
 export interface VenueFinish { edge:string; ground:string; grit:string; inset:number; spread:number }
 export const venueFinish = {
  coastal:{edge:'#b4a384',ground:'#d6c19a',grit:'#e9d9b9',inset:.9,spread:1.2},
+ airport:{edge:'#a8ada1',ground:'#82947a',grit:'#b4b4a0',inset:.9,spread:.5},
  naval:{edge:'#81939c',ground:'#81939c',grit:'#a7b5b7',inset:.9,spread:.5},
  spaceport:{edge:'#9f9784',ground:'#ceba98',grit:'#e4d4b5',inset:.9,spread:1.2},
  bay:{edge:'#92998e',ground:'#b0ba9c',grit:'#d6d4be',inset:.9,spread:.9},
@@ -419,6 +426,7 @@ export const interfaceMotion = { durationMs:160, rowStaggerMs:40 };
 export const circuitArtRevision = '2026-11-06-fleet-signature';
 /** One sun per venue; unchanged shadow-map dimensions and cached caster policy. */
 export const venueSunDirections = {
+ airport:[.6,-1,.55],
  naval:[.55,-1,.5],
  coastal:[.50,-1,.60],spaceport:[.65,-1,.38],bay:[.40,-1,.62],sunset:[.72,-1,.35],
  canyon:[.68,-1,.44],'night-city':[.55,-1,.45],alpine:[.48,-1,.64],yosemite:[.64,-1,.42],

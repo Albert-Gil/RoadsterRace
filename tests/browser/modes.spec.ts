@@ -48,7 +48,7 @@ test('Time Trial stores lap replay, reloads it and keeps the ghost outside the c
 });
 
 test('solo Full Tour scores all registered venues and resumes controller types and difficulty',async({page})=>{
-  test.setTimeout(540000);
+  test.setTimeout(Math.max(540000,circuits.length*70000));
   // A recorded session seed makes collision-heavy tour regressions reproducible.
   await page.addInitScript(()=>{Math.random=()=>92/0x7fffffff;});
   await page.goto('/');await page.getByRole('button',{name:'Solo Race',exact:true}).click();

@@ -14,7 +14,7 @@ const devURL = process.env.PAGES_DEV_URL || `http://127.0.0.1:5177${base}`;
 const productionURL = process.env.PAGES_URL || `http://127.0.0.1:4177${base}`;
 const fullRaces = process.env.PAGES_FULL_RACES === '1';
 const tournamentOnly = process.env.PAGES_ONLY === 'tournament';
-const circuits = ['coastal-launch', 'launchsite', 'golden-gate', 'santa-monica', 'grand-canyon', 'la-nights', 'snowy-tahoe', 'capitan-yosemite', 'canyon-south-rim','san-diego-fleet'];
+const circuits = ['coastal-launch', 'launchsite', 'golden-gate', 'santa-monica', 'grand-canyon', 'la-nights', 'snowy-tahoe', 'capitan-yosemite', 'canyon-south-rim','san-diego-fleet','lax'];
 const selection = process.env.PAGES_ONLY;
 assert.ok(!selection || ['tournament', 'sessions', 'phone', 'multiplayer', 'solo', 'challenges'].includes(selection) || circuits.includes(selection), 'Unknown PAGES_ONLY group');
 const selectedCircuits = selection ? circuits.filter(id => id === selection) : circuits;

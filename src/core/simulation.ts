@@ -126,6 +126,9 @@ export class RaceSimulation {
     s.velocity = { x: 0, z: 0 }; s.speed = 0; s.acceleration = 0; s.steeringRate = 0;
     s.elevation = groundHeight(s.position, this.track); if(this.track.sections)s.supportSectionId=s.position.sectionId;if(this.track.decks)s.supportSurfaceId=deckAt(s.position,this.track)?.id; s.verticalVelocity = 0; s.movement = 'grounded'; s.activeJump = null;s.intendedLandingSurfaceId=undefined; s.flightOrigin = null; s.flightStartedAt = -1; this.invalidFlight = false; this.clearCommands();
     s.thrustUntil = now; s.recoveringUntil = now + hold; s.recoveryCount++; s.drifting = false;
+    // A failed crossing must not strand a respawned car without the abilities needed to retry it.
+    // Availability begins after the hold; occupied respawns remain blocked independently.
+    s.thrustReadyAt = s.recoveringUntil; s.hopReadyAt = s.recoveringUntil;
     s.recoveryWaiting = false; this.stuckTicks = 0; this.gridPending = false;
   }
   /** Search only the next portion of the route, so a nearby hairpin cannot teleport progress. */

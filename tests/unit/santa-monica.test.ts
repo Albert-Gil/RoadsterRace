@@ -71,7 +71,7 @@ test.each([false, true])('six-lap complete physical race (jump=%s)', jump => {
   expect(race.state.finished, JSON.stringify(race.state)).toBe(true); expect(race.state.lapTimes).toHaveLength(6);
   if (jump) { expect(flights).toBeGreaterThanOrEqual(6); expect(landings).toBeGreaterThanOrEqual(6); }
 }, 15000);
-test('slow takeoff splashes, restores safe progress, clears commands and preserves the clock/recharge', () => {
+test('slow takeoff splashes, restores safe progress, clears commands and preserves the clock while refilling abilities', () => {
   const r = compileRoute(jumpSamples(24), track); if (!r.ok) throw new Error(r.message);
   const sim = new RaceSimulation(r.route, track, 1), s = sim.state, events: string[] = [];
   for (let tick = 0; tick < 7000 && !events.includes('splash'); tick++) { sim.step(); events.push(...sim.drainEvents().map(e => e.type)); }
@@ -80,6 +80,7 @@ test('slow takeoff splashes, restores safe progress, clears commands and preserv
   expect(s.distance).toBeLessThan(track.jumps![0].entryProgress); expect(s.checkpoint).toBeLessThanOrEqual(Math.floor(s.distance / (r.route.length / 8)) + 1);
   const time = s.time; sim.pressThrust(); for (let i = 0; i < 65; i++) sim.step();
   expect(s.time).toBeGreaterThan(time + 1); expect(s.thrustCount).toBe(0);
+  expect(s.thrustReadyAt).toBeLessThanOrEqual(s.time); expect(s.hopReadyAt).toBeLessThanOrEqual(s.time);
 });
 test('midair thrust changes horizontal momentum without tire steering, braking or sand drag', () => {
   const r = compileRoute(jumpSamples(), track); if (!r.ok) throw new Error(r.message);

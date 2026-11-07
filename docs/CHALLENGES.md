@@ -14,7 +14,7 @@ Hop remain available. There are no in-world shortcut signs, hints, planning badg
 new racing overlays or special physics. Fleet opponents are absent in its Time Trial
 challenge; the Frontier Cup uses the ordinary three CPU drivers and scoring.
 
-Completion stamps are independent of the thirty venue medals, cup badges and cosmetic
+Completion stamps are independent of the venue medals, cup badges and cosmetic
 unlock thresholds. Live challenge races may still earn ordinary medals under the usual
 rules. Completion does not equip anything or change performance.
 
@@ -57,7 +57,9 @@ the current browser profile/app installation, without cloud synchronization.
 The menu is DOM/CSS only. The active tracker consumes existing race events once per
 rendered frame after fixed-step simulation; no scene mesh, material, pass, light or
 per-frame simulation query is added. Landing events carry read-only crossing/origin
-metadata. Physics stays **19**, compiler **20**, and all ten track versions/geometry
+metadata. At the challenge milestone, physics stayed **19**, compiler **20**, and all ten track versions/geometry
 remain unchanged. Existing records, ghosts and championships keep compatibility.
 
 Physical iPhone/iPad Safari usability and performance remain pending hardware testing.
+
+LAX preview note (2026-11-07): recovery rules are now 20; compiler remains 20. LAX is an additional local venue. The original four-round Frontier Cup and its challenge identity are preserved; challenge logic adds no special forces or rendering work.
