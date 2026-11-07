@@ -45,6 +45,9 @@ export function computerRoute(track: TrackDefinition, difficulty: Difficulty, op
   const route=result.route, factor=AI_TUNING[difficulty]*(0.99+opponent*0.01);
   route.points.forEach(p=>{p.desiredSpeed=clamp(Math.sqrt(trackSurface(track).grip*AI_DRIVING.cornerGripShare/Math.max(0.008,Math.abs(p.curvature)))*factor,PACE_RANGE.min,Math.min(PACE_RANGE.max,PACE_RANGE.max*factor));});
   if(track.sections)for(const p of route.points)for(const j of track.jumps??[])if(j.kind==='crest'&&p.courseProgress!>=j.entryProgress&&p.courseProgress!<=j.exitProgress)p.desiredSpeed=Math.max(22,p.desiredSpeed);
+  // Authored receiving bends constrain the planned approach, never the physical car.
+  // Brake before takeoff: ordinary tire forces are unavailable during the flight itself.
+  for(const p of route.points)for(const j of track.jumps??[])if(j.planningSpeed!==undefined&&route.jumps?.includes(j.id)&&p.courseProgress!==undefined&&p.courseProgress>=j.entryProgress-40&&p.courseProgress<=j.exitProgress+24)p.desiredSpeed=Math.min(p.desiredSpeed,j.planningSpeed*factor);
   // No braking in flight: arrive at a ski crest with the landing bend already planned.
   for(const p of route.points)for(const j of track.terrainTakeoffs??[])if(p.courseProgress!>=j.progress-12&&p.courseProgress!<=j.progress+48)p.desiredSpeed=Math.min(p.desiredSpeed,j.planningSpeed*factor);
   // Work around the seam too: braking for turn one starts on the previous lap.

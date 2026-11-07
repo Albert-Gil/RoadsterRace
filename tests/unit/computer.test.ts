@@ -76,9 +76,9 @@ for(const{id,track}of circuits)test(`${id} computer plans are safe, deterministi
     expect(routes.filter(r=>r.jumps?.length).length).toBe(track.sections||track.jumps?.some(j=>j.mandatory)?3:track.jumps?.length?(difficulty==='easy'?0:difficulty==='normal'?1:2):0);
   }
   expect(medians[0]).toBeGreaterThan(medians[1]);expect(medians[1]).toBeGreaterThan(medians[2]);
-// Nine six-lap races on the alpine heightfield are bounded by simulation ticks;
+// Nine six-lap races on heightfields or multi-deck courses are bounded by simulation ticks;
 // give shared test hosts enough wall time without weakening any driving checks.
-}, track.terrain ? 360000 : 180000);
+}, track.terrain || track.decks ? 360000 : 180000);
 
 test.each(circuits)('$id computer contact and thrust share the human simulation',({track})=>{
   const routes=[0,0,1,2].map(i=>computerRoute(track,'normal',i,92)),race=new LocalRace(routes,track,2);

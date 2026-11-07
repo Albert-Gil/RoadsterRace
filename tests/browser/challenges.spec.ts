@@ -33,7 +33,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 844, height: 390 
 test('Fleet both support sequences complete through real drawing, legal Hop controls and physical landings', async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, recordVideo: { dir: `${root}/video`, size: { width: 1280, height: 720 } } }), page = await context.newPage();
   await open(page); await launch(page, 'fleet-explorer'); await waitForPhase(page, 'drawing'); await draw(page, context, fleetExplorerSamples(fleet));
-  const compiled = await page.evaluate(() => (window as any).__roadster.getRoute()); expect(compiled.hazards).toBeUndefined(); expect(compiled.crossings).toHaveLength(4);
+  const compiled = await page.evaluate(() => (window as any).__roadster.getRoute()); expect(compiled.hazards).toBeUndefined(); expect(compiled.crossings).toHaveLength(6);
   await page.getByRole('button', { name: 'Race this line', exact: true }).click(); await waitForPhase(page, 'racing');
   const hopped = new Set<string>(), deadline = Date.now() + 115000;
   while (Date.now() < deadline) {
@@ -42,7 +42,7 @@ test('Fleet both support sequences complete through real drawing, legal Hop cont
     const car = s.race;
     for (const j of fleet.jumps!.filter(j => j.activation === 'hop')) {
       const dx = car.position.x - j.from.x, dz = car.position.z - j.from.z, along = dx * j.forward.x + dz * j.forward.z, across = dx * j.forward.z - dz * j.forward.x;
-      if (!hopped.has(j.id) && along >= -8 && along <= -3 && Math.abs(across) < 5 && car.movement === 'grounded') { await page.keyboard.press('KeyH'); hopped.add(j.id); }
+      if (!hopped.has(j.id) && along >= -5.2 && along <= -3.4 && Math.abs(across) < 5 && car.movement === 'grounded') { await page.keyboard.press('KeyH'); hopped.add(j.id); }
     }
     await page.waitForTimeout(25);
   }

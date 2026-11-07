@@ -20,7 +20,7 @@ Conventions: SI units; horizontal plane (x, z) with y up; heading 0 points along
 | Snowy Tahoe track (`snowy-tahoe`) | 6 |
 | Capitan Yosemite track (`capitan-yosemite`) | 5 |
 | Grand Canyon: South Rim track (`canyon-south-rim`) | 1 |
-| San Diego Fleet track (`san-diego-fleet`) | 3 |
+| San Diego Fleet track (`san-diego-fleet`) | 6 |
 
 Records, ghosts, session bests and championships are scoped by the relevant versions. Computer-version changes invalidate Solo championships only; human Time Trial records and local Multiplayer saves retain their unchanged rules/track compatibility. Change a version whenever a value below changes race results.
 
@@ -37,7 +37,7 @@ Records, ghosts, session bests and championships are scoped by the relevant vers
 | Snowy Tahoe | `snowy-tahoe` | 6 | 16 | 554.8 | 21 | hop lane `forestry-trail` |
 | Capitan Yosemite | `capitan-yosemite` | 5 | 16 | 716.6 | 55 | crest `valley-creek-crest`, crest `sentinel-creek-crest`, crest `cathedral-creek-crest`, hop lane `ranger-timber-trail` |
 | Grand Canyon: South Rim | `canyon-south-rim` | 1 | 16 | 850.7 | 24 | crest `south-rim-crossing`, hop lane `juniper-saddle`, hop lane `redwall-traverse` |
-| San Diego Fleet | `san-diego-fleet` | 3 | 16 | 719.1 | 88 | ramp `carrier-a-crossing`, ramp `carrier-b-crossing`, water Hop `support-a-hop`, ramp `support-a-return`, water Hop `support-b-hop`, ramp `support-b-return`, hop lane `support-a-lane`, hop lane `support-b-lane` |
+| San Diego Fleet | `san-diego-fleet` | 6 | 16 | 736.8 | 114 | ramp `carrier-a-crossing`, ramp `destroyer-a-return`, ramp `carrier-b-crossing`, ramp `destroyer-b-return`, water Hop `support-a-hop`, ramp `support-a-return`, water Hop `support-b-hop`, ramp `support-b-return`, hop lane `support-a-lane`, hop lane `support-b-lane` |
 
 Vehicle envelope: 2.9095 m × 6.877 m. Race distance: 1–6 laps (default 2). Championship points by place: 10 / 6 / 4 / 0.
 
@@ -58,16 +58,18 @@ Main-road ski crests keep continuous terrain support and use automatic-flight gr
 
 ## Fleet deck crossings and local Collection
 
-San Diego Fleet owns named stationary 24/22/16 m decks. Physical support comes only from those footprints and the explicit sloping ramp decks; interpolated drawing guides across a gap provide no support. Each automatic crossing has a visible 3 m raised steel ramp, with authored launch boost 8 m/s plus 0.08 times forward speed. Support-vessel alternatives require manual Hop at the unmarked entry and an automatic exit in order. Their entire working decks have road grip and no painted alternate lane. Incomplete or unsupported drawings remain penalized hazards. Intended receiving-deck ownership and full vehicle clearance are required at landing. CPU drivers use the normal route. The staggered formation's crossing dimensions are:
+San Diego Fleet owns named stationary 24/22/16 m decks. Every vessel and ramp deck has uniform dry-asphalt grip over its entire physical footprint; leaving the historical centreline applies no sand penalty. Substantial equipment and rails remain collidable. Physical support comes only from those footprints and the explicit sloping ramp decks; interpolated drawing guides across a gap provide no support. All four main transfers are automatic jumps across open water, with six visible 3 m raised steel ramps including auxiliary exits; there are no connecting gangways. Launch tuning is authored per crossing in the table below. Support-vessel alternatives require manual Hop at the unmarked entry and an automatic exit in order. Their working decks match their parent carriers at 24/22 m, have road grip throughout and no painted alternate lane; compact protected wheelhouses sit at the edge with the full central driving corridor clear. Incomplete or unsupported drawings remain penalized hazards. Intended receiving-deck ownership and full vehicle clearance are required at landing. CPU drivers use the normal route. The staggered formation's crossing dimensions are:
 
-| Crossing | Activation | Ramp (m) | Rise (m) | Water gap (m) |
-|---|---|---:|---:|---:|
-| carrier-a-crossing | automatic | 12.53 | 3.00 | 10.44 |
-| carrier-b-crossing | automatic | 12.53 | 3.00 | 10.44 |
-| support-a-hop | hop | 0.00 | 0.00 | 6.79 |
-| support-a-return | automatic | 13.59 | 3.00 | 6.79 |
-| support-b-hop | hop | 0.00 | 0.00 | 6.79 |
-| support-b-return | automatic | 13.59 | 3.00 | 6.79 |
+| Crossing | Activation | Ramp (m) | Rise (m) | Water gap (m) | Launch boost | Speed factor | CPU approach (m/s) |
+|---|---|---:|---:|---:|---:|---:|---:|
+| carrier-a-crossing | automatic | 16.00 | 3.00 | 14.00 | 8 | 0.08 | — |
+| destroyer-a-return | automatic | 16.00 | 3.00 | 12.53 | 20 | 0.03 | 18.5 |
+| carrier-b-crossing | automatic | 16.00 | 3.00 | 14.00 | 8 | 0.08 | — |
+| destroyer-b-return | automatic | 16.00 | 3.00 | 12.53 | 26 | 0.03 | 18.5 |
+| support-a-hop | hop | 0.00 | 0.00 | 8.00 | — | — | — |
+| support-a-return | automatic | 16.00 | 3.00 | 12.00 | 8 | -0.1 | — |
+| support-b-hop | hop | 0.00 | 0.00 | 8.00 | — | — | — |
+| support-b-return | automatic | 16.00 | 3.00 | 12.00 | 8 | -0.1 | — |
 
 Human-only Finish (selected distance), Clean (one lap without barrier/car contact or recovery) and Rival (shared first in Solo Normal/Hard) are independent historical achievements. Drifting, off-road driving and abilities do not spoil Clean. Tutorial, CPU, ghosts and practice cannot award progress. Cup completion and cosmetic rewards are installation-local, idempotent and independent of race preferences/versions; there is no synchronization or gameplay advantage.
 

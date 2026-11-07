@@ -135,7 +135,7 @@ function table(name: string, values: Record<string, number>) {
 export function currentRulesMarkdown() {
   const fleet = circuits.find(c => c.id === 'san-diego-fleet')!.track;
   const fleetHeights = [...new Set(fleet.decks!.map(d => d.elevation))].sort((a, b) => b - a).join('/');
-  const fleetCrossings = ['| Crossing | Activation | Ramp (m) | Rise (m) | Water gap (m) |','|---|---|---:|---:|---:|',...fleet.jumps!.map(j=>`| ${j.id} | ${j.activation??'automatic'} | ${j.rampLength.toFixed(2)} | ${j.lipHeight.toFixed(2)} | ${j.gap.toFixed(2)} |`)].join('\n');
+  const fleetCrossings = ['| Crossing | Activation | Ramp (m) | Rise (m) | Water gap (m) | Launch boost | Speed factor | CPU approach (m/s) |','|---|---|---:|---:|---:|---:|---:|---:|',...fleet.jumps!.map(j=>`| ${j.id} | ${j.activation??'automatic'} | ${j.rampLength.toFixed(2)} | ${j.lipHeight.toFixed(2)} | ${j.gap.toFixed(2)} | ${j.activation==='hop'?'—':j.launchBoost} | ${j.activation==='hop'?'—':j.launchSlope} | ${j.planningSpeed??'—'} |`)].join('\n');
   const peak = RULES.hopLaunchSpeed ** 2 / (2 * flightGravity('hop')), airtime = 2 * RULES.hopLaunchSpeed / flightGravity('hop');
   const crest = circuits.find(c => c.id === 'grand-canyon')!.track.jumps!.find(j => j.kind === 'crest')!;
   const courses = ['| Circuit | ID | Track version | Road width (m) | Centerline (m) | Barriers | Branches |', '|---|---|---:|---:|---:|---:|---|',
@@ -177,7 +177,7 @@ ${ski.join('\n')}
 
 ## Fleet deck crossings and local Collection
 
-San Diego Fleet owns named stationary ${fleetHeights} m decks. Physical support comes only from those footprints and the explicit sloping ramp decks; interpolated drawing guides across a gap provide no support. Each automatic crossing has a visible 3 m raised steel ramp, with authored launch boost 8 m/s plus 0.08 times forward speed. Support-vessel alternatives require manual Hop at the unmarked entry and an automatic exit in order. Their entire working decks have road grip and no painted alternate lane. Incomplete or unsupported drawings remain penalized hazards. Intended receiving-deck ownership and full vehicle clearance are required at landing. CPU drivers use the normal route. The staggered formation's crossing dimensions are:
+San Diego Fleet owns named stationary ${fleetHeights} m decks. Every vessel and ramp deck has uniform dry-asphalt grip over its entire physical footprint; leaving the historical centreline applies no sand penalty. Substantial equipment and rails remain collidable. Physical support comes only from those footprints and the explicit sloping ramp decks; interpolated drawing guides across a gap provide no support. All four main transfers are automatic jumps across open water, with six visible 3 m raised steel ramps including auxiliary exits; there are no connecting gangways. Launch tuning is authored per crossing in the table below. Support-vessel alternatives require manual Hop at the unmarked entry and an automatic exit in order. Their working decks match their parent carriers at 24/22 m, have road grip throughout and no painted alternate lane; compact protected wheelhouses sit at the edge with the full central driving corridor clear. Incomplete or unsupported drawings remain penalized hazards. Intended receiving-deck ownership and full vehicle clearance are required at landing. CPU drivers use the normal route. The staggered formation's crossing dimensions are:
 
 ${fleetCrossings}
 

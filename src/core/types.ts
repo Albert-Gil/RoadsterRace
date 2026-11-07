@@ -1,6 +1,6 @@
 export interface Point { x: number; z: number; y?: number; sectionId?: string; courseProgress?: number }
 export interface DrawSample extends Point { time: number }
-export interface TrackBarrier { deckSurfaceId?:string; id: string; footprint: Point[]; height: number; baseHeight?: number; /** Resolve a level foundation from the authored terrain before baking its ground grid. */ terrainAnchor?:boolean; sectionId?: string; kind?: 'infield' | 'building' | 'bridge-rail' | 'bridge-support' | 'pier-rail' | 'service-barrier' | 'cliff-rail' | 'cliff-face' | 'rock'; bridgeId?: string; /** Explicit constrained lane, city median or approved broad infield protection. */ runoffException?: 'hop-lane' | 'urban-median' | 'cut-protection'; /** A real sloping cliff, not an extruded invisible wall. */ slopedFace?: { lip: Point; toe: Point; lipWidth: number; toeWidth: number; lipHeight: number; toeHeight: number } }
+export interface TrackBarrier { deckSurfaceId?:string; vesselSurfaceId?:string; equipmentKind?:'early-warning-aircraft'|'transport-helicopter'|'deck-crane'|'crash-truck'|'missile-launcher'|'command-annex'|'engine-rack'|'fuel-bowser'|'deck-workshop'|'cable-winch'|'jet-deflector'; id: string; footprint: Point[]; height: number; baseHeight?: number; /** Resolve a level foundation from the authored terrain before baking its ground grid. */ terrainAnchor?:boolean; sectionId?: string; kind?: 'infield' | 'building' | 'bridge-rail' | 'bridge-support' | 'pier-rail' | 'service-barrier' | 'cliff-rail' | 'cliff-face' | 'rock'; bridgeId?: string; /** Explicit constrained lane, city median or approved broad infield protection. */ runoffException?: 'hop-lane' | 'urban-median' | 'cut-protection' | 'naval-deck'; /** A real sloping cliff, not an extruded invisible wall. */ slopedFace?: { lip: Point; toe: Point; lipWidth: number; toeWidth: number; lipHeight: number; toeHeight: number } }
 export interface RoadSection { id: string; from: number; to: number; heights: [number, number][]; supportWidth: number; /** Optional distance/width profile for continuous shoulders, relative to section.from. */ supportWidths?: [number, number][]; flight?: boolean }
 export interface SupportSurface { id: string; footprint: Point[] }
 /** Stationary physical deck. A transfer can grade continuously between two heights. */
@@ -11,6 +11,7 @@ export interface TrackJump {
   /** Alternate road coordinates, mapped onto the bypass's ordered course distance. */
   branch: Point[]; entryProgress: number; exitProgress: number;
   kind?: 'crest'; takeoffElevation?: number; landingElevation?: number; launchBoost?: number; launchSlope?: number;
+  /** Optional legal CPU approach target for a crossing with a constrained receiving bend. */ planningSpeed?:number;
   /** Main-road crossing, included by every legal main route and every CPU difficulty. */
   mandatory?:boolean;
   activation?:'automatic'|'hop';

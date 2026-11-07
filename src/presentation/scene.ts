@@ -193,7 +193,7 @@ export class GameScene {
     const err = mat('error', '#ec765a'); err.emissiveColor = Color3.FromHexString('#ec765a');
     this.errorMarker = MeshBuilder.CreateTorus('route-error', { diameter: 4, thickness: 0.25, tessellation: 32 }, this.scene); this.errorMarker.material = err; this.errorMarker.isVisible = false;
     // Small arrows teach direction without a screen-space overlay covering the circuit.
-    for (const fraction of [10, 45, 95, 150, 195].map(value => value / 216)) {
+    if(!track.decks)for (const fraction of [10, 45, 95, 150, 195].map(value => value / 216)) {
       const i = Math.min(n - 1, Math.floor(fraction * n));
       const a = p[i], b = p[i + 1], angle = Math.atan2(b.x - a.x, b.z - a.z);
       const dx = Math.sin(angle), dz = Math.cos(angle), arrowHeight=track.decks?(deckPlanningHeight(a,track)??0):(a.y??0);
@@ -337,7 +337,7 @@ export class GameScene {
     const fitTerrain=!!this.track.terrain&&interactive,key=[w,h,left,rightInset,top,bottom,aspect].map(n=>n.toFixed(5)).join('/');
     const cached=fitTerrain?this.terrainCameraFits.get(key):undefined;
     if(cached){this.applyCameraFit(cached.position,cached.target,cached.distance);return;}
-    const elevation = (this.scenery==='naval'?(Math.min(w,h)<=500?fleetCamera.phoneElevation:fleetCamera.desktopElevation):Math.max(this.scenery==='yosemite'?yosemiteAppearance.cameraElevation:0,Math.min(w,h)<=500?sceneTuning.camera.compactElevationDegrees:sceneTuning.camera.elevationDegrees)) * Math.PI / 180;
+    const elevation = (this.scenery==='naval'?(w<h?fleetCamera.portraitElevation:Math.min(w,h)<=500?fleetCamera.phoneElevation:fleetCamera.desktopElevation):Math.max(this.scenery==='yosemite'?yosemiteAppearance.cameraElevation:0,Math.min(w,h)<=500?sceneTuning.camera.compactElevationDegrees:sceneTuning.camera.elevationDegrees)) * Math.PI / 180;
     const tangent = Math.tan(this.camera.fov / 2);
     const paths = [this.track.centerline,...(this.track.jumps??[]).map(j=>j.branch),...(this.track.hopShortcuts??[]).map(j=>j.branch)];
     const fitted = paths.flatMap((path,i)=>roadEdges(path,this.track.roadWidth,i===0).flatMap(side=>side.map((p,n)=>new Vector3(p.x,this.track.decks?(deckPlanningHeight(p,this.track)??0):this.track.terrain?terrainElevation(p,this.track):this.track.sections?roadHeight(this.track,path[n].courseProgress??0):0,p.z))));
@@ -349,7 +349,7 @@ export class GameScene {
     for(const j of this.track.jumps??[]) for(const along of [8,25,45]) fitted.push(new Vector3(j.from.x+j.forward.x*along,hopEnvelope+j.lipHeight+(this.track.decks?(j.takeoffElevation??0):0),j.from.z+j.forward.z*along));
     for(const j of this.track.jumps??[])if(j.kind==='crest'){const v=j.launchBoost!+RULES.maxSpeed*j.launchSlope!,at=RULES.maxSpeed*v/FLIGHT_RULES.gravity;fitted.push(new Vector3(j.from.x+j.forward.x*at,j.takeoffElevation!+v*v/(2*FLIGHT_RULES.gravity)+FLIGHT_RULES.carHeight+.3,j.from.z+j.forward.z*at));}
     // Fleet silhouettes and visible freeboard are part of the playable composition, not distant scenery.
-    if(this.track.decks){for(const d of this.track.decks.filter(d=>d.vessel))for(const p of d.footprint)fitted.push(new Vector3(p.x,d.elevation+.2,p.z),new Vector3(p.x,-1.6,p.z));for(const b of this.track.barriers.filter(b=>b.id.includes('island')))for(const p of b.footprint)fitted.push(new Vector3(p.x,(b.baseHeight??0)+b.height,p.z));}
+    if(this.track.decks){for(const d of this.track.decks.filter(d=>d.vessel))for(const p of d.footprint)fitted.push(new Vector3(p.x,d.elevation+.2,p.z),new Vector3(p.x,-1.6,p.z));for(const b of this.track.barriers.filter(b=>b.vesselSurfaceId))for(const p of b.footprint)fitted.push(new Vector3(p.x,(b.baseHeight??0)+b.height,p.z));}
     const courseCenter = new Vector3((Math.min(...fitted.map(p=>p.x))+Math.max(...fitted.map(p=>p.x)))/2,0,(Math.min(...fitted.map(p=>p.z))+Math.max(...fitted.map(p=>p.z)))/2);
     const cx = (left-rightInset)/w, cy=(bottom-top)/h;
     const clearance = Math.min(w,h) <= 500 ? sceneTuning.camera.phoneRunoffClearancePixels : sceneTuning.camera.clearancePixels;
@@ -363,9 +363,9 @@ export class GameScene {
       const eye=away.scale(d).add(right.scale(-cx*tangent*aspect*d)).add(up.scale(-cy*tangent*d)).add(courseCenter);
       return {away,right,up,d,eye,hidden:hiddenTerrainRoadPoints(this.track,eye,sightPoints)};
     };
-    let fit=candidate(sceneTuning.camera.azimuthDegrees);
+    let fit=candidate(this.scenery==='naval'?(w<h?fleetCamera.portraitAzimuth:Math.min(w,h)<=500?fleetCamera.phoneAzimuth:fleetCamera.desktopAzimuth):sceneTuning.camera.azimuthDegrees);
     const initialChoices=[fit],yawRange=fitTerrain&&this.scenery!=='yosemite'?360:180;
-    for(let yaw=0;yaw<yawRange;yaw+=sceneTuning.camera.azimuthStep){const c=candidate(yaw);initialChoices.push(c);if(c.hidden<fit.hidden||(c.hidden===fit.hidden&&c.d<fit.d*0.995))fit=c;}
+    if(this.scenery!=='naval')for(let yaw=0;yaw<yawRange;yaw+=sceneTuning.camera.azimuthStep){const c=candidate(yaw);initialChoices.push(c);if(c.hidden<fit.hidden||(c.hidden===fit.hidden&&c.d<fit.d*0.995))fit=c;}
     if(fitTerrain){
       // Raise the fixed angle only when the steep terrain needs it. Validate
       // through the same intersection that drawing will use, before input starts.

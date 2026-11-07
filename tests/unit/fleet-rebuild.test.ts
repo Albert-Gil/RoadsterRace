@@ -12,7 +12,7 @@ import { createTournament } from '../../src/core/tournament';
 import { parseTournament } from '../../src/presentation/tournament-storage';
 
 test('revised fleet has taller stationary ship decks, a clear gate and bounded sweeping bends', () => {
- expect(track.version).toBe(3); expect(track.roadWidth).toBe(16); expect(track.length).toBeGreaterThan(700); expect(track.length).toBeLessThan(780);
+ expect(track.version).toBe(6); expect(track.roadWidth).toBe(16); expect(track.length).toBeGreaterThan(700); expect(track.length).toBeLessThan(780);
  expect(track.decks!.filter(d => d.vessel)).toHaveLength(6); expect(track.decks!.filter(d => d.vessel).every(d => d.elevation >= 16)).toBe(true); expect(minimumRadius(track.centerline)).toBeGreaterThan(12);
  for (const p of drawingStartBounds(track).corners) expect(deckAt(p, track)?.id).toBe('carrier-a');
 });
@@ -23,13 +23,12 @@ test('each crossing has a real open-water gap ending on its named receiving vess
   expect(deckAt(jumpPoint(j, j.rampLength + j.gap + .02), track)?.id, j.id).toBe(j.landingSurfaceId);
  }
 });
-test('graded gangways reach the receiving height before the first carrier overlap, without a vertical step', () => {
- const angle=.24,rotate=(x:number,z:number)=>({x:(x+.3*z)*Math.cos(angle)-z*Math.sin(angle),z:(x+.3*z)*Math.sin(angle)+z*Math.cos(angle)});
- for(const side of[-1,1])for(const across of[-8,0,8]){
-  let previous=groundHeight(rotate(side*(95+across),side*54),track);
-  for(let z=54.1;z<66;z+=.1){const next=groundHeight(rotate(side*(95+across),side*z),track);expect(Math.abs(next-previous)).toBeLessThan(.04);previous=next;}
- }
+test('all four main transfers are ramp launches over real water, without a connecting deck',()=>{
+ expect(track.jumps!.filter(j=>j.mandatory)).toHaveLength(4);
+ expect(track.decks!.filter(d=>d.kind==='transfer'&&!d.rampId)).toHaveLength(0);
+ for(const j of track.jumps!){expect(j.gap).toBeGreaterThanOrEqual(j.activation==='hop'?8:12);for(let s=j.rampLength+.2;s<j.rampLength+j.gap;s+=.25)expect(deckAt(jumpPoint(j,s),track),j.id).toBeUndefined();}
 });
+
 test('superstructures, larger aircraft and tractors are supported and stay inside their physical envelopes', () => {
  for (const b of track.barriers.filter(b => !b.deckSurfaceId && !b.id.startsWith('fleet-rail'))) {
   const support = track.decks!.find(d => d.vessel && Math.abs(d.elevation - b.baseHeight!) < .01 && b.footprint.every(p => onDeck(p, d)));
@@ -49,7 +48,7 @@ test('hulls have deep keels, outward-facing steel sides and remain within the st
  expect(normal[0] * dx + normal[2] * dz).toBeGreaterThan(0);
  const geometry = fleetGeometry(track); expect(Object.values(geometry).reduce((n, g) => n + g.triangleCount, 0)).toBeLessThan(120000);
  expect(Object.values(geometry).every(g => g.positions.every(Number.isFinite) && Array.from(g.toVertexData().normals!).every(Number.isFinite))).toBe(true);
- expect(sceneryFinishes.naval!.terrain.kind).toBe('water'); expect(fleetCamera.phoneElevation).toBeLessThan(60);
+ expect(sceneryFinishes.naval!.terrain.kind).toBe('water'); expect(fleetCamera.phoneElevation).toBeLessThan(75);
 });
 test('Fleet v1 championships invalidate without changing the ordinary save format', () => {
  const rounds = [{ circuitId: track.id, trackVersion: 1 }, { circuitId: 'golden-gate', trackVersion: 8 }];

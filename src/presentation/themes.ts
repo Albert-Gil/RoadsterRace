@@ -22,8 +22,12 @@ export const defaultPaintId = 'glacier';
 /** Native production kit colours; baked into existing venue batches. */
 export const productionSurfaceTuning={rockFoot:.79,strata:.025,plantFoot:.76,crown:.05,snowFoot:.91,structureFoot:.83,top:.035};
 export const productionAppearance={roofInset:'#59676a',bayGlass:'#315b68',foundation:'#848475',eaveShadow:'#525c59',awnings:['#467f7a','#a15e50','#c6a65f'],contact:'#5a6054'};
-export const fleetAppearance={deckApron:'#51636e',superstructure:'#cbd4cf',navy:'#34516b',hangar:'#202f3a',oxide:'#aa6048',rescueOrange:'#ef873b',rescueYellow:'#edbc46',helmet:'#f2e8cc',jetBlue:'#59788b',hull:'#8d9da6',hullShade:'#637a89',hullFill:'#344b58',waterline:'#435968',bootTop:'#273d49',deck:'#6b7b83',supportDeck:'#73888d',rampSurface:'#8d9da0',rampEdge:'#d9b764',rampRibs:'#b2c0c2',asphalt:'#485b65',coping:'#c0cdd1',ribs:'#536c7c',line:'#e2dbbd',aircraft:'#c3cecc',glass:'#294955',dark:'#28343a',equipment:'#ca9e48',water:'#246779',foam:'#70a3aa'};
-export const fleetCamera={desktopElevation:42,phoneElevation:50};
+export const fleetAppearance={deckOffset:.015,drivingOffset:.035,deckApron:'#3b4b54',superstructure:'#a6b6bc',navy:'#34516b',hangar:'#202f3a',oxide:'#aa6048',rescueOrange:'#ef873b',rescueYellow:'#edbc46',helmet:'#f2e8cc',jetBlue:'#59788b',hull:'#8d9da6',hullShade:'#637a89',hullFill:'#344b58',waterline:'#435968',bootTop:'#273d49',deck:'#39464e',supportDeck:'#39464e',rampSurface:'#48565e',rampEdge:'#d9b764',rampRibs:'#b2c0c2',asphalt:'#485b65',coping:'#c0cdd1',ribs:'#536c7c',line:'#e2dbbd',aircraft:'#c3cecc',glass:'#294955',dark:'#28343a',equipment:'#ca9e48',emergencyRed:'#b94d3d',navalHelicopter:'#95a9ad',water:'#246779',foam:'#70a3aa'};
+// Authored overview angles keep the normal route visible behind the tall islands.
+// Refit distance to the safe rectangle, but never rotate or follow cars during play.
+export const fleetLaneAppearance={surface:'#26333c',edge:'#e4e8dd',centre:'#d8cba4',kerbRed:'#b84c49',kerbWhite:'#d9dfdb',edgeWidth:.40,edgeInset:.30,kerbWidth:.85,kerbHeight:.08};
+export const fleetFlagAppearance={red:'#b53f45',white:'#ecece5',blue:'#294765'};
+export const fleetCamera={desktopElevation:64,phoneElevation:68,portraitElevation:56,desktopAzimuth:180,phoneAzimuth:210,portraitAzimuth:135};
 /** Solo Thrust/Hop keep the standard red interface (`--control-1`) whatever the car paint; with two or more cars the pads use each driver's paint instead (ui/controls.ts). */
 export const abilityControlColors = ['#d51f35', '#3b79e6', '#f1be37', '#45a77b'] as const;
 export const vehicleMaterials = {
@@ -245,7 +249,7 @@ export const surfaceFinishes: Record<string, SurfaceFinish> = {
   'bay-metal': { kind: 'concrete', scale: 40, normal: 0, variation: 0, reflection: 0.3, roughness: 0.35 },
 };
 export const sceneryFinishes: Partial<Record<keyof typeof sceneryLighting, Record<string, SurfaceFinish>>> = {
-  naval:{terrain:{kind:'water',scale:90,normal:.10,variation:.035,reflection:.35,roughness:.32,specular:.12,gloss:80},'fleet-hull':{kind:'concrete',scale:14,normal:.045,variation:.035,walls:true,reflection:.18,roughness:.56},'fleet-deck':{kind:'concrete',scale:16,normal:.055,variation:.025,reflection:.14,roughness:.54},'fleet-equipment':{kind:'concrete',scale:6,normal:.05,variation:.025,walls:true,reflection:.12,roughness:.48}},
+  naval:{terrain:{kind:'water',scale:90,normal:.10,variation:.035,reflection:.35,roughness:.32,specular:.12,gloss:80},'fleet-hull':{kind:'concrete',scale:14,normal:.045,variation:.035,walls:true,reflection:.18,roughness:.56},'fleet-deck':{kind:'asphalt',scale:9,normal:.10,variation:.055,reflection:.08,roughness:.80},'fleet-equipment':{kind:'concrete',scale:6,normal:.05,variation:.025,walls:true,reflection:.12,roughness:.48}},
   yosemite:{terrain:{kind:'dirt',scale:22,normal:.26,variation:.08},asphalt:{kind:'dirt',scale:12,normal:.32,variation:.12},shoulder:{kind:'dirt',scale:15,normal:.26,variation:.1},'yosemite-granite':{kind:'rock',scale:11,normal:.32,variation:.13,walls:true}},
   alpine: {terrain:{kind:'snow',scale:18,normal:.16,variation:.035},asphalt:{kind:'snow',scale:10,normal:.2,variation:.055},shoulder:{kind:'snow',scale:14,normal:.19,variation:.04},'tahoe-granite':{kind:'rock',scale:5,normal:.45,variation:.12,walls:true}},
   // Golden Gate paints its land in full colour; the finish adds only fine grain. The shore carries vertex colour.

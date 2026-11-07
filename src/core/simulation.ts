@@ -23,12 +23,13 @@ export function lateralGrip(grip: number, response: number, speed: number, slip:
 
 /** Surface comes from the physical car footprint, never from its planned line. */
 export function sampleSurface(position: Point, track: TrackDefinition) {
+  const profile = trackSurface(track);
+  // Whole working decks have uniform grip; skip an irrelevant centreline-distance query.
+  if(track.decks&&deckAt(position,track)?.racingSurface)return{sandAmount:0,grip:profile.grip,response:RULES.asphaltResponse,drag:profile.drag,surface:profile.road};
   const road = track.sections ? locateRoad(position,track) : projectToPolylineNear(position, track.centerline, track.distances);
   const branch = track.sections ? undefined : branchProjection(position, track); if (branch && branch.distance < road.distance) road.distance = branch.distance;
   const edge = (track.roadWidth - track.carWidth) / 2;
-  const workingDeck = track.decks && deckAt(position, track)?.racingSurface;
-  const sandAmount = workingDeck ? 0 : clamp((road.distance - edge) / RULES.surfaceTransition, 0, 1);
-  const profile = trackSurface(track);
+  const sandAmount = clamp((road.distance - edge) / RULES.surfaceTransition, 0, 1);
   return { sandAmount, grip: lerp(profile.grip, profile.looseGrip, sandAmount), response: lerp(RULES.asphaltResponse, RULES.sandResponse, sandAmount), drag: profile.drag, surface: sandAmount > .25 ? profile.loose : profile.road };
 }
 

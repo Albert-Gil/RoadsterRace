@@ -1,71 +1,93 @@
 import{fleetRails}from'./fleet-rails';
-import{cumulative,projectToPolyline,samplePolyline}from'../geometry';
+import{cumulative,projectToPolyline}from'../geometry';
 import{roundedCircuit}from'../road-geometry';
 import{createStartFinish}from'../start-finish';
 import{VEHICLE_DIMENSIONS}from'../vehicle-size';
 import type{DeckSurface,Point,TrackBarrier,TrackDefinition,TrackJump,HopShortcut}from'../types';
 
-const rect=(x:number,z:number,w:number,d:number):Point[]=>[{x,z},{x:x+w,z},{x:x+w,z:z+d},{x,z:z+d}];
+const angle=.24,c=Math.cos(angle),s=Math.sin(angle);
+const world=(p:Point):Point=>{const x=p.x+.3*p.z;return{x:x*c-p.z*s,z:x*s+p.z*c};};
+const unit=(p:Point)=>{const q=world(p),n=Math.hypot(q.x,q.z);return{x:q.x/n,z:q.z/n};};
 const mirror=(p:Point):Point=>({x:-p.x,z:-p.z});
-/** Staggered carriers and diagonal escorts form a flowing harbor lap, not a box. */
-const centerline=roundedCircuit([[-55,-90],[16,-90],[58,-103],[95,-84],[95,43],[80,92],[30,83],[-30,100],[-70,95],[-95,85],[-95,-90],[-55,-90]].map(([x,z])=>({x,z})),20);
-const gateIndex=centerline.slice(0,-1).reduce((best,p,i)=>Math.hypot(p.x+55,p.z+90)<Math.hypot(centerline[best].x+55,centerline[best].z+90)?i:best,0);
+const at=(p:Point,f:Point,along:number,across=0):Point=>({x:p.x+f.x*along+f.z*across,z:p.z+f.z*along-f.x*across});
+const box=(x:number,z:number,w:number,d:number)=>[[x,z],[x+w,z],[x+w,z+d],[x,z+d]].map(([x,z])=>world({x,z}));
+/** Every mouth is perpendicular to the final world-space driving axis, after harbor composition. */
+function clip(poly:Point[],origin:Point,f:Point,keepForward:boolean){const sign=keepForward?1:-1,dist=(p:Point)=>sign*((p.x-origin.x)*f.x+(p.z-origin.z)*f.z),out:Point[]=[];for(let i=0;i<poly.length;i++){const a=poly[i],b=poly[(i+1)%poly.length],da=dist(a),db=dist(b);if(da>=-1e-8)out.push(a);if((da>=0)!==(db>=0)){const u=da/(da-db);out.push({x:a.x+(b.x-a.x)*u,z:a.z+(b.z-a.z)*u});}}return out;}
+const centerline=roundedCircuit([[-55,-90],[16,-90],[58,-106],[95,-96],[95,100],[30,83],[-30,100],[-70,95],[-95,85],[-95,-90],[-55,-90]].map(([x,z])=>world({x,z})),20);
+const gate=world({x:-55,z:-90}),gateIndex=centerline.slice(0,-1).reduce((best,p,i)=>Math.hypot(p.x-gate.x,p.z-gate.z)<Math.hypot(centerline[best].x-gate.x,centerline[best].z-gate.z)?i:best,0);
 centerline.splice(0,centerline.length,...centerline.slice(gateIndex,-1),...centerline.slice(0,gateIndex),{...centerline[gateIndex]});
-const rawCenterline=centerline.map(p=>({...p})),rawDistances=cumulative(centerline),progress=(p:Point)=>projectToPolyline(p,centerline,rawDistances).progress;
-const f={x:Math.sqrt(3)/2,z:.5},entry={x:-10,z:-58},at=(s:number,t=0):Point=>({x:entry.x+f.x*s+f.z*t,z:entry.z+f.z*s-f.x*t});
-// These deck-edge mouths meet the exact six-metre unsupported openings, including their full beam.
-const returnEdge=57+6*Math.SQRT1_2,landingS=(returnEdge-entry.x-entry.z)/(f.x+f.z),lipS=landingS-6;
-const carrier:Point[]=[{x:-133,z:-118},{x:-114,z:-126},{x:80,z:-122},{x:111,z:-110},{x:128,z:-88},{x:111,z:-58},{x:65,z:-58},{x:42,z:-58},at(0,13),at(0,-13),{x:-35,z:-58},{x:-70,z:-58},{x:-126,z:-66}];
-const escort:Point[]=[{x:79,z:-48},{x:111,z:-48},{x:117,z:-34},{x:117,z:15},{x:110,z:32},{x:95,z:49},{x:80,z:32},{x:73,z:15},{x:returnEdge+8,z:-8},{x:returnEdge+20,z:-20},{x:79,z:-34}];
-const boat=[at(6,11),at(12,13),at(lipS-18,13),at(lipS,9.2),at(lipS,-9.2),at(lipS-18,-13),at(12,-13),at(6,-11)];
+const distances=cumulative(centerline),length=distances.at(-1)!,project=(p:Point)=>projectToPolyline(p,centerline,distances),progress=(p:Point)=>project(p).progress;
+const forward=unit({x:0,z:1}),hopForward=unit({x:Math.sqrt(3)/2,z:.5}),hopLip=world({x:-10,z:-58});
+const mainLip=world({x:95,z:-58}),mainLanding=at(mainLip,forward,14),returnLip=world({x:95,z:54}),returnLanding=world({x:95,z:66});
+const oldReturnEdge=57+6*Math.SQRT1_2,rawLandingS=(oldReturnEdge+68)/(Math.sqrt(3)/2+.5),oldLanding=world({x:-10+Math.sqrt(3)/2*rawLandingS,z:-58+.5*rawLandingS});
+const supportLanding=at(oldLanding,hopForward,7),supportBow=at(supportLanding,hopForward,-12),supportLength=(supportBow.x-hopLip.x)*hopForward.x+(supportBow.z-hopLip.z)*hopForward.z;
+const carrierRaw=[[-133,-118],[-114,-126],[80,-122],[111,-110],[128,-88],[111,-58],[65,-58],[42,-58]];
+let carrier=[...carrierRaw.map(([x,z])=>world({x,z})),at(hopLip,hopForward,0,14),at(hopLip,hopForward,0,-14),world({x:-35,z:-58}),world({x:-70,z:-58}),at(mirror(returnLanding),mirror(forward),0,-10),at(mirror(returnLanding),mirror(forward),0,10),world({x:-126,z:-66})];
+carrier=clip(carrier,mainLip,forward,false);
+// Fine foredecks and a native port-side receiving shoulder; no connecting platform.
+const escort=[at(mainLanding,forward,0,-13),at(mainLanding,forward,0,13),world({x:115,z:-30}),world({x:115,z:22}),at(returnLip,forward,0,8.6),at(returnLip,forward,0,-8.6),world({x:75,z:22}),at(supportLanding,hopForward,0,-10),at(supportLanding,hopForward,0,10),world({x:76,z:-30})];
+const support=[at(hopLip,hopForward,8,-12.5),at(hopLip,hopForward,17,-15.5),at(hopLip,hopForward,supportLength-19,-15.5),at(hopLip,hopForward,supportLength,-8.6),at(hopLip,hopForward,supportLength,8.6),at(hopLip,hopForward,supportLength-19,15.5),at(hopLip,hopForward,17,15.5),at(hopLip,hopForward,8,12.5)];
 const decks:DeckSurface[]=[
- {id:'carrier-a',kind:'carrier',elevation:24,footprint:carrier,vessel:{origin:{x:-8,z:-90},forward:{x:1,z:0}}},
- {id:'destroyer-a',kind:'destroyer',elevation:16,footprint:escort,vessel:{origin:{x:95,z:-4},forward:{x:0,z:1}}},
- {id:'carrier-b',kind:'carrier',elevation:22,footprint:carrier.map(mirror),vessel:{origin:{x:8,z:90},forward:{x:-1,z:0}}},
- {id:'destroyer-b',kind:'destroyer',elevation:16,footprint:escort.map(mirror),vessel:{origin:{x:-95,z:4},forward:{x:0,z:-1}}},
- {id:'east-transfer',kind:'transfer',elevation:16,toElevation:22,from:{x:95,z:27},to:{x:95,z:60},footprint:rect(84,27,22,39)},
- {id:'west-transfer',kind:'transfer',elevation:16,toElevation:24,from:{x:-95,z:-27},to:{x:-95,z:-60},footprint:rect(-106,-66,22,39)},
- {id:'support-a',kind:'support-ship',elevation:16,racingSurface:true,footprint:boat,vessel:{origin:at((6+lipS)/2),forward:f}},
- {id:'support-b',kind:'support-ship',elevation:16,racingSurface:true,footprint:boat.map(mirror),vessel:{origin:mirror(at((6+lipS)/2)),forward:mirror(f)}},
+ {id:'carrier-a',kind:'carrier',racingSurface:true,elevation:24,footprint:carrier,vessel:{origin:world({x:-8,z:-90}),forward:unit({x:1,z:0})}},
+ {id:'destroyer-a',kind:'destroyer',racingSurface:true,elevation:16,footprint:escort,vessel:{origin:world({x:101,z:-4}),forward}},
+ {id:'carrier-b',kind:'carrier',racingSurface:true,elevation:22,footprint:carrier.map(mirror),vessel:{origin:world({x:8,z:90}),forward:unit({x:-1,z:0})}},
+ {id:'destroyer-b',kind:'destroyer',racingSurface:true,elevation:16,footprint:escort.map(mirror),vessel:{origin:world({x:-101,z:4}),forward:mirror(forward)}},
+ {id:'support-a',kind:'support-ship',elevation:24,racingSurface:true,footprint:support,vessel:{origin:at(hopLip,hopForward,(8+supportLength)/2),forward:hopForward}},
+ {id:'support-b',kind:'support-ship',elevation:22,racingSurface:true,footprint:support.map(mirror),vessel:{origin:mirror(at(hopLip,hopForward,(8+supportLength)/2)),forward:mirror(hopForward)}},
 ];
-const mainA:TrackJump={id:'carrier-a-crossing',from:{x:95,z:-70},forward:{x:0,z:1},width:16,rampLength:12,lipHeight:3,launchSlope:.08,gap:10,runout:60,corridorLength:82,takeoffElevation:24,landingElevation:16,takeoffSurfaceId:'carrier-a',landingSurfaceId:'destroyer-a',mandatory:true,branch:[{x:95,z:-77},{x:95,z:-70},{x:95,z:12}],entryProgress:progress({x:95,z:-77}),exitProgress:progress({x:95,z:12})};
-const mainB:TrackJump={...mainA,id:'carrier-b-crossing',from:mirror(mainA.from),forward:mirror(mainA.forward),takeoffElevation:22,takeoffSurfaceId:'carrier-b',landingSurfaceId:'destroyer-b',branch:mainA.branch.map(mirror),entryProgress:progress({x:-95,z:77}),exitProgress:progress({x:-95,z:-12})};
-const start=projectToPolyline({x:-46,z:-90},centerline,rawDistances).point,join=at((95-entry.x)/f.x);
-// The approach joins a straight working deck; there is no painted branch or activation area.
-const approach=[start,{x:-35,z:-90},at(-18),at(-8),at(0),at(6),at(40),at(lipS-12),at(lipS),join];
-const enter:TrackJump={id:'support-a-hop',activation:'hop',from:entry,forward:f,width:24,rampLength:0,lipHeight:0,gap:6,runout:20,corridorLength:26,takeoffElevation:24,landingElevation:16,takeoffSurfaceId:'carrier-a',landingSurfaceId:'support-a',branch:[at(-8),at(0),at(26)],entryProgress:progress(start),exitProgress:progress(join)};
-const exit:TrackJump={id:'support-a-return',from:at(lipS-12),forward:f,width:16,rampLength:12,lipHeight:3,launchSlope:.08,gap:6,runout:38,corridorLength:56,takeoffElevation:16,landingElevation:16,takeoffSurfaceId:'support-a',landingSurfaceId:'destroyer-a',branch:[at(lipS-14),at(lipS-12),join],entryProgress:enter.entryProgress,exitProgress:enter.exitProgress};
-const lane:HopShortcut={id:'support-a-lane',branch:approach,width:24,crossings:[enter.id,exit.id],entryProgress:progress(start),exitProgress:progress(join)};
-function mirrorJump(j:TrackJump):TrackJump{return{...j,id:j.id.replace('support-a','support-b'),from:mirror(j.from),forward:mirror(j.forward),takeoffElevation:j.activation==='hop'?22:16,takeoffSurfaceId:j.takeoffSurfaceId?.replace('carrier-a','carrier-b').replace('support-a','support-b'),landingSurfaceId:j.landingSurfaceId?.replace('support-a','support-b').replace('destroyer-a','destroyer-b'),branch:j.branch.map(mirror),entryProgress:progress(mirror(start)),exitProgress:progress(mirror(join))};}
-const laneB:HopShortcut={...lane,id:'support-b-lane',branch:approach.map(mirror),crossings:['support-b-hop','support-b-return'],entryProgress:progress(mirror(start)),exitProgress:progress(mirror(join))};
-laneB.branch[0]=projectToPolyline(laneB.branch[0],centerline,rawDistances).point;laneB.entryProgress=progress(laneB.branch[0]);
-const barriers:TrackBarrier[]=[
- ...decks.filter(d=>d.vessel).map(d=>({id:`${d.id}-hull`,deckSurfaceId:d.id,kind:'building' as const,baseHeight:-5,height:d.elevation+5,footprint:d.footprint})),
- {id:'carrier-a-island',kind:'building',baseHeight:24,height:22,footprint:rect(34,-80,32,13)},
- {id:'carrier-b-island',kind:'building',baseHeight:22,height:22,footprint:rect(-4,109,36,13)},
-];
-for(const side of[1,-1])for(const x of[-92,-68,-44,-20,4])barriers.push({id:`parked-aircraft-${side}-${x}`,kind:'building',baseHeight:side===1?24:22,height:4.5,footprint:rect(side*x-8,side*-115-5.5,16,11)});
-for(const side of[1,-1]){
- for(const x of[70,77])barriers.push({id:`deck-tractor-${side}-${x}`,kind:'building',baseHeight:side===1?24:22,height:2.4,footprint:rect(side*x-3,side*-65-2,6,4)});
- barriers.push({id:'destroyer-bridge-'+side,kind:'building',baseHeight:16,height:12,footprint:rect(side*111.7-3,side*-3-8,6,16)});
- barriers.push({id:'destroyer-turret-'+side,kind:'building',baseHeight:16,height:4,footprint:rect(side*111.7-3,side*-29-5,6,10)});
+function crossing(id:string,lip:Point,f:Point,landing:Point,takeoffSurfaceId:string,landingSurfaceId:string,boost:number,slope:number,mandatory=false):TrackJump{
+ const from=at(lip,f,-16),gap=(landing.x-lip.x)*f.x+(landing.z-lip.z)*f.z,source=decks.find(d=>d.id===takeoffSurfaceId)!,target=decks.find(d=>d.id===landingSurfaceId)!;
+ return{id,from,forward:f,width:16,rampLength:16,lipHeight:3,launchBoost:boost,launchSlope:slope,gap,runout:50,corridorLength:16+gap+50,takeoffElevation:source.elevation,landingElevation:target.elevation,takeoffSurfaceId,landingSurfaceId,mandatory,branch:[at(from,f,-4),from,lip,landing,at(landing,f,10)],entryProgress:progress(at(from,f,-4)),exitProgress:progress(at(landing,f,10))};
 }
-/** A shared affine harbor composition staggers the ships and inclines the escort axes.
- * Recompute distances/progression: unlike a rigid rotation, this changes authored course lengths. */
-const jumps=[mainA,mainB,enter,exit,mirrorJump(enter),mirrorJump(exit)];
-const angle=.24,c=Math.cos(angle),s=Math.sin(angle),transform=(p:Point):Point=>{const x=p.x+.30*p.z;return{...p,x:x*c-p.z*s,z:x*s+p.z*c};};
-const direction=(p:Point)=>{const q=transform(p),scale=Math.hypot(q.x,q.z);return{vector:{x:q.x/scale,z:q.z/scale},scale};};
-for(let i=0;i<centerline.length;i++)centerline[i]=transform(centerline[i]);
-const distances=cumulative(centerline),length=distances.at(-1)!,remap=(value:number)=>projectToPolyline(transform(samplePolyline(rawCenterline,rawDistances,value)),centerline,distances).progress;
-for(const d of decks){d.footprint=d.footprint.map(transform);if(d.from&&d.to){const dx=d.to.x-d.from.x,dz=d.to.z-d.from.z;d.gradeNormal={x:dx*c-(dz-.3*dx)*s,z:dx*s+(dz-.3*dx)*c};}if(d.from)d.from=transform(d.from);if(d.to)d.to=transform(d.to);if(d.vessel)d.vessel={origin:transform(d.vessel.origin),forward:direction(d.vessel.forward).vector};}
-for(const b of barriers)b.footprint=b.footprint.map(transform);
-for(const j of jumps){const {vector,scale}=direction(j.forward);j.from=transform(j.from);j.forward=vector;j.rampLength*=scale;j.gap*=scale;j.runout*=scale;j.corridorLength*=scale;j.branch=j.branch.map(transform);j.entryProgress=remap(j.entryProgress);j.exitProgress=remap(j.exitProgress);}
-for(const h of[lane,laneB]){h.branch=h.branch.map(transform);h.entryProgress=remap(h.entryProgress);h.exitProgress=remap(h.exitProgress);}
-// A real, full-width steel wedge supports every automatic launch. Guides across water never do.
+const mainA=crossing('carrier-a-crossing',mainLip,forward,mainLanding,'carrier-a','destroyer-a',8,.08,true);
+const upA=crossing('destroyer-a-return',returnLip,forward,returnLanding,'destroyer-a','carrier-b',20,.03,true);
+const mainB=crossing('carrier-b-crossing',mirror(mainLip),mirror(forward),mirror(mainLanding),'carrier-b','destroyer-b',8,.08,true);
+const upB=crossing('destroyer-b-return',mirror(returnLip),mirror(forward),mirror(returnLanding),'destroyer-b','carrier-a',26,.03,true);
+upA.planningSpeed=18.5;upB.planningSpeed=18.5;
+const start=project(world({x:-46,z:-90})).point,join=world({x:95,z:-58+.5*(105/(Math.sqrt(3)/2))});
+const approach=[start,world({x:-35,z:-90}),at(hopLip,hopForward,-18),at(hopLip,hopForward,-8),hopLip,at(hopLip,hopForward,10),at(hopLip,hopForward,45),at(supportBow,hopForward,-16),supportBow,join];
+const enter:TrackJump={id:'support-a-hop',activation:'hop',from:hopLip,forward:hopForward,width:24,rampLength:0,lipHeight:0,gap:8,runout:50,corridorLength:58,takeoffElevation:24,landingElevation:24,takeoffSurfaceId:'carrier-a',landingSurfaceId:'support-a',branch:[at(hopLip,hopForward,-8),hopLip,at(hopLip,hopForward,60)],entryProgress:progress(start),exitProgress:progress(join)};
+const exit=crossing('support-a-return',supportBow,hopForward,supportLanding,'support-a','destroyer-a',8,-.1);exit.entryProgress=enter.entryProgress;exit.exitProgress=enter.exitProgress;
+const lane:HopShortcut={id:'support-a-lane',branch:approach,width:24,crossings:[enter.id,exit.id],entryProgress:enter.entryProgress,exitProgress:enter.exitProgress};
+const enterB:TrackJump={...enter,id:'support-b-hop',from:mirror(hopLip),forward:mirror(hopForward),takeoffElevation:22,landingElevation:22,takeoffSurfaceId:'carrier-b',landingSurfaceId:'support-b',branch:enter.branch.map(mirror),entryProgress:progress(mirror(start)),exitProgress:progress(mirror(join))};
+const exitB=crossing('support-b-return',mirror(supportBow),mirror(hopForward),mirror(supportLanding),'support-b','destroyer-b',8,-.1);exitB.entryProgress=enterB.entryProgress;exitB.exitProgress=enterB.exitProgress;
+const laneB:HopShortcut={...lane,id:'support-b-lane',branch:approach.map(mirror),crossings:[enterB.id,exitB.id],entryProgress:enterB.entryProgress,exitProgress:enterB.exitProgress};laneB.branch[0]=project(laneB.branch[0]).point;laneB.entryProgress=progress(laneB.branch[0]);
+const jumps=[mainA,upA,mainB,upB,enter,exit,enterB,exitB];
+const barriers:TrackBarrier[]=decks.map(d=>({id:d.id+'-hull',deckSurfaceId:d.id,kind:'building',baseHeight:-5,height:d.elevation+5,footprint:d.footprint}));
+for(const side of[1,-1]){
+ const owner=side===1?'a':'b',base=side===1?24:22;
+ const add=(id:string,vessel:string,x:number,z:number,w:number,d:number,height:number,equipmentKind?:TrackBarrier['equipmentKind'])=>barriers.push({id,vesselSurfaceId:vessel,sectionId:'fleet-road',runoffException:'naval-deck',kind:'building',baseHeight:vessel.startsWith('destroyer')?16:base,height,footprint:side===1?box(x,z,w,d):box(x,z,w,d).map(mirror),...(equipmentKind?{equipmentKind}:{})});
+ add('carrier-'+owner+'-island','carrier-'+owner,32,side===1?-80:-78,50,side===1?18:16,48);
+ add('carrier-'+owner+'-island-annex','carrier-'+owner,20,-77,12,12,22,'command-annex');
+ add(`parked-aircraft-${side}--92`,'carrier-'+owner,-125,-116,18,14,6);
+ add(`parked-aircraft-${side}-4`,'carrier-'+owner,-4,-120.5,16,11,4.5);
+ add(`parked-aircraft-${side}-36`,'carrier-'+owner,24,-122,22,10,5.5);
+ add(`parked-aircraft-${side}--91`,'carrier-'+owner,-100,-121,18,11,5);
+ add('fleet-engine-spares-'+owner,'carrier-'+owner,0,-79,14,6,3.6,'engine-rack');
+ add('fleet-hawkeye-'+owner,'carrier-'+owner,-72,-122.5,28,16,6.5,'early-warning-aircraft');
+ add('fleet-transport-'+owner,'carrier-'+owner,-28,-123,22,15,7,'transport-helicopter');
+ add('fleet-crane-'+owner,'carrier-'+owner,-65,-71,20,12,13,'deck-crane');
+ add('fleet-crash-truck-'+owner,'carrier-'+owner,-77,-70,10,6,4,'crash-truck');
+ add('fleet-workshop-'+owner,'carrier-'+owner,-125,-78,18,9,6.5,'deck-workshop');
+ add('fleet-fuel-bowser-'+owner,'carrier-'+owner,-44,-71,12,6,4.2,'fuel-bowser');
+ add('fleet-mooring-winch-'+owner,'carrier-'+owner,111,-98,8,7,4.5,'cable-winch');
+ add('fleet-blast-deflector-'+owner,'carrier-'+owner,-42,-106,13,3,3.5,'jet-deflector');
+ for(const x of[56,65])add(`deck-tractor-${side}-${x}`,'carrier-'+owner,x-3,-120,6,4,2.4);
+ add('destroyer-bridge-'+side,'destroyer-'+owner,105.5,-10,9,30,36);
+ add('destroyer-turret-'+side,'destroyer-'+owner,107.1,-37,5,10,6);
+ add('fleet-launch-cells-'+owner,'destroyer-'+owner,78.5,12,6,14,3.2,'missile-launcher');
+ add('fleet-escort-bowser-'+owner,'destroyer-'+owner,106,-25,7,8,4.2,'fuel-bowser');
+ add('fleet-escort-winch-'+owner,'destroyer-'+owner,106,24,5,6,4.5,'cable-winch');
+ const ps=[at(hopLip,hopForward,24,10.05),at(hopLip,hopForward,58,10.05),at(hopLip,hopForward,58,15.25),at(hopLip,hopForward,24,15.25)];
+ const rack=[at(hopLip,hopForward,60,-13.85),at(hopLip,hopForward,78,-13.85),at(hopLip,hopForward,78,-10.05),at(hopLip,hopForward,60,-10.05)];
+ barriers.push({id:'fleet-support-rack-'+side,equipmentKind:'engine-rack',vesselSurfaceId:'support-'+owner,sectionId:'fleet-road',runoffException:'naval-deck',kind:'building',baseHeight:base,height:3.6,footprint:side===1?rack:rack.map(mirror)});
+ const winch=[at(hopLip,hopForward,29,-15.25),at(hopLip,hopForward,43,-15.25),at(hopLip,hopForward,43,-10.05),at(hopLip,hopForward,29,-10.05)];
+ barriers.push({id:'fleet-support-winch-'+side,equipmentKind:'cable-winch',vesselSurfaceId:'support-'+owner,sectionId:'fleet-road',runoffException:'naval-deck',kind:'building',baseHeight:base,height:4.5,footprint:side===1?winch:winch.map(mirror)});
+ barriers.push({id:'support-bridge-'+side,vesselSurfaceId:'support-'+owner,sectionId:'fleet-road',runoffException:'naval-deck',kind:'building',baseHeight:base,height:28,footprint:side===1?ps:ps.map(mirror)});
+}
 for(const j of jumps.filter(j=>j.rampLength>0)){
- const at=(along:number,across:number):Point=>({x:j.from.x+j.forward.x*along+j.forward.z*across,z:j.from.z+j.forward.z*along-j.forward.x*across});
- decks.push({id:j.id+'-ramp',kind:'transfer',rampId:j.id,racingSurface:j.takeoffSurfaceId?.startsWith('support-'),elevation:j.takeoffElevation!,toElevation:j.takeoffElevation!+j.lipHeight,from:j.from,to:at(j.rampLength,0),footprint:[at(0,-j.width/2),at(j.rampLength,-j.width/2),at(j.rampLength,j.width/2),at(0,j.width/2)]});
+ const point=(along:number,across=0)=>at(j.from,j.forward,along,across);
+ decks.push({id:j.id+'-ramp',kind:'transfer',rampId:j.id,racingSurface:true,elevation:j.takeoffElevation!,toElevation:j.takeoffElevation!+j.lipHeight,from:j.from,to:point(j.rampLength),footprint:[point(0,-8),point(j.rampLength,-8),point(j.rampLength,8),point(0,8)]});
 }
 barriers.push(...fleetRails);
-export const sanDiegoFleetTrack:TrackDefinition={id:'san-diego-fleet',name:'San Diego Fleet',version:3,centerline,distances,length,roadWidth:16,carWidth:VEHICLE_DIMENSIONS.width,carLength:VEHICLE_DIMENSIONS.length,start:centerline[0],startFinish:createStartFinish(centerline[0],centerline[1],16),decks,barriers,
- sections:[{id:'fleet-road',from:0,to:length,heights:[[0,24],[length,24]],supportWidth:16}],jumps,hopShortcuts:[lane,laneB]};
+export const sanDiegoFleetTrack:TrackDefinition={id:'san-diego-fleet',name:'San Diego Fleet',version:6,centerline,distances,length,roadWidth:16,carWidth:VEHICLE_DIMENSIONS.width,carLength:VEHICLE_DIMENSIONS.length,start:centerline[0],startFinish:createStartFinish(centerline[0],centerline[1],16),decks,barriers,sections:[{id:'fleet-road',from:0,to:length,heights:[[0,24],[length,24]],supportWidth:16}],jumps,hopShortcuts:[lane,laneB]};

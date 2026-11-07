@@ -52,6 +52,8 @@ describe('playable circuit registry', () => {
           // The full asphalt remains clear. Only the Launchsite tank parcel has a
           // sub-metre shoulder, deliberately separating its adjacent roads.
           expect(minimum, barrier.id).toBeGreaterThanOrEqual(barrier.id==='utility-storage-tower' ? 0.45 : 2);
+        } else if(barrier.runoffException==='naval-deck'){
+          expect(track.id).toBe('san-diego-fleet');const owner=track.decks!.find(d=>d.id===barrier.vesselSurfaceId);expect(owner?.vessel).toBeDefined();expect(barrier.footprint.every(p=>insideBarrier(p,{id:owner!.id,height:0,footprint:owner!.footprint}))).toBe(true);expect(minimum,barrier.id).toBeGreaterThanOrEqual(2);
         } else if (barrier.runoffException === 'urban-median') {
           expect(track.id).toBe('golden-gate'); expect(barrier.id).toBe('median-arcade');
           expect(barrier.kind).toBe('building');
@@ -78,7 +80,7 @@ describe('playable circuit registry', () => {
       const result = compileRoute(samples, track); if (!result.ok) throw new Error(result.message);
       const race = new RaceSimulation(result.route, track); let reachedSand = false;
       for (let i = 0; i < 18000 && !race.state.finished; i++) { race.step(); reachedSand ||= race.state.sandAmount > 0.5; }
-      expect(race.state.finished).toBe(true); expect(reachedSand).toBe(true);
+      expect(race.state.finished).toBe(true); expect(reachedSand).toBe(!track.decks);
     });
     test('four cars complete six laps and cannot use another circuit’s plan', () => {
       const result = compileRoute(createPracticeSamples(circuit.track, 7), circuit.track);

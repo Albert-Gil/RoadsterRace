@@ -17,7 +17,7 @@ async function draw(page:Page,context:BrowserContext,branch?:string,touch=false)
 }
 for(const viewport of[{width:844,height:390},{width:390,height:844}])test(`fleet real touch drawing and both hidden decks ${viewport.width}`,async({browser})=>{
  const context=await browser.newContext({viewport,hasTouch:true,isMobile:true,deviceScaleFactor:2}),page=await context.newPage(),errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
- for(const branch of[undefined,'support-a-lane','support-b-lane']){await setup(page);const r=await draw(page,context,branch,true);expect(r.route.hazards).toBeUndefined();expect(r.route.crossings.length).toBe(branch?3:2);await page.screenshot({path:`${root}/touch-${viewport.width}-${branch??'main'}.png`});}expect(errors).toEqual([]);await context.close();
+ for(const branch of[undefined,'support-a-lane','support-b-lane']){await setup(page);const r=await draw(page,context,branch,true);expect(r.route.hazards).toBeUndefined();expect(r.route.crossings.length).toBe(branch?5:4);await page.screenshot({path:`${root}/touch-${viewport.width}-${branch??'main'}.png`});}expect(errors).toEqual([]);await context.close();
 });
 test('live human fleet race earns independent medals and preserves them after reload; practice cannot earn',async({browser})=>{
  const context=await browser.newContext({viewport:{width:1440,height:900},recordVideo:{dir:`${root}/video`,size:{width:1280,height:720}}}),page=await context.newPage();await setup(page);const report=await draw(page,context);expect(report.route.hazards).toBeUndefined();await page.getByRole('button',{name:'Race this line',exact:true}).click();await waitForPhase(page,'racing');

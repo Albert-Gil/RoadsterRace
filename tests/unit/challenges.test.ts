@@ -88,12 +88,12 @@ test('challenge menu stays separate from live race UI', () => {
 });
 test('both Fleet branches physically land in one lap and produce challenge evidence without physics assistance', () => {
   const compiled = compileRoute(fleetExplorerSamples(track), track); if (!compiled.ok) throw Error(compiled.message);
-  expect(compiled.route.hazards).toBeUndefined(); expect(compiled.route.crossings).toHaveLength(4);
+  expect(compiled.route.hazards).toBeUndefined(); expect(compiled.route.crossings).toHaveLength(6);
   const t = new ChallengeLapTracker('fleet-explorer', config, compiled.route), sim = new RaceSimulation(compiled.route, track, 1);
   const entries = track.jumps!.filter(j => j.activation === 'hop'); const landings: string[] = [];
   for (let tick = 0; tick < 12000 && !sim.state.finished; tick++) {
-    for (const j of entries) { const q = jumpCoordinates(sim.state.position, j); if (q.along >= -6 && q.along <= -4 && Math.abs(q.across) < 5) sim.pressHop(); }
+    for (const j of entries) { const q = jumpCoordinates(sim.state.position, j); if (q.along >= -5 && q.along <= -4 && Math.abs(q.across) < 5) sim.pressHop(); }
     sim.step(); for (const event of sim.drainEvents()) { if (event.type === 'landing' && event.crossingId) landings.push(event.crossingId); t.observe(event); }
   }
-  expect(sim.state.finished).toBe(true); expect(sim.state.recoveryCount).toBe(0); expect(sim.state.hopCount).toBe(2); expect(landings).toEqual(route.crossings.map(c => c.id)); expect(t.completed).toBe(true);
+  expect(sim.state.finished).toBe(true); expect(sim.state.recoveryCount).toBe(0); expect(sim.state.hopCount).toBe(2); expect(landings).toEqual(compiled.route.crossings!.map(c=>c.id)); expect(t.completed).toBe(true);
 }, 120000);

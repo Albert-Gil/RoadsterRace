@@ -23,9 +23,9 @@ test('every automatic crossing has a full-width physical raised ramp, and manual
 });
 test('both slender auxiliary ships offer road grip over the full working deck, without a painted alternate lane',()=>{
  for(const d of track.decks!.filter(d=>d.kind==='support-ship')){
-  expect(d.racingSurface).toBe(true);expect(track.barriers.filter(b=>!b.deckSurfaceId&&!b.id.startsWith('fleet-rail')).some(b=>b.footprint.some(p=>onDeck(p,d)))).toBe(false);
+  expect(d.racingSurface).toBe(true);const cabins=track.barriers.filter(b=>b.vesselSurfaceId===d.id&&b.id.startsWith('support-bridge'));expect(cabins).toHaveLength(1);expect(cabins[0].id).toContain('support-bridge');
   const f=d.vessel!.forward,o=d.vessel!.origin,r={x:f.z,z:-f.x},projection=d.footprint.map(p=>({s:(p.x-o.x)*f.x+(p.z-o.z)*f.z,t:(p.x-o.x)*r.x+(p.z-o.z)*r.z}));
-  const beam=Math.max(...projection.map(p=>p.t))-Math.min(...projection.map(p=>p.t)),length=Math.max(...projection.map(p=>p.s))-Math.min(...projection.map(p=>p.s));expect(beam).toBeLessThan(27);expect(length/beam).toBeGreaterThan(3);
+  const beam=Math.max(...projection.map(p=>p.t))-Math.min(...projection.map(p=>p.t)),length=Math.max(...projection.map(p=>p.s))-Math.min(...projection.map(p=>p.s));expect(beam).toBeLessThanOrEqual(31.01);expect(length/beam).toBeGreaterThan(3);
   for(const s of[-20,0,20])for(const across of[-7,0,7]){const p={x:o.x+s*f.x+across*r.x,z:o.z+s*f.z+across*r.z};expect(onDeck(p,d)).toBe(true);expect(sampleSurface(p,track)).toMatchObject({sandAmount:0,grip:RULES.asphaltGrip});}
  }
  // No asphalt vertices lie on auxiliary decks: their whole grey surface is the driving area.

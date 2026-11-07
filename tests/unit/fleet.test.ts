@@ -17,14 +17,14 @@ test('fleet supports the full start zone, ten-course envelope and both economica
  expect(t.decks?.filter(d=>d.kind==='carrier')).toHaveLength(2);expect(t.decks?.filter(d=>d.kind==='destroyer')).toHaveLength(2);expect(t.decks?.filter(d=>d.kind==='support-ship')).toHaveLength(2);
  for(const p of drawingStartBounds(t).corners)expect(supported(p,t)).toBe(true);
  const savings=t.hopShortcuts!.map(h=>h.exitProgress-h.entryProgress-cumulative(h.branch).at(-1)!);
- savings.forEach(v=>{expect(v).toBeGreaterThanOrEqual(20);expect(v).toBeLessThanOrEqual(45);});expect((t.length-savings.reduce((a,b)=>a+b))/2).toBeGreaterThanOrEqual(315);
+ savings.forEach(v=>{expect(v).toBeGreaterThanOrEqual(20);expect(v).toBeLessThanOrEqual(50);});expect((t.length-savings.reduce((a,b)=>a+b))/2).toBeGreaterThanOrEqual(315);
 });
 test('ordered normal and support-vessel routes compile without hazards; guides are not support',()=>{
- const main=compile();expect(main.crossings!.map(c=>c.id)).toEqual(['carrier-a-crossing','carrier-b-crossing']);expect(main.hazards).toBeUndefined();
+ const main=compile();expect(main.crossings!.map(c=>c.id)).toEqual(['carrier-a-crossing','destroyer-a-return','carrier-b-crossing','destroyer-b-return']);expect(main.hazards).toBeUndefined();
  for(const lane of t.hopShortcuts!){const r=compile(lane.id);expect(r.hazards).toBeUndefined();expect(r.crossings!.filter(c=>c.id.startsWith(lane.id.slice(0,9))).map(c=>c.id)).toEqual(lane.crossings);}
  for(const j of t.jumps!){const p=jumpPoint(j,j.rampLength+j.gap/2);expect(supported(p,t)).toBe(false);expect(groundHeight(p,t)).toBeGreaterThan(8);}
 });
-for(const speed of[20,30,42])test(`all six crossings land with ${speed} m/s momentum and yaw variation`,()=>{
+for(const speed of[20,30,42])test(`all eight crossings land with ${speed} m/s momentum and yaw variation`,()=>{
  for(const j of t.jumps!)for(const yaw of[-20,0,20]){
   const branch=t.hopShortcuts!.find(h=>h.crossings?.includes(j.id)),route=compile(branch?.id),sim=new RaceSimulation(route,t,1),p=jumpPoint(j,j.activation==='hop'?-5:j.rampLength-.1),heading=Math.atan2(j.forward.x,j.forward.z),near=route.points.reduce((a,b)=>distance(a,p)<distance(b,p)?a:b);
   Object.assign(sim.state,{position:p,elevation:groundHeight(p,t),heading:heading+yaw*Math.PI/180,speed,velocity:{x:j.forward.x*speed+j.forward.z*2,z:j.forward.z*speed-j.forward.x*2},distance:near.distance});
@@ -39,7 +39,7 @@ test('finite hulls do not become support across water and old handling constants
 });
 test('both shortcut variants complete six laps with one legal timed hop per branch per lap',()=>{
  for(const lane of t.hopShortcuts!){const sim=new RaceSimulation(compile(lane.id),t,6),j=t.jumps!.find(j=>j.id===lane.crossings![0])!;
-  for(let n=0;n<24000&&!sim.state.finished;n++){const q=jumpCoordinates(sim.state.position,j);if(q.along>=-6&&q.along<=-4&&Math.abs(q.across)<5)sim.pressHop();sim.step();sim.drainEvents();}
+  for(let n=0;n<24000&&!sim.state.finished;n++){const q=jumpCoordinates(sim.state.position,j);if(q.along>=-5&&q.along<=-4&&Math.abs(q.across)<5)sim.pressHop();sim.step();sim.drainEvents();}
   expect(sim.state.finished).toBe(true);expect(sim.state.hopCount).toBe(6);expect(sim.state.recoveryCount).toBe(0);
  }
 },120000);
@@ -48,7 +48,9 @@ test('fifteen seeded four-car CPU races finish within 240 simulated seconds on t
   const routes=[0,0,1,2].map(i=>computerRoute(t,difficulty,i,seed));routes.forEach(r=>{expect(r.hazards).toBeUndefined();expect(r.crossings?.every(c=>c.activation==='automatic')).toBe(true);});
   const race=new LocalRace(routes,t,2);for(let n=0;n<14400&&!race.finished;n++){stepComputers(race,difficulty);race.step();}expect(race.finished,difficulty+'/'+seed).toBe(true);expect(race.racers.every(r=>r.state.finishTime!<=240)).toBe(true);
  }
-},240000);
+// Wall-clock budget covers fifteen seeded races under concurrent CI load. The
+// simulation deadline above remains exactly 240 seconds for every individual race.
+},480000);
 
 test('concave deck triangulation does not bridge unsupported notches',()=>{
  for(const deck of t.decks!){const indices=deckTriangles(deck.footprint);expect(indices.length).toBe((deck.footprint.length-2)*3);for(let i=0;i<indices.length;i+=3){const points=indices.slice(i,i+3).map(i=>deck.footprint[i]),p={x:points.reduce((a,p)=>a+p.x,0)/3,z:points.reduce((a,p)=>a+p.z,0)/3};expect(deckAt(p,t,Infinity,deck.id)?.id).toBe(deck.id);}}

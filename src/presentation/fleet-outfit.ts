@@ -23,10 +23,10 @@ export function deckCrew(g:CompositionShapes,x:number,z:number,color:string){
  navalEllipsoid(g,x,1.49,z,.22,.23,.22,art.helmet,7,5);g.box(x,1.47,z+.19,.3,.10,.06,art.glass);
 }
 /** Outfitting follows the actual tapered steel skin, below the entire driveable deck. */
-export function hullOutfit(d:DeckSurface,frame:Frame,ps:Point[],rows:HullRow[],details:CompositionShapes,paint:CompositionShapes){
- const skin=(p:Point,y:number)=>{const i=Math.max(0,rows.findIndex((r,i)=>i<rows.length-1&&y<=r.y&&y>=rows[i+1].y)),u=(rows[i].y-y)/(rows[i].y-rows[i+1].y);const len=Math.hypot(p.x,p.z)||1;return frame.world(p.x*(rows[i].s+(rows[i+1].s-rows[i].s)*u)+p.x/len*.035,p.z*(rows[i].t+(rows[i+1].t-rows[i].t)*u)+p.z/len*.035,y);};
+export function hullOutfit(d:DeckSurface,frame:Frame,ps:Point[],rows:HullRow[],details:CompositionShapes,paint:CompositionShapes,skinAt?:(p:Point,y:number)=>number[],skinPoints=ps){
+ const skin=skinAt??((p:Point,y:number)=>{const i=Math.max(0,rows.findIndex((r,i)=>i<rows.length-1&&y<=r.y&&y>=rows[i+1].y)),u=(rows[i].y-y)/(rows[i].y-rows[i+1].y);const len=Math.hypot(p.x,p.z)||1;return frame.world(p.x*(rows[i].s+(rows[i+1].s-rows[i].s)*u)+p.x/len*.035,p.z*(rows[i].t+(rows[i+1].t-rows[i].t)*u)+p.z/len*.035,y);});
  // A warm anti-fouling belt makes the freeboard and waterline unmistakable.
- for(let i=0;i<ps.length;i++){const a=ps[i],b=ps[(i+1)%ps.length];paint.quad([skin(a,-1.48),skin(b,-1.48),skin(b,1.55),skin(a,1.55)],art.oxide);paint.beam(skin(a,1.65),skin(b,1.65),.10,art.coping,4);}
+ for(let i=0;i<skinPoints.length;i++){const a=skinPoints[i],b=skinPoints[(i+1)%skinPoints.length];paint.quad([skin(a,-1.48),skin(b,-1.48),skin(b,1.55),skin(a,1.55)],art.oxide);paint.beam(skin(a,1.65),skin(b,1.65),.10,art.coping,4);}
  for(const side of[-1,1]){
   const edge=ps.map((a,i)=>({a,b:ps[(i+1)%ps.length]})).filter(e=>((e.a.z+e.b.z)/2)*side>0).sort((a,b)=>Math.hypot(b.b.x-b.a.x,b.b.z-b.a.z)-Math.hypot(a.b.x-a.a.x,a.b.z-a.a.z))[0];if(!edge)continue;
   const {a,b}=edge,l=Math.hypot(b.x-a.x,b.z-a.z),at=(u:number,y:number)=>skin({x:a.x+(b.x-a.x)*u,z:a.z+(b.z-a.z)*u},y),half=Math.min(d.kind==='carrier'?8:3,l*.09)/l;
@@ -42,7 +42,7 @@ export function hullOutfit(d:DeckSurface,frame:Frame,ps:Point[],rows:HullRow[],d
   for(let n=0;n<count;n++){
    const u=(n+1)/(count+1),y=d.elevation-4.1,p=at(u,y),s=a.x+(b.x-a.x)*u,t=(a.z+(b.z-a.z)*u)*.88;
    const boat=new CompositionShapes();navalEllipsoid(boat,0,0,0,d.kind==='carrier'?3.2:2.4,.83,.95,art.rescueOrange,12,6);navalEllipsoid(boat,.2,.45,0,2.0,.65,.72,art.superstructure,10,5);boat.box(.35,.8,0,1.9,.28,1.30,art.glass);boat.box(0,-.48,0,5.8,.16,.7,art.dark);
-   const q=frame.world(s*.975,t,y);details.instance(boat,{x:q[0],y:q[1],z:q[2],heading:-Math.atan2(d.vessel!.forward.z,d.vessel!.forward.x)});
+   const q=at(u,y);details.instance(boat,{x:q[0],y:q[1],z:q[2],heading:-Math.atan2(d.vessel!.forward.z,d.vessel!.forward.x)});
    // Davits and strong triangular under-deck brackets stay below deck height.
    for(const offset of[-4,4]){const top=frame.world(s+offset,t,d.elevation-1),inside=frame.world(s+offset,t-side*2,d.elevation-4.9);details.beam(inside,top,.18,art.coping,6);details.beam(top,[p[0]+d.vessel!.forward.x*offset,y+1.3,p[2]+d.vessel!.forward.z*offset],.14,art.ribs,5);}
   }
