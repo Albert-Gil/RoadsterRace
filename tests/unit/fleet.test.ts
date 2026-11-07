@@ -17,7 +17,7 @@ test('fleet supports the full start zone, ten-course envelope and both economica
  expect(t.decks?.filter(d=>d.kind==='carrier')).toHaveLength(2);expect(t.decks?.filter(d=>d.kind==='destroyer')).toHaveLength(2);expect(t.decks?.filter(d=>d.kind==='support-ship')).toHaveLength(2);
  for(const p of drawingStartBounds(t).corners)expect(supported(p,t)).toBe(true);
  const savings=t.hopShortcuts!.map(h=>h.exitProgress-h.entryProgress-cumulative(h.branch).at(-1)!);
- savings.forEach(v=>{expect(v).toBeGreaterThanOrEqual(20);expect(v).toBeLessThanOrEqual(35);});expect((t.length-savings.reduce((a,b)=>a+b))/2).toBeGreaterThanOrEqual(315);
+ savings.forEach(v=>{expect(v).toBeGreaterThanOrEqual(20);expect(v).toBeLessThanOrEqual(45);});expect((t.length-savings.reduce((a,b)=>a+b))/2).toBeGreaterThanOrEqual(315);
 });
 test('ordered normal and support-vessel routes compile without hazards; guides are not support',()=>{
  const main=compile();expect(main.crossings!.map(c=>c.id)).toEqual(['carrier-a-crossing','carrier-b-crossing']);expect(main.hazards).toBeUndefined();
@@ -26,7 +26,7 @@ test('ordered normal and support-vessel routes compile without hazards; guides a
 });
 for(const speed of[20,30,42])test(`all six crossings land with ${speed} m/s momentum and yaw variation`,()=>{
  for(const j of t.jumps!)for(const yaw of[-20,0,20]){
-  const branch=t.hopShortcuts!.find(h=>h.crossings?.includes(j.id)),route=compile(branch?.id),sim=new RaceSimulation(route,t,1),p=jumpPoint(j,j.activation==='hop'?-5:7.9),heading=Math.atan2(j.forward.x,j.forward.z),near=route.points.reduce((a,b)=>distance(a,p)<distance(b,p)?a:b);
+  const branch=t.hopShortcuts!.find(h=>h.crossings?.includes(j.id)),route=compile(branch?.id),sim=new RaceSimulation(route,t,1),p=jumpPoint(j,j.activation==='hop'?-5:j.rampLength-.1),heading=Math.atan2(j.forward.x,j.forward.z),near=route.points.reduce((a,b)=>distance(a,p)<distance(b,p)?a:b);
   Object.assign(sim.state,{position:p,elevation:groundHeight(p,t),heading:heading+yaw*Math.PI/180,speed,velocity:{x:j.forward.x*speed+j.forward.z*2,z:j.forward.z*speed-j.forward.x*2},distance:near.distance});
   if(j.activation==='hop')sim.pressHop();let landed=false,recovered=false;
   for(let i=0;i<200;i++){sim.step();const es=sim.drainEvents();landed ||=es.some(e=>e.type==='landing');recovered ||=es.some(e=>e.type==='recovery');if(landed||recovered)break;}

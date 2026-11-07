@@ -78,3 +78,6 @@ still checks every course.
 
 Physical iPhone/iPad Safari drawing comfort, sound and sustained performance remain
 pending actual hardware testing. Automated phone emulation is supplemental evidence.
+
+Current follow-up: [FLEET_V3.md](FLEET_V3.md) supersedes this v2 layout with a staggered
+719.1 m lap, visible automatic ramps and full-deck auxiliary driving surfaces.

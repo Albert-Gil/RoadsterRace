@@ -133,7 +133,9 @@ function table(name: string, values: Record<string, number>) {
 }
 
 export function currentRulesMarkdown() {
-  const fleetHeights = [...new Set(circuits.find(c => c.id === 'san-diego-fleet')!.track.decks!.map(d => d.elevation))].sort((a, b) => b - a).join('/');
+  const fleet = circuits.find(c => c.id === 'san-diego-fleet')!.track;
+  const fleetHeights = [...new Set(fleet.decks!.map(d => d.elevation))].sort((a, b) => b - a).join('/');
+  const fleetCrossings = ['| Crossing | Activation | Ramp (m) | Rise (m) | Water gap (m) |','|---|---|---:|---:|---:|',...fleet.jumps!.map(j=>`| ${j.id} | ${j.activation??'automatic'} | ${j.rampLength.toFixed(2)} | ${j.lipHeight.toFixed(2)} | ${j.gap.toFixed(2)} |`)].join('\n');
   const peak = RULES.hopLaunchSpeed ** 2 / (2 * flightGravity('hop')), airtime = 2 * RULES.hopLaunchSpeed / flightGravity('hop');
   const crest = circuits.find(c => c.id === 'grand-canyon')!.track.jumps!.find(j => j.kind === 'crest')!;
   const courses = ['| Circuit | ID | Track version | Road width (m) | Centerline (m) | Barriers | Branches |', '|---|---|---:|---:|---:|---:|---|',
@@ -175,7 +177,9 @@ ${ski.join('\n')}
 
 ## Fleet deck crossings and local Collection
 
-San Diego Fleet owns named stationary ${fleetHeights} m decks. Physical support comes only from those footprints; interpolated drawing guides across a gap provide no support. Normal automatic crossings use an 8 m approach, 1.2 m lip, 10 m opening and 60 m receiving straight. Support-vessel alternatives pair a manual 6 m water Hop with an automatic 6 m exit; incomplete or unsupported drawings remain penalized hazards. Intended receiving-deck ownership is required at landing. CPU drivers use the normal route.
+San Diego Fleet owns named stationary ${fleetHeights} m decks. Physical support comes only from those footprints and the explicit sloping ramp decks; interpolated drawing guides across a gap provide no support. Each automatic crossing has a visible 3 m raised steel ramp, with authored launch boost 8 m/s plus 0.08 times forward speed. Support-vessel alternatives require manual Hop at the unmarked entry and an automatic exit in order. Their entire working decks have road grip and no painted alternate lane. Incomplete or unsupported drawings remain penalized hazards. Intended receiving-deck ownership and full vehicle clearance are required at landing. CPU drivers use the normal route. The staggered formation's crossing dimensions are:
+
+${fleetCrossings}
 
 Human-only Finish (selected distance), Clean (one lap without barrier/car contact or recovery) and Rival (shared first in Solo Normal/Hard) are independent historical achievements. Drifting, off-road driving and abilities do not spoil Clean. Tutorial, CPU, ghosts and practice cannot award progress. Cup completion and cosmetic rewards are installation-local, idempotent and independent of race preferences/versions; there is no synchronization or gameplay advantage.
 

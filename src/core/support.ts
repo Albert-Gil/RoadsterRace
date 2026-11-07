@@ -95,9 +95,9 @@ function crestTraversal(located: Point[], track: TrackDefinition) {
  * takes forward inside their corridor are approved and excused over their gap.
  */
 export function assessSupports(points: Point[], track: TrackDefinition): { jumps: string[]; unsupported: boolean[] } {
-  if(track.decks){const crossings=deckCrossings(points,track),jumps=crossings.map(c=>c.id);return{jumps,unsupported:points.map((p,i)=>{
+  if(track.decks){const crossings=deckCrossings(points,track),jumps=crossings.map(c=>c.id),ds=cumulative(points);return{jumps,unsupported:points.map((p,i)=>{
     if(deckVehicleSupported(p,headingAt(points,i),track))return false;
-    return !track.jumps?.some(j=>{const c=crossingCoords(p,j);return jumps.includes(j.id)&&c.along>=-track.carLength&&c.along<=j.rampLength+j.gap+track.carLength/2&&Math.abs(c.across)<=(j.width-track.carWidth)/2;});
+    return !track.jumps?.some(j=>{const c=crossingCoords(p,j),crossing=crossings.find(v=>v.id===j.id);return crossing&&ds[i]>=crossing.entryDistance-track.carLength&&ds[i]<=crossing.exitDistance&&c.along>=-track.carLength&&Math.abs(c.across)<=(j.width-track.carWidth)/2;});
   })};}
   if (track.sections) {
     const located = annotateRoad(points, track), crest = crestTraversal(located, track), jump = track.jumps?.find(j => j.kind === 'crest');

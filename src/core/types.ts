@@ -4,7 +4,7 @@ export interface TrackBarrier { deckSurfaceId?:string; id: string; footprint: Po
 export interface RoadSection { id: string; from: number; to: number; heights: [number, number][]; supportWidth: number; /** Optional distance/width profile for continuous shoulders, relative to section.from. */ supportWidths?: [number, number][]; flight?: boolean }
 export interface SupportSurface { id: string; footprint: Point[] }
 /** Stationary physical deck. A transfer can grade continuously between two heights. */
-export interface DeckSurface extends SupportSurface {elevation:number;toElevation?:number;from?:Point;to?:Point;kind:'carrier'|'destroyer'|'support-ship'|'transfer'; /** Stationary vessel axes for hull/deck construction. Does not add support. */ vessel?:{origin:Point;forward:Point}}
+export interface DeckSurface extends SupportSurface {elevation:number;toElevation?:number;from?:Point;to?:Point;gradeNormal?:Point;kind:'carrier'|'destroyer'|'support-ship'|'transfer'; /** The entire authored working deck has ordinary road grip. */ racingSurface?:boolean; /** Physical wedge support belonging to an automatic crossing. */ rampId?:string; /** Stationary vessel axes for hull/deck construction. Does not add support. */ vessel?:{origin:Point;forward:Point}}
 export interface TrackJump {
   id: string; from: Point; forward: Point; width: number; rampLength: number; lipHeight: number;
   gap: number; runout: number; corridorLength: number;

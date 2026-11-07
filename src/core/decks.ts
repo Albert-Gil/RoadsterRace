@@ -2,8 +2,14 @@ import{clamp,cumulative,lerp,projectToPolyline}from'./geometry';
 import{insideBarrier}from'./barriers';
 import type{DeckSurface,Point,TrackDefinition,TrackJump}from'./types';
 
-export const onDeck=(p:Point,d:DeckSurface)=>insideBarrier(p,{id:d.id,height:0,footprint:d.footprint});
-export function deckElevation(p:Point,d:DeckSurface){if(d.from&&d.to&&d.toElevation!==undefined){const dx=d.to.x-d.from.x,dz=d.to.z-d.from.z,t=clamp(((p.x-d.from.x)*dx+(p.z-d.from.z)*dz)/(dx*dx+dz*dz),0,1);return lerp(d.elevation,d.toElevation,t);}return d.elevation;}
+// Runtime track polygons are immutable. Most wheel/landing probes are nowhere near
+// a given vessel: reject those cheaply, retaining the exact polygon test at its edges.
+const deckBounds=new WeakMap<Point[],{minX:number;maxX:number;minZ:number;maxZ:number}>();
+export const onDeck=(p:Point,d:DeckSurface)=>{
+ let b=deckBounds.get(d.footprint);if(!b){b={minX:Math.min(...d.footprint.map(p=>p.x))-1e-7,maxX:Math.max(...d.footprint.map(p=>p.x))+1e-7,minZ:Math.min(...d.footprint.map(p=>p.z))-1e-7,maxZ:Math.max(...d.footprint.map(p=>p.z))+1e-7};deckBounds.set(d.footprint,b);}
+ return p.x>=b.minX&&p.x<=b.maxX&&p.z>=b.minZ&&p.z<=b.maxZ&&insideBarrier(p,{id:d.id,height:0,footprint:d.footprint});
+};
+export function deckElevation(p:Point,d:DeckSurface){if(d.from&&d.to&&d.toElevation!==undefined){const dx=d.to.x-d.from.x,dz=d.to.z-d.from.z,n=d.gradeNormal??{x:dx,z:dz},t=clamp(((p.x-d.from.x)*n.x+(p.z-d.from.z)*n.z)/(dx*n.x+dz*n.z),0,1);return lerp(d.elevation,d.toElevation,t);}return d.elevation;}
 export function deckAt(p:Point,t:TrackDefinition,ceiling=Infinity,id?:string){
  let result:DeckSurface|undefined,height=-Infinity;
  for(const d of t.decks??[]){if(id&&d.id!==id||!onDeck(p,d))continue;const h=deckElevation(p,d);if(h<=ceiling+.05&&h>height){result=d;height=h;}}
@@ -26,7 +32,9 @@ export function deckVehicleSupported(p:Point,heading:number,t:TrackDefinition,id
 export function deckCrossings(points:Point[],t:TrackDefinition){
  const ds=cumulative(points),found:{id:string;entryDistance:number;exitDistance:number;activation:'automatic'|'hop'}[]=[];
  for(const j of t.jumps??[]){const half=(j.width-t.carWidth)/2,c=points.map(p=>crossingCoords(p,j)),a=c.findIndex((q,i)=>i>0&&c[i-1].along<=0&&q.along>0&&Math.abs(q.across)<=half);
-  if(a<0)continue;const b=c.findIndex((q,i)=>i>a&&q.along>=j.rampLength+j.gap+t.carLength/2&&Math.abs(q.across)<=half);if(b<0)continue;
+  // A skewed ship's landing mouth may reach one rear wheel later than the centreline.
+  // Keep the crossing active until the whole footprint is on its named receiving deck.
+  if(a<0)continue;const b=c.findIndex((q,i)=>i>a&&q.along>=j.rampLength+j.gap+t.carLength/2&&Math.abs(q.across)<=half&&deckVehicleSupported(points[i],Math.atan2(points[i].x-points[i-1].x,points[i].z-points[i-1].z),t,j.landingSurfaceId));if(b<0)continue;
   if(!c.slice(a,b+1).every((q,i,all)=>Math.abs(q.across)<=half&&(!i||q.along>=all[i-1].along-.5)))continue;
   found.push({id:j.id,entryDistance:ds[a],exitDistance:ds[b],activation:j.activation??'automatic'});
  }

@@ -333,3 +333,18 @@ bundled. The USS Midway Museum source above and the Naval History and Heritage C
 [USS Indianapolis photograph collection](https://www.history.navy.mil/content/history/museums/nmusn/explore/photography/ships-us/ships-usn-i/uss-indianapolis-ca-35.html)
 were visual references only. Vessel names, markings, game dimensions and layout remain
 fictional; no real ship's detailed plans or protected logos were reproduced.
+
+### Fleet v3 automatic ramps and aircraft (2026-11-06)
+
+The raised steel wedges, thin auxiliary working ships, closed jet fuselages, wing/tail
+assemblies and revised formation are original procedural Roadster Race geometry in
+`fleet.ts` and `fleet-model.ts`. Existing naval visual references and CC0 sky attribution
+remain unchanged. No downloaded models, new textures or official markings were added.
+
+### Fleet visible naval details (2026-11-06)
+
+The carrier bridge/radome families, deck crew, folded-wing variants, yellow rescue
+helicopters, original pennants, rescue lifeboats, hangar facades, aviation identifiers,
+helipads and elevator panels are original procedural geometry in fleet-model.ts and
+fleet-outfit.ts. Existing surface textures and coastal sky are reused. No national
+emblems, official ship names, downloaded artwork or additional licenses are introduced.

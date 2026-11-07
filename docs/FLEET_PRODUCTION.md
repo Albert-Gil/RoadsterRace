@@ -1,5 +1,8 @@
 # Visual production, Collection and San Diego Fleet
 
+Current local follow-up: [FLEET_V3.md](FLEET_V3.md) documents the 719.1 m staggered
+formation, physical steel ramps and full-deck auxiliary driving surfaces.
+
 The subsequent owner-requested **Fleet v2 ship rebuild** supersedes the original
 Fleet geometry/heights below. See [FLEET_REBUILD.md](FLEET_REBUILD.md) for the current
 714.8 m course, 24/22/16 m decks, naval artwork and compatibility requirements.

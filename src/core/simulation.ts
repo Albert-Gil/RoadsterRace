@@ -26,7 +26,8 @@ export function sampleSurface(position: Point, track: TrackDefinition) {
   const road = track.sections ? locateRoad(position,track) : projectToPolylineNear(position, track.centerline, track.distances);
   const branch = track.sections ? undefined : branchProjection(position, track); if (branch && branch.distance < road.distance) road.distance = branch.distance;
   const edge = (track.roadWidth - track.carWidth) / 2;
-  const sandAmount = clamp((road.distance - edge) / RULES.surfaceTransition, 0, 1);
+  const workingDeck = track.decks && deckAt(position, track)?.racingSurface;
+  const sandAmount = workingDeck ? 0 : clamp((road.distance - edge) / RULES.surfaceTransition, 0, 1);
   const profile = trackSurface(track);
   return { sandAmount, grip: lerp(profile.grip, profile.looseGrip, sandAmount), response: lerp(RULES.asphaltResponse, RULES.sandResponse, sandAmount), drag: profile.drag, surface: sandAmount > .25 ? profile.loose : profile.road };
 }
