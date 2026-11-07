@@ -9,12 +9,13 @@ import { roadPoint } from '../../src/core/elevation';
 import { cumulative, projectToPolyline } from '../../src/core/geometry';
 import { laxGeometry } from '../../src/presentation/lax';
 import { insideBarrier } from '../../src/core/barriers';
+import { drawingStartBounds, gateCoordinates } from '../../src/core/start-finish';
 
 const plan=(branch=false)=>{const r=compileRoute(createPracticeSamples(track,7,branch?'center-way':false),track);if(!r.ok)throw Error(r.message);return r.route;};
-test('LAX has wide rounded roads, elevated departures and two straight runway crests',()=>{
+test('LAX has wide rounded roads, elevated departures and compact runway sectors and street/airfield jumps',()=>{
  expect(minimumRadius(track.centerline)).toBeGreaterThan(12);expect(track.roadWidth).toBe(16);
- expect(track.length).toBeGreaterThan(1000);expect(track.sections?.every(s=>s.to>s.from)).toBe(true);
- expect(track.terrainTakeoffs).toHaveLength(2);expect(Math.max(...track.centerline.map(p=>p.y??0))).toBe(6);
+ expect(track.length).toBeGreaterThan(750);expect(track.length).toBeLessThan(900);expect(track.sections?.every(s=>s.to>s.from)).toBe(true);
+ expect(track.terrainTakeoffs).toHaveLength(2);expect(Math.max(...track.centerline.map(p=>p.y??0))).toBeCloseTo(6.2,1);
  const route=plan();expect(route.hazards??[]).toHaveLength(0);
  const shortcut=plan(true);expect(shortcut.hopShortcuts?.map(s=>s.id)).toContain('center-way');expect(shortcut.hazards??[]).toHaveLength(0);expect(shortcut.length).toBeLessThan(route.length-20);
 });
@@ -34,7 +35,7 @@ test.each(['easy','normal','hard'] as const)('four LAX drivers finish on %s',dif
  expect(race.racers.every(r=>Number.isFinite(r.state.finishTime))).toBe(true);
 },120000);
 test('the hidden cross-connection is an actual hop obstacle and completes repeated laps',()=>{
- const route=plan(true),sim=new RaceSimulation(route,track,2),lane=track.hopShortcuts![0],ds=cumulative(lane.branch),obstacle=projectToPolyline({x:0,z:47},lane.branch,ds).progress;
+ const route=plan(true),sim=new RaceSimulation(route,track,2),lane=track.hopShortcuts![0],ds=cumulative(lane.branch),obstacle=projectToPolyline({x:0,z:16},lane.branch,ds).progress;
  for(let i=0;i<60*240&&!sim.state.finished;i++){
   const q=projectToPolyline(sim.state.position,lane.branch,ds);if(q.distance<3&&q.progress>obstacle-14&&q.progress<obstacle-10)sim.pressHop();sim.step();
  }
@@ -51,5 +52,14 @@ test('seven terminal groups and native planting remain in their protected parcel
   const owner=track.barriers.find(b=>b.id===p.parcel)!;expect(owner).toBeDefined();
   for(let i=0;i<24;i++)expect(insideBarrier({x:p.x+p.radius*Math.cos(i*Math.PI/12),z:p.z+p.radius*Math.sin(i*Math.PI/12)},owner)).toBe(true);
   const clearance=Math.min(...paths.map(path=>projectToPolyline(p,path.points,path.distances).distance))-p.radius-track.roadWidth/2;expect(clearance).toBeGreaterThan(2);
+ }
+});
+
+test('the complete touchdown rectangle stays clear of airport equipment and buildings',()=>{
+ const gate=drawingStartBounds(track);
+ for(const b of track.barriers){
+  const points=b.footprint.map(p=>gateCoordinates(p,track)),along=points.map(p=>p.along),across=points.map(p=>p.across);
+  const overlaps=Math.max(...along)>gate.from&&Math.min(...along)<gate.to&&Math.max(...across)>-gate.halfWidth&&Math.min(...across)<gate.halfWidth;
+  expect(overlaps,b.id).toBe(false);
  }
 });

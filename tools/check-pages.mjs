@@ -312,8 +312,13 @@ try {
   }
   if (sessionChecks || selection === 'solo') {
     console.log('Checking Solo Race: three CPU cars and one human input');
-    const points = await fixture('coastal-launch');
-    const { context, page } = await productionPage();
+    // CI's CPU renderer can exceed the real 500 ms interruption guard with four
+    // cars. Keep the phone's CSS layout, real inputs, pause guard and fixed clock;
+    // reduce only the physical render pixels for this control/ownership check.
+    // Full-density phone drawing/layout is covered by its separate matrix group.
+    const soloOptions = process.env.CI ? { ...phone, deviceScaleFactor: 0.5 } : phone;
+    const points = await fixture('coastal-launch', 1, soloOptions);
+    const { context, page } = await productionPage(soloOptions);
     try {
       await page.goto(productionURL);
       await page.getByRole('button', { name: 'Solo Race', exact: true }).click();

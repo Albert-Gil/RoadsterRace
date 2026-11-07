@@ -1,12 +1,21 @@
 import { test, expect } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
-const root='artifacts/lax';mkdirSync(root,{recursive:true});
+const root='artifacts/lax-v2';mkdirSync(root,{recursive:true});
 
 for(const view of[{width:1440,height:900,touch:false},{width:844,height:390,touch:true},{width:390,height:844,touch:true},{width:1024,height:768,touch:true}])test(`LAX real ${view.touch?'touch':'mouse'} drawing and fixed framing ${view.width}`,async({browser})=>{
  const context=await browser.newContext({viewport:view,hasTouch:view.touch,isMobile:view.touch,deviceScaleFactor:view.touch?2:1}),page=await context.newPage(),errors:string[]=[];
  page.on('pageerror',e=>errors.push(e.message));await page.goto('/?circuit=lax&graphics=medium');
  await page.getByRole('button',{name:'Time Trial',exact:true}).click();await page.getByRole('button',{name:'1 lap',exact:true}).click();await page.getByRole('button',{name:'Draw racing line',exact:true}).click();await page.waitForFunction(()=>(window as any).__roadster.getGraphics().renderReady);
  const camera=await page.evaluate(()=>(window as any).__roadster.getWorld().camera.position.asArray());
+ const framing=await page.evaluate(async()=>{
+  const api=(window as any).__roadster,t=api.getTrack(),edgeModule='/src/core/road-geometry.ts',heightModule='/src/core/elevation.ts',gateModule='/src/core/start-finish.ts';
+  const [{roadEdges},{roadHeight},{drawingStartBounds}]=await Promise.all([import(edgeModule),import(heightModule),import(gateModule)]);
+  const paths=[t.centerline,...t.hopShortcuts.map((h:any)=>h.branch)],points=paths.flatMap((path:any[],i:number)=>roadEdges(path,16,i===0).flatMap((edge:any[])=>edge.map((p:any,n:number)=>api.project({...p,y:roadHeight(t,path[n].courseProgress)}))))
+   .concat(drawingStartBounds(t).corners.map((p:any)=>api.project({...p,y:0})));
+  return{rect:document.querySelector('#course-space')!.getBoundingClientRect().toJSON(),points};
+ });
+ const margin=view.touch&&Math.min(view.width,view.height)<=500?18:4;
+ for(const p of framing.points){expect(p.x).toBeGreaterThanOrEqual(framing.rect.left+margin);expect(p.x).toBeLessThanOrEqual(framing.rect.right-margin);expect(p.y).toBeGreaterThanOrEqual(framing.rect.top+margin);expect(p.y).toBeLessThanOrEqual(framing.rect.bottom-margin);}
  await page.screenshot({path:`${root}/drawing-${view.width}.png`});
  const points=await page.evaluate(()=>{const g=(window as any).__roadster,t=g.getTrack();return t.centerline.filter((_:any,i:number)=>i%2===0||i===t.centerline.length-1).map((p:any)=>({...g.project(p),fraction:t.distances[t.centerline.indexOf(p)]/t.length}));});
  for(const p of points){expect(p.x).toBeGreaterThan(0);expect(p.x).toBeLessThan(view.width);expect(p.y).toBeGreaterThan(0);expect(p.y).toBeLessThan(view.height);}
@@ -47,8 +56,8 @@ test('LAX Time Trial keeps its actual lap ghost cosmetic and within the effects 
 
 test('LAX hidden horseshoe connection clears its equipment with a real Hop button press',async({page})=>{
  await page.goto('/?circuit=lax&graphics=medium');await page.getByRole('button',{name:'Time Trial',exact:true}).click();await page.getByRole('button',{name:'1 lap',exact:true}).click();await page.getByRole('button',{name:'Draw racing line',exact:true}).click();await page.waitForFunction(()=>(window as any).__roadster.getGraphics().renderReady);await page.evaluate(()=>(window as any).__roadster.usePracticeLine('center-way'));await page.screenshot({path:`${root}/horseshoe-connection.png`});await page.getByRole('button',{name:'Race this line',exact:true}).click();
- await page.waitForFunction(()=>{const s=(window as any).__roadster.getState().race,p=s?.position;return p&&p.x>10&&p.x<14&&Math.abs(p.z-47)<2&&s.movement==='grounded'&&s.velocity.x<0;},undefined,{timeout:120000});
- await page.getByRole('button',{name:'Activate hop',exact:true}).click();await page.waitForFunction(()=>{const s=(window as any).__roadster.getState().race;return s.elevation>12&&s.hopCount===1;});await page.screenshot({path:`${root}/horseshoe-hop.png`});
+ await page.waitForFunction(()=>{const s=(window as any).__roadster.getState().race,p=s?.position;return p&&p.x>10&&p.x<14&&Math.abs(p.z-16)<2&&s.movement==='grounded'&&s.velocity.x<0;},undefined,{timeout:120000});
+ await page.getByRole('button',{name:'Activate hop',exact:true}).click();await page.waitForFunction(()=>{const s=(window as any).__roadster.getState().race;return s.elevation>9&&s.hopCount===1;});await page.screenshot({path:`${root}/horseshoe-hop.png`});
  await page.waitForFunction(()=>(window as any).__roadster.getState().phase==='results',undefined,{timeout:120000});const s=await page.evaluate(()=>(window as any).__roadster.getState().race);expect(s.recoveryCount).toBe(0);expect(s.collisionCount).toBe(0);expect(s.hopCount).toBe(1);writeFileSync(`${root}/shortcut-race.json`,JSON.stringify(s,null,2));
 });
 

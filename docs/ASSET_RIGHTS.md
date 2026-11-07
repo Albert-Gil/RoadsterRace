@@ -368,3 +368,9 @@ models. Liveries and signage are fictional. Official visual-reference links and
 the fictional seven-terminal layout distinction are recorded in `docs/LAX.md`.
 Existing licensed sky and material sources are reused; no new third-party pack,
 trademark logo, purchased asset or runtime service is introduced.
+
+LAX v2 uses the owner's attached annotated gameplay map and airport aerial only
+as layout references. No screenshot/map imagery is bundled. Its compact terminal
+kit, continuous runway extensions, concrete apron and structural street-transfer
+crests remain original procedural geometry with the same existing material/sky
+sources and eight static batches.
