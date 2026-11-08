@@ -5,15 +5,17 @@ import type { Scene } from '@babylonjs/core/scene';
 import type { TrackDefinition, Point } from '../core/types';
 import { roadEdges } from '../core/road-geometry';
 import { roadHeight, roadSupportWidth, sectionAt } from '../core/elevation';
-import { laxTerminals, laxApronAircraft, laxCargoAprons, laxPlanting, LAX_LAYOUT } from '../core/tracks/lax';
+import { laxTerminals, laxApronAircraft, laxCargoAprons, laxPlanting, laxRunways, laxRouteAircraft, laxApronEquipment, laxStreetExtensions, laxGroundVehicles, laxParkingCars, LAX_LAYOUT } from '../core/tracks/lax';
 import { cumulative, projectToPolyline } from '../core/geometry';
 import { CompositionShapes } from './composition-shapes';
 import { RenderedSurface } from './rendered-surface';
-import { laxAppearance as art, type PresentationTheme } from './themes';
+import { laxAppearance as art, laxMarkingAppearance as marking, type PresentationTheme } from './themes';
 import { surfaceTexture } from './textures';
 import { hex } from './landscape/mesh';
 
 type V=number[];
+// Babylon's clockwise convention uses (c-a) × (b-a) for the outward normal.
+const upward=(p:V[])=>((p[1][2]-p[0][2])*(p[2][0]-p[0][0])-(p[1][0]-p[0][0])*(p[2][2]-p[0][2]))>0?p.slice().reverse():p;
 /** Original airliner kit, reusable at different apron scales, with no individual draw calls. */
 function airliner(g:CompositionShapes,paint:CompositionShapes,x:number,z:number,scale=1,heading=0,tail=art.livery[0]){
  const at=(a:number,b:number,c:number):V=>[x+(a*Math.cos(heading)+c*Math.sin(heading))*scale,b*scale,z+(-a*Math.sin(heading)+c*Math.cos(heading))*scale];
@@ -42,23 +44,42 @@ function digits(g:CompositionShapes,n:number,x:number,y:number,z:number,scale=1)
 export function laxGeometry(track:TrackDefinition){
  const ground=new CompositionShapes(),road=new CompositionShapes(),concrete=new CompositionShapes(),structure=new CompositionShapes(),glass=new CompositionShapes(),equipment=new CompositionShapes(),paint=new CompositionShapes(),plants=new CompositionShapes(),base=LAX_LAYOUT.streetHeight;
  ground.box(0,-.2,20,2400,.3,2400,art.ground);
- concrete.box(0,-.055,27,193,.08,186,art.apron);
- concrete.box(0,-.045,87,210,.08,65,art.apron);
+ concrete.box(0,-.055,75,193,.08,342,art.apron);
+ concrete.box(0,-.045,200,210,.08,110,art.apron);
  // These ARE the race straights: each runway continues beyond the raced section.
- for(const side of[-1,1])for(const [x,w] of[[side*82,16],[side*111,11]]){
-  road.box(x,.005,25,w,.04,330,art.runway);
-  for(let z=-130;z<185;z+=13)paint.box(x,.08,z,.28,.02,5,art.marking);
-  for(const edge of[-1,1])paint.box(x+edge*(w/2-.28),.08,25,.22,.02,327,art.marking);
-  for(const z of[-128,169])for(let n=-3;n<=3;n++)paint.box(x+n*w/9,.09,z,.65,.02,8,art.marking);
-  digits(paint,side<0?25:7,x-1.5,.10,side<0?151:-112,1.2);
+ for(const runway of laxRunways){
+  const {x,z,width:w,length:l}=runway;
+  road.box(x,.005,z,w,.04,l,art.runway);
+  for(let along=z-l/2+10;along<z+l/2-10;along+=16)paint.box(x,.08,along,marking.runwayCentreWidth,.02,7,art.marking);
+  for(const edge of[-1,1])paint.box(x+edge*(w/2-.5),.08,z,marking.runwayEdgeWidth,.02,l-3,art.marking);
+  for(const along of[z-l/2+12,z+l/2-12])for(let n=-6;n<=6;n++)if(n)paint.box(x+n*2.8,.09,along,1.3,.02,10,art.marking);
+  for(const along of[z-l/2+50,z+l/2-50])for(const edge of[-1,1])paint.box(x+edge*7,.08,along,1.4,.02,8,art.marking);
+  digits(paint,runway.number,x-3.5,.10,x<0?z+l/2-34:z-l/2+26,2.8);
+ }
+ // Real public streets continue beyond the circuit turn, behind physical closures.
+ for(const street of laxStreetExtensions){
+  const height=(x:number,z:number)=>{const h=roadHeight(track,projectToPolyline({x,z},track.centerline,track.distances).progress),t=Math.max(0,Math.min(1,(-z+LAX_LAYOUT.lowerTurnZ-17)/35));return h+(base-h)*t;};
+  const junction=(x:number,radius:number)=>street.fromZ-Math.sqrt(Math.max(0,radius**2-(42-Math.abs(x))**2));
+  for(let z=street.toZ;z<street.fromZ;z+=1){
+   const next=Math.min(z+1,street.fromZ),l=street.x-street.width/2,r=street.x+street.width/2;
+   // Union the straight tail with the existing circular corner instead of
+   // drawing intersecting decks/walls through the racing surface.
+   const step=z<LAX_LAYOUT.lowerTurnZ-9?street.width:.5;
+   for(let x=l;x<r-.01;x+=step){const xx=Math.min(r,x+step),a=Math.min(next,junction(x,23.95)),b=Math.min(next,junction(xx,23.95)),c=Math.min(z,junction(x,23.95)),d=Math.min(z,junction(xx,23.95));if(a<=c&&b<=d)continue;road.quad(upward([[x,height(x,c)+.022,c],[xx,height(xx,d)+.022,d],[xx,height(xx,b)+.022,b],[x,height(x,a)+.022,a]]),art.asphalt);}
+   const a=l-1.2,b=r+1.2;concrete.quad(upward([[a,height(a,z)-.08,z],[b,height(b,z)-.08,z],[b,height(b,next)-.08,next],[a,height(a,next)-.08,next]]),art.concrete);
+   for(const x of[a,b])if(next<junction(x,30.2))structure.quad([[x,0,z],[x,0,next],[x,height(x,next)-.09,next],[x,height(x,z)-.09,z]],art.fascia);
+   for(const x of[l+.25,r-.25])if(next<junction(x,24.2))paint.beam([x,height(x,z)+.05,z],[x,height(x,next)+.05,next],.07,art.marking,4);
+   if(Math.floor(-z)%7<3)for(const side of[-1,1]){const x=street.x+side*.2;if(next<junction(x,24.2))paint.beam([x,height(x,z)+.05,z],[x,height(x,next)+.05,next],.055,art.yellow,4);}
+   if(z<LAX_LAYOUT.lowerTurnZ-15&&Math.floor(-z)%14===0)for(const side of[-1,1]){const x=street.x+side*6.5,h=height(x,z);structure.box(x,h/2,z,.8,h,.8,art.concrete);}
+  }
  }
  const drawPath=(path:Point[],closed:boolean,branch=false)=>{
-  const [a,b]=roadEdges(path,16,closed),edges=roadEdges(path,2,closed),ds=cumulative(path);
+  const [a,b]=roadEdges(path,16,closed),edges=roadEdges(path,2,closed),stripes=roadEdges(path,16-marking.apronEdgeWidth*2,closed),kerb=roadEdges(path,16+marking.apronKerbWidth*2,closed),ds=cumulative(path);
   const at=(i:number)=>path[i].y??roadHeight(track,projectToPolyline(path[i],track.centerline,track.distances).progress);
   for(let i=0;i<path.length-1;i++){
    const y=at(i),yn=at(i+1),s=sectionAt(track,path[i].courseProgress??track.distances[i]??0),apron=!branch&&s?.id==='north-apron',runway=!branch&&s?.id.includes('runway'),ramp=!branch&&s?.id.endsWith('-ramp');
    const color=runway?art.runway:apron?art.apron:art.asphalt;
-   if(!apron)road.quad([[a[i].x,y+.04,a[i].z],[b[i].x,y+.04,b[i].z],[b[i+1].x,yn+.04,b[i+1].z],[a[i+1].x,yn+.04,a[i+1].z]].reverse(),color);
+   if(!apron&&!runway)road.quad([[a[i].x,y+.04,a[i].z],[b[i].x,y+.04,b[i].z],[b[i+1].x,yn+.04,b[i+1].z],[a[i+1].x,yn+.04,a[i+1].z]].reverse(),color);
    if(y>.1||yn>.1){
     const widths=[i,i+1].map(k=>branch?18:Math.min(28,roadSupportWidth(track,track.distances[k]))),shoulders=edges.map(edge=>[i,i+1].map((k,n)=>({x:path[k].x+(edge[k].x-path[k].x)*widths[n]/2,z:path[k].z+(edge[k].z-path[k].z)*widths[n]/2})));
     const [l,r]=shoulders;concrete.quad([[l[0].x,y+.01,l[0].z],[r[0].x,y+.01,r[0].z],[r[1].x,yn+.01,r[1].z],[l[1].x,yn+.01,l[1].z]].reverse(),art.concrete);
@@ -67,6 +88,13 @@ export function laxGeometry(track:TrackDefinition){
    }
    if(!branch&&!runway&&!apron)for(const edge of[a,b])paint.beam([edge[i].x,y+.09,edge[i].z],[edge[i+1].x,yn+.09,edge[i+1].z],.11,art.marking,4);
    if(apron)paint.beam([path[i].x,y+.06,path[i].z],[path[i+1].x,yn+.06,path[i+1].z],.12,art.yellow,4);
+   if(apron){
+    for(const side of[0,1]){
+     const edge=[a,b][side],stripe=stripes[side],outer=kerb[side],h=marking.apronKerbHeight;
+     paint.quad(upward([[edge[i].x,y+.055,edge[i].z],[stripe[i].x,y+.055,stripe[i].z],[stripe[i+1].x,yn+.055,stripe[i+1].z],[edge[i+1].x,yn+.055,edge[i+1].z]]),art.marking);
+     paint.quad(upward([[edge[i].x,y+h,edge[i].z],[outer[i].x,y+h,outer[i].z],[outer[i+1].x,yn+h,outer[i+1].z],[edge[i+1].x,yn+h,edge[i+1].z]]),Math.floor(ds[i]/3)%2?marking.apronBarrierWhite:marking.apronBarrierRed);
+    }
+   }
    if(!branch&&Math.floor(ds[i]/7)!==Math.floor((ds[i-1]??-1)/7)){
     const p=path[i],q=path[i+1],d=Math.hypot(q.x-p.x,q.z-p.z)||1,dx=(q.x-p.x)/d,dz=(q.z-p.z)/d;
     if(apron){for(const sign of[-1,1])equipment.box(p.x-dz*7.5*sign,y+.15,p.z+dx*7.5*sign,.20,.28,.20,art.blue);}
@@ -99,14 +127,35 @@ export function laxGeometry(track:TrackDefinition){
   paint.beam([px-4,.07,z-7],[px+4,.07,z-7],.09,art.yellow,4);
  });
  // Raised central parking island, Theme Building arches and close-up control cab.
- concrete.box(0,1.5,-11.5,24,3,35,art.parking);
- for(const axis of[0,Math.PI/2])for(const sign of[-1,1]){let last:V|undefined;for(let i=0;i<=18;i++){const t=i/18,p=[Math.sin(axis)*sign*10*(1-t),base+Math.sin(t*Math.PI/2)*13,-5+Math.cos(axis)*sign*10*(1-t)];if(last)structure.beam(last,p,.5,art.terminal,7);last=p;}}
- structure.beam([0,12,-5],[0,13.5,-5],4.7,art.roof,28);glass.beam([0,11,-5],[0,12.5,-5],4.3,art.glass,28);structure.beam([0,10.8,-5],[0,11,-5],4.7,art.terminal,28);
- structure.box(0,13.5,-23,2.8,21,2.8,art.tower);structure.box(0,24,-23,6,1.5,6,art.roof);glass.box(0,22.9,-23,5.6,1.3,5.6,art.glass);structure.beam([0,24.75,-23],[0,27,-23],.10,art.metal,6);
- for(const x of[-8,8])for(const z of[-25,-17,-9,-1]){paint.box(x,base+.035,z,3,.03,.1,art.marking);equipment.box(x,base+.7,z+1.8,1.7,1.4,3,art.livery[Math.abs(z)%3]);glass.box(x,base+1.2,z+1.8,1.55,.55,1.6,art.glass);}
+ concrete.box(0,1.5,LAX_LAYOUT.parkingZ,24,3,LAX_LAYOUT.parkingDepth,art.parking);
+ for(const axis of[0,Math.PI/2])for(const sign of[-1,1]){let last:V|undefined;for(let i=0;i<=18;i++){const t=i/18,p=[Math.sin(axis)*sign*10*(1-t),base+Math.sin(t*Math.PI/2)*13,LAX_LAYOUT.themeZ+Math.cos(axis)*sign*10*(1-t)];if(last)structure.beam(last,p,.5,art.terminal,7);last=p;}}
+ const tz=LAX_LAYOUT.themeZ,cz=LAX_LAYOUT.towerZ;
+ structure.beam([0,12,tz],[0,13.5,tz],4.7,art.roof,28);glass.beam([0,11,tz],[0,12.5,tz],4.3,art.glass,28);structure.beam([0,10.8,tz],[0,11,tz],4.7,art.terminal,28);
+ structure.box(0,13.5,cz,2.8,21,2.8,art.tower);structure.box(0,24,cz,6,1.5,6,art.roof);glass.box(0,22.9,cz,5.6,1.3,5.6,art.glass);structure.beam([0,24.75,cz],[0,27,cz],.10,art.metal,6);
+ for(const x of[-8,8])for(const z of laxParkingCars){paint.box(x,base+.035,z,3,.03,.1,art.marking);equipment.box(x,base+.7,z+1.8,1.7,1.4,3,art.livery[Math.abs(z)%3]);glass.box(x,base+1.2,z+1.8,1.55,.55,1.6,art.glass);}
  for(const b of track.barriers){
   const xs=b.footprint.map(p=>p.x),zs=b.footprint.map(p=>p.z),x=(Math.min(...xs)+Math.max(...xs))/2,z=(Math.min(...zs)+Math.max(...zs))/2,w=Math.max(...xs)-Math.min(...xs),d=Math.max(...zs)-Math.min(...zs),h=b.baseHeight??0;
-  if(b.id.startsWith('lax-departures-rail')){const f=b.footprint,a={x:(f[0].x+f[3].x)/2,z:(f[0].z+f[3].z)/2},c={x:(f[1].x+f[2].x)/2,z:(f[1].z+f[2].z)/2};structure.beam([a.x,h+.9,a.z],[c.x,h+.9,c.z],.18,art.metal,6);structure.beam([a.x,h,a.z],[a.x,h+1.1,a.z],.1,art.metal,5);}
+  if(b.id.startsWith('lax-apron-edge')){
+   const f=b.footprint,n=f.length/2,first=Number(b.id.split('-').at(-1)),inset=(a:typeof f[number],c:typeof f[number])=>({x:a.x+(c.x-a.x)*.18,z:a.z+(c.z-a.z)*.18});
+   for(let i=0;i<n-1;i++){
+    const a=f[i],c=f[i+1],d=f[f.length-2-i],e=f[f.length-1-i],ta=inset(a,e),tc=inset(c,d),td=inset(d,c),te=inset(e,a),color=Math.floor((first+i)/3)%2?marking.apronBarrierWhite:marking.apronBarrierRed;
+    for(const [p,q,tp,tq] of[[a,c,ta,tc],[d,e,td,te]]){
+     structure.quad([[p.x,h,p.z],[q.x,h,q.z],[q.x,h+.16,q.z],[p.x,h+.16,p.z]],marking.apronBarrierBase);
+     structure.quad([[p.x,h+.16,p.z],[q.x,h+.16,q.z],[tq.x,h+b.height,tq.z],[tp.x,h+b.height,tp.z]],color);
+    }
+    structure.quad(upward([[ta.x,h+b.height,ta.z],[tc.x,h+b.height,tc.z],[td.x,h+b.height,td.z],[te.x,h+b.height,te.z]]),marking.apronBarrierWhite);
+   }
+   for(const [a,c] of[[f[0],f[f.length-1]],[f[n],f[n-1]]]){const ta=inset(a,c),tc=inset(c,a);structure.quad([[a.x,h,a.z],[c.x,h,c.z],[tc.x,h+b.height,tc.z],[ta.x,h+b.height,ta.z]],marking.apronBarrierWhite);}
+  }
+  else if(b.id.startsWith('lax-departures-rail')){const f=b.footprint,a={x:(f[0].x+f[3].x)/2,z:(f[0].z+f[3].z)/2},c={x:(f[1].x+f[2].x)/2,z:(f[1].z+f[2].z)/2};structure.beam([a.x,h+.9,a.z],[c.x,h+.9,c.z],.18,art.metal,6);structure.beam([a.x,h,a.z],[a.x,h+1.1,a.z],.1,art.metal,5);}
+  else if(b.id.startsWith('lax-public-street-closure')){
+   const f=b.footprint,n=f.length/2;for(let i=0;i<n-1;i++){
+    const a=f[i],c=f[i+1],d=f[f.length-2-i],e=f[f.length-1-i],color=Math.floor(i/3)%2?art.marking:art.kerb;
+    structure.quad([[a.x,h,a.z],[c.x,h,c.z],[c.x,h+b.height,c.z],[a.x,h+b.height,a.z]],color);
+    structure.quad([[e.x,h,e.z],[d.x,h,d.z],[d.x,h+b.height,d.z],[e.x,h+b.height,e.z]].reverse(),color);
+    structure.quad(upward([[a.x,h+b.height,a.z],[c.x,h+b.height,c.z],[d.x,h+b.height,d.z],[e.x,h+b.height,e.z]]),color);
+   }
+  }
   else if(b.id.includes('center-way')){
    if(b.id==='lax-center-way-equipment')for(let n=0;n<6;n++){const zz=z-d/2+(n+.5)*d/6,y=n%2?1.8:1.6;equipment.box(x,h+y/2,zz,w,y,d/6-.18,art.service);for(const side of[-1,1])glass.panelX(x+side*(w/2+.01),h+y*.56,zz,1.5,.6,art.hangar,side);}
    else structure.box(x,h+b.height/2,z,w,b.height,d,art.service);
@@ -118,9 +167,16 @@ export function laxGeometry(track:TrackDefinition){
  }
  for(const p of laxPlanting)plants.palm(p.x,p.y,p.z,p.height,p.radius,art.trunk,art.plant);
  for(const [x,z,heading] of laxApronAircraft)airliner(equipment,glass,x,z,1,heading,art.livery[Math.abs(x+z)%3]);
- for(const z of[145,-111])concrete.box(0,-.04,z,182,.08,58,art.apron);
+ for(const [i,a] of laxRouteAircraft.entries())airliner(equipment,glass,a.x,a.z,a.scale,a.heading,art.livery[i]);
+ for(const a of laxApronEquipment){
+  concrete.box(a.x,.1,a.z,a.width,.2,a.depth,art.concrete);
+  equipment.box(a.x,1.45,a.z,a.width-.4,2.5,a.depth-.4,art.service);glass.box(a.x,2.1,a.z,a.width-.3,.65,a.depth-.3,art.hangar);
+  equipment.box(a.x,a.height-.3,a.z,a.width-.7,.6,a.depth-.7,art.roof);
+  for(let i=-2;i<=2;i++)equipment.box(a.x+i*.9,1.4,a.z,.08,2.3,a.depth-.3,art.metal);
+ }
+ for(const z of new Set(laxCargoAprons.map(a=>a.z)))concrete.box(0,-.04,z,182,.08,70,art.apron);
  for(const {x,z,side} of laxCargoAprons){structure.box(x,5.5,z+side*22,40,11,20,art.cargo);for(let n=-1;n<=1;n++)glass.box(x+n*11,4,z+side*11.9,9,7,.12,art.hangar);airliner(equipment,glass,x,z-side*7,.8,side>0?Math.PI:0,art.livery[Math.abs(x)%3]);}
- for(const side of[-1,1])for(const z of[-12,22,56]){const x=side*LAX_LAYOUT.groundVehicleX;equipment.box(x,1.7,z,3.4,3.2,8,z>0?art.yellow:art.rescue);glass.box(x,2.4,z-2,3.5,1,2.7,art.glass);for(const dx of[-1.8,1.8])equipment.beam([x+dx,.8,z-2.5],[x+dx,.8,z+2.5],.8,art.dark,6);}
+ for(const {x,z} of laxGroundVehicles){equipment.box(x,1.7,z,3.4,3.2,8,z>0?art.yellow:art.rescue);glass.box(x,2.4,z-2,3.5,1,2.7,art.glass);for(const dx of[-1.8,1.8])equipment.beam([x+dx,.8,z-2.5],[x+dx,.8,z+2.5],.8,art.dark,6);}
  return{ground,road,concrete,structure,glass,equipment,paint,plants};
 }
 

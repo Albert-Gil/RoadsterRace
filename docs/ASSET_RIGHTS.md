@@ -374,3 +374,18 @@ as layout references. No screenshot/map imagery is bundled. Its compact terminal
 kit, continuous runway extensions, concrete apron and structural street-transfer
 crests remain original procedural geometry with the same existing material/sky
 sources and eight static batches.
+
+LAX v3's broad runway paint, apron race markings, public-street continuations,
+closure barriers and additional parked apron aircraft/service bays extend that
+same original procedural kit. The owner's annotated reference guides placement;
+its pixels are not shipped. No new third-party asset, licence or rendering system
+is introduced.
+
+LAX v4 adds original procedural tapered concrete barriers and wider flat apron
+paint/kerbs to the same native batches. Its red/white palette is centrally authored;
+no photograph, texture pack, model licence or external service was added.
+
+LAX v5 reauthors the original course and relocates/extends the same terminal,
+landmark, runway and service kit for portrait play. Model dimensions and physical
+footprints remain shared; no new external asset source or runtime dependency is
+introduced.

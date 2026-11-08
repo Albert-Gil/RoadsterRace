@@ -1,4 +1,4 @@
-# LAX — compact runway and terminal circuit
+# LAX — portrait airport circuit
 
 Owner-approved setting and sketch, 2026-11-07. Verified locally first. The owner
 subsequently authorized commit and push on the same date; Pages publication remains
@@ -6,23 +6,52 @@ conditional on successful main-branch verification.
 
 ## Course
 
-`lax`, track version **2**, **770.1 m**, 16 m reference road, dry-asphalt handling.
-The owner's annotated map supersedes the initial 1,256.2 m layout: the driving
-envelope is approximately **180 × 168 m**, with a raised public-street horseshoe,
-two short sectors of real runway and an open concrete apron at the far end.
-The reference road is about 39% shorter; terminal/apron spacing is compressed for
-phone play rather than reproducing an operating airport at geographic scale.
+`lax`, track version **5**, **1,312.5 m**, 16 m reference road, dry-asphalt handling.
+The owner's latest rectangular-layout request supersedes the earlier 770.1 m
+square plan. The course is approximately 190 × 320 m including the gate and apron
+boundaries, with longer public-street/runway legs and two deeper S-lobes on the
+connecting apron. Continuous geometric runway straights are approximately 242 m,
+over twice their former length. Apron bends use 20 m radii; the street returns
+retain 16 m radii rather than stretching sampled corners into narrow shapes.
+
+Portrait uses a fixed 68° elevated view aligned to the long axis. Measured on a
+390×844 touch layout, the driving surface occupies **73.5% of usable height**, up
+from **44.0%**. Median projected road width remains close: **28.0 CSS px** versus
+29.2 before. Landscape retains a fixed 60° view with automatic initial orientation
+selection. Drawing, preview and racing always share the same stationary projection.
 
 The western runway travels north, linked taxiway bends cross the northern apron,
 the eastern runway travels south, and two tight southern connectors enter and
-leave the terminal horseshoe. Both inner primary runways continue well beyond the
-raced sectors. Secondary parallel strips remain airport scenery. The apron has a
-continuous yellow taxi guide and blue edge studs, without an asphalt racing snake
-or decorative circuit kerbs across the concrete.
+leave the terminal horseshoe. There are exactly **two 44 m-wide runways**, one on
+each side, replacing the four narrow strips. Each is 450 m long, extending beyond
+the raced sector. The reference line uses the inboard part of that continuous
+runway surface; there is no separate asphalt ribbon on top. Threshold bars, runway
+numbers, centre dashes and edge stripes belong to the full-width runway.
 
-Seven original terminal groups surround the horseshoe, with gate airliners, jet
+The connecting apron retains its grey concrete. Continuous red/white concrete
+barriers define both sides of the route, with 0.7 m flat white edge stripes and
+full-length 0.95 m red/white kerbs. The barriers stand 1.35 m high and 0.8 m wide,
+retaining at least 5.2 m between asphalt edge and their near face. Their authoritative
+footprints form continuous ribbons, divided into small collision parcels that
+share exact cross-sections. All artwork remains in the existing native batches.
+The ordinary yellow taxi guide remains. Two parked airliners and two service-equipment
+bays sit on alternate sides of the bends, with matching physical footprints and
+at least five metres beyond the racing surface. Outer aircraft, maintenance
+hangars and service vehicles move clear of the broad runways.
+
+Both public streets visibly continue south beyond the racing turns. Curved concrete
+closures follow the outside of the turn,
+blocking the unused road while retaining runoff. They make physical contact
+before a straight-ahead car loses road support. The closed street tails are
+background scenery, not extra race progression or new shortcuts, and are excluded
+from camera fitting. Their joins are cut around the existing bends rather than
+stacking intersecting decks or walls through the racing surface.
+
+Seven original terminal groups surround the longer horseshoe, with gate airliners, jet
 bridges, covered entrances, skylights, baggage dollies and tow tractors. The infield
 contains a Theme Building-inspired four-arch restaurant and a tall control tower.
+The terminal halls are longer, with matching protected footprints. Parking,
+planting, the northern garden and apron equipment follow the new dimensions.
 Public streets stand at 3 m, with covered terminal entrances and matching raised
 foundations. The two street/airfield transfers include physical launch crests.
 Grounded slopes change height and pitch, not horizontal forces. Aircraft, service
@@ -43,7 +72,7 @@ markings are original; airport buildings are visual references, not affiliations
   continuous: these are crests, not disguised water gaps, and very slow cars can
   descend their real grades.
 - One hidden `center-way` elevated cross-connection cuts the horseshoe. Its 16 m
-  lane at z=16 crosses ordinary service equipment 1.8 m above the 3 m deck. Only a compiled
+  lane at z=108 crosses ordinary service equipment 1.8 m above the 3 m deck. Only a compiled
   forward traversal exempts that named obstacle from the usual protected-area
   collision rule; a real manual Hop with full vehicle clearance is required.
 - The open northern apron allows ordinary inside cuts through the linked taxiway
@@ -62,7 +91,7 @@ Solo/CPU, local Multiplayer, Time Trial, 1–6 laps, Custom Tours and newly crea
 Full Tours discover LAX through the normal registry. Existing saved schedules are
 not rewritten. Current rules are 20 (including the independently requested
 post-recovery ability refill); compiler remains 20. Existing course geometry and
-track versions are unchanged. The v2 track version invalidates only incompatible
+track versions are unchanged. The v5 track version invalidates only incompatible
 LAX plans/records/tours through the existing compatibility checks. Compiler and
 global physics remain at 20; no shared handling or ability tuning was changed.
 
@@ -96,5 +125,8 @@ four-car scene draw-call limits; test effects while active.
 Physical iPhone/iPad Safari drawing comfort, sound and sustained performance remain
 pending real hardware verification. Automated phone tests supplement that gate.
 
-The first-version results remain in `LAX_TEST_REPORT.md`; the compact-layout
-verification and GitHub smoke-test correction are recorded in `LAX_V2_TEST_REPORT.md`.
+The first-version results remain in `LAX_TEST_REPORT.md`; compact-layout/GitHub
+verification is in `LAX_V2_TEST_REPORT.md`. The two-runway, apron and street changes
+are recorded in `LAX_V3_TEST_REPORT.md`. The stronger apron boundaries and visibility
+checks are recorded in `LAX_V4_TEST_REPORT.md`. Rectangular-layout measurements and
+verification are in `LAX_V5_TEST_REPORT.md`.

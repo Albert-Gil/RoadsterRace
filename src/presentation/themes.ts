@@ -2,6 +2,9 @@ import { assetUrl } from './urls';
 import { VEHICLE_DIMENSIONS } from '../core/vehicle-size';
 import { launchsiteRemoteRockets } from '../core/tracks/venue-parcels';
 
+export const laxMarkingAppearance={apronEdgeWidth:.7,apronKerbWidth:.95,apronKerbHeight:.07,apronBarrierRed:'#d1464b',apronBarrierWhite:'#eeeee6',apronBarrierBase:'#737e83',runwayEdgeWidth:.35,runwayCentreWidth:.45};
+export const laxFramingAppearance={portraitElevation:68};
+
 export const paintFinishes = [
   { id: 'glacier', name: 'Stainless steel gray', color: '#aeb4b8' },
   { id: 'crimson', name: 'Crimson', color: '#d51f35' },
@@ -423,7 +426,7 @@ export const venueFinish = {
  yosemite:{edge:'#a08e6c',ground:'#84906a',grit:'#bdaf8b',inset:.18,spread:1.05},
 } satisfies Record<string,VenueFinish>;
 export const interfaceMotion = { durationMs:160, rowStaggerMs:40 };
-export const circuitArtRevision = '2026-11-06-fleet-signature';
+export const circuitArtRevision = '2026-11-07-lax-portrait-layout';
 /** One sun per venue; unchanged shadow-map dimensions and cached caster policy. */
 export const venueSunDirections = {
  airport:[.6,-1,.55],

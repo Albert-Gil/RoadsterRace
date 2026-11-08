@@ -46,7 +46,7 @@ import { assetUrl } from './urls';
 import { VehicleView } from './vehicle';
 import { buildScenery, type SceneryRuntime } from './scenery';
 import type { SceneryId } from '../content/circuits';
-import { yosemiteAppearance, fleetCamera, laxAppearance } from './themes';
+import { yosemiteAppearance, fleetCamera, laxAppearance, laxFramingAppearance } from './themes';
 import { surfaceTexture } from './textures';
 import { createReflectionSky, loadSky } from './environment';
 import { PaceLine } from './pace-line';
@@ -337,7 +337,7 @@ export class GameScene {
     const fitTerrain=!!this.track.terrain&&interactive,key=[w,h,left,rightInset,top,bottom,aspect].map(n=>n.toFixed(5)).join('/');
     const cached=fitTerrain?this.terrainCameraFits.get(key):undefined;
     if(cached){this.applyCameraFit(cached.position,cached.target,cached.distance);return;}
-    const elevation = (this.scenery==='airport'?laxAppearance.cameraElevation:this.scenery==='naval'?(w<h?fleetCamera.portraitElevation:Math.min(w,h)<=500?fleetCamera.phoneElevation:fleetCamera.desktopElevation):Math.max(this.scenery==='yosemite'?yosemiteAppearance.cameraElevation:0,Math.min(w,h)<=500?sceneTuning.camera.compactElevationDegrees:sceneTuning.camera.elevationDegrees)) * Math.PI / 180;
+    const elevation = (this.scenery==='airport'?(w<h?laxFramingAppearance.portraitElevation:laxAppearance.cameraElevation):this.scenery==='naval'?(w<h?fleetCamera.portraitElevation:Math.min(w,h)<=500?fleetCamera.phoneElevation:fleetCamera.desktopElevation):Math.max(this.scenery==='yosemite'?yosemiteAppearance.cameraElevation:0,Math.min(w,h)<=500?sceneTuning.camera.compactElevationDegrees:sceneTuning.camera.elevationDegrees)) * Math.PI / 180;
     const tangent = Math.tan(this.camera.fov / 2);
     const paths = [this.track.centerline,...(this.track.jumps??[]).map(j=>j.branch),...(this.track.hopShortcuts??[]).map(j=>j.branch)];
     const fitted = paths.flatMap((path,i)=>roadEdges(path,this.track.roadWidth,i===0).flatMap(side=>side.map((p,n)=>new Vector3(p.x,this.track.decks?(deckPlanningHeight(p,this.track)??0):this.track.terrain?terrainElevation(p,this.track):this.track.sections?roadHeight(this.track,path[n].courseProgress??0):0,p.z))));
@@ -348,6 +348,9 @@ export class GameScene {
     for (const p of [...fitted]) fitted.push(new Vector3(p.x, p.y+hopEnvelope, p.z));
     for(const j of this.track.jumps??[]) for(const along of [8,25,45]) fitted.push(new Vector3(j.from.x+j.forward.x*along,hopEnvelope+j.lipHeight+(this.track.decks?(j.takeoffElevation??0):0),j.from.z+j.forward.z*along));
     for(const j of this.track.jumps??[])if(j.kind==='crest'){const v=j.launchBoost!+RULES.maxSpeed*j.launchSlope!,at=RULES.maxSpeed*v/FLIGHT_RULES.gravity;fitted.push(new Vector3(j.from.x+j.forward.x*at,j.takeoffElevation!+v*v/(2*FLIGHT_RULES.gravity)+FLIGHT_RULES.carHeight+.3,j.from.z+j.forward.z*at));}
+    // Apron walls define the readable course perimeter. Fit their real bounds,
+    // without reserving another Hop envelope above scenery or fitting runway ends.
+    if(this.scenery==='airport')for(const b of this.track.barriers.filter(b=>b.id.startsWith('lax-apron-edge-')))for(const p of b.footprint)fitted.push(new Vector3(p.x,b.baseHeight??0,p.z),new Vector3(p.x,(b.baseHeight??0)+b.height,p.z));
     // Fleet silhouettes and visible freeboard are part of the playable composition, not distant scenery.
     if(this.track.decks){for(const d of this.track.decks.filter(d=>d.vessel))for(const p of d.footprint)fitted.push(new Vector3(p.x,d.elevation+.2,p.z),new Vector3(p.x,-1.6,p.z));for(const b of this.track.barriers.filter(b=>b.vesselSurfaceId))for(const p of b.footprint)fitted.push(new Vector3(p.x,(b.baseHeight??0)+b.height,p.z));}
     const courseCenter = new Vector3((Math.min(...fitted.map(p=>p.x))+Math.max(...fitted.map(p=>p.x)))/2,0,(Math.min(...fitted.map(p=>p.z))+Math.max(...fitted.map(p=>p.z)))/2);
