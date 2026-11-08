@@ -15,13 +15,12 @@ Conventions: SI units; horizontal plane (x, z) with y up; heading 0 points along
 | Launchsite track (`orbital-launchyard`) | 12 |
 | Golden Gate track (`golden-gate`) | 8 |
 | Santa Monica track (`santa-monica`) | 5 |
-| Grand Canyon track (`grand-canyon`) | 5 |
+| Grand Canyon track (`canyon-south-rim`) | 2 |
 | LA nights track (`la-nights`) | 5 |
 | Snowy Tahoe track (`snowy-tahoe`) | 6 |
 | Capitan Yosemite track (`capitan-yosemite`) | 5 |
-| Grand Canyon: South Rim track (`canyon-south-rim`) | 1 |
 | San Diego Fleet track (`san-diego-fleet`) | 6 |
-| LAX track (`lax`) | 5 |
+| LAX track (`lax`) | 6 |
 
 Records, ghosts, session bests and championships are scoped by the relevant versions. Computer-version changes invalidate Solo championships only; human Time Trial records and local Multiplayer saves retain their unchanged rules/track compatibility. Change a version whenever a value below changes race results.
 
@@ -33,13 +32,12 @@ Records, ghosts, session bests and championships are scoped by the relevant vers
 | Launchsite | `orbital-launchyard` | 12 | 16 | 460.6 | 37 | hop lane `service-hop`, hop lane `utility-wing-hop`, hop lane `rocket-yard-tip-hop` |
 | Golden Gate | `golden-gate` | 8 | 16 | 496.4 | 39 | hop lane `quayside-hop`, bridge `golden-span` |
 | Santa Monica | `santa-monica` | 5 | 16 | 660.7 | 116 | ramp `pacific-hop` |
-| Grand Canyon | `grand-canyon` | 5 | 16 | 595.0 | 43 | crest `canyon-crest`, hop lane `mesa-service-trail` |
+| Grand Canyon | `canyon-south-rim` | 2 | 16 | 850.7 | 24 | crest `south-rim-crossing`, hop lane `juniper-saddle`, hop lane `redwall-traverse` |
 | LA nights | `la-nights` | 5 | 16 | 734.0 | 29 | ramp `channel-crossing`, hop lane `backlot-alley` |
 | Snowy Tahoe | `snowy-tahoe` | 6 | 16 | 554.8 | 21 | hop lane `forestry-trail` |
 | Capitan Yosemite | `capitan-yosemite` | 5 | 16 | 716.6 | 55 | crest `valley-creek-crest`, crest `sentinel-creek-crest`, crest `cathedral-creek-crest`, hop lane `ranger-timber-trail` |
-| Grand Canyon: South Rim | `canyon-south-rim` | 1 | 16 | 850.7 | 24 | crest `south-rim-crossing`, hop lane `juniper-saddle`, hop lane `redwall-traverse` |
 | San Diego Fleet | `san-diego-fleet` | 6 | 16 | 736.8 | 114 | ramp `carrier-a-crossing`, ramp `destroyer-a-return`, ramp `carrier-b-crossing`, ramp `destroyer-b-return`, water Hop `support-a-hop`, ramp `support-a-return`, water Hop `support-b-hop`, ramp `support-b-return`, hop lane `support-a-lane`, hop lane `support-b-lane` |
-| LAX | `lax` | 5 | 16 | 1312.5 | 344 | hop lane `center-way`, bridge `lax-departures` |
+| LAX | `lax` | 6 | 16 | 1312.5 | 344 | hop lane `center-way`, bridge `lax-departures` |
 
 Vehicle envelope: 2.9095 m × 6.877 m. Race distance: 1–6 laps (default 2). Championship points by place: 10 / 6 / 4 / 0.
 
@@ -125,7 +123,7 @@ Human-only Finish (selected distance), Clean (one lap without barrier/car contac
 | `hazardPenaltySpeed` | 20 | m/s | Extra reset wait is the skipped circuit distance divided by this |
 | `repeatRecoveryWindow` | 15 | m | A second reset within this route distance also moves the car forward |
 
-Derived: level-ground manual hop peak 8.028 m and airtime 0.944 s. Santa Monica ramp launch upward velocity is `rampLaunchBoost + max(0, forward speed) × lipHeight / rampLength`. Grand Canyon uses its authored natural crest: `29 + max(0, forward speed) × 0.05` from 8 m to the 6 m receiving surface, across a 30 m unsupported opening. Grounded elevation changes do not add slope acceleration.
+Derived: level-ground manual hop peak 8.028 m and airtime 0.944 s. Santa Monica ramp launch upward velocity is `rampLaunchBoost + max(0, forward speed) × lipHeight / rampLength`. Grand Canyon uses its authored natural crest: `29 + max(0, forward speed) × 0.05` from 12 m to the 10 m receiving surface, across a 30 m unsupported opening. Grounded elevation changes do not add slope acceleration.
 
 ## FLIGHT_RULES
 

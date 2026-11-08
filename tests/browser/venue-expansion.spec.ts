@@ -15,6 +15,11 @@ for(const id of['coastal-launch','capitan-yosemite','canyon-south-rim'])for(cons
  expect(report.hazards).toBeUndefined();if(id==='canyon-south-rim'){expect(report.sections).toContain('air-crossing');expect(report.sections).toContain('lower-crossing');expect(report.jumps).toContain('south-rim-crossing');}if(id==='capitan-yosemite')expect(report.jumps).toHaveLength(3);
  expect(errors).toEqual([]);await page.screenshot({path:`${root}/touch-${id}-${viewport.width}.png`});writeFileSync(`${root}/touch-${id}-${viewport.width}.json`,JSON.stringify({viewport,...report,errors},null,2));await context.close();
 });
+test('the retired Grand Canyon link opens the surviving Grand Canyon',async({page})=>{
+ await page.goto('/?circuit=grand-canyon');await page.getByRole('button',{name:'Time Trial',exact:true}).click();
+ await expect(page.getByRole('button',{name:'Grand Canyon circuit',exact:true})).toHaveAttribute('aria-pressed','true');
+ expect(await page.evaluate(()=>(window as any).__roadster.getTrack().id)).toBe('canyon-south-rim');
+});
 test('South Rim actual airborne crossing and lower road finish a race within the scene budget',async({browser})=>{
  const context=await browser.newContext({viewport:{width:1280,height:720},recordVideo:{dir:`${root}/video`,size:{width:1280,height:720}}}),page=await context.newPage(),errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('/?circuit=canyon-south-rim&graphics=medium');await page.getByRole('button',{name:'Time Trial',exact:true}).click();await page.getByRole('button',{name:'1 lap',exact:true}).click();await page.getByRole('button',{name:'Draw racing line',exact:true}).click();await page.waitForFunction(()=>(window as any).__roadster.getGraphics().renderReady);

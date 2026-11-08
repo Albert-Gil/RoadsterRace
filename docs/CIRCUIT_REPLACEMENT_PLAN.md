@@ -1,5 +1,7 @@
 # Circuit replacement plan — Grand Canyon and a new tenth venue
 
+**Applied 2026-11-07** at the owner's request: the original `grand-canyon` is retired, South Rim (`canyon-south-rim`) is displayed as Grand Canyon, LAX is the tenth venue and the Frontier Cup is the three-round preset proposed below. See GRAND_CANYON_RETIREMENT.md. The text below is the original plan.
+
 Update 2026-11-07: the owner selected LAX and authorized its implementation from a horseshoe/runway sketch. Its additional local preview is documented in LAX.md. The original ten remain registered during review, preserving the latest requirement that Frontier Champion uses the actual four-round cup. The proposed three-round replacement below has not been applied and must not silently replace that challenge. Retirement/rename activation remains separate.
 
 Original planning record — 2026-11-07. Status: planning only. The recovery-ability refill is implemented separately under rules 20. This plan makes no circuit registry, layout, title or progression changes yet.

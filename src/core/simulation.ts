@@ -2,7 +2,7 @@ import{deckAt,deckVehicleSupported}from'./decks';
 import { angleDelta, clamp, distance, lerp, modulo } from './geometry';
 import { projectToPolylineNear } from './nearest';
 import { sampleRoute, COMPILER_VERSION } from './route';
-import { barrierContact, blockedRouteSection, sweepVehicle } from './barriers';
+import { barrierContact, blockedRouteSection, insidePolygon, sweepVehicle } from './barriers';
 import { DEFAULT_LAPS, validateLapCount } from './race-options';
 import { RULES } from './rules';
 import { createContactLog, stepRacers } from './stepping';
@@ -25,7 +25,7 @@ export function lateralGrip(grip: number, response: number, speed: number, slip:
 export function sampleSurface(position: Point, track: TrackDefinition) {
   const profile = trackSurface(track);
   // Whole working decks have uniform grip; skip an irrelevant centreline-distance query.
-  if(track.decks&&deckAt(position,track)?.racingSurface)return{sandAmount:0,grip:profile.grip,response:RULES.asphaltResponse,drag:profile.drag,surface:profile.road};
+  if(track.decks&&deckAt(position,track)?.racingSurface||track.pavedAreas?.some(area=>insidePolygon(position,area)))return{sandAmount:0,grip:profile.grip,response:RULES.asphaltResponse,drag:profile.drag,surface:profile.road};
   const road = track.sections ? locateRoad(position,track) : projectToPolylineNear(position, track.centerline, track.distances);
   const branch = track.sections ? undefined : branchProjection(position, track); if (branch && branch.distance < road.distance) road.distance = branch.distance;
   const edge = (track.roadWidth - track.carWidth) / 2;

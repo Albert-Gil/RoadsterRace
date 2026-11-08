@@ -137,7 +137,7 @@ export function currentRulesMarkdown() {
   const fleetHeights = [...new Set(fleet.decks!.map(d => d.elevation))].sort((a, b) => b - a).join('/');
   const fleetCrossings = ['| Crossing | Activation | Ramp (m) | Rise (m) | Water gap (m) | Launch boost | Speed factor | CPU approach (m/s) |','|---|---|---:|---:|---:|---:|---:|---:|',...fleet.jumps!.map(j=>`| ${j.id} | ${j.activation??'automatic'} | ${j.rampLength.toFixed(2)} | ${j.lipHeight.toFixed(2)} | ${j.gap.toFixed(2)} | ${j.activation==='hop'?'—':j.launchBoost} | ${j.activation==='hop'?'—':j.launchSlope} | ${j.planningSpeed??'—'} |`)].join('\n');
   const peak = RULES.hopLaunchSpeed ** 2 / (2 * flightGravity('hop')), airtime = 2 * RULES.hopLaunchSpeed / flightGravity('hop');
-  const crest = circuits.find(c => c.id === 'grand-canyon')!.track.jumps!.find(j => j.kind === 'crest')!;
+  const crest = circuits.find(c => c.id === 'canyon-south-rim')!.track.jumps!.find(j => j.kind === 'crest')!;
   const courses = ['| Circuit | ID | Track version | Road width (m) | Centerline (m) | Barriers | Branches |', '|---|---|---:|---:|---:|---:|---|',
     ...circuits.map(({ track }) => `| ${track.name} | \`${track.id}\` | ${track.version} | ${format(track.roadWidth)} | ${track.length.toFixed(1)} | ${track.barriers.length} | ${[
       ...(track.jumps ?? []).map(j => `${j.activation==='hop'?'water Hop':j.kind === 'crest' ? 'crest' : 'ramp'} \`${j.id}\``), ...(track.hopShortcuts ?? []).map(h => `hop lane \`${h.id}\``), ...(track.bridges ?? []).map(b => `bridge \`${b.id}\``),

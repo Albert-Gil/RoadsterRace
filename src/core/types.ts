@@ -56,6 +56,8 @@ export interface TrackDefinition {
   terrain?: TerrainSurface;
   terrainTakeoffs?:TerrainTakeoff[];
   decks?:DeckSurface[];
+  /** Authored paved areas (polygons) with full road grip beyond the 16 m reference road, such as LAX's full-width runways. Grip only: support, barriers and progression are unchanged. */
+  pavedAreas?:Point[][];
 }
 export interface RoutePoint extends Point {
   distance: number;

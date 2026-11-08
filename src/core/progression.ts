@@ -6,7 +6,7 @@ export interface Progression {version:1;medals:Record<string,Medal[]>;cups:strin
 export const emptyProgression=():Progression=>({version:1,medals:{},cups:[]});
 export const CUPS=[
  {id:'pacific',name:'Pacific Cup',rounds:['coastal-launch','santa-monica','golden-gate']},
- {id:'frontier',name:'Frontier Cup',rounds:['grand-canyon','canyon-south-rim','capitan-yosemite','snowy-tahoe']},
+ {id:'frontier',name:'Frontier Cup',rounds:['canyon-south-rim','capitan-yosemite','snowy-tahoe']},
  {id:'fleet',name:'Fleet Cup',rounds:['orbital-launchyard','la-nights','san-diego-fleet']},
 ] as const;
 export const REWARDS=[

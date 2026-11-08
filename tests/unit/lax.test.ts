@@ -3,7 +3,7 @@ import { laxTrack as track, laxPlanting, laxTerminals, laxRunways, laxStreetExte
 import { compileRoute, createPracticeSamples } from '../../src/core/route';
 import { minimumRadius } from '../../src/core/road-geometry';
 import { computerRoute, stepComputers } from '../../src/core/computer';
-import { RaceSimulation } from '../../src/core/simulation';
+import { RaceSimulation, sampleSurface } from '../../src/core/simulation';
 import { LocalRace } from '../../src/core/local-race';
 import { roadPoint, sectionAt } from '../../src/core/elevation';
 import { cumulative, projectToPolyline, samplePolyline } from '../../src/core/geometry';
@@ -130,3 +130,19 @@ test.each([0,1])('apron side %i stops a swept 42 m/s impact instead of tunneling
  const physical={...track,barriers:track.barriers.filter(b=>b.id.startsWith('lax-apron-edge-'))},result=sweepVehicle(p,{x:p.x+normal.x*30,z:p.z+normal.z*30},heading,heading,{x:normal.x*42,z:normal.z*42},physical);
  expect(result.collided).toBe(true);expect(result.impact).toBeGreaterThan(20);expect(projectToPolyline(result.position,track.centerline,track.distances).distance).toBeLessThan(track.roadWidth/2+LAX_LAYOUT.apronBarrierRunoff);
 });
+test('v6: the full width of both runways grips like the road; ground beyond them stays loose',()=>{
+ expect(track.version).toBe(6);expect(track.pavedAreas).toHaveLength(2);
+ for(const r of laxRunways)for(const dx of[-21,-12,0,12,21])for(const z of[-150,-60,40,160,280]){
+  const s=sampleSurface({x:r.x+dx,z},track);expect(s.sandAmount).toBe(0);expect(s.surface).toBe('asphalt');
+ }
+ for(const p of[{x:-121,z:40},{x:121,z:40},{x:-66,z:40},{x:66,z:40}])expect(sampleSurface(p,track).sandAmount).toBe(1);
+});
+test('v6: a line along the outer runway edge keeps road speed instead of sliding through sand',()=>{
+ // After the start, swing 18 m outward along the western runway (still on runway tarmac), then rejoin.
+ const ramp=(z:number)=>Math.min(1,Math.max(0,(z-60)/20))*Math.min(1,Math.max(0,(150-z)/20));
+ const reference=createPracticeSamples(track,7),outer=reference.map(p=>Math.abs(p.x+LAX_LAYOUT.runwayX)<1e-5?{...p,x:p.x-18*ramp(p.z)}:p);
+ const r=compileRoute(outer,track);if(!r.ok)throw Error(r.message);expect(r.route.hazards).toBeUndefined();
+ const sim=new RaceSimulation(r.route,track,1);let maxSand=0,outerTicks=0;
+ for(let tick=0;tick<12000&&!sim.state.finished;tick++){sim.step();const s=sim.state;if(s.position.x<-94&&s.position.z>85&&s.position.z<125){outerTicks++;maxSand=Math.max(maxSand,s.sandAmount);}}
+ expect(sim.state.finished).toBe(true);expect(sim.state.recoveryCount).toBe(0);expect(outerTicks).toBeGreaterThan(30);expect(maxSand).toBe(0);
+},60000);

@@ -6,7 +6,7 @@ import { createStartFinish } from '../start-finish';
 import { outcrop } from './outcrop';
 import type { HopShortcut, Point, RoadSection, TrackBarrier, TrackDefinition } from '../types';
 
-/** Separate South Rim candidate: the original Grand Canyon stays registered. */
+/** Grand Canyon (stable ID `canyon-south-rim`): the South Rim layout replaced the retired original `grand-canyon`. */
 const path=roundedCircuit([[-50,-74],[-112,-74],[-140,-50],[-153,-10],[-133,28],[-105,0],[118,0],[144,40],[126,78],[77,119],[32,76],[0,76],[0,-74]].map(([x,z])=>({x,z})),22);
 const distances=cumulative(path),length=distances.at(-1)!;
 const at=(p:Point)=>projectToPolyline(p,path,distances).progress;
@@ -21,7 +21,9 @@ const sections:RoadSection[]=[
  {id:'lower-crossing',from:floor,to:length,heights:[[0,0],[length-floor,0]],supportWidth:28},
 ];
 const vertex=(x:number,z:number)=>samplePolyline(path,distances,at({x,z}));
-const west=roundedCircuit([vertex(-143,-40),{x:-111,z:-20},vertex(-100,0)],17,false);
+// Juniper Saddle peels off the climbing west road and merges into the eastbound straight
+// at shallow angles, so cars at race pace stay on supported ground at both joins.
+const west=roundedCircuit([vertex(-142.3,-43),{x:-142,z:-31},{x:-106,z:-6.5},vertex(-92.3,0)],16,false);
 const east=roundedCircuit([vertex(136,58),{x:101,z:72},vertex(38,82)],18,false);
 const hops:HopShortcut[]=[
  {id:'juniper-saddle',branch:west,width:16,obstacleId:'south-rim-west-hop-rock',entryProgress:at(west[0]),exitProgress:at(west.at(-1)!)},
@@ -43,7 +45,7 @@ barriers.push(
  rock('north-saddle',-28,123,21,10,23),rock('far-west-wall',-219,-36,17,46,47),
  rock('far-north-wall',-25,161,56,17,48),rock('far-east-wall',222,57,19,48,50),
 );
-const track:TrackDefinition={id:'canyon-south-rim',name:'Grand Canyon: South Rim',version:1,surface:'packed-dirt',centerline:path,distances,length,roadWidth:16,carWidth:VEHICLE_DIMENSIONS.width,carLength:VEHICLE_DIMENSIONS.length,start:path[0],startFinish:createStartFinish(path[0],path[1],16),sections,barriers,
+const track:TrackDefinition={id:'canyon-south-rim',name:'Grand Canyon',version:2,surface:'packed-dirt',centerline:path,distances,length,roadWidth:16,carWidth:VEHICLE_DIMENSIONS.width,carLength:VEHICLE_DIMENSIONS.length,start:path[0],startFinish:createStartFinish(path[0],path[1],16),sections,barriers,
  jumps:[{id:'south-rim-crossing',kind:'crest',mandatory:true,from:{x:-15,z:0},forward:{x:1,z:0},width:16,rampLength:0,lipHeight:12,takeoffElevation:12,landingElevation:10,launchBoost:29,launchSlope:.05,gap:30,runout:80,corridorLength:110,branch:[{x:-85,z:0},{x:-15,z:0},{x:15,z:0},{x:95,z:0}],entryProgress:approach,exitProgress:mesa}],hopShortcuts:hops,
 };
 for(const [index,h]of hops.entries()){

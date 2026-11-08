@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-for (const circuit of ['coastal-launch', 'launchsite', 'golden-gate', 'santa-monica', 'grand-canyon', 'la-nights']) {
+for (const circuit of ['coastal-launch', 'launchsite', 'golden-gate', 'santa-monica', 'canyon-south-rim', 'la-nights']) {
   test(`${circuit}: expanded touchdown region stays visible and accepts a real touch lead-in`, async ({ browser }) => {
     const context = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true });
     const page = await context.newPage();

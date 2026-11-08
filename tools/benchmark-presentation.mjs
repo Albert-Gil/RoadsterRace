@@ -1,5 +1,5 @@
 import {chromium} from '@playwright/test';import {browserOptions} from './browser-options.mjs';import{mkdirSync,writeFileSync}from'node:fs';
-const stage=process.argv[2]||'before',port=process.argv[3]||'5182',ids=process.argv[4]?[process.argv[4]]:['coastal-launch','launchsite','golden-gate','santa-monica','grand-canyon','la-nights','snowy-tahoe','capitan-yosemite'],dir=`artifacts/pro-polish/${stage}`;mkdirSync(dir,{recursive:true});
+const stage=process.argv[2]||'before',port=process.argv[3]||'5182',ids=process.argv[4]?[process.argv[4]]:['coastal-launch','launchsite','golden-gate','santa-monica','canyon-south-rim','la-nights','snowy-tahoe','capitan-yosemite'],dir=`artifacts/pro-polish/${stage}`;mkdirSync(dir,{recursive:true});
 const browser=await chromium.launch({...browserOptions(),args:[...(browserOptions().args??[]),'--disable-background-timer-throttling','--disable-renderer-backgrounding']});const results=[];
 try{const p=await browser.newPage({viewport:{width:844,height:390},deviceScaleFactor:2,hasTouch:true,isMobile:true});p.setDefaultTimeout(120000);const errors=[];p.on('pageerror',e=>errors.push(e.message));for(const id of ids){
 for(let run=0;run<Number(process.argv[5]||3);run++){

@@ -71,8 +71,10 @@ for(const [i,{x,z,side}] of laxCargoAprons.entries()){
 }
 for(const {x,z} of laxGroundVehicles)barriers.push({id:`lax-ground-vehicle-${x}-${z}`,kind:'building',height:3.4,footprint:obstacleRectangle(x-2.6,z,5.2,8)});
 export const laxTrack:TrackDefinition={
- id:'lax',name:'LAX',version:5,centerline,distances,length,roadWidth:16,carWidth:VEHICLE_DIMENSIONS.width,carLength:VEHICLE_DIMENSIONS.length,
+ id:'lax',name:'LAX',version:6,centerline,distances,length,roadWidth:16,carWidth:VEHICLE_DIMENSIONS.width,carLength:VEHICLE_DIMENSIONS.length,
  start:centerline[0],startFinish:createStartFinish(centerline[0],centerline[1],16),sections,barriers,
+ // The whole 44 m width of both visible runways grips like the road (v6). Elsewhere off-road remains loose.
+ pavedAreas:laxRunways.map(r=>obstacleRectangle(r.x-r.width/2,r.z,r.width,r.length)),
  bridges:[{id:'lax-departures',from:{x:26,z:-46},to:{x:-82,z:-56},width:28}],
  // Continuous receiving roads. Normal approaches jump between street and apron;
  // very slow cars can descend the physical grade. There is no invisible water gap.

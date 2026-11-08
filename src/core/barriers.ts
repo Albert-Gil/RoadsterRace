@@ -20,7 +20,10 @@ function closest(p: Point, a: Point, b: Point) {
   return mix(a, b, t);
 }
 export function insideBarrier(p: Point, barrier: TrackBarrier) {
-  let inside = false; const v = barrier.footprint;
+  return insidePolygon(p, barrier.footprint);
+}
+export function insidePolygon(p: Point, v: readonly Point[]) {
+  let inside = false;
   for (let i = 0, j = v.length - 1; i < v.length; j = i++) {
     const a = v[i], b = v[j];
     if ((a.z > p.z) !== (b.z > p.z) && p.x < (b.x - a.x) * (p.z - a.z) / (b.z - a.z) + a.x) inside = !inside;

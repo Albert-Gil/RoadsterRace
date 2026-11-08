@@ -80,7 +80,8 @@ describe('playable circuit registry', () => {
       const result = compileRoute(samples, track); if (!result.ok) throw new Error(result.message);
       const race = new RaceSimulation(result.route, track); let reachedSand = false;
       for (let i = 0; i < 18000 && !race.state.finished; i++) { race.step(); reachedSand ||= race.state.sandAmount > 0.5; }
-      expect(race.state.finished).toBe(true); expect(reachedSand).toBe(!track.decks);
+      // Fleet decks and LAX's full-width runways (where this excursion runs) grip like the road.
+      expect(race.state.finished).toBe(true); expect(reachedSand).toBe(!track.decks && !track.pavedAreas);
     });
     test('four cars complete six laps and cannot use another circuit’s plan', () => {
       const result = compileRoute(createPracticeSamples(circuit.track, 7), circuit.track);

@@ -1,4 +1,5 @@
 import { expect, test } from 'vitest';
+import { grandCanyonTrack } from '../../src/core/tracks/grand-canyon';
 import { circuits } from '../../src/content/circuits';
 import { cumulative, distance, lerp, projectToPolyline, samplePolyline } from '../../src/core/geometry';
 import { compileRoute, createPracticeSamples } from '../../src/core/route';
@@ -26,7 +27,8 @@ const cuts: [string, number, number, number][] = [
 ];
 
 test.each(cuts)('%s accepts a supported inside cut that skips a turn', (id, start, skip, minimumDeviation) => {
-  const track = circuits.find(c => c.id === id)!.track;
+  // The retired original Grand Canyon stays covered through its retained source.
+  const track = id === 'grand-canyon' ? grandCanyonTrack : circuits.find(c => c.id === id)!.track;
   const from = id === 'grand-canyon' ? track.sections!.find(s => s.id === 'descent')!.from + 11 : start;
   const result = compileRoute(insideCut(track, from, skip), track);
   expect(result.ok, result.ok ? undefined : result.message).toBe(true);

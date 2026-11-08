@@ -50,7 +50,7 @@ test('alpine rock skins remain within actual collision footprints and height env
 test('mountain colors remain finite while revealing slopes beyond the driving lane',()=>{
  const flat=alpineGroundColor(30,20,48,0,20),steep=alpineGroundColor(30,20,48,.8,20);expect(flat).not.toEqual(steep);
  for(const c of[flat,steep,alpineGroundColor(0,0,0,0,0)])expect(c.every(v=>Number.isFinite(v)&&v>=0&&v<=1)).toBe(true);
- expect(circuits).toHaveLength(11);
+ expect(circuits).toHaveLength(10);
 });
 test('city pavements are flat, upward-facing and leave water openings untouched',()=>{
  for(const id of['la-nights','golden-gate']){

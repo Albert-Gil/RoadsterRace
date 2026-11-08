@@ -6,7 +6,7 @@ Choose **Challenges** from Home for three curated sessions: both Fleet support-v
 
 San Diego Fleet v2 replaces the platform-like course with sculpted ship hulls, higher flight decks, deck sweepers, larger naval command islands and visible water gaps. See the [ship rebuild guide](docs/FLEET_REBUILD.md).
 
-Ten venues are available: Newport Island, Launchsite, Golden Gate, Santa Monica, Grand Canyon, LA nights, Snowy Tahoe, Capitan Yosemite, Grand Canyon: South Rim and San Diego Fleet. Both canyon courses remain playable. Newly created Full Tours include all ten; saved schedules remain unchanged. San Diego Fleet adds stationary ship decks, automatic crossings and two discoverable support-vessel alternatives. See the [fleet production guide](docs/FLEET_PRODUCTION.md), [local Collection rules](docs/PROGRESSION.md), [venue expansion](docs/VENUE_EXPANSION.md), [Grand Canyon guide](docs/GRAND_CANYON.md), [LA nights guide](docs/LA_NIGHTS.md) and [Snowy Tahoe guide](docs/TAHOE_GROUNDING_UPGRADE.md).
+Ten venues are available: Newport Island, Launchsite, Golden Gate, Santa Monica, Grand Canyon, LA nights, Snowy Tahoe, Capitan Yosemite, San Diego Fleet and LAX. The original Grand Canyon layout is retired; the South Rim layout (`canyon-south-rim`) is now simply **Grand Canyon**, and old `?circuit=grand-canyon` links open it. Newly created Full Tours include all ten; saved schedules that contain the retired layout cannot resume. See the [Grand Canyon retirement notes](docs/GRAND_CANYON_RETIREMENT.md). San Diego Fleet adds stationary ship decks, automatic crossings and two discoverable support-vessel alternatives. See the [fleet production guide](docs/FLEET_PRODUCTION.md), [local Collection rules](docs/PROGRESSION.md), [venue expansion](docs/VENUE_EXPANSION.md), [Grand Canyon guide](docs/GRAND_CANYON.md), [LA nights guide](docs/LA_NIGHTS.md) and [Snowy Tahoe guide](docs/TAHOE_GROUNDING_UPGRADE.md).
 
 All roads are now **16 metres wide**, including Golden Gate's bridge and Santa Monica's pier/jump surfaces. The fixed camera fits the actual road tightly, with a phone-friendly orientation and compact controls. See [phone framing, computer drivers and lap ghosts](docs/PHONE_AND_MODES.md).
 
@@ -77,7 +77,7 @@ Solo keeps the bottom-right thrust/hop pads with Space (Thrust) and H (Hop). The
 
 ### Tournaments and ten circuits
 
-Choose **Tournament** at the top of Solo Race or Multiplayer setup (01 / RACE FORMAT, above the circuits). **Full Tour** races Newport Island, Launchsite, Golden Gate, Santa Monica, Grand Canyon, LA nights, Snowy Tahoe, Capitan Yosemite, Grand Canyon: South Rim and San Diego Fleet in that order. **Custom Tour** supports 2–12 races, repeated venues and up/down reordering. The selected 1–6 laps apply throughout; each round begins with fresh private drawing turns.
+Choose **Tournament** at the top of Solo Race or Multiplayer setup (01 / RACE FORMAT, above the circuits). **Full Tour** races Newport Island, Launchsite, Golden Gate, Santa Monica, Grand Canyon, LA nights, Snowy Tahoe, Capitan Yosemite, San Diego Fleet and LAX in that order. **Custom Tour** supports 2–12 races, repeated venues and up/down reordering. The selected 1–6 laps apply throughout; each round begins with fresh private drawing turns.
 
 First/second/third/fourth receive **10/6/4/0 points**. Race ties share place points and skip following ranks; equal championship totals share the title. Completed points save locally. **Resume tournament** preserves earlier results and restarts the unfinished round with fresh lines. Drivers and schedule lock at tournament start.
 
@@ -164,7 +164,7 @@ The nine current courses are listed below. Older expansion documents record prop
 
 ## Select a circuit
 
-In race setup, choose **Newport Island**, **Launchsite**, **Golden Gate**, **Santa Monica**, **Grand Canyon**, **LA nights**, **Snowy Tahoe**, **Capitan Yosemite** or **Grand Canyon: South Rim** before drawing. Cards show gameplay artwork/map, name, difficulty and approximate length, without descriptive notes. South Rim is a separate replacement candidate; the original Grand Canyon remains playable. See [venue expansion](docs/VENUE_EXPANSION.md), [Yosemite waterways](docs/YOSEMITE_WATERWAYS.md) and [scenery composition](docs/SCENERY_COMPOSITION.md) for recent changes.
+In race setup, choose **Newport Island**, **Launchsite**, **Golden Gate**, **Santa Monica**, **Grand Canyon**, **LA nights**, **Snowy Tahoe**, **Capitan Yosemite**, **San Diego Fleet** or **LAX** before drawing. Cards show gameplay artwork/map, name, difficulty and approximate length, without descriptive notes. See [venue expansion](docs/VENUE_EXPANSION.md), [Yosemite waterways](docs/YOSEMITE_WATERWAYS.md) and [scenery composition](docs/SCENERY_COMPOSITION.md) for recent changes.
 
 The selected circuit is remembered with names, paint and lap count. A deliberate circuit change discards every previous plan, ready state and race; names, paint and distance remain. Race session bests remain separate by circuit/version/lap count; Time Trial lap records are independent of lap count. Old one-circuit saved preferences migrate to Coastal Launch. A direct local link is `http://localhost:5173/?circuit=orbital-launchyard`.
 

@@ -7,7 +7,7 @@ sessions using the normal car, abilities, collision rules and route compiler.
 |---|---|---|
 | Fleet Explorer | San Diego Fleet, Time Trial, one lap | Manually Hop onto both support vessels and land each automatic return jump in the same completed lap |
 | Alpine Precision | Snowy Tahoe, Time Trial, one lap | Complete a lap with zero barrier contacts, car contacts and recoveries |
-| Frontier Champion | Solo Race, Hard, one lap per round | Win or share the title in Grand Canyon → Canyon South Rim → Capitan Yosemite → Snowy Tahoe |
+| Frontier Champion | Solo Race, Hard, one lap per round | Win or share the title in Grand Canyon → Capitan Yosemite → Snowy Tahoe |
 
 Every challenge is immediately available. Drift, legal off-road driving, Thrust and
 Hop remain available. There are no in-world shortcut signs, hints, planning badges,
@@ -63,3 +63,5 @@ remain unchanged. Existing records, ghosts and championships keep compatibility.
 Physical iPhone/iPad Safari usability and performance remain pending hardware testing.
 
 LAX preview note (2026-11-07): recovery rules are now 20; compiler remains 20. LAX is an additional local venue. The original four-round Frontier Cup and its challenge identity are preserved; challenge logic adds no special forces or rendering work.
+
+Grand Canyon retirement (2026-11-07): the original Grand Canyon is retired. Frontier Cup and Frontier Champion are now three rounds (Grand Canyon, formerly South Rim → Capitan Yosemite → Snowy Tahoe). Saved four-round Frontier tournaments cannot resume; earned Frontier badges and challenge stamps are kept.

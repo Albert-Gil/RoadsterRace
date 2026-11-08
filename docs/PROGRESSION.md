@@ -5,7 +5,7 @@ It does not synchronize between browsers, devices, the website and the installed
 The key `roadster-race.progression.v1` is separate from preferences, lap records and
 championships. Storage failures fall back to memory and never stop a race.
 
-Every venue has three independent medals. The Fleet milestone had ten venues and thirty medals; the local LAX preview has eleven venues and thirty-three medals. Existing cosmetic unlock thresholds remain unchanged:
+Every venue has three independent medals. The Fleet milestone had ten venues and thirty medals; the local LAX preview had eleven venues and thirty-three medals; after the original Grand Canyon was retired there are ten active venues and thirty active medals. Medals already earned on the retired layout stay credited for cosmetic rewards. Existing cosmetic unlock thresholds remain unchanged:
 
 | Medal | Qualifying live human achievement |
 |---|---|
@@ -38,7 +38,7 @@ badges and Collection never enter vehicle forces, collision shapes or timing.
 Cup presets reuse ordinary Solo/Multiplayer championships, laps and 10/6/4/0 scoring:
 
 - Pacific: Newport Island → Santa Monica → Golden Gate.
-- Frontier: Grand Canyon → Canyon South Rim → Capitan Yosemite → Snowy Tahoe.
+- Frontier: Grand Canyon (stable ID `canyon-south-rim`) → Capitan Yosemite → Snowy Tahoe. Until 2026-11-07 it also opened with the now-retired original Grand Canyon.
 - Fleet: Launchsite → LA nights → San Diego Fleet.
 
 Complete every round to earn the corresponding badge. Saves retain the preset ID,

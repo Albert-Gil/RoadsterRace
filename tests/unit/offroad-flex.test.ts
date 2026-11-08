@@ -1,4 +1,5 @@
 import { expect, test } from 'vitest';
+import { grandCanyonTrack } from '../../src/core/tracks/grand-canyon';
 import { circuits } from '../../src/content/circuits';
 import { cumulative, distance, projectToPolyline, samplePolyline } from '../../src/core/geometry';
 import { compileRoute } from '../../src/core/route';
@@ -56,7 +57,8 @@ test('a line far off the circuit is accepted as drawn and the car drives it thro
 });
 
 test('widened canyon shoulders do not fold inward around bends', () => {
-  const track = circuits.find(c => c.id === 'grand-canyon')!.track;
+  // Retired original Grand Canyon: its source and shoulder geometry remain a regression fixture.
+  const track = grandCanyonTrack;
   const orientedArea = (a: {x:number;z:number}, b: {x:number;z:number}, c: {x:number;z:number}) =>
     (b.x - a.x) * (c.z - a.z) - (b.z - a.z) * (c.x - a.x);
   for (const section of track.sections!.filter(s => !s.flight)) {

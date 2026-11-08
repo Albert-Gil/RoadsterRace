@@ -14,7 +14,7 @@ const devURL = process.env.PAGES_DEV_URL || `http://127.0.0.1:5177${base}`;
 const productionURL = process.env.PAGES_URL || `http://127.0.0.1:4177${base}`;
 const fullRaces = process.env.PAGES_FULL_RACES === '1';
 const tournamentOnly = process.env.PAGES_ONLY === 'tournament';
-const circuits = ['coastal-launch', 'launchsite', 'golden-gate', 'santa-monica', 'grand-canyon', 'la-nights', 'snowy-tahoe', 'capitan-yosemite', 'canyon-south-rim','san-diego-fleet','lax'];
+const circuits = ['coastal-launch', 'launchsite', 'golden-gate', 'santa-monica', 'canyon-south-rim', 'la-nights', 'snowy-tahoe', 'capitan-yosemite', 'san-diego-fleet', 'lax'];
 const selection = process.env.PAGES_ONLY;
 assert.ok(!selection || ['tournament', 'sessions', 'phone', 'multiplayer', 'solo', 'challenges'].includes(selection) || circuits.includes(selection), 'Unknown PAGES_ONLY group');
 const selectedCircuits = selection ? circuits.filter(id => id === selection) : circuits;
@@ -242,7 +242,7 @@ try {
       await page.getByRole('button', { name: 'Draw your lines', exact: false }).waitFor();
       const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('roadster-race.tournament.v1')));
       assert.equal(saved.challengeId, 'frontier-champion'); assert.equal(saved.challengeEligible, true);
-      assert.equal(saved.options.mode, 'solo-race'); assert.equal(saved.options.difficulty, 'hard'); assert.equal(saved.state.rounds.length, 4); assert.equal(saved.state.laps, 1);
+      assert.equal(saved.options.mode, 'solo-race'); assert.equal(saved.options.difficulty, 'hard'); assert.equal(saved.state.rounds.length, 3); assert.equal(saved.state.laps, 1);
       assert.equal(await page.evaluate(() => typeof window.__roadster), 'undefined');
       report.checks.push({ challenges: true, realTouchChallengeDrawing: true, challengeRaceStarted: true, hardFrontierPreset: true, productionInspectorAbsent: true });
     } finally { await context.close(); }

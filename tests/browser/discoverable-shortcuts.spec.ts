@@ -15,7 +15,7 @@ for (const viewport of [{ width: 844, height: 390 }, { width: 390, height: 844 }
       await expect(card.locator('.circuit-length')).toContainText('m');
     }
     await page.screenshot({ path: `artifacts/higher-hop/selection-${viewport.width}.png` });
-    for (const [name, branch] of [['Launchsite', 'service-hop'], ['Santa Monica', true], ['Grand Canyon','mesa-service-trail']] as const) {
+    for (const [name, branch] of [['Launchsite', 'service-hop'], ['Santa Monica', true], ['Grand Canyon','juniper-saddle']] as const) {
       await page.getByRole('button', { name: `${name} circuit`, exact: true }).click();
       await page.getByRole('button', { name: 'Draw racing line', exact: true }).click();
       await page.evaluate(branch => (window as any).__roadster.usePracticeLine(branch), branch);

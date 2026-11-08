@@ -6,7 +6,7 @@ import type { CompiledRoute, RaceEvent } from './types';
 export const CHALLENGES = [
   { id: 'fleet-explorer', name: 'Fleet Explorer', venue: 'San Diego Fleet', circuitId: 'san-diego-fleet', mode: 'time-trial', objective: 'Complete one lap using both support vessels. Hop onto each vessel, then take its automatic return jump.', format: 'Time Trial · 1 lap', number: '01' },
   { id: 'alpine-precision', name: 'Alpine Precision', venue: 'Snowy Tahoe', circuitId: 'snowy-tahoe', mode: 'time-trial', objective: 'Complete one lap without barrier contact or recovery. Drifting, Thrust and Hop are allowed.', format: 'Time Trial · 1 lap', number: '02' },
-  { id: 'frontier-champion', name: 'Frontier Champion', venue: 'Frontier Cup', circuitId: 'grand-canyon', mode: 'solo-race', objective: 'Win the four-round Frontier Cup against Hard computer drivers. A shared championship title counts.', format: 'Solo Race · Hard · 4 rounds · 1 lap each', number: '03' },
+  { id: 'frontier-champion', name: 'Frontier Champion', venue: 'Frontier Cup', circuitId: 'canyon-south-rim', mode: 'solo-race', objective: 'Win the three-round Frontier Cup against Hard computer drivers. A shared championship title counts.', format: 'Solo Race · Hard · 3 rounds · 1 lap each', number: '03' },
 ] as const;
 export type ChallengeId = typeof CHALLENGES[number]['id'];
 export const findChallenge = (id: string | undefined) => CHALLENGES.find(c => c.id === id);

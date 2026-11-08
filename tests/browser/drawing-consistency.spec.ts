@@ -1,7 +1,7 @@
 import { expect,test } from '@playwright/test';
 import { mkdirSync,writeFileSync } from 'node:fs';
 
-for(const circuit of ['coastal-launch','grand-canyon'])test(`${circuit}: recorded touch pace survives phone framing, zoom and pixel density`,async({browser})=>{
+for(const circuit of ['coastal-launch','canyon-south-rim'])test(`${circuit}: recorded touch pace survives phone framing, zoom and pixel density`,async({browser})=>{
   test.setTimeout(300000);mkdirSync('artifacts/driving-update',{recursive:true});
   const views=[{width:1440,height:900,dpr:1,zoom:1},{width:844,height:390,dpr:2,zoom:1},{width:390,height:844,dpr:3,zoom:1},{width:844,height:390,dpr:2,zoom:1.18}];
   const records:{view:typeof views[number];duration:number;pace:number[]}[]=[];

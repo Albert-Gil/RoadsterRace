@@ -6,7 +6,12 @@ conditional on successful main-branch verification.
 
 ## Course
 
-`lax`, track version **5**, **1,312.5 m**, 16 m reference road, dry-asphalt handling.
+`lax`, track version **6**, **1,312.5 m**, 16 m reference road, dry-asphalt handling.
+Since v6 the **entire 44 m width of both runways** has the same road grip as the
+reference road (`pavedAreas`). Before, only the 16 m reference road gripped, so a car
+far from the centre line on identical-looking runway tarmac slowed as if in sand.
+Runway grip changes no support, barrier, progression, CPU or camera rule; the grey
+apron concrete and other ground beyond the runways remain loose runoff.
 The owner's latest rectangular-layout request supersedes the earlier 770.1 m
 square plan. The course is approximately 190 × 320 m including the gate and apron
 boundaries, with longer public-street/runway legs and two deeper S-lobes on the

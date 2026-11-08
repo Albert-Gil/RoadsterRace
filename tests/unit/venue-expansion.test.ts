@@ -16,9 +16,9 @@ import { jumpCoordinates } from '../../src/core/support';
 import type {TrackDefinition} from '../../src/core/types';
 
 const plan=(t:TrackDefinition,id:boolean|string=false,seconds=6.5)=>{const r=compileRoute(createPracticeSamples(t,seconds,id),t);if(!r.ok)throw Error(r.message);expect(r.route.hazards).toBeUndefined();return r.route;};
-test('new canyon is a separate ninth venue and newly created tours can include both canyons',()=>{
- expect(findCircuit(canyon.id).track).toBe(canyon);expect(findCircuit('grand-canyon').track).toBe(original);
- expect(original.version).toBe(5);expect(circuits[8]?.id).toBe(canyon.id);expect(canyon.version).toBe(1);
+test('South Rim is the only registered Grand Canyon; the retired original link opens it',()=>{
+ expect(findCircuit(canyon.id).track).toBe(canyon);expect(findCircuit('grand-canyon').track).toBe(canyon);expect(circuits.some(c=>c.id==='grand-canyon')).toBe(false);
+ expect(canyon.name).toBe('Grand Canyon');expect(original.version).toBe(5);expect(circuits[4]?.id).toBe(canyon.id);expect(canyon.version).toBe(2);
  expect(canyon.length).toBeGreaterThan(800);expect(canyon.length).toBeLessThan(900);expect(canyon.roadWidth).toBe(16);
  expect(canyon.hopShortcuts).toHaveLength(2);expect(plan(canyon).jumps).toEqual(['south-rim-crossing']);
 });
@@ -66,3 +66,13 @@ test('LA maintenance causeway stays inside the existing physical ramp and remain
  for(let i=0;i<g.positions.length;i+=3){const c=jumpCoordinates({x:g.positions[i],z:g.positions[i+2]},j);expect(c.along).toBeGreaterThanOrEqual(-.001);expect(c.along).toBeLessThanOrEqual(j.rampLength+.001);expect(Math.abs(c.across)).toBeLessThanOrEqual(j.width/2+.001);expect(g.positions[i+1]).toBeLessThanOrEqual(.11+c.along*j.lipHeight/j.rampLength);}
  expect(g.toVertexData().normals!.every(Number.isFinite)).toBe(true);expect(g.toVertexData().normals![1]).toBeGreaterThan(.8);expect(JSON.stringify(j)).toBe(before);
 });
+test('Grand Canyon v2: Juniper Saddle joins keep fast cars supported with an ordinary Hop window',()=>{
+ const h=canyon.hopShortcuts!.find(s=>s.id==='juniper-saddle')!,b=canyon.barriers.find(b=>b.id===h.obstacleId)!;
+ const center={x:b.footprint.reduce((s,p)=>s+p.x,0)/b.footprint.length,z:b.footprint.reduce((s,p)=>s+p.z,0)/b.footprint.length},obstacle=shortcutProjection(center,h).progress;
+ // Previously the 70–75° joins threw a fast car off the narrow branch support even with a correct Hop.
+ for(const seconds of[5,6.5])for(const lead of[6,10]){
+  const route=plan(canyon,h.id,seconds),sim=new RaceSimulation(route,canyon,1);let pressed=false;
+  for(let tick=0;tick<9000&&!sim.state.finished;tick++){const q=shortcutProjection(sim.state.position,h);if(!pressed&&q.distance<6&&q.progress>obstacle-lead-2&&q.progress<obstacle-lead){sim.pressHop();pressed=true;}sim.step();}
+  expect(sim.state.finished).toBe(true);expect(sim.state.hopCount).toBe(1);expect(sim.state.recoveryCount).toBe(0);expect(sim.state.collisionCount).toBe(0);
+ }
+},60000);

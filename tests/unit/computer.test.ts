@@ -1,4 +1,5 @@
 import { expect, test } from 'vitest';
+import { grandCanyonTrack } from '../../src/core/tracks/grand-canyon';
 import { circuits } from '../../src/content/circuits';
 import { computerRoute, stepComputers, computerPaceLimit, computerTraffic, shouldComputerThrust, shouldComputerHop } from '../../src/core/computer';
 import { LocalRace } from '../../src/core/local-race';
@@ -47,7 +48,7 @@ test('a safely separating adjacent car does not impose a following cap',()=>{
 });
 
 test('CPU can pass with a supported hop on an elevated straight, but refuses an occupied landing',()=>{
-  const track=circuits.find(c=>c.id==='grand-canyon')!.track,route=computerRoute(track,'normal',0,71),race=new LocalRace(Array(4).fill(route),track,1);
+  const track=grandCanyonTrack,route=computerRoute(track,'normal',0,71),race=new LocalRace(Array(4).fill(route),track,1);
   race.tick=360;race.racers.forEach((r,i)=>Object.assign(r.state,{position:{x:1000+i*100,z:1000},time:6,tick:360}));
   const at=route.points.reduce((a,b)=>Math.hypot(a.x-40,a.z)<Math.hypot(b.x-40,b.z)?a:b),s=race.racers[1].state,o=race.racers[0].state;
   Object.assign(s,{position:{x:40,z:0,courseProgress:at.courseProgress},distance:at.distance,heading:Math.PI/2,elevation:6,speed:30,velocity:{x:30,z:0},movement:'grounded'});
