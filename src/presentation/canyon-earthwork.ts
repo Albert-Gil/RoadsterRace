@@ -147,8 +147,15 @@ export function canyonBankGeometry(trails: readonly CanyonTrail[]) {
 }
 interface BankPoint extends Point { y: number; foot: Point; erosion: number }
 
+/**
+ * Where a Hop trail overlaps the main trail, `under` reports the distance to the main
+ * centreline and the main support width there. Branch overlays then drop their own rim and
+ * feather colouring inside the main surfaces, so no rectangular slab edge shows at junctions.
+ */
+export type CanyonMainSurface = (x: number, z: number) => { distance: number; support: number };
+
 /** A multi-row top surface: gentle colour breakup instead of one uninterrupted pale ribbon. */
-export function canyonShoulderGeometry(trails: readonly CanyonTrail[]) {
+export function canyonShoulderGeometry(trails: readonly CanyonTrail[], under?: CanyonMainSurface) {
   const result = new Geometry(), columns = 12;
   for (const trail of trails) {
     const part = new Geometry(), edges = canyonTrailEdges(trail), rows: number[][] = [];
@@ -156,7 +163,8 @@ export function canyonShoulderGeometry(trails: readonly CanyonTrail[]) {
       const a = edges[0][i], b = edges[1][i], row: number[] = [];
       for (let j = 0; j <= columns; j++) {
         const f = j / columns, x = lerp(a.x, b.x, f), z = lerp(a.z, b.z, f);
-        const rim = smoothstep(0.28, 0.5, Math.abs(f - 0.5));
+        let rim = smoothstep(0.28, 0.5, Math.abs(f - 0.5));
+        if (!trail.section && under) { const m = under(x, z); rim *= smoothstep(m.support / 2 - 2, m.support / 2 + 1, m.distance); }
         const mottling = fbm2(x / 6, z / 6, 3, 412), c = scale(mix([1.05, 1.0, 0.94], [0.91, 0.82, 0.73], rim * 0.5), 1 + 0.12 * mottling);
         row.push(part.vertex(x, trail.path[i].y! + (trail.section ? 0.03 : 0.045), z, c));
       }
@@ -173,7 +181,7 @@ export function canyonShoulderGeometry(trails: readonly CanyonTrail[]) {
 }
 
 /** Ragged compacted dirt with a wide, uneven colour transition into the sandy shoulder. */
-export function canyonRoadGeometry(trails: readonly CanyonTrail[], roadWidth: number, roadColor: string, shoulderColor: string) {
+export function canyonRoadGeometry(trails: readonly CanyonTrail[], roadWidth: number, roadColor: string, shoulderColor: string, under?: CanyonMainSurface) {
   const result = new Geometry(), road = hex(roadColor), shoulder = hex(shoulderColor), columns = 16;
   for (const trail of trails) {
     const edges = canyonTrailEdges(trail, roadWidth, art.roadRoughness), part = new Geometry(), rows: number[][] = [];
@@ -182,7 +190,9 @@ export function canyonRoadGeometry(trails: readonly CanyonTrail[], roadWidth: nu
       for (let j = 0; j <= columns; j++) {
         const f = j / columns, x = lerp(edges[0][i].x, edges[1][i].x, f), z = lerp(edges[0][i].z, edges[1][i].z, f);
         const fromEdge = Math.min(f, 1 - f) * roadWidth;
-        const feather = 1 - smoothstep(0, art.roadFeather * (1 + 0.25 * noise2(x, z, 61)), fromEdge);
+        let feather = 1 - smoothstep(0, art.roadFeather * (1 + 0.25 * noise2(x, z, 61)), fromEdge);
+        // Inside the main road a branch overlay takes the plain road colour beneath it.
+        if (!trail.section && under) feather *= smoothstep(roadWidth / 2 - art.roadFeather, roadWidth / 2 + 0.5, under(x, z).distance);
         const c = mix([1, 1, 1], shoulder.map((v, k) => v / Math.max(0.01, road[k])) as Rgb, feather * 0.83);
         // Separate the branch overlay by a few centimetres at its two shared junctions.
         // Coplanar feathered borders would shimmer against the main dirt mesh.
@@ -197,4 +207,28 @@ export function canyonRoadGeometry(trails: readonly CanyonTrail[], roadWidth: nu
     result.append(part);
   }
   return result;
+}
+
+/**
+ * Bank-slope height of the rendered hillsides at p (the same taper as canyonBankGeometry,
+ * without per-vertex erosion noise), or undefined on a trail top. `near` is the lowest top
+ * of the trails whose banks cover p: dressing must stay below it to keep sight lines.
+ */
+export function canyonBankSurface(trails: readonly CanyonTrail[], p: Point) {
+  let height = art.floor, near = Infinity, onTop = false, along = 1;
+  for (const trail of trails) {
+    let best = Infinity, index = 0;
+    for (let i = 0; i < trail.path.length - 1; i++) {
+      const a = trail.path[i], b = trail.path[i + 1], dx = b.x - a.x, dz = b.z - a.z, t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.z - a.z) * dz) / (dx * dx + dz * dz || 1)));
+      const d = Math.hypot(p.x - (a.x + dx * t), p.z - (a.z + dz * t)); if (d < best) { best = d; index = t < .5 ? i : i + 1; }
+    }
+    const c = trail.path[index], top = c.y!, r0 = (trail.widths?.[index] ?? trail.width) / 2, spread = 1 + Math.max(0, top - art.floor) * art.baseSpread;
+    if (best < r0 + art.rimRoughness + 1) { onTop = true; continue; }
+    // Every trail within 25 m of its support edge limits the dressing height (sight lines).
+    if (best < r0 + 25) near = Math.min(near, top);
+    const t = (best - r0) / spread; if (t >= 1.15) continue;
+    const y = art.floor + (top - art.floor) * Math.max(0, 1 - Math.min(1, t) ** (1 / 0.85));
+    if (y > height) { height = y; along = Math.min(along, t); }
+  }
+  return onTop ? undefined : { height, near, along };
 }

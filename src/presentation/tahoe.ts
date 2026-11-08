@@ -25,6 +25,7 @@ import {alpineOutcrops} from './mountain-composition';
 import {tahoeResortLife} from './landmark-showcase';
 import {tahoeExteriorLife} from './tahoe-roadside';
 import {bakeLandmark} from './venue-landmarks';
+import {tahoeCourseMarkings,tahoeShallows} from './tahoe-course';
 
 export { tahoeLayout };
 
@@ -74,6 +75,11 @@ export function buildTahoe(scene:Scene,track:TrackDefinition,theme:PresentationT
     for(let i=0;i<8;i++){grooves.triangle(rows[0][i],rows[1][i],rows[1][i+1]);grooves.triangle(rows[0][i],rows[1][i+1],rows[0][i+1]);}
   }
   bake('slope-groomer-impressions',grooves,ruts);
+  // Course readability: dye dashes inside the road edges and a snow fence on the reserve rim share one batch.
+  const course=mat('tahoe-course-dye','#ffffff');course.metadata={absoluteVertexColors:true};
+  bake('tahoe-course-markings',tahoeCourseMarkings(track,(x,z)=>groundSurface.height(x,z)??layout.height(x,z)+art.surfaceOffsets.road),course);
+  const shallowsMaterial=new StandardMaterial('tahoe-shallows',scene);shallowsMaterial.diffuseColor=Color3.White();shallowsMaterial.specularColor.setAll(.3);shallowsMaterial.backFaceCulling=false;shallowsMaterial.metadata={absoluteVertexColors:true};
+  const shallows=bake('tahoe-lake-shallows',tahoeShallows(art.extent,-2.4),shallowsMaterial);shallows.hasVertexAlpha=true;shallows.isPickable=false;
   for(const t of layout.trees.filter(t=>t.authored))box('fir-trunk',t.x,layout.height(t.x,t.z)+t.height*.22,t.z,.22,t.height*.44,.22,wood);
   bake('snow-capped-granite-outcrops',alpineOutcrops(track),stone);
   const reserve=track.barriers.find(b=>b.id==='forest-reserve')!,cx=-8,cz=5,bank=new Geometry(),rim:Point[]=[];

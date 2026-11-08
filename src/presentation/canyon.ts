@@ -8,7 +8,8 @@ import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import type { Scene } from '@babylonjs/core/scene';
 import type { Point, TrackDefinition } from '../core/types';
 import { roadEdges } from '../core/road-geometry';
-import { roadHeight } from '../core/elevation';
+import { roadHeight, roadSupportWidth } from '../core/elevation';
+import { projectToPolyline } from '../core/geometry';
 import { canyonAppearance as art, venueDetail, type PresentationTheme } from './themes';
 import { surfaceTexture } from './textures';
 import { buildCanyonLandscape, CANYON } from './canyon-landscape';
@@ -42,11 +43,12 @@ export function buildCanyon(scene:Scene,track:TrackDefinition,theme:Presentation
  const bankPositions=banks.getVerticesData(VertexBuffer.PositionKind)!,bankNormals=banks.getVerticesData(VertexBuffer.NormalKind)!,bankUvs:number[]=[];
  for(let i=0;i<bankPositions.length;i+=3){const along=Math.abs(bankNormals[i])>Math.abs(bankNormals[i+2])?bankPositions[i+2]:bankPositions[i];bankUvs.push(along/8,bankPositions[i+1]/3);}
  banks.setVerticesData(VertexBuffer.UVKind,bankUvs);
- const shoulders=new Mesh('canyon-weathered-trail-shoulders',scene);canyonShoulderGeometry(trails).toVertexData().applyToMesh(shoulders);shoulders.material=shoulder;
+ const under=(x:number,z:number)=>{const q=projectToPolyline({x,z},track.centerline,track.distances);return{distance:q.distance,support:roadSupportWidth(track,q.progress)};};
+ const shoulders=new Mesh('canyon-weathered-trail-shoulders',scene);canyonShoulderGeometry(trails,under).toVertexData().applyToMesh(shoulders);shoulders.material=shoulder;
  const shoulderPositions=shoulders.getVerticesData(VertexBuffer.PositionKind)!,shoulderUvs:number[]=[],extent=CANYON.extent;
  for(let i=0;i<shoulderPositions.length;i+=3)shoulderUvs.push((shoulderPositions[i]-extent.minX)/(extent.maxX-extent.minX),(shoulderPositions[i+2]-extent.minZ)/(extent.maxZ-extent.minZ));
  shoulders.setVerticesData(VertexBuffer.UVKind,shoulderUvs);
- const dirt=new Mesh('packed-dirt-road',scene);canyonRoadGeometry(trails,track.roadWidth,theme.scene.asphalt,theme.scene.shoulder).toVertexData().applyToMesh(dirt);dirt.material=road;
+ const dirt=new Mesh('packed-dirt-road',scene);canyonRoadGeometry(trails,track.roadWidth,theme.scene.asphalt,theme.scene.shoulder,under).toVertexData().applyToMesh(dirt);dirt.material=road;
  const positions=dirt.getVerticesData(VertexBuffer.PositionKind)!,uvs:number[]=[];
  for(let i=0;i<positions.length;i+=3)uvs.push(positions[i]/12,positions[i+2]/12);dirt.setVerticesData(VertexBuffer.UVKind,uvs);
  for(const trail of trails)for(const [side,edge]of roadEdges(trail.path,4.6,false).entries()){

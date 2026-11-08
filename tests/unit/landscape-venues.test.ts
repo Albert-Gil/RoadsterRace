@@ -4,6 +4,8 @@ import { insideBarrier } from '../../src/core/barriers';
 import { grandCanyonTrack } from '../../src/core/tracks/grand-canyon';
 import { parseProps } from '../../src/presentation/props';
 import { CANYON, canyonLayout } from '../../src/presentation/canyon-landscape';
+import { canyonBankSurface, canyonTrails } from '../../src/presentation/canyon-earthwork';
+import { supported } from '../../src/core/support';
 import { goldenGateTrack } from '../../src/core/tracks/golden-gate';
 import { GOLDEN, goldenLayout } from '../../src/presentation/golden-gate-landscape';
 import { santaMonicaTrack } from '../../src/core/tracks/santa-monica';
@@ -54,11 +56,19 @@ describe.each(venues)('$name landscape', venue => {
     }
     const { loose, plants } = venue.scatter();
     expect(loose.length).toBeGreaterThan(venue.minimum?.loose ?? 200); expect(plants.length).toBeGreaterThan(venue.minimum?.plants ?? 300);
+    // Canyon hollow dressing is the one exception: inside the corridor only on unsupported
+    // bank slopes, kept at least 0.5 m below every trail top within 25 m (never hides a road).
+    const trails = venue.name === 'Grand Canyon' ? canyonTrails(venue.track) : [];
+    const hollow = (item: { x: number; y: number; z: number; size: number }) => {
+      if (!trails.length || supported(item, venue.track)) return false;
+      const bank = canyonBankSurface(trails, item); return !!bank && item.y + item.size <= bank.near - 0.5;
+    };
     for (const item of [...loose, ...plants]) {
+      if (hollow(item)) { for (const b of venue.track.barriers) expect(insideBarrier(item, b)).toBe(false); continue; }
       expect(exact(item.x, item.z), `${item.x.toFixed(1)}, ${item.z.toFixed(1)}`).toBeGreaterThanOrEqual(venue.corridor);
       for (const b of venue.track.barriers) expect(insideBarrier(item, b), `${item.x.toFixed(1)}, ${item.z.toFixed(1)} in ${b.id}`).toBe(false);
     }
-    for (const p of plants.filter(p => ['juniper', 'cypress', 'palm', 'joshua'].includes(p.kind))) expect(exact(p.x, p.z), `${p.kind} ${p.size.toFixed(1)} m`).toBeGreaterThan(8 + 1.5 * p.size);
+    for (const p of plants.filter(p => ['juniper', 'cypress', 'palm', 'joshua'].includes(p.kind) && !hollow(p))) expect(exact(p.x, p.z), `${p.kind} ${p.size.toFixed(1)} m`).toBeGreaterThan(8 + 1.5 * p.size);
   });
 });
 

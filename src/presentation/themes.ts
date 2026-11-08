@@ -4,6 +4,10 @@ import { launchsiteRemoteRockets } from '../core/tracks/venue-parcels';
 
 export const laxMarkingAppearance={apronEdgeWidth:.7,apronKerbWidth:.95,apronKerbHeight:.07,apronBarrierRed:'#d1464b',apronBarrierWhite:'#eeeee6',apronBarrierBase:'#737e83',runwayEdgeWidth:.35,runwayCentreWidth:.45};
 export const laxFramingAppearance={portraitElevation:68};
+/** LAX airfield detail (2026-11): apron slab joints, repairs, taxi lane and airfield lighting. Flat or low, inside existing batches. */
+export const laxAirfieldAppearance={jointSpacing:7.5,jointWidth:.11,joint:'#8c9089',patch:'#999b90',stain:'#8b8d84',patches:70,
+ edgeLight:'#f8eab0',threshold:'#5cc27e',endLight:'#dc5550',approach:'#fbf3d3',taxiBlue:'#4d87c8',taxiX:69,taxiFrom:-60,taxiTo:150,
+ edgeLightSpacing:30,lightSize:.5,lightHeight:.12,approachBars:5,approachSpacing:12,bridgeLeg:'#5e686b'};
 
 export const paintFinishes = [
   { id: 'glacier', name: 'Stainless steel gray', color: '#aeb4b8' },
@@ -132,7 +136,8 @@ export const sceneryPalettes = {
  airport:{terrain:'#718268',asphalt:'#aeb7bc',sky:'#bad1d8',sunlight:1.05},
   naval:{terrain:fleetAppearance.water,water:fleetAppearance.water,asphalt:'#a6b2b8',structure:'#637c87',sky:'#c6d9de',sunlight:1.06},
   yosemite:{terrain:'#61816a',embankment:'#859070',asphalt:'#8f826b',shoulder:'#a5a079',structure:'#5a6552',curb:'#ddd4b9',glass:'#39564b',foliage:'#254f3a',foliageLight:'#658351',rock:'#c5c2b3',trunk:'#795d40',water:'#367f84',foam:'#dfefdd',sky:'#afd5d9',sunlight:1.05},
-  alpine: {terrain:'#dce7ee',embankment:'#b9cad6',asphalt:'#8ca6b9',shoulder:'#d2e0e9',structure:'#3b4f59',curb:'#edf5f7',glass:'#304f60',foliage:'#34564e',foliageLight:'#5e7970',rock:'#87959f',trunk:'#716357',water:'#23647f',foam:'#c4e3ec',sky:'#b1d3e3',sunlight:.96},
+  // Packed road and its groomed berm read darker and bluer than fresh powder (course readability, 2026-11).
+  alpine: {terrain:'#dce7ee',embankment:'#b9cad6',asphalt:'#7b97ad',shoulder:'#c2d4e1',structure:'#3b4f59',curb:'#edf5f7',glass:'#304f60',foliage:'#34564e',foliageLight:'#5e7970',rock:'#87959f',trunk:'#716357',water:'#23647f',foam:'#c4e3ec',sky:'#b1d3e3',sunlight:.96},
   'night-city': { terrain:'#34383e',embankment:'#53515a',asphalt:'#b4b4b8',shoulder:'#535058',structure:'#383440',curb:'#ded4c3',glass:'#272a34',foliage:'#344c45',foliageLight:'#637567',rock:'#5c5960',trunk:'#5c4d46',water:'#1c2c33',foam:'#8c9c9b',sky:'#15151f',sunlight:.42 },
   coastal: { terrain: '#dec697', embankment: '#a2ae7c', water: '#277e8d', shallows: '#76b8af', foliage: '#3e644a', foliageLight: '#839757' },
   sunset: { terrain: '#e4c59d', embankment: '#c8a47e', asphalt: '#9ca4ad', shoulder: '#ba9c7c', structure: '#765d60', foliage: '#526e58', foliageLight: '#8d9e68', rock: '#c5ac92', trunk: '#9c735a', water: '#388ca2', shallows: '#6bb5b9', foam: '#f1dbc3', sky: '#e5a3a0', sunlight: 1.08 },
@@ -357,6 +362,14 @@ export const venueDetail = { floorSpacing: 1.9, rockLayers: 7, mesaStones: 34, s
 export const parkedVehicleFacades = [0, 2, 4, 5] as const;
 export const ghostAppearance = { color: '#a6e5ed', opacity: 0.32 };
 
+/** Snowy Tahoe course readability: dye dashes, reserve snow fence and lake shallows (presentation only). */
+export const tahoeCourseAppearance = {
+  dye:'#e8662f', dyeAlt:'#2f6fb3', blueEvery:4, inset:.55, dashWidth:.32, dashLength:3.2, dashSpacing:6.5, dashStart:8, lift:.035,
+  fence:'#ec7a2c', post:'#5a4a3c', fenceInset:.45, fenceBase:.28, fenceHeight:1.05, fenceSag:.06, fenceSpacing:1.6, postEvery:2, postWidth:.09,
+  shallows:'#8fd3cf', midWater:'#3c93a6', shoreOverlap:6, shallowLift:.03, shallowStep:6, fenceCap:.16,
+  /** [metres from the shoreline band start, alpha]: pale turquoise at the shore fading into the existing deep lake. */
+  shallowBands:[[0,.88],[14,.74],[40,.4],[95,0]] as [number,number][],
+};
 export const snowyTahoeAppearance = {
   surfaceOffsets:{road:.12,branch:.13,fringe:.045,branchFringe:.055},
   snow:'#dce7ee',packed:'#8ca6b9',ruts:'#7e99aa',powder:'#eef5f7',fir:'#304f46',firLight:'#526f63',bark:'#6d5a48',rock:'#87959f',timber:'#8e7254',lodge:'#a28869',roof:'#c9dbe5',window:'#dcb77b',lake:'#23647f',

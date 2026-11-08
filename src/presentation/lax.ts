@@ -9,7 +9,7 @@ import { laxTerminals, laxApronAircraft, laxCargoAprons, laxPlanting, laxRunways
 import { cumulative, projectToPolyline } from '../core/geometry';
 import { CompositionShapes } from './composition-shapes';
 import { RenderedSurface } from './rendered-surface';
-import { laxAppearance as art, laxMarkingAppearance as marking, type PresentationTheme } from './themes';
+import { laxAppearance as art, laxMarkingAppearance as marking, laxAirfieldAppearance as field, type PresentationTheme } from './themes';
 import { surfaceTexture } from './textures';
 import { hex } from './landscape/mesh';
 
@@ -176,6 +176,7 @@ export function laxGeometry(track:TrackDefinition){
  }
  for(const z of new Set(laxCargoAprons.map(a=>a.z)))concrete.box(0,-.04,z,182,.08,70,art.apron);
  for(const {x,z,side} of laxCargoAprons){structure.box(x,5.5,z+side*22,40,11,20,art.cargo);for(let n=-1;n<=1;n++)glass.box(x+n*11,4,z+side*11.9,9,7,.12,art.hangar);airliner(equipment,glass,x,z-side*7,.8,side>0?Math.PI:0,art.livery[Math.abs(x)%3]);}
+ airfieldDetail(track,paint,equipment,structure);
  for(const {x,z} of laxGroundVehicles){equipment.box(x,1.7,z,3.4,3.2,8,z>0?art.yellow:art.rescue);glass.box(x,2.4,z-2,3.5,1,2.7,art.glass);for(const dx of[-1.8,1.8])equipment.beam([x+dx,.8,z-2.5],[x+dx,.8,z+2.5],.8,art.dark,6);}
  return{ground,road,concrete,structure,glass,equipment,paint,plants};
 }
@@ -190,4 +191,47 @@ export function buildLax(scene:Scene,track:TrackDefinition,_theme:PresentationTh
  };
  mesh('ground','terrain');mesh('road','asphalt');mesh('concrete','airport-concrete');mesh('structure','airport-structure',true);mesh('glass','airport-glass');mesh('equipment','airport-equipment',true);mesh('paint','airport-markings');mesh('plants','airport-palms',true);
  return{groundSurface:surface,shadowCasterMaterials:casters,update(_time:number,_reduced:boolean){}};
+}
+
+/**
+ * Apron slab joints and repairs, a gate-side taxi lane and airfield lights.
+ * Everything is flush (≤ 0.15 m) or on non-driving ground, so it adds no visual obstacle,
+ * and it is appended to existing batches (no extra draw calls).
+ */
+function airfieldDetail(track:TrackDefinition,paint:CompositionShapes,equipment:CompositionShapes,structure:CompositionShapes){
+ let seed=9157;const rand=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
+ const flat=(x0:number,z0:number,x1:number,z1:number,y:number,color:string)=>paint.quad(upward([[x0,y,z0],[x1,y,z0],[x1,y,z1],[x0,y,z1]]),color);
+ // Concrete slab joints on both apron slabs; they sit under runway/road surfaces and terminal plinths.
+ for(const [minX,maxX,minZ,maxZ] of[[-96.5,96.5,-96,246],[-105,105,246,255]]){
+  for(let x=minX+field.jointSpacing;x<maxX;x+=field.jointSpacing)flat(x-field.jointWidth/2,minZ,x+field.jointWidth/2,maxZ,.004,field.joint);
+  for(let z=minZ+field.jointSpacing;z<maxZ;z+=field.jointSpacing)flat(minX,z-field.jointWidth/2,maxX,z+field.jointWidth/2,.004,field.joint);
+ }
+ // Repaired slabs and worn stands, aligned to the joint grid.
+ for(let i=0;i<field.patches;i++){
+  const cx=-96.5+field.jointSpacing*Math.floor(rand()*25),cz=-96+field.jointSpacing*Math.floor(rand()*45),w=field.jointSpacing*(1+Math.floor(rand()*2)),d=field.jointSpacing*(1+Math.floor(rand()*2));
+  flat(cx+.08,cz+.08,cx+w-.08,cz+d-.08,.006,rand()<.6?field.patch:field.stain);
+ }
+ // Taxi lane between the gate aircraft and each runway: yellow centreline and blue edge lights.
+ for(const side of[-1,1]){
+  const x=side*field.taxiX;
+  for(let z=field.taxiFrom;z<field.taxiTo;z+=6)paint.beam([x,.07,z],[x,.07,z+4.2],.09,art.yellow,4);
+  for(let z=field.taxiFrom;z<=field.taxiTo;z+=15)for(const edge of[-3.5,3.5])equipment.box(x+edge,.05,z,.3,.1,.3,field.taxiBlue);
+ }
+ // Runway edge, threshold/end and approach lights, flush with the tarmac.
+ const light=(x:number,z:number,color:string,size=field.lightSize)=>equipment.box(x,field.lightHeight/2,z,size,field.lightHeight,size,color);
+ for(const r of laxRunways){
+  const half=r.width/2-.35,start=r.z-r.length/2,end=r.z+r.length/2;
+  for(let z=start+5;z<=end-5;z+=field.edgeLightSpacing)for(const side of[-1,1])light(r.x+side*half,z,field.edgeLight);
+  for(const [edge,out] of[[start,-1],[end,1]] as const){
+   for(let x=-half;x<=half;x+=2.8){light(r.x+x,edge-out*2,field.threshold);light(r.x+x,edge-out*.6,field.endLight);}
+   for(let n=1;n<=field.approachBars;n++)for(let k=-2;k<=2;k++)light(r.x+k*1.8,edge+out*n*field.approachSpacing,field.approach,.6);
+  }
+ }
+ // Jet bridges: drive columns and wheel bogies under each bridge stub.
+ laxTerminals.forEach(([x,z],i)=>{
+  if(i===3)return;
+  const side=Math.sign(x);
+  structure.box(side*55.5,.95,z+4,.45,1.9,.45,field.bridgeLeg);
+  structure.box(side*55.5,.25,z+4,1.4,.5,.9,art.dark);
+ });
 }

@@ -9,6 +9,9 @@ import type { PlantKind, PlantPalette } from './landscape/plants';
 import { smoothPath } from './landscape/paths';
 import { scatterTools } from './landscape/scatter';
 import { runLandscape, stopwatch } from './landscape/runtime';
+import { canyonBankSurface, canyonTrails } from './canyon-earthwork';
+import { supported } from '../core/support';
+import { insideBarrier } from '../core/barriers';
 
 /**
  * Grand Canyon's floor and walls (presentation only). The trails stand on earthen supports above
@@ -22,6 +25,8 @@ export const CANYON = {
   /** Ground the cameras can see (union of phone, tablet and desktop fits), with a margin. */
   visible: { minX: -228, maxX: 186, minZ: -228, maxZ: 136 } satisfies Extent,
   floor: -2.6, corridor: 24, terrainCell: 3, flatUntil: 24,
+  /** Hollows between trails: grid cell (m), density, boulder share, lowest bank fraction and sink (m). */
+  pitDressing: { cell: 3.2, density: 0.32, boulders: 0.16, minAlong: 0.45, sink: 0.25 },
   formations: {
     'canyon-west-butte': { style: 'butte' }, 'canyon-south-mesa': { style: 'mesa' }, 'canyon-east-butte': { style: 'butte', tiers: 2 },
     'canyon-north-mesa': { style: 'mesa' }, 'canyon-west-spire': { style: 'butte' },
@@ -117,6 +122,7 @@ export function canyonLayout(track: TrackDefinition) {
       return { kind, size, dryness: kind === 'deadwood' ? 1 : dry };
     });
     tools.trees(30, 'juniper', () => 3.5 + tools.rand() * 2.5, 12);
+    pitDressing(track, D, tools);
     return { loose: tools.loose, plants: tools.plants };
   };
   const scatter = () => (scattered ??= scatterCanyon());
@@ -133,4 +139,27 @@ export function buildCanyonLandscape(scene: Scene, track: TrackDefinition, mater
     return { generators: detail, paint: detail.paintInto(scene, track, layout, terrainMaterial, materials.get('shoulder')), formations: layout.formations, rock: C.rock, loose, plants, plantPalette: C.plants, topPlants: ['sage', 'grass', 'agave'] };
   } });
   return { terrain: terrain.mesh, shadowCasters };
+}
+
+/**
+ * The hollows between elevated trails (inside the planning corridor, where the general
+ * scatter does not reach) get junipers, sage and boulders on their lower bank slopes and
+ * floor. Only unsupported ground is dressed, so nothing stands on a drivable surface, and
+ * every plant stays below the nearest trail top so the overview's sight lines are kept.
+ */
+function pitDressing(track: TrackDefinition, D: (x: number, z: number) => number, tools: ReturnType<typeof scatterTools>) {
+  if (!track.sections) return;
+  const trails = canyonTrails(track), C = CANYON, cell = C.pitDressing.cell;
+  for (let x = C.visible.minX; x < C.visible.maxX; x += cell) for (let z = C.visible.minZ; z < C.visible.maxZ; z += cell) {
+    const p = { x: x + (tools.rand() - .5) * cell * .8, z: z + (tools.rand() - .5) * cell * .8 };
+    if (D(p.x, p.z) > C.corridor + 2 || supported(p, track) || track.barriers.some(b => insideBarrier(p, b))) continue;
+    const bank = canyonBankSurface(trails, p);
+    if (!bank || bank.along < C.pitDressing.minAlong || tools.rand() > C.pitDressing.density) continue;
+    const r = tools.rand(), room = bank.near - bank.height - 1.2, y = bank.height - C.pitDressing.sink;
+    if (room < 0.8) continue;
+    if (r < C.pitDressing.boulders) { tools.loose.push({ x: p.x, y, z: p.z, size: Math.min(room * .5, 0.6 + tools.rand() * 0.9), heading: tools.rand() * Math.PI * 2, seed: tools.loose.length * 13 + 7, kind: 'boulder' }); continue; }
+    const kind: PlantKind = r < 0.45 ? 'juniper' : r < 0.75 ? 'sage' : r < 0.92 ? 'grass' : 'deadwood';
+    const size = Math.min(room, kind === 'juniper' ? 2.2 + tools.rand() * 1.6 : kind === 'sage' ? 0.8 + tools.rand() * 0.6 : kind === 'grass' ? 0.5 + tools.rand() * 0.4 : 1 + tools.rand());
+    tools.plants.push({ kind, x: p.x, y, z: p.z, size, heading: tools.rand() * Math.PI * 2, seed: tools.plants.length * 31 + 3, dryness: kind === 'deadwood' ? 1 : 0.3 + 0.4 * tools.rand() });
+  }
 }
