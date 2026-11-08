@@ -15,7 +15,7 @@ Conventions: SI units; horizontal plane (x, z) with y up; heading 0 points along
 | Launchsite track (`orbital-launchyard`) | 12 |
 | Golden Gate track (`golden-gate`) | 8 |
 | Santa Monica track (`santa-monica`) | 5 |
-| Grand Canyon track (`canyon-south-rim`) | 2 |
+| Grand Canyon track (`canyon-south-rim`) | 3 |
 | LA nights track (`la-nights`) | 5 |
 | Snowy Tahoe track (`snowy-tahoe`) | 6 |
 | Capitan Yosemite track (`capitan-yosemite`) | 5 |
@@ -32,7 +32,7 @@ Records, ghosts, session bests and championships are scoped by the relevant vers
 | Launchsite | `orbital-launchyard` | 12 | 16 | 460.6 | 37 | hop lane `service-hop`, hop lane `utility-wing-hop`, hop lane `rocket-yard-tip-hop` |
 | Golden Gate | `golden-gate` | 8 | 16 | 496.4 | 39 | hop lane `quayside-hop`, bridge `golden-span` |
 | Santa Monica | `santa-monica` | 5 | 16 | 660.7 | 116 | ramp `pacific-hop` |
-| Grand Canyon | `canyon-south-rim` | 2 | 16 | 850.7 | 24 | crest `south-rim-crossing`, hop lane `juniper-saddle`, hop lane `redwall-traverse` |
+| Grand Canyon | `canyon-south-rim` | 3 | 16 | 850.7 | 24 | crest `south-rim-crossing`, hop lane `juniper-saddle`, hop lane `redwall-traverse` |
 | LA nights | `la-nights` | 5 | 16 | 734.0 | 29 | ramp `channel-crossing`, hop lane `backlot-alley` |
 | Snowy Tahoe | `snowy-tahoe` | 6 | 16 | 554.8 | 21 | hop lane `forestry-trail` |
 | Capitan Yosemite | `capitan-yosemite` | 5 | 16 | 716.6 | 55 | crest `valley-creek-crest`, crest `sentinel-creek-crest`, crest `cathedral-creek-crest`, hop lane `ranger-timber-trail` |

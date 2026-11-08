@@ -12,7 +12,9 @@ const distances=cumulative(path),length=distances.at(-1)!;
 const at=(p:Point)=>projectToPolyline(p,path,distances).progress;
 const approach=at({x:-85,z:0}),lip=at({x:-15,z:0}),landing=at({x:15,z:0}),mesa=at({x:95,z:0}),descent=at({x:50,z:85}),floor=at({x:0,z:22});
 const sections:RoadSection[]=[
- {id:'western-floor',from:0,to:approach,heights:[[0,0],[70,0],[approach-25,10.4],[approach,10.4]],supportWidth:28},
+ // v3: the west climb tops out in the hairpin (169 m). Juniper Saddle's linear profile then reaches
+ // 10.4 m at 55% of its length, so its rock and its merge sit level with the road beside them.
+ {id:'western-floor',from:0,to:approach,heights:[[0,0],[70,0],[169,10.4],[approach,10.4]],supportWidth:28},
  {id:'upper-approach',from:approach,to:lip,heights:[[0,10.4],[lip-approach-8,10.4],[lip-approach,12]],supportWidth:36,supportWidths:[[0,28],[18,36],[lip-approach-16,36],[lip-approach,24]]},
  {id:'air-crossing',from:lip,to:landing,heights:[[0,12],[landing-lip,10]],supportWidth:16,flight:true},
  {id:'receiving-ledge',from:landing,to:mesa,heights:[[0,10],[mesa-landing,10]],supportWidth:32,supportWidths:[[0,16],[16,20],[50,29],[mesa-landing,32]]},
@@ -45,12 +47,14 @@ barriers.push(
  rock('north-saddle',-28,123,21,10,23),rock('far-west-wall',-219,-36,17,46,47),
  rock('far-north-wall',-25,161,56,17,48),rock('far-east-wall',222,57,19,48,50),
 );
-const track:TrackDefinition={id:'canyon-south-rim',name:'Grand Canyon',version:2,surface:'packed-dirt',centerline:path,distances,length,roadWidth:16,carWidth:VEHICLE_DIMENSIONS.width,carLength:VEHICLE_DIMENSIONS.length,start:path[0],startFinish:createStartFinish(path[0],path[1],16),sections,barriers,
+const track:TrackDefinition={id:'canyon-south-rim',name:'Grand Canyon',version:3,surface:'packed-dirt',centerline:path,distances,length,roadWidth:16,carWidth:VEHICLE_DIMENSIONS.width,carLength:VEHICLE_DIMENSIONS.length,start:path[0],startFinish:createStartFinish(path[0],path[1],16),sections,barriers,
  jumps:[{id:'south-rim-crossing',kind:'crest',mandatory:true,from:{x:-15,z:0},forward:{x:1,z:0},width:16,rampLength:0,lipHeight:12,takeoffElevation:12,landingElevation:10,launchBoost:29,launchSlope:.05,gap:30,runout:80,corridorLength:110,branch:[{x:-85,z:0},{x:-15,z:0},{x:15,z:0},{x:95,z:0}],entryProgress:approach,exitProgress:mesa}],hopShortcuts:hops,
 };
+// Juniper Saddle's rock sits on its level top (64%); Redwall's stays at 52%.
+const rockAt=[.64,.52];
 for(const [index,h]of hops.entries()){
- const ds=cumulative(h.branch),s=ds.at(-1)!*.52,p=samplePolyline(h.branch,ds,s),a=samplePolyline(h.branch,ds,s-.5),b=samplePolyline(h.branch,ds,s+.5),d=distance(a,b),forward={x:(b.x-a.x)/d,z:(b.z-a.z)/d};
- const y=roadHeight(track,lerp(h.entryProgress,h.exitProgress,.52));
+ const ds=cumulative(h.branch),s=ds.at(-1)!*rockAt[index],p=samplePolyline(h.branch,ds,s),a=samplePolyline(h.branch,ds,s-.5),b=samplePolyline(h.branch,ds,s+.5),d=distance(a,b),forward={x:(b.x-a.x)/d,z:(b.z-a.z)/d};
+ const y=roadHeight(track,lerp(h.entryProgress,h.exitProgress,rockAt[index]));
  const outline=(points:number[][])=>points.map(([u,v])=>({x:p.x+forward.z*u+forward.x*v,z:p.z-forward.x*u+forward.z*v}));
  barriers.push({id:h.obstacleId!,kind:'rock',height:2.8,baseHeight:y,runoffException:'hop-lane',footprint:outline([[-8,-.5],[-6,-1.2],[-3,-.8],[0,-1.3],[3,-.7],[6,-1.2],[8,-.5],[8,.6],[5,1.1],[2,.8],[-1,1.2],[-4,.7],[-7,1.1],[-8,.6]])});
  for(const side of[-1,1])barriers.push({id:`south-rim-${index}-hop-end-${side}`,kind:'rock',height:3.2,baseHeight:y,runoffException:'hop-lane',footprint:outline([[7.8,-.7],[9.5,-1.5],[11,-.7],[10.9,1],[9.4,1.7],[7.8,.8]].map(([u,v])=>[u*side,v]))});

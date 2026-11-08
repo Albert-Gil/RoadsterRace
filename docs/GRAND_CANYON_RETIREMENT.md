@@ -47,6 +47,35 @@ narrower than Redwall's because the trail climbs about 11%. Hopping too late or 
 early still hits the rock, as intended. Covered by
 `tests/unit/venue-expansion.test.ts` (both paces, two Hop timings, zero recoveries).
 
+## Grand Canyon v3: Juniper Saddle level with the road (2026-11-08)
+
+**Reported after v2:** on the testing website the car still fell off or was reset at the
+first-turn shortcut.
+
+**Cause found.** Physically, v2 worked: lines up to ±6 m off the trail centre and
+correctly timed Hops finished cleanly in simulation. But the trail climbed linearly to
+its merge and ran 1–2 m *below* the hairpin exit road beside it. The road's sandstone
+bank was therefore drawn across the second half of the trail, and the drivable trail
+(lane + 1 m) was hidden under a rendered slope. A player following the visible
+surfaces drew onto unsupported ground and fell. A hidden height step also separated
+the trail from the neighbouring road.
+
+**Change.** The west climb now tops out in the hairpin (10.4 m at 169 m instead of
+203.5 m; about 10.5% instead of 7.8%). Juniper Saddle's linear profile therefore reaches
+10.4 m at 55% of its length. Its rock moves from 52% to 64% of the trail, onto that level
+top, and the merge with the eastbound straight is level with the road beside it. The
+rendered trail now matches the supported area: a support overlay shows drivable ground
+only on the drawn trail and road, and unsupported ground only on cliff faces. Track
+version 2 → 3.
+
+| Practice pace / Hop lead before the rock centre | v2 | v3 | Redwall (reference) |
+|---|---|---|---|
+| 5 s lap (≈25 m/s) | 6–14 m clean | 6–14 m clean | 6–18 m clean |
+| 6.5 s lap (≈20 m/s) | 6–10 m clean | 6–10 m clean | 6–14 m clean |
+| Lines ±2/4/6 m off the trail, both paces | clean | clean | clean |
+
+Verification for v3: typecheck; regenerated rules; 636 unit tests in the 33 files that cover Grand Canyon or loop over every circuit passed. Simulated races used practice and offset lines at two paces and seven Hop timings, plus a rendered support overlay and a perspective capture of the trail.
+
 ## LAX v6: full-width runway grip
 
 **Problem.** Only the 16 m reference road gripped. On the visible 44 m runways, a car
