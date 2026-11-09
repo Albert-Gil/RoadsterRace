@@ -2,8 +2,12 @@ import { assetUrl } from './urls';
 import { VEHICLE_DIMENSIONS } from '../core/vehicle-size';
 import { launchsiteRemoteRockets } from '../core/tracks/venue-parcels';
 
-export const laxMarkingAppearance={apronEdgeWidth:.7,apronKerbWidth:.95,apronKerbHeight:.07,apronBarrierRed:'#d1464b',apronBarrierWhite:'#eeeee6',apronBarrierBase:'#737e83',runwayEdgeWidth:.35,runwayCentreWidth:.45};
+export const laxMarkingAppearance={deckShoulderDrop:.12,apronEdgeWidth:.7,apronKerbWidth:.95,apronKerbHeight:.07,apronBarrierRed:'#d1464b',apronBarrierWhite:'#eeeee6',apronBarrierBase:'#737e83',runwayEdgeWidth:.35,runwayCentreWidth:.45};
 export const laxFramingAppearance={portraitElevation:68};
+/** LAX scene upgrade (2026-11): mown grass, runway touchdown markings and rubber, landside lanes, stands, rooftops and parked cars. */
+export const laxSceneAppearance={grassFrom:[-300,-330] as const,grassTo:[300,430] as const,grassCell:8,stripe:16,grassLight:'#7f9372',grassDark:'#6a7d5f',grassDry:'#8f9468',baseGround:'#62735a',
+ rubber:'#23292d',rubberLight:'#2b3236',chevron:'#e0b84f',tdz:[[90,3],[120,2],[150,1]] as [number,number][],laneDash:3.2,laneGap:6.8,laneOffset:4,
+ hvac:'#9aa6a8',hvacDark:'#6f7b7e',solar:'#2c4a63',carColors:['#d8d8d2','#3a4650','#8d2f2f','#2e5b86','#b8b29f','#1f2326','#6d7f88','#a4473a'],taxi:'#e2b33a',bus:'#e7e9e4'};
 /** LAX airfield detail (2026-11): apron slab joints, repairs, taxi lane and airfield lighting. Flat or low, inside existing batches. */
 export const laxAirfieldAppearance={jointSpacing:7.5,jointWidth:.11,joint:'#8c9089',patch:'#999b90',stain:'#8b8d84',patches:70,
  edgeLight:'#f8eab0',threshold:'#5cc27e',endLight:'#dc5550',approach:'#fbf3d3',taxiBlue:'#4d87c8',taxiX:69,taxiFrom:-60,taxiTo:150,

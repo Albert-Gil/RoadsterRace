@@ -9,7 +9,7 @@ import { laxTerminals, laxApronAircraft, laxCargoAprons, laxPlanting, laxRunways
 import { cumulative, projectToPolyline } from '../core/geometry';
 import { CompositionShapes } from './composition-shapes';
 import { RenderedSurface } from './rendered-surface';
-import { laxAppearance as art, laxMarkingAppearance as marking, laxAirfieldAppearance as field, type PresentationTheme } from './themes';
+import { laxAppearance as art, laxMarkingAppearance as marking, laxAirfieldAppearance as field, laxSceneAppearance as scene3, type PresentationTheme } from './themes';
 import { surfaceTexture } from './textures';
 import { hex } from './landscape/mesh';
 
@@ -43,9 +43,11 @@ function digits(g:CompositionShapes,n:number,x:number,y:number,z:number,scale=1)
 }
 export function laxGeometry(track:TrackDefinition){
  const ground=new CompositionShapes(),road=new CompositionShapes(),concrete=new CompositionShapes(),structure=new CompositionShapes(),glass=new CompositionShapes(),equipment=new CompositionShapes(),paint=new CompositionShapes(),plants=new CompositionShapes(),base=LAX_LAYOUT.streetHeight;
- ground.box(0,-.2,20,2400,.3,2400,art.ground);
- concrete.box(0,-.055,75,193,.08,342,art.apron);
- concrete.box(0,-.045,200,210,.08,110,art.apron);
+ // The distant base sits lower; the airfield's own mown grass covers it at the usual ground level.
+ ground.box(0,-.3,20,2400,.3,2400,scene3.baseGround);
+ // Apron slabs end at the runway edges (|x| = 74 m): nothing lies flush under the runway surface.
+ concrete.box(0,-.055,75,148,.08,342,art.apron);
+ concrete.box(0,-.045,200,148,.08,110,art.apron);
  // These ARE the race straights: each runway continues beyond the raced section.
  for(const runway of laxRunways){
   const {x,z,width:w,length:l}=runway;
@@ -82,8 +84,10 @@ export function laxGeometry(track:TrackDefinition){
    if(!apron&&!runway)road.quad([[a[i].x,y+.04,a[i].z],[b[i].x,y+.04,b[i].z],[b[i+1].x,yn+.04,b[i+1].z],[a[i+1].x,yn+.04,a[i+1].z]].reverse(),color);
    if(y>.1||yn>.1){
     const widths=[i,i+1].map(k=>branch?18:Math.min(28,roadSupportWidth(track,track.distances[k]))),shoulders=edges.map(edge=>[i,i+1].map((k,n)=>({x:path[k].x+(edge[k].x-path[k].x)*widths[n]/2,z:path[k].z+(edge[k].z-path[k].z)*widths[n]/2})));
-    const [l,r]=shoulders;concrete.quad([[l[0].x,y+.01,l[0].z],[r[0].x,y+.01,r[0].z],[r[1].x,yn+.01,r[1].z],[l[1].x,yn+.01,l[1].z]].reverse(),art.concrete);
-    for(const edge of shoulders)structure.quad([[edge[0].x,ramp?0:y-.55,edge[0].z],[edge[1].x,ramp?0:yn-.55,edge[1].z],[edge[1].x,yn,edge[1].z],[edge[0].x,y,edge[0].z]],art.fascia);
+    // The deck shoulder sits a curb height below the asphalt. Curved, climbing quads are not
+    // planar and each layer triangulates differently, so a few centimetres let them cross.
+    const deck=marking.deckShoulderDrop,[l,r]=shoulders;concrete.quad([[l[0].x,y-deck,l[0].z],[r[0].x,y-deck,r[0].z],[r[1].x,yn-deck,r[1].z],[l[1].x,yn-deck,l[1].z]].reverse(),art.concrete);
+    for(const edge of shoulders)structure.quad([[edge[0].x,ramp?0:y-.55,edge[0].z],[edge[1].x,ramp?0:yn-.55,edge[1].z],[edge[1].x,yn-deck+.02,edge[1].z],[edge[0].x,y-deck+.02,edge[0].z]],art.fascia);
     if(i%12===0&&y>1.2)structure.box(path[i].x,y/2-.25,path[i].z,1.4,y-.5,1.4,art.concrete);
    }
    if(!branch&&!runway&&!apron)for(const edge of[a,b])paint.beam([edge[i].x,y+.09,edge[i].z],[edge[i+1].x,yn+.09,edge[i+1].z],.11,art.marking,4);
@@ -174,9 +178,11 @@ export function laxGeometry(track:TrackDefinition){
   equipment.box(a.x,a.height-.3,a.z,a.width-.7,.6,a.depth-.7,art.roof);
   for(let i=-2;i<=2;i++)equipment.box(a.x+i*.9,1.4,a.z,.08,2.3,a.depth-.3,art.metal);
  }
- for(const z of new Set(laxCargoAprons.map(a=>a.z)))concrete.box(0,-.04,z,182,.08,70,art.apron);
+ // Cargo slabs stop short of the runways (|x| < 74 m) so they never flicker under the runway surface.
+ for(const z of new Set(laxCargoAprons.map(a=>a.z)))concrete.box(0,-.04,z,147,.08,70,art.apron);
  for(const {x,z,side} of laxCargoAprons){structure.box(x,5.5,z+side*22,40,11,20,art.cargo);for(let n=-1;n<=1;n++)glass.box(x+n*11,4,z+side*11.9,9,7,.12,art.hangar);airliner(equipment,glass,x,z-side*7,.8,side>0?Math.PI:0,art.livery[Math.abs(x)%3]);}
- airfieldDetail(track,paint,equipment,structure);
+ airfieldDetail(track,paint,equipment,structure,concrete);
+ airportScene(track,ground,paint,equipment,structure,glass);
  for(const {x,z} of laxGroundVehicles){equipment.box(x,1.7,z,3.4,3.2,8,z>0?art.yellow:art.rescue);glass.box(x,2.4,z-2,3.5,1,2.7,art.glass);for(const dx of[-1.8,1.8])equipment.beam([x+dx,.8,z-2.5],[x+dx,.8,z+2.5],.8,art.dark,6);}
  return{ground,road,concrete,structure,glass,equipment,paint,plants};
 }
@@ -198,17 +204,20 @@ export function buildLax(scene:Scene,track:TrackDefinition,_theme:PresentationTh
  * Everything is flush (≤ 0.15 m) or on non-driving ground, so it adds no visual obstacle,
  * and it is appended to existing batches (no extra draw calls).
  */
-function airfieldDetail(track:TrackDefinition,paint:CompositionShapes,equipment:CompositionShapes,structure:CompositionShapes){
+function airfieldDetail(track:TrackDefinition,paint:CompositionShapes,equipment:CompositionShapes,structure:CompositionShapes,slab:CompositionShapes){
  let seed=9157;const rand=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
- const flat=(x0:number,z0:number,x1:number,z1:number,y:number,color:string)=>paint.quad(upward([[x0,y,z0],[x1,y,z0],[x1,y,z1],[x0,y,z1]]),color);
+ // Joints and repairs belong to the slab batch: they must stay below runway and road surfaces.
+ const flat=(x0:number,z0:number,x1:number,z1:number,y:number,color:string)=>slab.quad(upward([[x0,y,z0],[x1,y,z0],[x1,y,z1],[x0,y,z1]]),color);
  // Concrete slab joints on both apron slabs; they sit under runway/road surfaces and terminal plinths.
- for(const [minX,maxX,minZ,maxZ] of[[-96.5,96.5,-96,246],[-105,105,246,255]]){
+ // Only open apron concrete: never under the runways (|x| ≥ 74 m) or the low street ramps (z < −48 m).
+ for(const [minX,maxX,minZ,maxZ] of[[-73.5,73.5,-48,246],[-73.5,73.5,246,255]]){
   for(let x=minX+field.jointSpacing;x<maxX;x+=field.jointSpacing)flat(x-field.jointWidth/2,minZ,x+field.jointWidth/2,maxZ,.004,field.joint);
   for(let z=minZ+field.jointSpacing;z<maxZ;z+=field.jointSpacing)flat(minX,z-field.jointWidth/2,maxX,z+field.jointWidth/2,.004,field.joint);
  }
  // Repaired slabs and worn stands, aligned to the joint grid.
  for(let i=0;i<field.patches;i++){
-  const cx=-96.5+field.jointSpacing*Math.floor(rand()*25),cz=-96+field.jointSpacing*Math.floor(rand()*45),w=field.jointSpacing*(1+Math.floor(rand()*2)),d=field.jointSpacing*(1+Math.floor(rand()*2));
+  const cx=-73.5+field.jointSpacing*Math.floor(rand()*19),cz=-48+field.jointSpacing*Math.floor(rand()*39),w=field.jointSpacing*(1+Math.floor(rand()*2)),d=field.jointSpacing*(1+Math.floor(rand()*2));
+  if(cx+w>73.5)continue;
   flat(cx+.08,cz+.08,cx+w-.08,cz+d-.08,.006,rand()<.6?field.patch:field.stain);
  }
  // Taxi lane between the gate aircraft and each runway: yellow centreline and blue edge lights.
@@ -234,4 +243,67 @@ function airfieldDetail(track:TrackDefinition,paint:CompositionShapes,equipment:
   structure.box(side*55.5,.95,z+4,.45,1.9,.45,field.bridgeLeg);
   structure.box(side*55.5,.25,z+4,1.4,.5,.9,art.dark);
  });
+}
+
+/**
+ * LAX scene upgrade: mown grass, runway touchdown-zone bars, rubber deposits and blast-pad
+ * chevrons, landside lane dividers, gate lead-in lines, rooftop plant, solar arrays and a
+ * fuller car park. All flat or inside protected parcels; existing batches only.
+ */
+function airportScene(track:TrackDefinition,ground:CompositionShapes,paint:CompositionShapes,equipment:CompositionShapes,structure:CompositionShapes,glass:CompositionShapes){
+ let seed=4021;const rand=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
+ const flat=(g:CompositionShapes,x0:number,z0:number,x1:number,z1:number,y:number,color:string|[number,number,number])=>g.quad(upward([[x0,y,z0],[x1,y,z0],[x1,y,z1],[x0,y,z1]]),color);
+ // Mown grass: alternating mower bands with gentle, deterministic tone variation.
+ const [gx0,gz0]=scene3.grassFrom,[gx1,gz1]=scene3.grassTo,cell=scene3.grassCell;
+ const light=hex(scene3.grassLight),dark=hex(scene3.grassDark),dry=hex(scene3.grassDry);
+ for(let x=gx0;x<gx1;x+=cell)for(let z=gz0;z<gz1;z+=cell){
+  const band=Math.floor((z-gz0)/scene3.stripe)%2,patch=.5+.5*Math.sin(x*.031+z*.017)*Math.cos(x*.012-z*.027);
+  const base=band?light:dark,c=base.map((v,i)=>v+(dry[i]-v)*Math.max(0,patch-.55)*.9) as [number,number,number];
+  flat(ground,x,z,x+cell,z+cell,-.05,c);
+ }
+ // Runways: touchdown-zone bars, rubber deposits and yellow blast-pad chevrons.
+ for(const r of laxRunways){
+  const start=r.z-r.length/2,end=r.z+r.length/2;
+  for(const [edge,dir] of[[start,1],[end,-1]] as const){
+   for(const [at,count] of scene3.tdz)for(const side of[-1,1])for(let n=0;n<count;n++){const x=r.x+side*(8+n*2.2);flat(paint,x-.6,edge+dir*at-6,x+.6,edge+dir*at+6,.075,art.marking);}
+   for(let k=0;k<26;k++){
+    const along=edge+dir*(55+rand()*130),x=r.x+(rand()-.5)*9,len=10+rand()*28;
+    flat(paint,x-.22-rand()*.25,Math.min(along,along+dir*len),x+.22+rand()*.25,Math.max(along,along+dir*len),.07,rand()<.5?scene3.rubber:scene3.rubberLight);
+   }
+   for(let n=0;n<3;n++){const z=edge+dir*(1.5+n*2.6);for(const side of[-1,1])paint.beam([r.x,.08,z+dir*2],[r.x+side*(r.width/2-2),.08,z],.28,scene3.chevron,4);}
+  }
+ }
+ // Landside lanes: white dashed dividers on the public streets and elevated horseshoe.
+ const path=track.centerline,ds=track.distances;
+ for(let s=0;s<track.length;s+=scene3.laneDash+scene3.laneGap){
+  const sec=sectionAt(track,s);if(!sec||sec.id.includes('runway')||sec.id==='north-apron'||sec.id.endsWith('-ramp'))continue;
+  for(const side of[-1,1]){
+   const pts=[s,s+scene3.laneDash].map(at=>{const i=Math.max(1,ds.findIndex(d=>d>=at)),a=path[i-1],b=path[i],t=(at-ds[i-1])/((ds[i]-ds[i-1])||1),x=a.x+(b.x-a.x)*t,z=a.z+(b.z-a.z)*t,l=Math.hypot(b.x-a.x,b.z-a.z)||1;return{x:x-(b.z-a.z)/l*side*scene3.laneOffset,z:z+(b.x-a.x)/l*side*scene3.laneOffset,y:roadHeight(track,at)};});
+   paint.beam([pts[0].x,pts[0].y+.09,pts[0].z],[pts[1].x,pts[1].y+.09,pts[1].z],.075,art.marking,4);
+  }
+ }
+ // Gate lead-in lines from each stand to the taxi lane.
+ laxTerminals.forEach(([x,z],i)=>{
+  if(i===3)return;
+  const side=Math.sign(x),px=side*LAX_LAYOUT.planeX,lane=side*field.taxiX;
+  paint.beam([px,.07,z-7],[px,.07,z-26],.09,art.yellow,4);
+  paint.beam([px,.07,z-26],[(px+lane)/2,.07,z-34],.09,art.yellow,4);paint.beam([(px+lane)/2,.07,z-34],[lane,.07,z-40],.09,art.yellow,4);
+  digits(paint,i+1,px-1.4,.08,z-24,1.1);
+ });
+ // Rooftop plant and solar arrays: cargo hangars and the head terminal (seen from above).
+ for(const {x,z,side} of laxCargoAprons){
+  const cz=z+side*22;
+  for(let n=-3;n<=3;n++)flat(glass,x+n*5-1.8,cz-6,x+n*5+1.8,cz+6,11.03,scene3.solar);
+  for(const dx of[-15,15]){structure.box(x+dx,11.5,cz+side*7,3,1,2.4,scene3.hvac);structure.box(x+dx,12.05,cz+side*7,1.6,.12,1.6,scene3.hvacDark);}
+ }
+ const head=laxTerminals[3];
+ for(let n=-3;n<=3;n++)if(n)structure.box(head[0]+n*4,7.05,head[1]+3.5,2.4,.7,1.8,scene3.hvac);
+ // Fuller car park: two inner rows beside the existing outer rows, clear of the landmarks.
+ const base=LAX_LAYOUT.streetHeight;
+ for(const x of[-3.4,3.4])for(let z=LAX_LAYOUT.parkingZ-LAX_LAYOUT.parkingDepth/2+6;z<LAX_LAYOUT.parkingZ+LAX_LAYOUT.parkingDepth/2-6;z+=5.6){
+  if(Math.abs(z-LAX_LAYOUT.themeZ)<14||Math.abs(z-LAX_LAYOUT.towerZ)<6||rand()<.18)continue;
+  const color=scene3.carColors[Math.floor(rand()*scene3.carColors.length)];
+  paint.box(x,base+.035,z-2.8,2.6,.03,.1,art.marking);
+  equipment.box(x,base+.62,z,1.7,1.0,4.2,color);glass.box(x,base+1.2,z-.2,1.55,.5,2.2,art.glass);
+ }
 }
