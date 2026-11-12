@@ -138,3 +138,22 @@ export function permittedHopBarriers(state: RaceState, route: CompiledRoute, tra
       && insideCorridor(to, heading, shortcut, track) ? [shortcut.obstacleId] : [];
   });
 }
+
+/**
+ * Feedback only: the Hop trail a manual-Hop landing has just cleared, with the distance its
+ * line saves. A landing counts when it is inside the lane, beyond the lane's named obstacle,
+ * and the compiled route actually uses that trail. Never changes physics or timing.
+ */
+export function clearedShortcut(point: Point, route: CompiledRoute, track: TrackDefinition): { id: string; saved: number } | null {
+  for (const used of route.hopShortcuts ?? []) {
+    const shortcut = track.hopShortcuts?.find(h => h.id === used.id), obstacle = track.barriers.find(b => b.id === shortcut?.obstacleId);
+    if (!shortcut || !obstacle) continue;
+    const centre = { x: obstacle.footprint.reduce((s, p) => s + p.x, 0) / obstacle.footprint.length, z: obstacle.footprint.reduce((s, p) => s + p.z, 0) / obstacle.footprint.length };
+    const at = shortcutProjection(point, shortcut), rock = shortcutProjection(centre, shortcut);
+    if (at.distance > shortcut.width / 2 + 1 || at.progress <= rock.progress) continue;
+    let length = 0; for (let i = 1; i < shortcut.branch.length; i++) length += Math.hypot(shortcut.branch[i].x - shortcut.branch[i - 1].x, shortcut.branch[i].z - shortcut.branch[i - 1].z);
+    const main = ((shortcut.exitProgress - shortcut.entryProgress) % track.length + track.length) % track.length;
+    return { id: shortcut.id, saved: Math.max(0, main - length) };
+  }
+  return null;
+}

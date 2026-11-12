@@ -15,6 +15,7 @@ import {tourSchedule,type TourSetup} from './presentation/tournament-ui';
 import{ProgressionStore}from'./presentation/progression-storage';
 import{CUPS,badgeChoices,paintUnlocked,type ProgressEvidence}from'./core/progression';
 import{collectionPanel,badgeMarkup}from'./ui/panels/collection';
+import { clearedShortcut } from './core/hop-shortcuts';
 import { ChallengeLapTracker, findChallenge, frontierChallengeComplete, type ChallengeId } from './core/challenges';
 import { ChallengeStore } from './presentation/challenge-storage';
 import { challengesPanel, challengeResults } from './ui/panels/challenges';
@@ -660,6 +661,8 @@ try {
         audio.cue(event.type, event.intensity); if (event.type === 'thrust') rechargeAnnounced[event.player] = false; const prefix = playerCount > 1 ? `${driverName(event.player)} · ` : '';
         if ((event.type === 'landing' || event.type === 'splash') && event.point) world.feedback(event.point, event.type === 'splash');
         if (event.type === 'landing') world.vehicles[event.player].impact(event.time, true);
+        // Reward only after the fact: hidden trails stay unmarked until a driver has cleared one.
+        if (event.type === 'landing' && event.flightOrigin === 'hop' && event.point && controllerFor(sessionOptions.mode, event.player) === 'human') { const cleared = clearedShortcut(event.point, session.racers[event.player].route, activeTrack); if (cleared) showNotice(`${prefix}Shortcut cleared · ${Math.round(cleared.saved)} m saved`, 2.2); }
         if (event.type === 'car-impact') { world.vehicles[event.player].impact(event.time); world.vehicles[event.otherPlayer!].impact(event.time); }
         if (event.type === 'collision') { world.vehicles[event.player].impact(event.time); showNotice(`${prefix}Barrier contact`); }
         if (event.type === 'recovery') { previousPoses[event.player] = { ...session.racers[event.player].state.position, heading: session.racers[event.player].state.heading, y: session.racers[event.player].state.elevation }; showNotice(event.penalty ? `${prefix}Crashed · +${event.penalty.toFixed(1)} s` : `${prefix}Recovering`); }

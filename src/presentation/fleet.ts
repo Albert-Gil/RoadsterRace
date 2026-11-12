@@ -9,7 +9,7 @@ import { CompositionShapes } from './composition-shapes';
 import { hex } from './landscape/mesh';
 import { deckElevation, deckPlanningHeight, deckAt } from '../core/decks';
 import { surfaceTexture } from './textures';
-import { fleetAppearance as art, type PresentationTheme } from './themes';
+import { fleetAppearance as art, fleetWaterlineAppearance as wake, type PresentationTheme } from './themes';
 import { navalHull, navalProp, vesselFrame } from './fleet-model';
 import {carrierDeckSignature,aircraftApron} from './fleet-outfit';
 
@@ -70,6 +70,21 @@ export function fleetGeometry(track:TrackDefinition){
  for(let i=0;i<road.indices.length;i+=3)[road.indices[i+1],road.indices[i+2]]=[road.indices[i+2],road.indices[i+1]];
  return{hull,deck,road,paint,details,radar};
 }
+/**
+ * Soft foam and a pale shallow halo around each stationary hull (presentation only).
+ * Rings start under the deck edge and fade to nothing, so the dark ships separate from the
+ * open water in the overview. One alpha-vertex mesh.
+ */
+export function fleetWaterline(track:TrackDefinition){
+ const g=new CompositionShapes(),foam=hex(wake.foam),halo=hex(wake.halo);
+ for(const d of track.decks??[]){
+  if(d.rampId)continue;
+  const f=d.footprint,cx=f.reduce((s,p)=>s+p.x,0)/f.length,cz=f.reduce((s,p)=>s+p.z,0)/f.length;
+  const rings=wake.rings.map(([out,alpha,tone])=>f.map(p=>{const l=Math.hypot(p.x-cx,p.z-cz)||1,v=g.vertex(p.x+(p.x-cx)/l*out,wake.y,p.z+(p.z-cz)/l*out,tone?foam:halo);g.colors[v*4+3]=alpha;return v;}));
+  for(let r=0;r<rings.length-1;r++)for(let i=0;i<f.length;i++){const j=(i+1)%f.length;g.triangle(rings[r][i],rings[r][j],rings[r+1][j]);g.triangle(rings[r][i],rings[r+1][j],rings[r+1][i]);}
+ }
+ return g;
+}
 export function buildFleet(scene:Scene,track:TrackDefinition,_theme:PresentationTheme,materials:Map<string,StandardMaterial>){
  const casters=new Set<StandardMaterial>(),geo=fleetGeometry(track);
  const mat=(name:string,color:string,shadow=false)=>{const m=new StandardMaterial(name,scene);m.diffuseColor=Color3.FromHexString(color);m.specularColor.setAll(.12);m.backFaceCulling=false;m.metadata={absoluteVertexColors:true};materials.set(name,m);if(shadow)casters.add(m);return m;};
@@ -80,6 +95,8 @@ export function buildFleet(scene:Scene,track:TrackDefinition,_theme:Presentation
  const mesh=(name:string,g:CompositionShapes,m:StandardMaterial,dynamic=false)=>{const mesh=new Mesh(name,scene),data=g.toVertexData();data.uvs=Float32Array.from({length:g.vertexCount*2},(_,i)=>g.positions[Math.floor(i/2)*3+(i%2?2:0)]/12);data.applyToMesh(mesh,dynamic);mesh.material=m;mesh.isPickable=false;if(dynamic)mesh.metadata={dynamicScenery:true};return mesh;};
  mesh('fleet-hulls',geo.hull,hull);mesh('fleet-decks',geo.deck,deck);mesh('fleet-deck-markings',geo.paint,paint);mesh('fleet-aircraft-islands-equipment',geo.details,detail);
  const sea=new CompositionShapes();sea.quad([[-600,-1.6,-600],[600,-1.6,-600],[600,-1.6,600],[-600,-1.6,600]],'#ffffff');mesh('fleet-harbor-water',sea,water);
+ const foamMaterial=new StandardMaterial('fleet-waterline-foam',scene);foamMaterial.diffuseColor=Color3.White();foamMaterial.specularColor.setAll(0);foamMaterial.emissiveColor=new Color3(.35,.35,.35);foamMaterial.backFaceCulling=false;foamMaterial.metadata={absoluteVertexColors:true};
+ const waterline=mesh('fleet-waterline-foam',fleetWaterline(track),foamMaterial);waterline.hasVertexAlpha=true;waterline.isPickable=false;
  const radars=mesh('fleet-radars',geo.radar,detail,true);
  asphalt.diffuseTexture=surfaceTexture(scene,'asphalt');deck.diffuseTexture=surfaceTexture(scene,'asphalt');hull.specularPower=32;
  const rotorBase=Float32Array.from(geo.radar.positions),rotorNormals=Float32Array.from(geo.radar.toVertexData().normals!),rotorPoints=rotorBase.slice(),rotorDirections=rotorNormals.slice();

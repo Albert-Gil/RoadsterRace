@@ -9,7 +9,7 @@ import { computerRoute,stepComputers } from '../../src/core/computer';
 import { LocalRace } from '../../src/core/local-race';
 import { groundHeight,jumpPoint,vehicleSupported } from '../../src/core/support';
 import { drawingRay,roadPoint } from '../../src/core/elevation';
-import { shortcutProjection } from '../../src/core/hop-shortcuts';
+import { shortcutProjection, clearedShortcut } from '../../src/core/hop-shortcuts';
 import { findCircuit,circuits } from '../../src/content/circuits';
 import { urbanRampGeometry } from '../../src/presentation/urban-ramp';
 import { jumpCoordinates } from '../../src/core/support';
@@ -78,3 +78,8 @@ test('Grand Canyon v3: Juniper Saddle joins keep fast cars supported and its roc
   expect(sim.state.finished).toBe(true);expect(sim.state.hopCount).toBe(1);expect(sim.state.recoveryCount).toBe(0);expect(sim.state.collisionCount).toBe(0);
  }
 },60000);
+test('shortcut feedback only reports a landing beyond the rock on a trail the route uses',()=>{
+ const h=canyon.hopShortcuts!.find(s=>s.id==='juniper-saddle')!,route=plan(canyon,h.id),normal=plan(canyon),after=h.branch[h.branch.length-6],before=h.branch[8];
+ const cleared=clearedShortcut(after,route,canyon);expect(cleared?.id).toBe('juniper-saddle');expect(cleared!.saved).toBeGreaterThan(40);expect(cleared!.saved).toBeLessThan(52);
+ expect(clearedShortcut(before,route,canyon)).toBeNull();expect(clearedShortcut(after,normal,canyon)).toBeNull();expect(clearedShortcut({x:0,z:-74},route,canyon)).toBeNull();
+});

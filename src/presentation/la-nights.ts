@@ -8,7 +8,9 @@ import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTextur
 import type { Scene } from '@babylonjs/core/scene';
 import type { TrackDefinition } from '../core/types';
 import { laBuildings } from '../content/la-night-art';
-import { nightAppearance as art, parkedVehicleFacades, type PresentationTheme } from './themes';
+import { nightAppearance as art, parkedVehicleFacades, laRoadLightAppearance as roadLight, type PresentationTheme } from './themes';
+import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
+import { samplePolyline } from '../core/geometry';
 import { surfaceTexture } from './textures';
 import { projectToPolyline } from '../core/geometry';
 import { StaticBoxes } from './static-boxes';
@@ -107,6 +109,25 @@ export function buildLANights(scene:Scene,track:TrackDefinition,theme:Presentati
    box('la-avenue-lamp',pole.x,3,pole.z,.14,6,.14,dark);box('la-avenue-lamp-head',(pole.x+pool.x)/2,6,(pole.z+pool.z)/2,1,.16,1,windows);
    patch('la-avenue-light-pool',pool.x,pool.z,13,13,pools[2],.06);
   }
+ }
+ // Road lighting: warm pools along the whole course in ONE mesh, and a dashed centre line
+ // in the batched architecture. The channel jump stays dark and unmarked.
+ const poolPositions:number[]=[],poolUvs:number[]=[],poolIndices:number[]=[];
+ const onJump=(p:{x:number;z:number})=>Math.hypot(p.x-67,p.z+8)<=30;
+ for(let s=roadLight.spacing/2,k=0;s<track.length;s+=roadLight.spacing,k++){
+  const a=samplePolyline(track.centerline,track.distances,s),b=samplePolyline(track.centerline,track.distances,s+.5),l=Math.hypot(b.x-a.x,b.z-a.z)||1,side=k%2?1:-1;
+  const c={x:a.x-(b.z-a.z)/l*side*roadLight.offset,z:a.z+(b.x-a.x)/l*side*roadLight.offset};if(onJump(a))continue;
+  const h=roadLight.size/2,n=poolPositions.length/3;
+  poolPositions.push(c.x-h,roadLight.lift,c.z-h,c.x+h,roadLight.lift,c.z-h,c.x+h,roadLight.lift,c.z+h,c.x-h,roadLight.lift,c.z+h);poolUvs.push(0,0,1,0,1,1,0,1);poolIndices.push(n,n+1,n+2,n,n+2,n+3);
+ }
+ const poolData=new VertexData();poolData.positions=poolPositions;poolData.uvs=poolUvs;poolData.indices=poolIndices;poolData.normals=poolPositions.map((_,i)=>i%3===1?1:0);
+ const roadPools=new Mesh('la-course-light-pools',scene);poolData.applyToMesh(roadPools);roadPools.material=pools[2];roadPools.isPickable=false;
+ for(let s=0;s<track.length;s+=roadLight.dash+roadLight.gap){
+  const a=samplePolyline(track.centerline,track.distances,s),b=samplePolyline(track.centerline,track.distances,s+roadLight.dash);if(onJump(a)||onJump(b))continue;
+  const along=Math.abs(b.x-a.x)>Math.abs(b.z-a.z),len=Math.hypot(b.x-a.x,b.z-a.z);
+  // Axis-aligned dashes only (the batch has no rotation); corners simply go unmarked.
+  if(Math.min(Math.abs(b.x-a.x),Math.abs(b.z-a.z))>.35)continue;
+  box('la-centre-dash',(a.x+b.x)/2,.128,(a.z+b.z)/2,along?len:roadLight.dashWidth,.012,along?roadLight.dashWidth:len,white);
  }
  boxes.build(scene,'la-architecture');
  const landscape=buildLALandscape(scene,track,materials,cityGround,theme.scene.terrain,city);

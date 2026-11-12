@@ -34,6 +34,10 @@ export const defaultPaintId = 'glacier';
 export const productionSurfaceTuning={rockFoot:.79,strata:.025,plantFoot:.76,crown:.05,snowFoot:.91,structureFoot:.83,top:.035};
 export const productionAppearance={roofInset:'#59676a',bayGlass:'#315b68',foundation:'#848475',eaveShadow:'#525c59',awnings:['#467f7a','#a15e50','#c6a65f'],contact:'#5a6054'};
 export const laxAppearance={cameraElevation:60,aircraft:'#e8ebe6',aircraftShade:'#abbac0',joint:'#878f8b',kerb:'#a65247',skylight:'#77a2ac',ground:'#718268',apron:'#a5a79b',runway:'#303b41',asphalt:'#3f4648',concrete:'#c1c0b2',fascia:'#858d8c',marking:'#eee9d7',yellow:'#dcb958',blue:'#548aac',wing:'#c3cdd0',engine:'#acb7bb',dark:'#25333c',glass:'#3b6675',terminal:'#d1cdbd',roof:'#aebbbc',frame:'#71858c',metal:'#8c999e',parking:'#7c8581',tower:'#d9d6c5',service:'#8c9391',cargo:'#a6afa9',hangar:'#4b5b62',rescue:'#d2a844',plant:'#446653',trunk:'#837763',livery:['#4285a2','#bd564b','#6e7d91']};
+/** Fleet waterline (2026-11): [metres beyond the deck edge, alpha, foam(1)/halo(0)] rings around each hull. */
+export const fleetWaterlineAppearance={foam:'#d9eef0',halo:'#5fb0b9',y:-1.56,rings:[[-2,.85,1],[1.2,.8,1],[3.2,.38,0],[9,.2,0],[20,0,0]] as [number,number,number][]};
+/** LA nights road lighting (2026-11): warm pools along the course and a dashed centre line. */
+export const laRoadLightAppearance={spacing:22,size:21,offset:5,lift:.13,dash:3,gap:7,dashWidth:.22,line:'#d8cfa6'};
 export const fleetAppearance={deckOffset:.015,drivingOffset:.035,deckApron:'#3b4b54',superstructure:'#a6b6bc',navy:'#34516b',hangar:'#202f3a',oxide:'#aa6048',rescueOrange:'#ef873b',rescueYellow:'#edbc46',helmet:'#f2e8cc',jetBlue:'#59788b',hull:'#8d9da6',hullShade:'#637a89',hullFill:'#344b58',waterline:'#435968',bootTop:'#273d49',deck:'#39464e',supportDeck:'#39464e',rampSurface:'#48565e',rampEdge:'#d9b764',rampRibs:'#b2c0c2',asphalt:'#485b65',coping:'#c0cdd1',ribs:'#536c7c',line:'#e2dbbd',aircraft:'#c3cecc',glass:'#294955',dark:'#28343a',equipment:'#ca9e48',emergencyRed:'#b94d3d',navalHelicopter:'#95a9ad',water:'#246779',foam:'#70a3aa'};
 // Authored overview angles keep the normal route visible behind the tall islands.
 // Refit distance to the safe rectangle, but never rotate or follow cars during play.
@@ -386,7 +390,7 @@ export const snowyTahoeAppearance = {
 
 /** Original granite-valley presentation; all physical heights/footprints come from the track. */
 export const yosemiteAppearance={
- extent:{minX:-280,maxX:300,minZ:-220,maxZ:320},cameraElevation:58,road:'#8f8065',shoulder:'#a3936d',meadow:'#7c9368',dryMeadow:'#b4ab79',forestFloor:'#45624b',forest:'#34553d',forestLight:'#70865a',bark:'#71563e',granite:['#aeb6b1','#c9c8b9','#e2ddce','#737f83'],lichen:'#727b4e',timber:'#896648',roof:'#495548',window:'#b9d5bf',water:'#438c8d',waterDeep:'#285b6c',foam:'#dcebdc',
+ extent:{minX:-280,maxX:300,minZ:-220,maxZ:320},cameraElevation:58,road:'#7d6a51',shoulder:'#b7a67c',meadow:'#7c9368',dryMeadow:'#b4ab79',forestFloor:'#45624b',forest:'#34553d',forestLight:'#70865a',bark:'#71563e',granite:['#aeb6b1','#c9c8b9','#e2ddce','#737f83'],lichen:'#727b4e',timber:'#896648',roof:'#495548',window:'#b9d5bf',water:'#438c8d',waterDeep:'#285b6c',foam:'#dcebdc',
  treeCount:400,treeHeight:[11,25],nearTreeCount:180,nearTreeHeight:[7,13],nearTreeSetback:14,nearTreeSightline:.45,cedar:'#3c644c',fern:'#426c42',grass:'#8b995a',flowers:'#d4c37c',surfaceOffsets:{road:.12,branch:.13,fringe:.045,branchFringe:.055},mist:{count:18,opacity:.04,speed:.42},
  waterfall:{speed:.8,sprayCount:36,dropletCount:54,gravity:28,opacity:.96,sprayOpacity:.48,wetRock:'#657b7b',lipFraction:.90,lipRadius:.88,waterRadius:.89,halfAngle:.42,curtainWidth:10.8,basinWidth:16,basinDepth:10,basinHeight:.75,angle:Math.PI/2+.04,
   widths:{'granite-falls':10.8,'creek-falls':6.4,'cathedral-falls':7.2,'sentinel-falls':6.6,'sentinel-buttress-falls':7.4,'granite-twin-falls':6.2} as Record<string,number>},
