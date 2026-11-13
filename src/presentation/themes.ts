@@ -136,8 +136,12 @@ export const graphicsTiers: Record<GraphicsLevel, GraphicsTier> = {
 /** Automatic tier adaptation: step down when the measured frame time stays above budget. */
 export const graphicsGovernor = { warmupSeconds: 3, windowSeconds: 4, frameBudgetMs: 1000 / 45, ignoreFrameMs: 250 };
 export const postEffects = { bloomThreshold: 0.88, bloomWeight: 0.32, bloomKernel: 48, bloomScale: 0.5, ssrStrength: 0.55, ssrMaxDistance: 120 };
-/** Film-style grade on High/Ultra (Babylon ColorCurves: hue in degrees, others -100..100): warm highlights, cool shadows. */
-export const colorGrade = { saturation: 8, highlights: { hue: 38, density: 12, saturation: 14 }, shadows: { hue: 205, density: 14, saturation: 12 } };
+/**
+ * Film-style grade on every tier (Babylon ColorCurves: hue in degrees, others -100..100): warm highlights,
+ * cool shadows, plus a soft vignette. Both run inside the material shaders, so Low/Medium (where phones
+ * start) get them with no extra render pass.
+ */
+export const colorGrade = { vignette: { weight: 1.1, stretch: 0.25, color: [0.04, 0.06, 0.1] as const }, saturation: 14, highlights: { hue: 38, density: 12, saturation: 14 }, shadows: { hue: 205, density: 14, saturation: 12 } };
 
 /** Biome colors stay independent of interface branding and the driver's selected paint. */
 export const sceneryPalettes = {

@@ -33,3 +33,14 @@ circuits"). No support, grip, barrier, camera, track-version or physics change.
   San Diego Fleet 11.
 - Before/after overview captures were compared at the Low graphics tier only.
 - Not run: the full unit suite, browser specs, and physical iPhone/iPad checks.
+
+## Global colour grade on every graphics tier (2026-11-12)
+
+Owner request: "improve the graphics of the game". The film-style grade (warm highlights,
+cool shadows, more saturation) used to apply only on High/Ultra, while phones start on
+Medium. It now applies on every tier, with saturation raised from 8 to 14 and a soft
+dark-blue vignette. Both run inside the material shaders
+(`scene.imageProcessingConfiguration`), so Low and Medium need no extra render pass.
+Values: `colorGrade` in `src/presentation/themes.ts`; code: `src/presentation/scene.ts`.
+Checked on Snowy Tahoe and LAX at Medium in the cloud sandbox; frame rate on phones is
+not measured.

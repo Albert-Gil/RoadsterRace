@@ -278,8 +278,9 @@ export class GameScene {
     const sky = this.scene.environmentTexture === this.sky ? this.sky : null;
     applySurfaceFinishes(this.scene, this.materials, this.scenery, tier, sky, venue.waterReflection);
     const ip = this.scene.imageProcessingConfiguration;
-    ip.colorCurvesEnabled = !!tier.postProcessing;
-    if (tier.postProcessing) {
+    ip.colorCurvesEnabled = true;
+    ip.vignetteEnabled = true; ip.vignetteWeight = colorGrade.vignette.weight; ip.vignetteStretch = colorGrade.vignette.stretch; ip.vignetteColor.set(colorGrade.vignette.color[0], colorGrade.vignette.color[1], colorGrade.vignette.color[2], 0);
+    {
       const curves = new ColorCurves(); curves.globalSaturation = colorGrade.saturation;
       curves.highlightsHue = colorGrade.highlights.hue; curves.highlightsDensity = colorGrade.highlights.density; curves.highlightsSaturation = colorGrade.highlights.saturation;
       curves.shadowsHue = colorGrade.shadows.hue; curves.shadowsDensity = colorGrade.shadows.density; curves.shadowsSaturation = colorGrade.shadows.saturation;
