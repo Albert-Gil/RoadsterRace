@@ -9,6 +9,7 @@ import { CompositionShapes } from './composition-shapes';
 import { hex } from './landscape/mesh';
 import { deckElevation, deckPlanningHeight, deckAt } from '../core/decks';
 import { surfaceTexture } from './textures';
+import { fleetHarbour } from './fleet-harbour';
 import { fleetAppearance as art, fleetWaterlineAppearance as wake, type PresentationTheme } from './themes';
 import { navalHull, navalProp, vesselFrame } from './fleet-model';
 import {carrierDeckSignature,aircraftApron} from './fleet-outfit';
@@ -97,6 +98,8 @@ export function buildFleet(scene:Scene,track:TrackDefinition,_theme:Presentation
  const sea=new CompositionShapes();sea.quad([[-600,-1.6,-600],[600,-1.6,-600],[600,-1.6,600],[-600,-1.6,600]],'#ffffff');mesh('fleet-harbor-water',sea,water);
  const foamMaterial=new StandardMaterial('fleet-waterline-foam',scene);foamMaterial.diffuseColor=Color3.White();foamMaterial.specularColor.setAll(0);foamMaterial.emissiveColor=new Color3(.35,.35,.35);foamMaterial.backFaceCulling=false;foamMaterial.metadata={absoluteVertexColors:true};
  const waterline=mesh('fleet-waterline-foam',fleetWaterline(track),foamMaterial);waterline.hasVertexAlpha=true;waterline.isPickable=false;
+ // Harbour life around the moored fleet: vessels in the equipment batch, wakes and ripples with the foam.
+ const harbour=fleetHarbour(track,-1.6);mesh('fleet-harbour-vessels',harbour.solid,detail);const harbourFoam=mesh('fleet-harbour-foam',harbour.foam,foamMaterial);harbourFoam.hasVertexAlpha=true;
  const radars=mesh('fleet-radars',geo.radar,detail,true);
  asphalt.diffuseTexture=surfaceTexture(scene,'asphalt');deck.diffuseTexture=surfaceTexture(scene,'asphalt');hull.specularPower=32;
  const rotorBase=Float32Array.from(geo.radar.positions),rotorNormals=Float32Array.from(geo.radar.toVertexData().normals!),rotorPoints=rotorBase.slice(),rotorDirections=rotorNormals.slice();

@@ -1,3 +1,4 @@
+import {laRooftops} from './la-rooftops';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
@@ -72,6 +73,7 @@ export function buildLANights(scene:Scene,track:TrackDefinition,theme:Presentati
   }
  }
  buildUrbanArchitecture(scene,laBuildings.map(b=>({...b,width:b.w,depth:b.d,height:b.h,color:b.style})),true,white,windows);
+ const roofs=laRooftops(laBuildings);bakeLandmark('la-rooftop-plant',roofs.paint,scene,white);bakeLandmark('la-rooftop-lights',roofs.lights,scene,windows);
  const theatre=nightPictureHouse();bakeLandmark('art-deco-picture-house',theatre.paint,scene,white);bakeLandmark('warm-theatre-marquee',theatre.lights,scene,windows);
  bakeLandmark('urban-boulevard-paving',urbanPromenade(track,true,()=>true),scene,white);
  // Original theater marquees, safely within the arts block.

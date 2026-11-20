@@ -496,3 +496,23 @@ export const launchsiteCampusAppearance={
  solar:{pitch:3.2,panel:2.2,cell:'#29425f',frame:'#9aa3a6'},
  water:{radius:4.2,tank:'#e9e6dc',leg:'#7a858a'},
 } as const;
+
+/** San Diego Fleet harbour life (fleet-harbour.ts): vessels at least `clearance` m from every ship, lane and crossing. */
+export const fleetHarbourAppearance={
+ clearance:30,foam:'#e8f2f0',foamLift:.02,scale:{tug:2.4,patrol:2,sail:2.2,buoy:1.6},
+ vessels:[
+  {kind:'tug',x:-205,z:-40,heading:.6},{kind:'tug',x:160,z:45,heading:-1.0},{kind:'tug',x:205,z:160,heading:2.2},
+  {kind:'patrol',x:-240,z:-150,heading:.3},{kind:'patrol',x:255,z:85,heading:-2.4},{kind:'patrol',x:215,z:-35,heading:1.9},
+  {kind:'sail',x:-262,z:0,heading:1.2},{kind:'sail',x:-170,z:-222,heading:2.6},{kind:'sail',x:300,z:140,heading:.4},{kind:'sail',x:170,z:220,heading:-.6},{kind:'sail',x:330,z:40,heading:1.0},{kind:'sail',x:-215,z:-110,heading:-2.2},
+  {kind:'buoy',x:262,z:205,heading:1},{kind:'buoy',x:285,z:160,heading:1},{kind:'buoy',x:305,z:115,heading:1},
+  {kind:'buoy',x:290,z:222,heading:-1},{kind:'buoy',x:312,z:175,heading:-1},{kind:'buoy',x:335,z:130,heading:-1},
+ ] as {kind:'tug'|'patrol'|'sail'|'buoy';x:number;z:number;heading:number}[],
+ tug:{hull:'#2f3d48',fender:'#1c1f22',deck:'#8b5e3c',house:'#e9e6dc',wheel:'#e9e6dc',glass:'#28404b',stack:'#c8462f',band:'#1c1f22'},
+ patrol:{hull:'#7d8b92',tube:'#3a4248',console:'#d7dad6',glass:'#2b4450'},
+ sail:{hull:'#f2f0ea',deck:'#b48a5c',mast:'#cfd3d0',cloth:'#f7f5ee'},
+ buoy:{red:'#c8402f',green:'#2f8a4e',light:'#f4e7a0'},
+ ripples:{seed:4711,tries:5000,count:320,clearance:28,wind:.7,extent:[-330,400,-340,280] as [number,number,number,number]},
+};
+
+/** LA nights rooftops (la-rooftops.ts): vertex colours multiply the architecture / window batches. */
+export const laRooftopAppearance={inset:1.1,unit:'#9aa1a6',fan:'#2a2f33',duct:'#b7bcbf',steel:'#4c5358',tank:'#8a6748',tankRoof:'#5a4a3c',solar:'#2a4566',skylightFrame:'#5d656a',skylight:'#ffd99a',penthouse:'#b9b3a8',doorLight:'#ffe2a8'} as const;
