@@ -1,3 +1,4 @@
+import { launchsiteCampusSites } from './launchsite-campus';
 import type { Scene } from '@babylonjs/core/scene';
 import type { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import type { Point, TrackBarrier, TrackDefinition } from '../core/types';
@@ -47,6 +48,10 @@ export const LAUNCHSITE = {
   roads: [
     { width: 5.5, points: [{ x: 111, z: 28 }, { x: 126, z: 35 }, { x: 150, z: 45 }, { x: 186, z: 51 }, { x: 236, z: 49 }] },
     { width: 5, points: [{ x: 109, z: 7 }, { x: 115, z: -6 }, { x: 115, z: -42 }, { x: 109, z: -76 }, { x: 101, z: -110 }, { x: 97, z: -150 }, { x: 93, z: -216 }] },
+    // Campus service roads: assembly building to the launch complex road, and a two-track to the tracking station.
+    { width: 7, points: [{ x: 126, z: 36 }, { x: 124, z: 48 }, { x: 120, z: 60 }] },
+    { width: 4.5, points: [{ x: 104, z: 68 }, { x: 96, z: 74 }, { x: 96, z: 80 }] },
+    { width: 2.6, track: true, points: [{ x: -170, z: 75 }, { x: -146, z: 66 }, { x: -132, z: 52 }, { x: -122, z: 30 }, { x: -118, z: 0 }] },
     { width: 2.6, track: true, points: [{ x: -60, z: -216 }, { x: -98, z: -166 }, { x: -114, z: -131 }, { x: -104, z: -84 }, { x: -101, z: -64 }] },
   ],
   rock: {
@@ -73,6 +78,8 @@ export function launchsiteLayout(track: TrackDefinition) {
   const big = rocks.filter(b => b.height >= 10), rockField = polygonField(rocks.map(b => b.footprint), extent, 3), bigField = polygonField(big.map(b => b.footprint), extent, 3);
   let solidField: ReturnType<typeof polygonField> | null = null; // Only placement needs it (built on first use).
   const pad = (x: number, z: number) => { const p = L.pad, dx = Math.max(p.minX - x, 0, x - p.maxX), dz = Math.max(p.minZ - z, 0, z - p.maxZ); return smoothstep(p.fade, 0, Math.hypot(dx, dz)); };
+  // Campus sites (launchsite-campus.ts) stand on level ground that blends out over 12 m.
+  const campus = (x: number, z: number) => Math.max(0, ...launchsiteCampusSites.map(c => { const dx = Math.max(Math.abs(x - c.x) - c.width / 2 - 2, 0), dz = Math.max(Math.abs(z - c.z) - c.depth / 2 - 2, 0); return smoothstep(12, 0, Math.hypot(dx, dz)); }));
   const edge = (x: number, z: number) => smoothstep(0, 45, Math.min(x - extent.minX, extent.maxX - x, z - extent.minZ, extent.maxZ - z));
   const rise = (d: number) => smoothstep(L.flatUntil, 80, d);
   // Dune ridges lie across a west-south-westerly wind, bent by a slow warp so they never read as stripes.
@@ -89,7 +96,7 @@ export function launchsiteLayout(track: TrackDefinition) {
     if (nearBig >= 0) { const sd = bigField(x, z), b = big[nearBig]; h += gate * 0.07 * b.height * Math.exp(-Math.max(0, sd) / (0.5 * b.height + 8)) * smoothstep(-1, 6, sd); }
     const dw = W(x, z); h += gate * (-0.95 * Math.exp(-((dw / 4.2) ** 2)) + 0.28 * Math.exp(-(((dw - 7.5) / 3) ** 2)));
     const dr = R(x, z); h *= 1 - 0.55 * Math.exp(-((dr / 5) ** 2));
-    return h * (1 - pad(x, z)) * edge(x, z);
+    return h * (1 - pad(x, z)) * (1 - campus(x, z)) * edge(x, z);
   };
   const tint = (x: number, z: number, h: number, slope: number): Rgb => {
     const d = D(x, z), r = rise(d), n1 = fbm2(x / 38, z / 38, 3, 21), n2 = fbm2(x / 8, z / 8, 2, 33);
@@ -109,7 +116,7 @@ export function launchsiteLayout(track: TrackDefinition) {
   /** Clear of the course corridor, every barrier, the launch pad and the roads. */
   const open = (p: Point, clearance = 0.8, roadClearance = 4) => {
     const d = D(p.x, p.z);
-    if (d < L.corridor - 2 || (d < L.corridor + 2 && D.exact(p.x, p.z) < L.corridor) || pad(p.x, p.z) > 0.05 || !inExtent(p, L.visible)) return false;
+    if (d < L.corridor - 2 || (d < L.corridor + 2 && D.exact(p.x, p.z) < L.corridor) || pad(p.x, p.z) > 0.05 || campus(p.x, p.z) > 0.6 || !inExtent(p, L.visible)) return false;
     solidField ??= polygonField(solids.map(b => b.footprint), extent, 2);
     if (solidField(p.x, p.z) < clearance + 2.5 && solidField.exact(p.x, p.z).distance < clearance) return false;
     return R(p.x, p.z) > 2.8 + roadClearance;

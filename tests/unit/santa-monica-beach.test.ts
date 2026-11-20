@@ -75,7 +75,9 @@ describe('Santa Monica beach life', () => {
         expect(layout.onLand(v), q.id).toBe(false); expect(v.x - layout.shoreX(v.z), q.id).toBeGreaterThan(5);
         expect(decks.some(s => insidePolygon(v, s.footprint) || edgeDistance(v, s.footprint) < 1.5), q.id).toBe(false);
         const j = jumpCoordinates(v, jump); expect(j.along > -12 && j.along < jump.corridorLength + 12 && Math.abs(j.across) < jump.width / 2 + 6, q.id).toBe(false);
-        expect(v.y).toBeLessThan(SANTA.water + 7);
+        // Tall offshore sailing vessels (visual pass 4) stay far enough out never to hide the course.
+        if (q.id === 'schooner') { expect(v.y).toBeLessThan(SANTA.water + 16); expect(layout.D.exact(v.x, v.z), q.id).toBeGreaterThan(40); }
+        else expect(v.y).toBeLessThan(SANTA.water + 7);
       }
     }
   });

@@ -344,7 +344,7 @@ export const pierComposition={wheelX:96.5,wheelY:27,wheelZ:15,wheelRadius:24,spe
 /** Large native attractions, reused material batches and one capped vapor mesh. */
 export const landmarkShowcase={
  rockets:[{x:105,z:11,height:36,radius:3.5,form:'ship'},{x:105,z:29,height:40,radius:3.8,form:'booster'},...launchsiteRemoteRockets],
- boilOff:{capacity:96,period:5.2,opacity:.6,color:'#f2f5ef',sizeStart:1.15,sizeGrowth:6.8,rise:10,drift:7,vents:[{x:95,y:19,z:16.5},{x:105,y:25,z:7},{x:105,y:28,z:26},...launchsiteRemoteRockets.map(r=>({x:r.x,y:r.height*.6,z:r.z-3}))]},
+ boilOff:{capacity:96,period:5.2,opacity:.4,color:'#f2f5ef',sizeStart:.9,sizeGrowth:4.6,rise:9,drift:8,vents:[{x:95,y:19,z:16.5},{x:105,y:25,z:7},{x:105,y:28,z:26},...launchsiteRemoteRockets.map(r=>({x:r.x,y:r.height*.86,z:r.z-3}))]},
  bridge:{hangerSpacing:4,hangerWidth:.18,deckY:1.0},
  tahoe:{snow:'#f4f2e7',shade:'#afc4ce',steel:'#344653',red:'#d35449',glass:'#527784',wood:'#805637',warm:'#f1ca84',cloth:'#ac3e3a',clearings:[{x:-36,z:-8.2,width:24,depth:7.2},{x:24,z:-20,width:9,depth:27},{x:-54,z:16,width:13,depth:9},{x:1,z:24,width:19,depth:5},{x:-55,z:1,width:11,depth:8},{x:-43,z:25,width:12,depth:7},{x:26,z:8,width:10,depth:9}]},
  skyline:{warm:'#efd8ab',cool:'#9ebbc0',facade:'#41434b',roof:'#8e7769'},
@@ -487,3 +487,12 @@ export const newportDuneAppearance={rings:6,segments:20,height:.16,base:-.06,wob
 
 /** Newport's protected garden lawn (circuit-details.ts): mowing stripes 4 m wide (texture spans 8 m). */
 export const newportLawnAppearance={base:'#ffffff',size:256,stripes:2,light:'#809d56',dark:'#74904c',flecks:900,fleckDark:'#5e7a3c',fleckLight:'#a3b66c'} as const;
+
+/** Launchsite spaceport campus (launchsite-campus.ts). Vertex colours multiply the ivory architecture material. */
+export const launchsiteCampusAppearance={
+ assembly:{apron:'#cfcabd',wall:'#e9e7df',wallShade:'#c9cbc6',trim:'#5d6970',door:'#8d979b',doorLine:'#6c777c',stripe:'#2f5f8f',equipment:'#9aa3a6',annex:12,band:6.5},
+ propellant:{apron:'#cdc8bb',berm:'#b9a789',lox:'#f2f2ec',fuel:'#e7e2d2',leg:'#6f7b80',pipe:'#9aa6aa',horizontal:'#dcdcd4',radius:4.2},
+ tracking:{pad:'#cfcabd',building:'#e4e1d8',roof:'#6b767b',dish1:'#f3f3ee',dish2:'#e3e5e2',fence:'#8a9396',dish:5.2},
+ solar:{pitch:3.2,panel:2.2,cell:'#29425f',frame:'#9aa3a6'},
+ water:{radius:4.2,tank:'#e9e6dc',leg:'#7a858a'},
+} as const;

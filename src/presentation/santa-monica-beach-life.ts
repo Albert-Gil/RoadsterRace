@@ -380,6 +380,31 @@ export function santaBeachLife(track: TrackDefinition, layout: SantaLayout) {
     if (standing) { f.person(0, W + 0.04, 0, Math.PI / 2, 'stand', beachLook(), 0.9); for (const side of [-1, 1]) f.box(side * 0.35, W + 0.003, -1.9, 0.18, 0.015, 1.8, C.foam, side * 0.3); }
     else f.person(0, W + 0.05, 0.25, Math.PI, 'lie', beachLook());
   });
+  // Larger vessels further offshore (visual pass 4): two motor yachts and a two-masted schooner.
+  const white = C.trim, hullStripe = C.ropeAccent;
+  const yacht = (x: number, z: number, h: number) => float('yacht', x, z, 11, () => {
+    const f = frame(x, z, h); // box(u, base y, v, ...)
+    f.box(0, W - 0.6, -0.6, 4.4, 1.6, 15, white); f.box(0, W - 0.5, 7.6, 3.0, 1.45, 2.4, white); f.box(0, W - 0.4, 9.2, 1.6, 1.3, 1.2, white);
+    f.box(0, W + 0.55, -0.6, 4.46, 0.22, 15.06, hullStripe); f.box(0, W + 1.0, -1.2, 4.1, 0.06, 13.4, C.timber);
+    f.box(0, W + 1.06, 0.4, 3.5, 1.4, 7.4, white); f.box(0, W + 1.5, 0.5, 3.56, 0.45, 6.8, C.glass);
+    f.box(0, W + 2.46, -0.6, 2.9, 0.7, 4.2, white); f.box(0, W + 2.6, 0.9, 2.95, 0.36, 0.9, C.glass);
+    f.box(0, W + 3.16, -0.8, 0.12, 1.5, 0.12, C.steel); f.box(0, W + 4.5, -0.8, 1.2, 0.1, 0.24, C.steel);
+    for (const side of [-1, 1]) { f.box(side * 2.6, W + 0.006, -10.4, 0.6, 0.015, 7.5, C.foam, side * 0.18); f.box(side * 1.2, W + 0.005, -9.2, 0.5, 0.015, 4.2, C.foam, side * 0.08); }
+    f.box(0, W + 0.006, -13.4, 2.4, 0.015, 4.5, C.foam);
+  });
+  const schooner = (x: number, z: number, h: number) => float('schooner', x, z, 12, () => {
+    const f = frame(x, z, h), hull = pick(C.hull), sail = C.sail[0];
+    f.box(0, W - 0.5, 0, 3.4, 1.5, 16, hull); f.box(0, W - 0.4, 8.8, 2.0, 1.35, 1.8, hull); f.box(0, W + 1.0, 0, 3.2, 0.08, 16.6, C.timber);
+    f.box(0, W + 1.08, -3.5, 2.2, 0.8, 3.4, C.timber); f.box(0, W + 1.4, -3.5, 2.24, 0.25, 3.0, C.glass);
+    f.box(0, W + 1.1, 11.2, 0.12, 0.12, 4.0, C.timber);
+    for (const [at, mast] of [[3.2, 12.5], [-2.0, 14]] as const) {
+      f.box(0, W + 1.0, at, 0.2, mast, 0.2, C.timber);
+      f.triangle([[0, W + 1.6, at - 0.2], [0, W + mast + 0.6, at - 0.15], [0, W + 1.6, at - 5.2]], sail); f.triangle([[0, W + 1.6, at - 0.2], [0, W + 1.6, at - 5.2], [0, W + mast + 0.6, at - 0.15]], sail);
+    }
+    f.triangle([[0, W + 1.4, 12.8], [0, W + 11.5, 3.5], [0, W + 1.4, 4.0]], sail); f.triangle([[0, W + 1.4, 12.8], [0, W + 1.4, 4.0], [0, W + 11.5, 3.5]], sail);
+    for (const side of [-1, 1]) f.box(side * 1.9, W + 0.006, -10.5, 0.45, 0.015, 6.5, C.foam, side * 0.15);
+  });
+  yacht(172, 82, 2.7); yacht(200, -50, 0.5); schooner(214, 96, -1.2);
   for (const [x, z, h] of [[205, 46, 0.3], [224, -34, 1.9], [150, 86, 2.6], [96, 92, 0.9], [232, 88, -0.4], [190, -66, 2.2]] as const) sailboat(x, z, h);
   for (const [x, z, h] of [[178, 64, -2.4], [214, 6, 0.4], [120, 70, 1.2]] as const) motorboat(x, z, h);
   motorboat(78, 67, 1.6, true);

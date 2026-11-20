@@ -39,7 +39,7 @@ export function* paintGround(scene: Scene, track: TrackDefinition, layout: Golde
   // Lawn: mottled green with drier and lusher patches, then mowing stripes.
   c.fillStyle = 'rgb(108,134,72)'; c.fillRect(0, 0, g.width, g.height);
   for (let i = 0; i < 760; i++) { const p = anywhere(), light = rand() < 0.5; g.blot(p.x, p.z, 4 + rand() ** 2 * 18, light ? '200,198,118' : '44,80,38', light ? 0.13 : 0.11, 0.5 + rand() * 0.5, rand() * 3); }
-  c.save(); c.translate(g.px(0), g.py(0)); c.rotate(0.42); c.fillStyle = 'rgb(226,238,176)'; c.globalAlpha = 0.065;
+  c.save(); c.translate(g.px(0), g.py(0)); c.rotate(0.42); c.fillStyle = 'rgb(226,238,176)'; c.globalAlpha = 0.11;
   for (let k = -g.m(420), w = g.m(3.4); k < g.m(420); k += 2 * w) c.fillRect(k, -g.m(420), w, g.m(840));
   c.restore();
   g.grain(17, 0.12);
