@@ -12,6 +12,7 @@ import {assemblyHall,launchTowerDetail,bakeLandmark} from './venue-landmarks';
 import {launchOperations} from './venue-signatures';
 import {launchFleet} from './landmark-showcase';
 import {rocketBoilOff} from './rocket-boiloff';
+import {launchMounts} from './launchsite-pads';
 import { launchsiteRocketStages, launchsiteVessels, launchsiteYardTank } from '../core/tracks/venue-parcels';
 
 /** Original, lightweight launchyard scenery. All substantial structures occupy protected footprints. */
@@ -139,6 +140,7 @@ export function buildSpaceport(scene: Scene, track: TrackDefinition, theme: Pres
   bakeLandmark('launch-tower-cross-bracing',launchTowerDetail(),scene,white);
   bakeLandmark('connected-launch-operations',launchOperations(),scene,white);
   bakeLandmark('launchsite-rocket-fleet',launchFleet(),scene,white);
+  bakeLandmark('launchsite-remote-mounts',launchMounts(track),scene,white);
   const boilOff=rocketBoilOff(scene);
   // Desert landscape: terrain and painted ground, plants, and the solid rock formations (landscape/).
   const landscape = buildLaunchsiteLandscape(scene, track, materials);

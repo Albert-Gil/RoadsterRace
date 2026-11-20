@@ -13,6 +13,8 @@ import {bakeLandmark} from './venue-landmarks';
 import {bayRoofscape} from './venue-signatures';
 import { cityAppearance, landmarkShowcase, type PresentationTheme } from './themes';
 import { buildGoldenGateLandscape, GOLDEN } from './golden-gate-landscape';
+import { rectangleDistance, waterDepth } from './water-depth';
+import { goldenBridgeDetail } from './golden-gate-bridge';
 
 /** Grounded original city blocks and an 88 m suspension span; collision rails are rendered separately. */
 export function buildBay(scene: Scene, track: TrackDefinition, theme: PresentationTheme, materials: Map<string, StandardMaterial>) {
@@ -44,6 +46,7 @@ export function buildBay(scene: Scene, track: TrackDefinition, theme: Presentati
   for (const x of [-43.1, 43.1]) box('quay-bank-face', x, -1.05, 69.5, 0.2, 2, 91, concrete);
   const water = mat('water', theme.scene.water, false); water.specularColor.setAll(0.45);
   const sea = MeshBuilder.CreateGround('bay-water', { width: 2000, height: 2000 }, scene); sea.position.y = -2.08; sea.material = water;
+  waterDepth(scene, 'bay', -2.08, rectangleDistance(cityLand));
   for (let i = 0; i < 20; i++) box('inlet-water-glint', -35 + i % 5 * 16, -2.06, 57 + Math.floor(i / 5) * 11, 3 + i % 3 * 2, 0.01, 0.08, metal);
   buildUrbanArchitecture(scene,cityBuildings.map(b=>({...b,style:b.style==='office'?2:b.style==='brick'?1:0})),false,facadeMaterial,glass);
   bakeLandmark('victorian-bay-roofscape',bayRoofscape(),scene,facadeMaterial);
@@ -100,6 +103,7 @@ export function buildBay(scene: Scene, track: TrackDefinition, theme: Presentati
       box('bridge-hanger-deck-bracket',x,.82,(z+inner)/2,.22,.24,Math.abs(z-inner)+.18,red);
     }
   }
+  const spanDetail = goldenBridgeDetail(); bakeLandmark('golden-span-detail', spanDetail.red, scene, red); bakeLandmark('golden-span-lamps', spanDetail.metal, scene, metal);
   // Parks, shore, riprap, park boulders and the headlands across the bay.
   const landscape = buildGoldenGateLandscape(scene, track, materials, ground);
   return { shadowCasterMaterials: casters, lateShadowCasters: landscape.shadowCasters, update: (_time: number, _reduced: boolean) => {} };

@@ -7,6 +7,8 @@ import { fbm2, noise2, random, smoothstep } from './landscape/noise';
 import { GroundPainter } from './landscape/paint';
 import { offsetPath } from './landscape/paths';
 import { pavedHopLanes } from './lanes';
+import { launchsiteRemoteRockets } from '../core/tracks/venue-parcels';
+import { launchPadAppearance } from './themes';
 export { buildFormation, looseRocks } from './landscape/rocks';
 export { plantGeometry } from './landscape/plants';
 
@@ -86,6 +88,18 @@ export function* paintGround(scene: Scene, track: TrackDefinition, layout: Launc
   // Launch pad blast: soot and streaks fanning out from the pad.
   g.blot(97, 20, 30, '60,50,44', 0.22);
   for (let i = 0; i < 90; i++) { const a = rand() * Math.PI * 2, r0 = 10 + rand() * 6, r1 = r0 + 6 + rand() * 18; g.stroke([{ x: 97 + Math.cos(a) * r0, z: 20 + Math.sin(a) * r0 }, { x: 97 + Math.cos(a) * r1, z: 20 + Math.sin(a) * r1 }], 0.4 + rand() * 0.8, 'rgb(70,58,48)', 0.06); }
+  // Remote launch mounts: a compacted apron around each plinth, then soot fanning out from it,
+  // fading before the course run-off (layout.D is the distance to the course centreline).
+  for (const r of launchsiteRemoteRockets) {
+    const half = r.radius * 1.3, pad = launchPadAppearance.ground;
+    g.fill([[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([u, v]) => ({ x: r.x + u * (half + 2.2), z: r.z + v * (half + 2.2) })), `rgb(${pad.apron})`, 0.5);
+    g.blot(r.x, r.z, half + 9, pad.soot, 0.2);
+    for (let i = 0; i < 46; i++) {
+      const a = rand() * Math.PI * 2, r0 = half + 0.5 + rand() * 2, r1 = r0 + 4 + rand() * 9, end = { x: r.x + Math.cos(a) * r1, z: r.z + Math.sin(a) * r1 };
+      if (layout.D(end.x, end.z) < 14) continue;
+      g.stroke([{ x: r.x + Math.cos(a) * r0, z: r.z + Math.sin(a) * r0 }, end], 0.35 + rand() * 0.7, `rgb(${pad.soot})`, 0.07);
+    }
+  }
   yield;
   // Pebbles: denser on desert pavement and near rock; a lit edge toward the sun.
   for (let i = 0; i < 46000; i++) {

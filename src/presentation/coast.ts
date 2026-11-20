@@ -19,6 +19,7 @@ import type { PropPlacement } from './props';
 import { newportHarbour } from './themes';
 import {newportClubhouse,bakeLandmark} from './venue-landmarks';
 import {shoreSurf} from './shore-surf';
+import {waterDepth} from './water-depth';
 import {NEWPORT_WORLD_SCALE as S} from '../core/tracks/newport-layout';
 
 /** Harbour water level: a calm sea just below the beach, so boats and piers float in the visible water. */
@@ -45,6 +46,11 @@ export function buildCoast(scene: Scene, track: TrackDefinition, theme: Presenta
   };
   band('lagoon-shelf', 0.99, 1.25, -0.16, COAST_WATER + 0.05, shallow);
   const surf=shoreSurf(scene,{kind:'island',water:COAST_WATER,scale:S},foam);
+  // Deeper water away from the island (the lagoon shelf above stays the shallow band).
+  waterDepth(scene,'coastal',COAST_WATER,(x,z)=>{
+    const a=Math.atan2(z/(62*S),x/(85*S)),shape=1+0.035*Math.sin(3*a+0.7)+0.018*Math.cos(7*a);
+    return (Math.hypot(x/(85*S),z/(62*S))/shape-1)*Math.hypot(Math.cos(a)*85*S,Math.sin(a)*62*S);
+  });
   band('wet-sand-rim', 0.965, 1.037, -0.07, -0.68, wetSand);
   const perimeter = ring(0.975, -0.035), land = new Mesh('sandy-island', scene), data = new VertexData();
   const positions = [0, -0.035, 0], normals = [0, 1, 0], uvs = [0.5, 0.5], indices: number[] = [];

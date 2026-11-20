@@ -459,3 +459,31 @@ export const venueSunDirections = {
  coastal:[.50,-1,.60],spaceport:[.65,-1,.38],bay:[.40,-1,.62],sunset:[.72,-1,.35],
  canyon:[.68,-1,.44],'night-city':[.55,-1,.45],alpine:[.48,-1,.64],yosemite:[.64,-1,.42],
 } as const;
+
+/** Open-water depth overlays (water-depth.ts): alpha rises from the shore shelf to deep water. Distances in metres. */
+export const waterDepthAppearance={
+ coastal:{centre:[0,0] as [number,number],reach:620,cell:10,lift:.012,near:14,shelf:30,far:120,shelfAlpha:.14,alpha:.5,mid:'#1b6d80',deep:'#0a4560'},
+ sunset:{centre:[120,0] as [number,number],reach:640,cell:12,lift:.012,near:3,shelf:22,far:190,shelfAlpha:.16,alpha:.5,mid:'#2a7894',deep:'#174f70'},
+ bay:{centre:[0,20] as [number,number],reach:330,cell:6,lift:.012,near:1,shelf:7,far:50,shelfAlpha:.2,alpha:.56,mid:'#2a6a7e',deep:'#143b52'},
+} as const;
+
+/** Golden Gate span detail (golden-gate-bridge.ts). Vertex colours multiply the bridge-red / bay-metal materials. */
+export const goldenBridgeAppearance={
+ shade:'#d3cac8',deep:'#8d8280',
+ tower:{x:[-28,28],legs:[32.5,51.5],leg:1.55,fluteBottom:.3,fluteTop:12.6,bands:[4.4,8.9],top:13.4,portal:7.9},
+ deck:{edges:[34,50],length:86,panel:4,fasciaTop:-.05,fasciaBottom:-.6,chordTop:-.72,chordBottom:-1.72},
+ lamps:{z:[33.3,50.7],x:[-36,-20,-12,-4,4,12,20,36],base:.94,height:3.1},
+} as const;
+
+/** Remote Launchsite launch mounts (launchsite-pads.ts), all inside each rocket's plinth footprint. */
+export const launchPadAppearance={
+ table:.08,concrete:'#d9d6cc',safety:'#e8b23a',soot:'#3b3734',slot:'#2a2c2e',clamp:'#5b6970',clamps:6,
+ mast:{width:1.5,heightRatio:.82,bay:2.6,steel:'#a4473a',arm:'#d9d6cc',arms:[.42,.74]},
+ ground:{apron:'186,176,160',soot:'58,48,40',track:'246,238,224'},
+} as const;
+
+/** Newport dune hummocks under the windswept beach trees (newport-dunes.ts). Height is a fraction of the mean radius. */
+export const newportDuneAppearance={rings:6,segments:20,height:.16,base:-.06,wobble:.07,sand:'#d2bd8f',dry:'#b5ae76',grass:'#7f9653',lush:'#5f7e45',bloom:'#c86a93'} as const;
+
+/** Newport's protected garden lawn (circuit-details.ts): mowing stripes 4 m wide (texture spans 8 m). */
+export const newportLawnAppearance={base:'#ffffff',size:256,stripes:2,light:'#809d56',dark:'#74904c',flecks:900,fleckDark:'#5e7a3c',fleckLight:'#a3b66c'} as const;

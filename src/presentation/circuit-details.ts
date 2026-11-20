@@ -12,14 +12,25 @@ import type { TrackDefinition, Point } from '../core/types';
 import { bridgeAt } from '../core/bridge';
 import { insideBarrier } from '../core/barriers';
 import { cumulative, distance, projectToPolyline } from '../core/geometry';
-import type { PresentationTheme } from './themes';
+import { newportLawnAppearance, type PresentationTheme } from './themes';
 import { hopPropIds } from '../core/tracks/hop-obstacles';
 import { pavedHopLanes } from './lanes';
+import { CompositionShapes } from './composition-shapes';
+import { duneHummock } from './newport-dunes';
+import { bakeLandmark } from './venue-landmarks';
 
 /** Walls originate in physical footprints. Every other solid prop is inside a protected island. */
 export function buildCircuitDetails(scene: Scene, track: TrackDefinition, theme: PresentationTheme, materials: Map<string, StandardMaterial>, casters: Set<StandardMaterial>, coastal = true) {
   const mat = (name: string, color: string, casts = true) => { const m = new StandardMaterial(name, scene); m.diffuseColor = Color3.FromHexString(color); m.specularColor.setAll(0.05); materials.set(name, m); if (casts) casters.add(m); return m; };
   const concrete = mat('barrier-concrete', theme.venue.concrete), rail = mat('galvanized-rail', theme.venue.metal), red = mat('race-red', theme.venue.accent), dark = mat('race-charcoal', theme.venue.rubber), white = materials.get('architecture')!, grass = materials.get('embankment')!, rock = materials.get('rock')!, leaf = materials.get('foliage')!, leafLight = materials.get('foliageLight')!;
+  // Newport's protected gardens: a mown lawn instead of the rocky embankment texture.
+  let lawn: StandardMaterial | undefined;
+  const gardenLawn = () => lawn ??= (() => {
+    const a = newportLawnAppearance, m = mat('garden-lawn', a.base, false), t = new DynamicTexture('garden-lawn-stripes', a.size, scene, false), c = t.getContext() as CanvasRenderingContext2D;
+    for (let k = 0; k < a.stripes; k++) { c.fillStyle = k % 2 ? a.dark : a.light; c.fillRect(k * a.size / a.stripes, 0, a.size / a.stripes, a.size); }
+    for (let i = 0; i < a.flecks; i++) { const x = (i * 97.13) % a.size, y = (i * 57.71 + (i % 7) * 13) % a.size; c.fillStyle = i % 3 ? a.fleckDark : a.fleckLight; c.fillRect(x, y, 2, 2); }
+    t.update(); t.wrapU = t.wrapV = 1; m.diffuseTexture = t; m.diffuseColor = Color3.White(); m.specularColor.setAll(0.02); m.backFaceCulling = false; return m;
+  })();
   const marking = mat('track-ivory', theme.venue.marking, false), worn = mat('asphalt-repair', theme.venue.repair, false); worn.alpha = 0.4;
   const box = (name: string, p: Point, y: number, w: number, h: number, d: number, material: StandardMaterial, angle = 0) => { const m = MeshBuilder.CreateBox(name, { width: w, height: h, depth: d }, scene); m.position.set(p.x, y, p.z); m.rotation.y = angle; m.material = material; return m; };
   const label = (name: string, text: string, width: number, height: number, p: Point, y: number, angle = 0) => {
@@ -51,7 +62,7 @@ export function buildCircuitDetails(scene: Scene, track: TrackDefinition, theme:
     vertices.forEach(p => { positions.push(p.x, 0.16, p.z); normals.push(0, 1, 0); uvs.push(p.x / 8, p.z / 8); });
     for (let i = 0; i < vertices.length; i++) indices.push(0, (i + 1) % vertices.length + 1, i + 1);
     data.positions = positions; data.normals = normals; data.uvs = uvs; data.indices = indices;
-    const ground = new Mesh(`protected-${barrier.id}`, scene); data.applyToMesh(ground); ground.material = barrier.id === 'apex-rocks' ? leaf : grass;
+    const ground = new Mesh(`protected-${barrier.id}`, scene); data.applyToMesh(ground); ground.material = barrier.id === 'apex-rocks' ? leaf : coastal ? gardenLawn() : grass;
     for (let i = 0; i < vertices.length; i++) {
       const a = vertices[i], b = vertices[(i + 1) % vertices.length], len = distance(a, b), dx = (b.x - a.x) / len, dz = (b.z - a.z) / len;
       const center = { x: (a.x + b.x) / 2 - dz * 0.25, z: (a.z + b.z) / 2 + dx * 0.25 }, angle = Math.atan2(dx, dz);
@@ -109,13 +120,15 @@ export function buildCircuitDetails(scene: Scene, track: TrackDefinition, theme:
   }
   label('braking-marker', 'BRAKE  /  01', 5, 0.85, { x: 29, z: -15.5 }, 1.5);
   // Layered coastal planting outside the entire driving corridor.
+  const dunes = new CompositionShapes();
   for (let i = 0; i < 46; i++) {
     const a = i * 2.39996, p = { x: Math.cos(a) * (70 + i % 9), z: Math.sin(a) * (48 + i % 10) };
     if (projectToPolyline({x:p.x*S,z:p.z*S}, track.centerline, track.distances).distance < 20 || p.z > 47 && p.x > -32 && p.x < 4) continue;
-    const mound = MeshBuilder.CreateSphere('coastal-bank', { diameter: 4 + i % 4, segments: 5 }, scene); mound.position.set(p.x, -0.5, p.z); mound.scaling.set(1.6, 0.45, 1.1); mound.material = grass;
+    const size = 4 + i % 4; duneHummock(dunes, p.x, p.z, size * 0.8, size * 0.55, i * 1.37);
     const stem = MeshBuilder.CreateCylinder('coastal-tree-trunk', { height: 3.5, diameterTop: 0.17, diameterBottom: 0.5, tessellation: 6 }, scene); stem.position.set(p.x, 1.4, p.z); stem.rotation.z = 0.15; stem.material = materials.get('trunk')!;
     for (let j = 0; j < 3; j++) { const crown = MeshBuilder.CreateSphere('windswept-tree', { diameter: 2.1 + i % 3 * 0.4, segments: 5 }, scene); crown.position.set(p.x + Math.cos(j * 2.4) * 0.9 - 0.3, 3 + j * 0.25, p.z + Math.sin(j * 2.4) * 0.9); crown.scaling.set(1.2, 0.9, 1); crown.material = j % 2 ? leaf : leafLight; }
   }
+  if (dunes.vertexCount) bakeLandmark('coastal-dune-hummocks', dunes, scene, white);
   // Only the original island artwork scales; shared road paint uses actual
   // track dimensions above. Heights, vehicle size and road width stay unchanged.
   for(const mesh of scene.meshes)if(!beforeCoastal.has(mesh)){mesh.position.x*=S;mesh.position.z*=S;mesh.scaling.x*=S;mesh.scaling.z*=S;}

@@ -21,6 +21,7 @@ import {buildPacificWheel,amusementBoardwalk,amusementAccess,coasterPosition} fr
 import {bakeLandmark} from './venue-landmarks';
 import {pierComposition} from './themes';
 import {shoreSurf} from './shore-surf';
+import {waterDepth} from './water-depth';
 
 /** Original procedural seaside venue. Every pier slab uses a physical support footprint. */
 export function buildSantaMonica(scene: Scene, track: TrackDefinition, theme: PresentationTheme, materials: Map<string, StandardMaterial>) {
@@ -155,6 +156,7 @@ export function buildSantaMonica(scene: Scene, track: TrackDefinition, theme: Pr
   for (const mesh of scene.meshes) if (!before.has(mesh) && !mesh.parent) mesh.parent = venueRoot;
   const landscape = buildSantaMonicaLandscape(scene, worldTrack, materials);
   const surf=shoreSurf(scene,{kind:'beach',water:-2.4,shoreX:landscape.layout.shoreX,height:landscape.layout.height});
+  waterDepth(scene,'sunset',-2.4,(x,z)=>x-landscape.layout.shoreX(z));
   // Beach life (v4 structures, crowds, boats, towels) is one world-space batch built from the physical track.
   casters.add(buildSantaBeachLife(scene, worldTrack, landscape.layout, materials).material);
   return { shadowCasterMaterials: casters, lateShadowCasters: landscape.shadowCasters, update(time: number, reduced: boolean) {
