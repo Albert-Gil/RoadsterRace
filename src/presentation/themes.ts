@@ -381,6 +381,9 @@ export const tahoeCourseAppearance = {
   shallows:'#8fd3cf', midWater:'#3c93a6', shoreOverlap:6, shallowLift:.03, shallowStep:6, fenceCap:.16,
   /** [metres from the shoreline band start, alpha]: pale turquoise at the shore fading into the existing deep lake. */
   shallowBands:[[0,.88],[14,.74],[40,.4],[95,0]] as [number,number][],
+  /** Snowmobile/ski tracks: [x, z, heading, length, wiggle, seed]; gauge = ribbon offsets (m). */
+  tracks:{colour:'#9fb4c4',width:.4,lift:.03,step:2,clearance:16,gauge:[-.55,.55],
+    paths:[[-260,-200,.5,420,.35,1],[-300,60,1.2,380,.3,2],[60,260,2.9,300,.4,3],[-120,280,2.5,260,.3,4],[200,-250,-.6,300,.35,5],[-40,-260,.1,240,.4,6],[230,120,3.6,260,.3,7],[-280,-60,1.6,300,.25,8]] as [number,number,number,number,number,number][]},
 };
 export const snowyTahoeAppearance = {
   surfaceOffsets:{road:.12,branch:.13,fringe:.045,branchFringe:.055},
@@ -394,7 +397,7 @@ export const snowyTahoeAppearance = {
 
 /** Original granite-valley presentation; all physical heights/footprints come from the track. */
 export const yosemiteAppearance={
- extent:{minX:-280,maxX:300,minZ:-220,maxZ:320},cameraElevation:58,road:'#7d6a51',shoulder:'#b7a67c',meadow:'#7c9368',dryMeadow:'#b4ab79',forestFloor:'#45624b',forest:'#34553d',forestLight:'#70865a',bark:'#71563e',granite:['#aeb6b1','#c9c8b9','#e2ddce','#737f83'],lichen:'#727b4e',timber:'#896648',roof:'#495548',window:'#b9d5bf',water:'#438c8d',waterDeep:'#285b6c',foam:'#dcebdc',
+ extent:{minX:-280,maxX:300,minZ:-220,maxZ:320},cameraElevation:58,road:'#7d6a51',shoulder:'#b7a67c',meadow:'#7c9368',dryMeadow:'#b4ab79',forestFloor:'#45624b',forest:'#34553d',forestLight:'#70865a',bark:'#71563e',granite:['#a7aea9','#c2c1b3','#d2cdbf','#6c787c'],streaks:{frequency:7.3,sharpness:5,strength:.34,colour:'#5b625c',pocket:'#6f7d63',pocketStrength:.55},lichen:'#727b4e',timber:'#896648',roof:'#495548',window:'#b9d5bf',water:'#438c8d',waterDeep:'#285b6c',foam:'#dcebdc',
  treeCount:400,treeHeight:[11,25],nearTreeCount:180,nearTreeHeight:[7,13],nearTreeSetback:14,nearTreeSightline:.45,cedar:'#3c644c',fern:'#426c42',grass:'#8b995a',flowers:'#d4c37c',surfaceOffsets:{road:.12,branch:.13,fringe:.045,branchFringe:.055},mist:{count:18,opacity:.04,speed:.42},
  waterfall:{speed:.8,sprayCount:36,dropletCount:54,gravity:28,opacity:.96,sprayOpacity:.48,wetRock:'#657b7b',lipFraction:.90,lipRadius:.88,waterRadius:.89,halfAngle:.42,curtainWidth:10.8,basinWidth:16,basinDepth:10,basinHeight:.75,angle:Math.PI/2+.04,
   widths:{'granite-falls':10.8,'creek-falls':6.4,'cathedral-falls':7.2,'sentinel-falls':6.6,'sentinel-buttress-falls':7.4,'granite-twin-falls':6.2} as Record<string,number>},
@@ -464,6 +467,7 @@ export const venueSunDirections = {
 export const waterDepthAppearance={
  coastal:{centre:[0,0] as [number,number],reach:620,cell:10,lift:.012,near:14,shelf:30,far:120,shelfAlpha:.14,alpha:.5,mid:'#1b6d80',deep:'#0a4560'},
  sunset:{centre:[120,0] as [number,number],reach:640,cell:12,lift:.012,near:3,shelf:22,far:190,shelfAlpha:.16,alpha:.5,mid:'#2a7894',deep:'#174f70'},
+ alpine:{centre:[360,15] as [number,number],reach:420,cell:10,lift:.03,near:20,shelf:60,far:190,shelfAlpha:.12,alpha:.62,mid:'#1d6c88',deep:'#0a3557'},
  bay:{centre:[0,20] as [number,number],reach:330,cell:6,lift:.012,near:1,shelf:7,far:50,shelfAlpha:.2,alpha:.56,mid:'#2a6a7e',deep:'#143b52'},
 } as const;
 

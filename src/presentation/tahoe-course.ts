@@ -1,7 +1,8 @@
 import type { Point, TrackDefinition } from '../core/types';
-import { cumulative, samplePolyline } from '../core/geometry';
+import { cumulative, projectToPolyline, samplePolyline } from '../core/geometry';
+import { insideBarrier } from '../core/barriers';
 import { tahoeShore } from '../core/tracks/tahoe-terrain';
-import { Geometry, hex, mix } from './landscape/mesh';
+import { Geometry, edgeDistance, hex, mix } from './landscape/mesh';
 import { tahoeCourseAppearance as art } from './themes';
 
 /**
@@ -91,4 +92,25 @@ function inset(footprint: readonly Point[], distance: number) {
     }
   }
   return rim;
+}
+
+/**
+ * Snowmobile and ski tracks meandering across the open snow (flat, 3 cm above the snow; no height
+ * or grip). Each track is a pair of thin bluish-shadow ribbons. Points closer than
+ * `art.tracks.clearance` m to the course centreline or Hop lanes, inside a barrier, or on the
+ * lake are skipped, so tracks never paint the road or its fringe.
+ */
+export function tahoeSnowTracks(g: Geometry, track: TrackDefinition, surface: (x: number, z: number) => number) {
+  const a = art.tracks, colour = hex(a.colour), lanes = [{ line: track.centerline, d: track.distances }, ...(track.hopShortcuts ?? []).map(h => ({ line: h.branch, d: cumulative(h.branch) }))];
+  const ok = (x: number, z: number) => x < tahoeShore(z) - 6 && lanes.every(l => projectToPolyline({ x, z }, l.line, l.d).distance > a.clearance) && track.barriers.every(b => !insideBarrier({ x, z }, b) && edgeDistance({ x, z }, b.footprint) > 1.5);
+  for (const [x0, z0, heading, length, wiggle, seed] of a.paths) {
+    const pts: Point[] = [];
+    for (let s = 0; s <= length; s += a.step) { const h = heading + wiggle * Math.sin(s / 37 + seed) + wiggle * .5 * Math.sin(s / 13 + seed * 2); const last = pts.at(-1) ?? { x: x0, z: z0 }; pts.push(s ? { x: last.x + Math.sin(h) * a.step, z: last.z + Math.cos(h) * a.step } : { x: x0, z: z0 }); }
+    for (const offset of a.gauge) for (let i = 1; i < pts.length; i++) {
+      const p = pts[i - 1], q = pts[i]; if (!ok(p.x, p.z) || !ok(q.x, q.z)) continue;
+      const l = Math.hypot(q.x - p.x, q.z - p.z) || 1, nx = -(q.z - p.z) / l, nz = (q.x - p.x) / l;
+      const v = [[p, offset - a.width / 2], [q, offset - a.width / 2], [q, offset + a.width / 2], [p, offset + a.width / 2]].map(([c, o]) => { const pt = c as Point, off = o as number, x = pt.x + nx * off, z = pt.z + nz * off; return g.vertex(x, surface(x, z) + a.lift, z, colour); });
+      g.triangle(v[0], v[1], v[2]); g.triangle(v[0], v[2], v[3]);
+    }
+  }
 }

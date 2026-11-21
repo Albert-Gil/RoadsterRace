@@ -20,6 +20,14 @@ export function yosemiteGeology(track: TrackDefinition) {
       let color=mix(hex(art.granite[0]),hex(art.granite[2]),Math.max(.12,Math.min(.82,.44+t*.20+grain*.20+broad*.20)));
       color=mix(color,hex(art.granite[3]),joint*.31*(1-smoothstep(.7,.96,t))+exfoliation*.19+Math.max(0,-broad)*.19);
       color=mix(color,hex(art.lichen),(1-smoothstep(.02,.28,t))*(.11+.12*Math.sin(angle*7)**2));
+      // Dark vertical water streaks (desert varnish) down the steep faces, as on Yosemite's walls.
+      const streak=Math.pow(.5+.5*Math.sin(angle*art.streaks.frequency+index*1.7+Math.sin(angle*23+index)*.6),art.streaks.sharpness)*smoothstep(.12,.5,t)*(1-smoothstep(.82,.98,t));
+      color=mix(color,hex(art.streaks.colour),streak*art.streaks.strength*(.6+.4*grain));
+      // The broad summits seen from the overview: lichen and pine-needle pockets in hollows, and
+      // dark sheet-joint cracks, so the domes no longer read as plain pale blobs.
+      const crown=smoothstep(.55,.9,t),pocket=smoothstep(.05,.4,fbm2(p.x*.09+index*3.1,p.z*.09,3)),crack=Math.pow(.5+.5*Math.sin(p.x*.35+p.z*.21+Math.sin(p.z*.13)*2+index),24);
+      color=mix(color,hex(art.streaks.pocket),crown*pocket*art.streaks.pocketStrength);
+      color=mix(color,hex(art.granite[3]),crown*crack*.45);
       color=mix(color,hex(art.waterfall.wetRock),waterfallFaceWeight(b,angle)*(1-smoothstep(.72,.84,t))*.5);
       // Mineral veins and dark weathering at the foot are baked into existing
       // vertices, retaining the authored silhouette, normals and collider.
