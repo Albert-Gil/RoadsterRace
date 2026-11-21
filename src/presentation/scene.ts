@@ -1,3 +1,4 @@
+import { applyCloudShadows } from './cloud-shadows';
 import { LapGhost } from './lap-ghost';
 import type { ReplayFrame } from '../core/lap-replay';
 import { drawingRay, roadHeight,terrainElevation } from '../core/elevation';
@@ -277,6 +278,7 @@ export class GameScene {
     } else { this.scene.environmentTexture = this.proceduralSky; this.scene.environmentIntensity = 0.85; }
     const sky = this.scene.environmentTexture === this.sky ? this.sky : null;
     applySurfaceFinishes(this.scene, this.materials, this.scenery, tier, sky, venue.waterReflection);
+    applyCloudShadows(this.scene, this.scenery, tier);
     const ip = this.scene.imageProcessingConfiguration;
     ip.colorCurvesEnabled = true;
     ip.vignetteEnabled = true; ip.vignetteWeight = colorGrade.vignette.weight; ip.vignetteStretch = colorGrade.vignette.stretch; ip.vignetteColor.set(colorGrade.vignette.color[0], colorGrade.vignette.color[1], colorGrade.vignette.color[2], 0);

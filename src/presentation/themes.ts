@@ -520,3 +520,9 @@ export const fleetHarbourAppearance={
 
 /** LA nights rooftops (la-rooftops.ts): vertex colours multiply the architecture / window batches. */
 export const laRooftopAppearance={inset:1.1,unit:'#9aa1a6',fan:'#2a2f33',duct:'#b7bcbf',steel:'#4c5358',tank:'#8a6748',tankRoof:'#5a4a3c',solar:'#2a4566',skylightFrame:'#5d656a',skylight:'#ffd99a',penthouse:'#b9b3a8',doorLight:'#ffe2a8'} as const;
+
+/** Drifting cloud shadows (cloud-shadows.ts): Medium tier and above, daytime venues only. Scale is 1 / cloud size in metres; wind in m/s. */
+export const cloudShadowAppearance={
+ base:{scale:1/95,coverage:.52,strength:.18,windX:.9,windZ:.45},
+ venues:{coastal:{},spaceport:{coverage:.62,strength:.13},bay:{coverage:.52},sunset:{coverage:.6,strength:.12},canyon:{coverage:.6,strength:.14,scale:1/130},alpine:{coverage:.54,strength:.12},yosemite:{coverage:.54,scale:1/120},naval:{coverage:.55,scale:1/140},airport:{coverage:.57,scale:1/120}},
+};
