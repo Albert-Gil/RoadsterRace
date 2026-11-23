@@ -168,7 +168,7 @@ function fascia(ft,out){
   const row=yo=>{const yEnd=yo<0?NK[1]+yo:yo,end=lerp3(NK,NQ,(NK[1]-yEnd)/(NK[1]-NQ[1])),sc=end[2]/.602;
     return zs.map((z,i)=>{if(i===zs.length-1)return end;const zz=z*sc,le=LE(zz),y=yo<0?le[1]+yo:yo,f=(le[1]-y)/(le[1]-NQ[1]);return [le[0]+(xfb(zz)-le[0])*f,y,zz];});};
   const r3=row(NQ[1]);
-  grid([zs.map(LE),row(-.026),row(-.040),r3],null,'fascia',()=>[1,.25,0],out,j=>['paint','light','black'][j]);
+  grid([zs.map(LE),row(-.017),row(-.043),r3],null,'fascia',()=>[1,.25,0],out,j=>['paint','light','black'][j]);
   const s4=.585/.602,r4=zs.map(z=>[xfb(z*s4)-.065,.292,z*s4]),r5=r4.map(p=>[p[0],.214,p[2]]);
   grid([r3,r4],'satin','fascia',()=>[0,-1,0],out);
   grid([r4,r5],'satin','fascia',()=>[1,0,0],out);
@@ -202,12 +202,14 @@ function wing(out){
   const a=.16,d=[-Math.cos(a),Math.sin(a)],u=[Math.sin(a),Math.cos(a)];
   const P=([c,h])=>[-1.96+c*d[0]+h*u[0],1.035+c*d[1]+h*u[1]],center=P([.20,.006]);
   const profile=[[0,0],[.04,.014],[.12,.022],[.25,.021],[.38,.009],[.40,0],[.38,-.009],[.20,-.011],[.05,-.008],[0,0]];
-  grid(profile.map(q=>{const[x,y]=P(q);return[[x,y,0],[x+.025,y-.012,.955]];}),'steel','wing',p=>[p[0]-center[0],p[1]-center[1],0],out);
-  prism([P([-.005,0]),P([.405,.04]),P([.405,-.035]),P([.015,-.035])],.955,.969,'steel',out);
+  // The centre blade drops between the pylons and sweeps up into its endplates.
+  grid(profile.map(q=>{const[x,y]=P(q);return[[x,y,0],[x+.048,y-.022,.42],[x+.085,y+.052,.955]];}),'steel','wing',p=>[p[0]-center[0],p[1]-center[1],0],out);
+  const endplate=[[-.035,.015],[.36,.095],[.405,.055],[.35,-.053],[.015,-.035]].map(q=>{const[x,y]=P(q);return[x+.085,y+.052];});
+  prism(endplate,.955,.969,'steel',out);
   sweep([[-1.90,.89],[-1.96,.95],[-2.07,1.025],[-2.14,1.035]],.40,.022,.012,'black',out);
 }
 function nozzle(y0,z0,out){
-  const xf=RF(y0,z0)[0]+.004,seg=detail === "showcase" ? 28 : 10,C=(r,a)=>Array.from({length:seg+1},(_,i)=>{const t=i/seg*Math.PI*2;return [xf-a,y0+r*Math.cos(t),z0+r*Math.sin(t)];});
+  const xf=RF(y0,z0)[0]+.004,seg=detail === "showcase" ? 28 : 7,C=(r,a)=>Array.from({length:seg+1},(_,i)=>{const t=i/seg*Math.PI*2;return [xf-a,y0+r*Math.cos(t),z0+r*Math.sin(t)];});
   const radial=s=>p=>[0,(p[1]-y0)*s,(p[2]-z0)*s];
   grid([C(.047,-.01),C(.047,.026)],'chrome','noz',radial(1),out);
   grid([C(.047,.026),C(.034,.026)],'chrome','noz',()=>[-1,0,0],out);
@@ -226,10 +228,10 @@ function wheelParts(w){
   grid([ring(.232,.22*H),ring(.06,.22*H)],'disc','w',()=>[0,0,1],fixed);
   const steps=detail==='showcase'?6:2;
   for(let s=0;s<10;s++){
-    const path=[];for(let i=0;i<=steps;i++){const t=i/steps,r=mixf(.058,.250,t),th=Math.floor(s/2)*Math.PI*2/5+(s%2?1:-1)*(.045+.07*t)+.12*t;path.push({c:[r*Math.cos(th),r*Math.sin(th)],tn:[-Math.sin(th),Math.cos(th)],zf:mixf(.93,.80,t)*H,hw:mixf(.010,.007,t)});}
+    const path=[];for(let i=0;i<=steps;i++){const t=i/steps,r=mixf(.058,.250,t),th=Math.floor(s/2)*Math.PI*2/5+(s%2?1:-1)*(.035+.18*t*t)+.20*t;path.push({c:[r*Math.cos(th),r*Math.sin(th)],tn:[-Math.sin(th),Math.cos(th)],zf:(.93-.23*Math.sin(t*Math.PI))*H,hw:mixf(.012,.010,t)});}
     const P=(i,e,deep)=>{const q=path[i];return [q.c[0]+q.tn[0]*q.hw*e,q.c[1]+q.tn[1]*q.hw*e,q.zf-(deep?.03:0)];};
     for(let i=0;i<steps;i++){const tn=path[i].tn;
-      poly([P(i,-1,0),P(i,1,0),P(i+1,1,0),P(i+1,-1,0)],'spokes',[0,0,1],spin);
+      poly([P(i,-1,0),P(i,1,0),P(i+1,1,0),P(i+1,-1,0)],'lip',[0,0,1],spin);
       poly([P(i,1,0),P(i,1,1),P(i+1,1,1),P(i+1,1,0)],'spokes',[tn[0],tn[1],0],spin);
       poly([P(i,-1,1),P(i,-1,0),P(i+1,-1,0),P(i+1,-1,1)],'spokes',[-tn[0],-tn[1],0],spin);}
   }
@@ -255,6 +257,17 @@ function build(){
   for(const r of RULES)H=applyRule(H,r);
   WHEELS.forEach(w=>well(w,H));
   fascia(ft,H);chin(H);rearCap(rt,H);wing(H);
+  // Recessed swept lamps follow the front fender from its shoulder towards the nose.
+  const lens=(x,t,lift)=>{const p=lerp3(CL.sh(x),CL.belt(x),t);p[1]+=lift;return p;};
+  const lamps=[[2.09,.26,.57],[1.93,.20,.57],[1.73,.30,.60],[1.59,.46,.50]];
+  grid(lamps.map(([x,a,b])=>[lens(x,a,.007),lens(x,b,.007)]),'black','lamp-pocket',()=>[0,1,.4],H);
+  grid(lamps.map(([x,a,b])=>[lens(x,mixf(a,b,.47),.012),lens(x,mixf(a,b,.86),.012)]),'light','running-lamp',()=>[0,1,.4],H);
+  // A body-coloured roof header frames the windscreen and separates it from the roof glass.
+  const header=[.28,.37].map(x=>Array.from({length:5},(_,i)=>{
+    const t=i/4,station=x+.10*t*t,rail=CL.rail(station),crown=CL.yc(station);
+    return[station,crown+(rail[1]-crown)*t*t+.009,rail[2]*t];
+  }));
+  grid(header,'paint','canopy-header',()=>[0,1,0],H);
   // A sculpted intake edge gives the rear quarter depth without a floating black decal.
   sweep([[-.55,.35],[-.64,.42],[-.72,.54],[-.85,.69]],.96,.010,.009,'blade',H);
   // Slim front cooling vanes and satin lower-corner blades.

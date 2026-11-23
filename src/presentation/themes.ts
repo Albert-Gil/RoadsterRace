@@ -52,8 +52,20 @@ export const vehicleMaterials = {
   glass: { color: '#17252f', metallic: .18, roughness: .14, coat: .8 },
   carbon: { color: '#141a20', metallic: .3, roughness: .4 },
   metal: { color: '#aeb4b8', metallic: .86, roughness: .28 },
-  wheels: { metallic: .65, roughness: .32 },
+  wheels: { finishes: [[.84,.01],[.25,.88],[.49,.80],[.32,.20]] },
+  // Vertex tints distinguish adjoining panels within a single material draw.
+  cabinTint: [.76, .91, 1], sideGlassTint: [.46, .61, .70],
+  bladeTint: [1.55, 1.64, 1.7], recessTint: [.32, .36, .40],
+  sillShade: .64, rotorTint: [.16, .19, .20],
 };
+
+/** Occlusion of ambient light by the surrounding static scenery, in world metres. */
+export const venueLight = { reach: 7.5, bias: .7, edgeFade: .035, strength: .57, nightStrength: .35, tint: [1, .91, .76] } as const;
+export const raceSurfaceArt = {
+  wearOpacity: .50, apexWear: .23,
+  curbProfile: [[0,.129, .75],[.22,.225, .98],[.80,.225,1],[1,.112,.58]],
+  snowComb: 10, snowDrift: 15, stoneRelief: 18, asphaltPatch: 20,
+} as const;
 
 export interface PresentationTheme {
   id: 'coastal' | 'graphite';

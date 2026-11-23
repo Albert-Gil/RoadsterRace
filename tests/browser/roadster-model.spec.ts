@@ -28,7 +28,7 @@ test('steel paint, shared geometry and fixed brakes render correctly through a r
     const rangeMoved = (r: any) => Array.from(car.brakePositions.slice(r.from,r.to)).some((v,i)=>Math.abs((v as number)-(rest[r.from+i] as number))>.0001);
     return { steel, painted, wing, artScale:car.root.scaling.x, forwardCoreDraws:car.jets.length, forwardCores:car.jets[0].metadata.boundedCores, forwardTriangles:car.jets[0].getTotalIndices()/3, forwardPosition:car.jets[0].position.asArray(), forwardBounds:car.jets[0].getBoundingInfo().boundingBox.extendSize.asArray(), triangles: car.triangleCount, fixed: root.filter((m: any) => m.name.startsWith('fixed-brakes')).map((m: any) => m.rotation.asArray()), assemblies: car.brakes.metadata.fixedWheelAssemblies, frontSteers: car.brakeRanges.slice(0,2).every(rangeMoved), rearFixed: car.brakeRanges.slice(2).every((r:any)=>!rangeMoved(r)), spinning: car.wheels.map((v: any) => v.mesh.rotation.x) };
   });
-  expect(model.steel).toEqual({ metal: .86, roughness: .28, texture: 'satin-steel-micro-brushing' });
+  expect(model.steel).toEqual({ metal: .86, roughness: .32, texture: 'satin-steel-micro-brushing' });
   expect(model.painted).toEqual({ metal: .5, bump: null });
   expect(model.wing).toEqual({color:'#AEB4B8',metal:.86,roughness:.28});
   expect(model.artScale).toBeCloseTo(1.4812, 6);

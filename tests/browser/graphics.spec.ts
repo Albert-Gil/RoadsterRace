@@ -5,6 +5,21 @@ import { closeSettings, openSettings, waitForPhase } from './ui';
 const graphics = (page: Page) => page.evaluate(() => (window as any).__roadster.getGraphics());
 const ready = (page: Page) => page.waitForFunction(() => (window as any).__roadster?.getGraphics().renderReady, null, { timeout: 120000 });
 
+test('baked venue lighting and unshaded kerb paint draw together without GPU errors', async ({page})=>{
+  const errors:string[]=[];
+  page.on('console',m=>{if(/GL_INVALID_OPERATION|Unable to compile effect/.test(m.text()))errors.push(m.text());});
+  await page.goto('/?circuit=golden-gate&graphics=medium');
+  await page.getByRole('button',{name:'Time Trial',exact:true}).click();
+  await page.getByRole('button',{name:'Draw racing line',exact:true}).click();
+  await ready(page);
+  await page.waitForFunction(()=>{
+    const scene=(window as any).__roadster.getWorld().scene;
+    return scene.getMeshByName('asphalt')?.subMeshes[0].effect?.defines.includes('#define VENUE_SKY_VISIBILITY');
+  });
+  await page.screenshot();
+  expect(errors).toEqual([]);
+});
+
 test('automation starts on Low; the Graphics setting switches tiers live, persists and never changes the race', async ({ page }) => {
   test.setTimeout(600000); // High on software WebGL renders a few frames a minute.
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));

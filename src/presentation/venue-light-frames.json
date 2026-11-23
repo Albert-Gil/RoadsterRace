@@ -1,0 +1,82 @@
+{
+  "coastal-launch": {
+    "left": -115,
+    "bottom": -87,
+    "width": 238,
+    "depth": 183,
+    "floor": -12,
+    "range": 23
+  },
+  "orbital-launchyard": {
+    "left": -130,
+    "bottom": -92,
+    "width": 258,
+    "depth": 199,
+    "floor": -12,
+    "range": 66
+  },
+  "golden-gate": {
+    "left": -130,
+    "bottom": -92,
+    "width": 260,
+    "depth": 186,
+    "floor": -12,
+    "range": 28
+  },
+  "santa-monica": {
+    "left": -108,
+    "bottom": -106,
+    "width": 326,
+    "depth": 222,
+    "floor": -12,
+    "range": 39
+  },
+  "canyon-south-rim": {
+    "left": -204,
+    "bottom": -126,
+    "width": 397,
+    "depth": 290,
+    "floor": -12,
+    "range": 58
+  },
+  "la-nights": {
+    "left": -162,
+    "bottom": -102,
+    "width": 364,
+    "depth": 214,
+    "floor": -12,
+    "range": 104
+  },
+  "snowy-tahoe": {
+    "left": -150,
+    "bottom": -107,
+    "width": 303,
+    "depth": 244,
+    "floor": -12,
+    "range": 124
+  },
+  "capitan-yosemite": {
+    "left": -165,
+    "bottom": -122,
+    "width": 338,
+    "depth": 276,
+    "floor": -12,
+    "range": 86
+  },
+  "san-diego-fleet": {
+    "left": -149,
+    "bottom": -165,
+    "width": 297,
+    "depth": 331,
+    "floor": -12,
+    "range": 81
+  },
+  "lax": {
+    "left": -134,
+    "bottom": -132,
+    "width": 268,
+    "depth": 400,
+    "floor": -12,
+    "range": 37
+  }
+}

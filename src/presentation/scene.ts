@@ -1,4 +1,5 @@
 import { applyCloudShadows } from './cloud-shadows';
+import { installVenueLight } from './venue-light';
 import { LapGhost } from './lap-ghost';
 import type { ReplayFrame } from '../core/lap-replay';
 import { drawingRay, roadHeight,terrainElevation } from '../core/elevation';
@@ -37,7 +38,7 @@ import { gestureSpeeds } from '../core/route';
 import { prepareDrawingSamples } from '../core/drawing-pace';
 import type { CompiledRoute, DrawSample, DrawingTrim, Point, TrackDefinition } from '../core/types';
 import type { PresentationTheme } from './themes';
-import { sceneTuning, sceneryTheme, sceneryLighting, nightAppearance, graphicsTiers, venueSkies, venueSunDirections, colorGrade, type GraphicsLevel } from './themes';
+import { sceneTuning, sceneryTheme, sceneryLighting, nightAppearance, graphicsTiers, venueSkies, venueSunDirections, colorGrade, raceSurfaceArt, type GraphicsLevel } from './themes';
 import { ColorCurves } from '@babylonjs/core/Materials/colorCurves';
 import { FrameGovernor, lowerAutomaticLevel, renderPixelRatio, resolveGraphics, type GraphicsChoice } from './graphics';
 import { applySurfaceFinishes, SurfaceDetailPlugin } from './surface-detail';
@@ -158,17 +159,49 @@ export class GameScene {
       this.openRibbon('jump-landing-asphalt', [{ x: jump.from.x + jump.forward.x * (jump.rampLength + jump.gap), z: jump.from.z + jump.forward.z * (jump.rampLength + jump.gap) }, jump.branch.at(-1)!], jump.width, 0.1).material = this.roadMaterial;
     }
     this.roadMaterial.diffuseTexture = surfaceTexture(this.scene, 'asphalt');
-    const rubber = mat('rubbered-racing-surface', '#161b20'); rubber.disableLighting = true; rubber.emissiveColor = Color3.FromHexString('#161b20'); rubber.diffuseTexture = surfaceTexture(this.scene, 'rubber'); rubber.useAlphaFromDiffuseTexture = true; rubber.alpha = 0.28;
-    this.ribbon('established-tire-wear', track.centerline, track.roadWidth * 0.48, 0.121).material = rubber;
+    const rubber = mat('rubbered-racing-surface', '#161b20'); rubber.disableLighting = true; rubber.emissiveColor = Color3.FromHexString('#161b20'); rubber.diffuseTexture = surfaceTexture(this.scene, 'rubber'); rubber.useAlphaFromDiffuseTexture = true; rubber.alpha = raceSurfaceArt.wearOpacity;
+    // Fade rubber into the straight and carry the broad, feathered wear band
+    // towards each apex. Both edges stay on the authoritative road ribbon.
+    const roadSides = roadEdges(p, track.roadWidth);
+    const wearPaths: Vector3[][] = [[],[]];
+    const deposits:number[]=[];
+    for (let i=0;i<=n;i++) {
+      const prev=p[(i+n-3)%n], mid=p[i], next=p[(i+3)%n];
+      const ax=mid.x-prev.x, az=mid.z-prev.z, bx=next.x-mid.x, bz=next.z-mid.z;
+      const bend=Math.tanh(1.5*Math.atan2(ax*bz-az*bx,ax*bx+az*bz));
+      deposits.push(.20+.76*Math.min(1,Math.abs(bend)*2.8));
+      const a=roadSides[0][i], b=roadSides[1][i];
+      for (const side of [0,1]) {
+        const f=.5 + bend*raceSurfaceArt.apexWear + (side-.5)*(.48+.14*Math.abs(bend));
+        wearPaths[side].push(new Vector3(a.x+(b.x-a.x)*f,.121,a.z+(b.z-a.z)*f));
+      }
+    }
+    const wear = MeshBuilder.CreateRibbon('established-tire-wear',{pathArray:wearPaths,uvs:wearPaths.flatMap((_,side)=>track.distances.map(d=>new Vector2(d/19,side)))},this.scene);
+    wear.setVerticesData(VertexBuffer.ColorKind,wearPaths.flatMap(()=>deposits.flatMap(alpha=>[1,1,1,alpha])));
+    wear.hasVertexAlpha=true;
+    wear.material=rubber;
     const curbInner = roadEdges(p, track.roadWidth + .05), curbOuter = roadEdges(p, track.roadWidth + 1.45);
     for (let i = 0; i < n; i += 3) {
       const a = p[i], b = p[Math.min(i + 3, n)];
       for (const side of [0, 1]) {
         if (i < 35 || i > n - 12 || bridgeAt(a, track) || bridgeAt(b, track)) continue;
         // Follow the shared bounded road edge instead of overlapping straight boxes on bends.
-        const pathArray = [curbInner, curbOuter].map(edges => edges[side].slice(i, Math.min(i + 3, n) + 1).map(v => new Vector3(v.x, .18, v.z)));
+        const inner = curbInner[side].slice(i, Math.min(i + 3, n) + 1);
+        const pathArray = raceSurfaceArt.curbProfile.map(([f,y])=>inner.map((a,k)=>{
+          const b=curbOuter[side][i+k];return new Vector3(a.x+(b.x-a.x)*f,y,a.z+(b.z-a.z)*f);
+        }));
         const curb = MeshBuilder.CreateRibbon('curb', { pathArray, sideOrientation: Mesh.DOUBLESIDE }, this.scene);
-        curb.setVerticesData(VertexBuffer.NormalKind, Array.from({ length: curb.getTotalVertices() }, () => [0, 1, 0]).flat());
+        const colors:number[]=[];
+        for(let j=0;j<curb.getTotalVertices();j++){
+          const row=Math.floor(j/inner.length)%pathArray.length;
+          const shade=raceSurfaceArt.curbProfile[row][2] * (j%inner.length===0?.86:1);
+          colors.push(shade,shade,shade,1);
+        }
+        curb.setVerticesData(VertexBuffer.ColorKind,colors);
+        // Each side's rows are wound oppositely. Orient the bevels towards daylight.
+        const normals=curb.getVerticesData(VertexBuffer.NormalKind)!;
+        for(let j=0;j<normals.length;j+=3)if(normals[j+1]<0){normals[j]*=-1;normals[j+1]*=-1;normals[j+2]*=-1;}
+        curb.setVerticesData(VertexBuffer.NormalKind,normals);
         curb.material = Math.floor(i / 3) % 2 ? white : accent;
       }
     }
@@ -237,6 +270,7 @@ export class GameScene {
       if (url && !track.sections && !track.surface) material.diffuseTexture = new Texture(assetUrl(url), this.scene, false, true, Texture.TRILINEAR_SAMPLINGMODE, undefined, () => { material.diffuseTexture?.dispose(); material.diffuseTexture = null; });
     }
     this.post = new PostEffects(this.scene, this.camera);
+    installVenueLight(this.scene, track.id, this.materials);
     this.applyGraphics();
     // Loaded only for development builds; the inspector and browser budgets read drawCalls.
     if (import.meta.env.DEV) void import('@babylonjs/core/Instrumentation/sceneInstrumentation').then(({ SceneInstrumentation }) => {

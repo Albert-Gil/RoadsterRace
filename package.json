@@ -18,6 +18,7 @@
     "report:size": "node tools/size-report.mjs",
     "docs:rules": "node tools/write-current-rules.mjs",
     "bake:env": "node tools/bake-environments.mjs",
+    "bake:venue-light": "node tools/bake-venue-light.mjs",
     "bake:props": "node tools/bake-props.mjs",
     "build:app": "tsc --noEmit && vite build --mode app",
     "ios:sync": "pnpm build:app && cap sync ios",

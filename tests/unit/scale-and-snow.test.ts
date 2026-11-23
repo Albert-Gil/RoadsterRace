@@ -1,6 +1,7 @@
 import {expect,test} from 'vitest';
 import {createHash} from 'node:crypto';
 import {vehicleShadowGeometry} from '../../src/presentation/vehicle-shadow';
+import {buildRoadsterGeometry} from '../../src/presentation/roadster-geometry.js';
 import {snowyTahoeTrack as snow} from '../../src/core/tracks/snowy-tahoe';
 import {tahoeRoadsidePockets} from '../../src/core/tracks/tahoe-roadside';
 import {tahoeExteriorLife} from '../../src/presentation/tahoe-roadside';
@@ -12,7 +13,9 @@ import {launchsiteRemoteRockets} from '../../src/core/tracks/venue-parcels';
 
 test('car shadow is a closed, bounded silhouette and remains within the 10k combined model budget',()=>{
  const g=vehicleShadowGeometry(),edges=new Map<string,number>();
- expect(g.triangleCount).toBe(92);expect(9904+g.triangleCount).toBeLessThan(10000);
+ const car=buildRoadsterGeometry('race'),count=(parts:typeof car.body)=>Object.values(parts).reduce((sum,p)=>sum+p.p.length/9,0);
+ const bodyAndWheels=count(car.body)+car.wheels.reduce((sum,w)=>sum+2*(count(w.spin)+count(w.fixed)),0);
+ expect(g.triangleCount).toBe(92);expect(bodyAndWheels+g.triangleCount).toBeLessThan(10000);
  for(let i=0;i<g.indices.length;i+=3)for(const[a,b]of[[g.indices[i],g.indices[i+1]],[g.indices[i+1],g.indices[i+2]],[g.indices[i+2],g.indices[i]]]){const key=a<b?`${a}/${b}`:`${b}/${a}`;edges.set(key,(edges.get(key)??0)+1);}
  expect([...edges.values()].every(v=>v===2)).toBe(true);expect([...g.positions,...g.normals!].every(Number.isFinite)).toBe(true);
 });

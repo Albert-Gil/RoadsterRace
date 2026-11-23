@@ -1,6 +1,7 @@
 import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture';
 import { Texture } from '@babylonjs/core/Materials/Textures/texture';
 import type { Scene } from '@babylonjs/core/scene';
+import { raceSurfaceArt as art } from './themes';
 
 /** Periodic value noise: irregular large-scale mottling without visible sine-wave bands. */
 function mineralNoise(u: number, v: number, cells: number) {
@@ -31,9 +32,21 @@ export function surfaceTexture(scene: Scene, kind: 'asphalt' | 'sand' | 'snow' |
     const fineGrain = Math.sin(x * 1.9 + y * 2.1) * Math.sin(y * .9 - x * .7);
     const value = kind === 'sandstone' ? 224 + strata * 12 + broad * 4 + noise * 11 : kind === 'timber' ? (230 + Math.sin(y * 0.4 + Math.sin(x * 0.11) * 2) * 6 + noise * 12) * plank : kind === 'concrete' ? 229 + broad * 4 + noise * 17 : kind === 'gravel' ? 222 + broad * 14 + fineGrain * 6 + noise * 23 : kind === 'rubber' ? 210 : kind === 'water' ? 235 + wave * 1.2 + broad * 1.5 + noise : kind === 'sand' ? 225 + broad * 8 + noise * 13 : 207 + noise * 47;
     const offset = (y * size + x) * 4;
-    const tone=kind==='snow'?240+broad*4+noise*8:value;
+    let tone=value;
+    if(kind==='asphalt') tone=214+broad*art.asphaltPatch+noise*28;
+    if(kind==='gravel') tone+=broad*art.stoneRelief;
+    if(kind==='snow'){
+      // Broad wind-loaded patches survive minification; the finer wind comb
+      // emerges nearer the camera. Both wrap at the tile boundary.
+      const relief=Math.sin(2*Math.PI*(y/size*6+x/size*2)+wave*1.4);
+      tone=232+broad*art.snowDrift+relief*art.snowComb+noise*6;
+    }
     pixels.data[offset] = tone * (kind === 'water' ? 0.9 : 1); pixels.data[offset + 1] = tone * (kind === 'water' ? 0.98 : 1); pixels.data[offset + 2] = tone;
-    pixels.data[offset + 3] = kind === 'rubber' ? Math.max(0, Math.sin(y / size * Math.PI)) ** 3 * (0.35 + 0.65 * Math.sin(y / size * Math.PI * 24 + wave * 0.3) ** 8) * noise * 240 : 255;
+    if(kind==='rubber'){
+      const across=y/size+.023*Math.sin(x/size*Math.PI*2);
+      const deposit=Math.exp(-((across-.28)**2)/.008)+Math.exp(-((across-.72)**2)/.011);
+      pixels.data[offset+3]=Math.min(1,deposit)*(.37+.35*noise+.2*broad)*255;
+    }else pixels.data[offset+3]=255;
   }
   context.putImageData(pixels, 0, 0);
   // Deterministic mineral flecks, pores and timber fasteners provide detail without large downloads.

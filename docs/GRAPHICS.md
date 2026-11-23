@@ -208,6 +208,28 @@ engine starts, every tier reaches a ready scene without errors, and a read-back 
 matches the WebGL 2 frame. Real-device behaviour (Safari / iOS 26 web view on Apple GPUs) and any
 performance benefit are untested; treat it as an experiment and compare tiers on both renderers.
 
+## Circuit lighting and roadster finishes
+
+All ten venues use an original baked map of the surrounding skyline. Buildings
+shade their foundations, conifers shelter nearby snow, and cliffs soften the
+light on lower trails. A single lookup in the existing scenery material compares
+the heights of three surrounding sectors with the visible surface. Roofs and
+elevated decks can therefore catch daylight above shaded ground. The effect
+fades at the map boundary. Night scenes use a lighter mix to preserve lamp pools.
+Cars, racing lines and the start marker have independent materials.
+
+Run `pnpm bake:venue-light` with the local Vite preview running on port 5173
+after changing large buildings or terrain. The baker reads the loaded stationary
+meshes, writes one lossless WebP per venue and records its world bounds.
+Set `ART_URL` for a different local preview. The baker uses Chrome/Playwright
+and ffmpeg. The game loads only the selected circuit's map.
+
+The race roadster and its replay share a 9,892-triangle silhouette with swept
+fender lamps, a roof header and a cranked stainless wing. Wheel faces, tyres,
+calipers and drilled brake rotors use one shared 128-pixel material map.
+The rotor coordinates stay attached to the fixed brake assemblies during steering
+and suspension travel. The separate closed shadow caster costs 92 triangles.
+
 ## Zoom and gestures
 
 `src/app/zoom-guard.ts` prevents Safari pinch (`gesture*`) and double-tap zoom, multi-finger

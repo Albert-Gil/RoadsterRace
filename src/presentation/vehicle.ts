@@ -23,6 +23,7 @@ import type{RenderedSurface}from'./rendered-surface';
 import{Texture}from'@babylonjs/core/Materials/Textures/texture';
 import { RawTexture } from '@babylonjs/core/Materials/Textures/rawTexture';
 import {vehicleShadowGeometry} from './vehicle-shadow';
+import {wheelFinish,wheelUV} from './wheel-finish';
 
 const geometries = new Map<string, ReturnType<typeof buildRoadsterGeometry>>();
 const sharedMeshes = new WeakMap<Scene, Map<string, Mesh>>();
@@ -95,40 +96,58 @@ export class VehicleView {
     let g = geometries.get(detail); if (!g) { g = buildRoadsterGeometry(detail); geometries.set(detail, g); }
     let triangles = 0;
     let meshCache = sharedMeshes.get(scene); if (!meshCache) { meshCache = new Map(); sharedMeshes.set(scene, meshCache); }
-    const meshFor = (name: string, parts: { part: RoadsterPart; color?: number[] }[], parent: TransformNode, side = 1) => {
+    type TintedPart = { part: RoadsterPart; color?: number[]; shadeBody?: boolean; wheelRole?: string; axleUVs?: number[] };
+    const meshFor = (name: string, parts: TintedPart[], parent: TransformNode, side = 1) => {
       const key = `${detail}:${name}:${side}`, source = meshCache!.get(key);
       if (source) { const clone = source.clone(name, parent, true)!; triangles += clone.getTotalIndices() / 3; return clone; }
       const data = new VertexData(), p: number[] = [], n: number[] = [], colors: number[] = [], indices: number[] = [], uvs: number[] = [];
-      for (const { part, color } of parts) for (let i = 0; i < part.p.length; i += 3) {
+      for (const { part, color = [1, 1, 1], shadeBody, wheelRole, axleUVs } of parts) for (let i = 0; i < part.p.length; i += 3) {
         p.push(part.p[i + 2] * side * SCALE, part.p[i + 1] * SCALE, part.p[i] * SCALE);
-        n.push(part.n[i + 2] * side, part.n[i + 1], part.n[i]); colors.push(...(color ?? [1, 1, 1]), 1);
-        uvs.push(part.p[i] * .22, part.p[i + 2] * .5);
+        n.push(part.n[i + 2] * side, part.n[i + 1], part.n[i]);
+        // Cavity shading on the rocker and lower door. Aluminium shoulders and
+        // roof catch the venue sky at full intensity, for every selectable paint.
+        const height = Math.min(1, Math.max(0, (part.p[i+1]-.26)/.56));
+        const shade = shadeBody ? vehicleMaterials.sillShade + (1-vehicleMaterials.sillShade)*height : 1;
+        colors.push(color[0]*shade, color[1]*shade, color[2]*shade, 1);
+        if(axleUVs)uvs.push(axleUVs[i/3*2],axleUVs[i/3*2+1]);
+        else if(wheelRole)uvs.push(...wheelUV(wheelRole,part.p[i],part.p[i+1]));
+        else uvs.push(part.p[i] * .22, part.p[i + 2] * .5);
       }
       // RoadsterLAB is right-handed; swapping X/Z already reverses winding for Babylon's left-handed scene.
       for (let i = 0; i < p.length / 3; i += 3) indices.push(i, i + (side === 1 ? 1 : 2), i + (side === 1 ? 2 : 1));
       data.positions = p; data.normals = n; data.indices = indices; data.colors = colors; data.uvs = uvs;
       const mesh = new Mesh(name, scene); data.applyToMesh(mesh); mesh.parent = parent; mesh.isPickable = false; triangles += indices.length / 3; meshCache!.set(key, mesh); return mesh;
     };
-    const groups = new Map<PBRMaterial, RoadsterPart[]>();
+    const groups = new Map<PBRMaterial, TintedPart[]>();
     for (const [name, part] of Object.entries(g.body)) {
       const mat = name === 'paint' ? this.paint : name.startsWith('glass') ? this.glass : name === 'light' || name === 'plate' ? front : name === 'red' || name === 'amber' ? this.tail : name === 'chrome' || name === 'steel' ? metal : carbon;
-      const parts = groups.get(mat) ?? []; parts.push(part); groups.set(mat, parts);
+      const color = name === 'glassD' ? vehicleMaterials.cabinTint : name === 'glassS' ? vehicleMaterials.sideGlassTint :
+        name === 'blade' ? vehicleMaterials.bladeTint : name === 'well' || name === 'black' ? vehicleMaterials.recessTint : undefined;
+      const parts = groups.get(mat) ?? []; parts.push({part, color, shadeBody:name==='paint'}); groups.set(mat, parts);
     }
-    for (const [mat, parts] of groups) meshFor(mat.name, parts.map(part => ({ part })), this.chassis).material = mat;
-    const wheelMat = pbr('roadster-wheel', '#ffffff', vehicleMaterials.wheels.metallic, vehicleMaterials.wheels.roughness);
-    const brakeParts: { part: RoadsterPart; color: number[] }[] = []; let brakeOffset = 0;
+    for (const [mat, parts] of groups) meshFor(mat.name, parts, this.chassis).material = mat;
+    const wheelMat = pbr('roadster-wheel', '#ffffff', 1, 1);
+    if(!wheelMat.metallicTexture){
+      wheelMat.metallicTexture=wheelFinish(scene);
+      wheelMat.useAmbientOcclusionFromMetallicTextureRed=true;
+      wheelMat.useRoughnessFromMetallicTextureAlpha=false;
+      wheelMat.useRoughnessFromMetallicTextureGreen=true;
+      wheelMat.useMetallnessFromMetallicTextureBlue=true;
+    }
+    const brakeParts: TintedPart[] = []; let brakeOffset = 0;
     g.mounts.forEach((mount, i) => { for (const side of [-1, 1]) {
       const pivot = new TransformNode('wheel-steering-pivot', scene); pivot.parent = this.root; pivot.position.set(mount.z * side * SCALE, mount.y * SCALE, mount.x * SCALE);
-      const parts = Object.entries(g!.wheels[i].spin).map(([name, part]) => ({ part, color: g!.wheelMaterials[name].c }));
+      const parts = Object.entries(g!.wheels[i].spin).map(([name, part]) => ({ part, color: g!.wheelMaterials[name].c, wheelRole:name }));
       const mesh = meshFor(`machined-wheel-${i}`, parts, pivot, side); mesh.material = wheelMat;
       const from = brakeOffset;
       for (const [name, part] of Object.entries(g!.wheels[i].fixed)) {
-        const p: number[] = [], n: number[] = [];
+        const p: number[] = [], n: number[] = [], axleUVs:number[]=[];
         for (let j = 0; j < part.p.length; j += 9) for (const k of side === 1 ? [0, 3, 6] : [0, 6, 3]) {
           p.push(part.p[j+k]+mount.x, part.p[j+k+1]+mount.y, (part.p[j+k+2]+mount.z)*side);
           n.push(part.n[j+k], part.n[j+k+1], part.n[j+k+2]*side);
+          axleUVs.push(...wheelUV(name,part.p[j+k],part.p[j+k+1]));
         }
-        brakeParts.push({ part: { p, n }, color: g!.wheelMaterials[name].c }); brakeOffset += p.length;
+        brakeParts.push({ part: { p, n }, axleUVs, color: name==='disc' ? vehicleMaterials.rotorTint : g!.wheelMaterials[name].c }); brakeOffset += p.length;
       }
       this.brakeRanges.push({ from, to: brakeOffset, x: mount.z*side*SCALE, z: mount.x*SCALE, wheel: this.wheels.length });
       this.wheels.push({ pivot, mesh, front: i === 0, radius: mount.r * SCALE,restY:pivot.position.y });

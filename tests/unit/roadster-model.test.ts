@@ -53,7 +53,10 @@ test('the cosmetic replay uses the complete new body and wheels in one isolated 
   const engine = new NullEngine(), scene = new Scene(engine), ghost = new LapGhost(scene);
   try {
     expect(scene.meshes).toHaveLength(1); expect(ghost.visible).toBe(false);
-    expect(scene.meshes[0].getTotalIndices() / 3).toBe(9904);
+    const model = buildRoadsterGeometry('race');
+    const triangleCount = (parts: typeof model.body) => Object.values(parts).reduce((sum,p) => sum + p.p.length/9, 0);
+    const carTriangles = triangleCount(model.body) + model.wheels.reduce((sum,w) => sum+2*(triangleCount(w.spin)+triangleCount(w.fixed)),0);
+    expect(scene.meshes[0].getTotalIndices() / 3).toBe(carTriangles);
     ghost.update({ t: 0, x: 1, z: 2, y: 8, heading: .2, thrust: true });
     expect(ghost.visible).toBe(true); expect(scene.meshes[0].position.asArray()).toEqual([1, 8, 2]);
     expect(scene.meshes[0].isPickable).toBe(false); expect(scene.meshes[0].receiveShadows).toBe(false);
