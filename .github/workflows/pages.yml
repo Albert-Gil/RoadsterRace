@@ -16,6 +16,24 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Type checking and the unit suite run once, in parallel with the smoke matrix
+  # (previously every matrix job repeated the ~19-minute unit suite and some groups hit
+  # the 30-minute limit). Deployment still requires both.
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.25.0
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -34,8 +52,6 @@ jobs:
         with:
           version: 11.25.0
       - run: pnpm install --frozen-lockfile
-      - run: pnpm typecheck
-      - run: pnpm test
       - run: pnpm build
         env:
           VITE_BASE_PATH: /RoadsterRace/
@@ -58,7 +74,7 @@ jobs:
 
   deploy:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    needs: verify
+    needs: [unit, verify]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

@@ -1,5 +1,5 @@
 import { applyCloudShadows } from './cloud-shadows';
-import { installVenueLight } from './venue-light';
+import { installVenueLight, setVenueLightEnabled } from './venue-light';
 import { LapGhost } from './lap-ghost';
 import type { ReplayFrame } from '../core/lap-replay';
 import { drawingRay, roadHeight,terrainElevation } from '../core/elevation';
@@ -313,6 +313,7 @@ export class GameScene {
     const sky = this.scene.environmentTexture === this.sky ? this.sky : null;
     applySurfaceFinishes(this.scene, this.materials, this.scenery, tier, sky, venue.waterReflection);
     applyCloudShadows(this.scene, this.scenery, tier);
+    setVenueLightEnabled(this.scene, tier.surfaceDetail);
     const ip = this.scene.imageProcessingConfiguration;
     ip.colorCurvesEnabled = true;
     ip.vignetteEnabled = true; ip.vignetteWeight = colorGrade.vignette.weight; ip.vignetteStretch = colorGrade.vignette.stretch; ip.vignetteColor.set(colorGrade.vignette.color[0], colorGrade.vignette.color[1], colorGrade.vignette.color[2], 0);

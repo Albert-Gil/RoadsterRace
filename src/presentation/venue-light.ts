@@ -17,13 +17,16 @@ type Frame = typeof frames[keyof typeof frames];
 // them to the fragment, so a ship's upper deck and the water below can sample
 // the same atlas and still receive different amounts of fill light.
 class VenueLightPlugin extends MaterialPluginBase {
+  private enabled = true;
   constructor(material: StandardMaterial, private map: Texture, private frame: Frame, private strength: number) {
     super(material, 'VenueSkyVisibility', 205, { VENUE_SKY_VISIBILITY: false });
     this._enable(true);
   }
+  /** Tier switch: off on Low, where the extra per-pixel lookup cost about 20 % of frame time in software rendering. */
+  setEnabled(value: boolean) { if (this.enabled === value) return; this.enabled = value; this.markAllDefinesAsDirty(); }
   getClassName() { return 'VenueLightPlugin'; }
   isCompatible(language: ShaderLanguage) { return language === ShaderLanguage.GLSL || language === ShaderLanguage.WGSL; }
-  prepareDefines(defines: MaterialDefines) { defines.VENUE_SKY_VISIBILITY = this.map.isReady(); }
+  prepareDefines(defines: MaterialDefines) { defines.VENUE_SKY_VISIBILITY = this.enabled && this.map.isReady(); }
   getSamplers(samplers: string[]) { samplers.push('venueHorizon'); }
   // External uniforms leave the engine's material buffer layout identical for
   // included surfaces and excluded paint, even while the atlas is loading.
@@ -59,6 +62,10 @@ class VenueLightPlugin extends MaterialPluginBase {
   }
 }
 
+const installed = new WeakMap<Scene, VenueLightPlugin[]>();
+/** Enables the baked venue light for the current graphics tier (Medium and above). */
+export function setVenueLightEnabled(scene:Scene, on:boolean) { for (const plugin of installed.get(scene) ?? []) plugin.setEnabled(on); }
+
 export function installVenueLight(scene:Scene, id:string, materials:Map<string,StandardMaterial>) {
   const frame = frames[id as keyof typeof frames];
   if (!frame) return;
@@ -72,4 +79,5 @@ export function installVenueLight(scene:Scene, id:string, materials:Map<string,S
         ['error','start-glow','checker','curb','accent'].includes(role)) continue;
     plugins.push(new VenueLightPlugin(material,map,frame,id==='la-nights'?art.nightStrength:art.strength));
   }
+  installed.set(scene, plugins);
 }

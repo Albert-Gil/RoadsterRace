@@ -217,6 +217,11 @@ the heights of three surrounding sectors with the visible surface. Roofs and
 elevated decks can therefore catch daylight above shaded ground. The effect
 fades at the map boundary. Night scenes use a lighter mix to preserve lamp pools.
 Cars, racing lines and the start marker have independent materials.
+The baked venue light runs on Medium, High and Ultra only (`setVenueLightEnabled`, switched
+with the tier). On Low its extra per-pixel lookup cost about 20 % of frame time in software
+rendering (Launchsite at 844×390: about 0.75 s → 0.60 s per frame in the 2-core sandbox).
+That pushed CI frames past the 0.5 s render-delay pause, and the Launchsite smoke check
+failed (2026-11-23).
 
 Run `pnpm bake:venue-light` with the local Vite preview running on port 5173
 after changing large buildings or terrain. The baker reads the loaded stationary
