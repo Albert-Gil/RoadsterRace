@@ -129,7 +129,21 @@ async function draw(page, context, points) {
   } finally { await cdp.detach(); }
 }
 async function racing(page) {
-  await page.waitForFunction(() => document.querySelector('main').dataset.phase === 'racing' && document.querySelector('#race-time').textContent !== '00:00.00', undefined, { timeout: 60000 });
+  const deadline = Date.now() + 60000;
+  for (let resumes = 0; ; resumes++) {
+    const state = await page.waitForFunction(() => {
+      const phase = document.querySelector('main').dataset.phase;
+      const time = document.querySelector('#race-time')?.textContent;
+      if (phase === 'paused') return 'paused';
+      return phase === 'racing' && time && time !== '00:00.00' && 'running';
+    }, undefined, { timeout: Math.max(1, deadline - Date.now()) });
+    const value = await state.jsonValue();
+    await state.dispose();
+    if (value === 'running') return;
+    assert.ok(resumes < 2 && Date.now() < deadline, 'Race repeatedly paused before its clock advanced');
+    console.log('Race paused during startup; resuming through the game controls');
+    await page.getByRole('button', { name: 'Resume', exact: true }).click();
+  }
 }
 async function checkHops(page, keys, withThrust = false) {
   for (let attempt = 0; attempt < 3; attempt++) {
