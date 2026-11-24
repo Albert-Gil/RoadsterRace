@@ -65,3 +65,14 @@ export function circuitMapPath(track: TrackDefinition) {
   const scale = Math.min(156 / (maxX - minX), 72 / (maxZ - minZ));
   return track.centerline.filter((_, i) => i % 2 === 0).map((p, i) => `${i ? 'L' : 'M'}${(90 + (p.x - (minX + maxX) / 2) * scale).toFixed(2)},${(46 - (p.z - (minZ + maxZ) / 2) * scale).toFixed(2)}`).join(' ') + ' Z';
 }
+
+/**
+ * Zoomed drawing sectors on phone-sized screens (src/app/drawing-mode.ts). Measured road width
+ * in the iPhone landscape overview (844×390 CSS px): Newport 55 px, Launchsite 46, Golden Gate
+ * 47 (no sectors); Santa Monica 37, LA nights 32, Snowy Tahoe 31, Grand Canyon 30 (2 sectors);
+ * Capitan Yosemite 27, San Diego Fleet 21 (3); LAX 26 px on a 1,313 m lap (4). Unlisted = 1.
+ */
+export const phoneDrawingSectors: Readonly<Record<string, number>> = {
+  'santa-monica': 2, 'la-nights': 2, 'snowy-tahoe': 2, 'canyon-south-rim': 2,
+  'capitan-yosemite': 3, 'san-diego-fleet': 3, lax: 4,
+};

@@ -9,6 +9,7 @@ export const settingsIcon = icon('<circle cx="12" cy="12" r="3"/><path d="M19.4 
 export const chevronIcon = icon('<path d="m9 6 6 6-6 6"/>');
 export const closeIcon = icon('<path d="M6 6l12 12M18 6 6 18"/>');
 export const restartIcon = icon('<path d="M4 10a8 8 0 1 1 1.4 7M4 4v6h6"/>');
+export const undoIcon = icon('<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>');
 export const drawIcon = icon('<path d="M4 20h4L19 9l-4-4L4 16z"/>');
 export const setupIcon = icon('<path d="M4 6h16M4 12h16M4 18h16M8 3v6m8 0v6m-6 0v6"/>');
 export const exitIcon = icon('<path d="M14 4h5v16h-5M10 8l-4 4 4 4M6 12h10"/>');

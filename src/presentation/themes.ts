@@ -538,3 +538,6 @@ export const cloudShadowAppearance={
  base:{scale:1/95,coverage:.52,strength:.18,windX:.9,windZ:.45},
  venues:{coastal:{},spaceport:{coverage:.62,strength:.13},bay:{coverage:.52},sunset:{coverage:.6,strength:.12},canyon:{coverage:.6,strength:.14,scale:1/130},alpine:{coverage:.54,strength:.12},yosemite:{coverage:.54,scale:1/120},naval:{coverage:.55,scale:1/140},airport:{coverage:.57,scale:1/120}},
 };
+
+/** Phone sector drawing (scene.ts / main.ts): camera glide, continue handle and touch radius. */
+export const sectorDrawingAppearance={glideMs:420,anchorMargin:.78,courseMargin:.92,zoomPerSector:{2:1.6,3:2,4:2.3} as Record<number,number>,courseAhead:360,handle:'#ffd34d',handleDiameter:5.6,handleThickness:.8,continueRadiusPx:46,retakeMetres:30} as const;

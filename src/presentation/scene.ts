@@ -48,7 +48,7 @@ import { assetUrl } from './urls';
 import { VehicleView } from './vehicle';
 import { buildScenery, type SceneryRuntime } from './scenery';
 import type { SceneryId } from '../content/circuits';
-import { yosemiteAppearance, fleetCamera, laxAppearance, laxFramingAppearance } from './themes';
+import { yosemiteAppearance, fleetCamera, laxAppearance, laxFramingAppearance, sectorDrawingAppearance } from './themes';
 import { surfaceTexture } from './textures';
 import { createReflectionSky, loadSky } from './environment';
 import { PaceLine } from './pace-line';
@@ -57,8 +57,18 @@ import { RULES } from '../core/simulation';
 import { planningHeight } from './planning-height';
 import { JumpFeedback } from './jump-feedback';
 
+interface CameraFrame{away:Vector3;right:Vector3;up:Vector3;cx:number;cy:number;rx:number;ry:number;tangent:number;aspect:number;distance:number;height:(p:Point)=>number}
+
 export class GameScene {
-  private terrainCameraFits=new Map<string,{position:Vector3;target:Vector3;distance:number}>();
+  private terrainCameraFits=new Map<string,{position:Vector3;target:Vector3;distance:number;frame:CameraFrame}>();
+  /** Overview orientation and safe rectangle from the last fit; sector zoom reuses them. */
+  private cameraFrame?:CameraFrame;
+  /** Phone drawing: the road of the current sector (plus the line's end) that the camera frames. */
+  private drawingFocus:{course:Point[];anchors:Point[];zoom:number}|null=null;
+  private cameraTween?:{fromPos:Vector3;fromTarget:Vector3;toPos:Vector3;toTarget:Vector3;distance:number;start:number;duration:number};
+  private continueHandle?:Mesh;
+  /** True while the drawing camera glides between sectors; drawing input waits. */
+  get cameraMoving(){return !!this.cameraTween;}
   readonly engine: AbstractEngine;
   readonly scene: Scene;
   readonly camera: FreeCamera;
@@ -374,7 +384,7 @@ export class GameScene {
     const aspect = this.engine.getRenderWidth() / this.engine.getRenderHeight();
     const fitTerrain=!!this.track.terrain&&interactive,key=[w,h,left,rightInset,top,bottom,aspect].map(n=>n.toFixed(5)).join('/');
     const cached=fitTerrain?this.terrainCameraFits.get(key):undefined;
-    if(cached){this.applyCameraFit(cached.position,cached.target,cached.distance);return;}
+    if(cached){this.cameraFrame=cached.frame;if(!this.applyDrawingFocus(false))this.applyCameraFit(cached.position,cached.target,cached.distance);return;}
     const elevation = (this.scenery==='airport'?(w<h?laxFramingAppearance.portraitElevation:laxAppearance.cameraElevation):this.scenery==='naval'?(w<h?fleetCamera.portraitElevation:Math.min(w,h)<=500?fleetCamera.phoneElevation:fleetCamera.desktopElevation):Math.max(this.scenery==='yosemite'?yosemiteAppearance.cameraElevation:0,Math.min(w,h)<=500?sceneTuning.camera.compactElevationDegrees:sceneTuning.camera.elevationDegrees)) * Math.PI / 180;
     const tangent = Math.tan(this.camera.fov / 2);
     const paths = [this.track.centerline,...(this.track.jumps??[]).map(j=>j.branch),...(this.track.hopShortcuts??[]).map(j=>j.branch)];
@@ -432,9 +442,52 @@ export class GameScene {
     // Narrow portrait fits may place the camera beyond the old 1000 m far plane.
     // Keep the whole venue visible and retain depth precision at the road surface.
     const position=away.scale(cameraDistance).add(offset);
-    if(fitTerrain){if(this.terrainCameraFits.size>=8)this.terrainCameraFits.delete(this.terrainCameraFits.keys().next().value!);this.terrainCameraFits.set(key,{position:position.clone(),target:offset.clone(),distance:cameraDistance});}
+    this.cameraFrame={away,right,up,cx,cy,rx,ry,tangent,aspect,distance:cameraDistance,height:(p:Point)=>this.track.decks?(deckPlanningHeight(p,this.track)??0):this.track.terrain?terrainElevation(p,this.track):planningHeight(p,this.track)};
+    if(fitTerrain){if(this.terrainCameraFits.size>=8)this.terrainCameraFits.delete(this.terrainCameraFits.keys().next().value!);this.terrainCameraFits.set(key,{position:position.clone(),target:offset.clone(),distance:cameraDistance,frame:this.cameraFrame});}
     // Input/projection can run before the next rendered frame after a mode change.
-    this.applyCameraFit(position,offset,cameraDistance);
+    if(!this.applyDrawingFocus(false))this.applyCameraFit(position,offset,cameraDistance);
+  }
+  /**
+   * Phone sector drawing: the overview's own orientation, `zoom` times closer, positioned to show
+   * as much of the upcoming `course` (ordered points from the end of the line onwards) as fits,
+   * with every `anchor` (the line's end, or the start box) comfortably inside. null returns to
+   * the overview. With `animate` the camera glides there; drawing waits (`cameraMoving`).
+   */
+  setDrawingFocus(focus:{course:Point[];anchors?:Point[];zoom:number}|null,animate=true){
+    this.drawingFocus=focus?{course:focus.course,anchors:focus.anchors??[],zoom:focus.zoom}:null;
+    if(!focus){this.cameraTween=undefined;this.resize();return;}
+    if(!this.applyDrawingFocus(animate))this.resize();
+  }
+  private applyDrawingFocus(animate:boolean){
+    const f=this.cameraFrame,focus=this.drawingFocus;
+    if(!f||!focus||this.layoutMode!=='drawing'||!focus.course.length)return false;
+    const d=f.distance/Math.max(1,focus.zoom),lift=(p:Point)=>new Vector3(p.x,f.height(p),p.z);
+    // Inside the safe rectangle (shrunk by `margin`) of a camera at distance d aimed via centre c.
+    const inside=(p:Vector3,c:Vector3,margin:number)=>{const q=p.subtract(c),depth=Vector3.Dot(q,f.away);return d>=depth+Math.max(Math.abs(Vector3.Dot(q,f.right)+f.cx*f.tangent*f.aspect*depth)/(f.tangent*f.aspect*f.rx*margin),Math.abs(Vector3.Dot(q,f.up)+f.cy*f.tangent*depth)/(f.tangent*f.ry*margin));};
+    const course=focus.course.map(lift),anchors=focus.anchors.map(lift);
+    let best=course[0],run=-1;
+    for(const c0 of course){
+      const c=new Vector3(c0.x,0,c0.z);
+      if(!anchors.every(a=>inside(a,c,sectorDrawingAppearance.anchorMargin)))continue;
+      let n=0;while(n<course.length&&inside(course[n],c,sectorDrawingAppearance.courseMargin))n++;
+      if(n>run){run=n;best=c;}
+    }
+    const center=new Vector3(best.x,0,best.z);
+    const target=f.right.scale(-f.cx*f.tangent*f.aspect*d).add(f.up.scale(-f.cy*f.tangent*d)).add(center),position=f.away.scale(d).add(target);
+    if(animate&&!this.reducedMotion.matches){
+      this.cameraTween={fromPos:this.camera.position.clone(),fromTarget:this.camera.getTarget().clone(),toPos:position,toTarget:target,distance:d,start:performance.now(),duration:sectorDrawingAppearance.glideMs};
+    }else{this.cameraTween=undefined;this.applyCameraFit(position,target,d);}
+    return true;
+  }
+  /** The glowing end of a partial phone drawing: touch it to continue. null hides it. */
+  showContinueHandle(point:Point|null,colour?:string){
+    if(!point){if(this.continueHandle)this.continueHandle.isVisible=false;return;}
+    if(!this.continueHandle){
+      const m=new StandardMaterial('continue-handle',this.scene);m.disableLighting=true;m.alpha=.85;m.backFaceCulling=false;m.metadata={roadsterOverlay:true};
+      const h=MeshBuilder.CreateTorus('continue-handle',{diameter:sectorDrawingAppearance.handleDiameter,thickness:sectorDrawingAppearance.handleThickness,tessellation:32},this.scene);h.material=m;h.isPickable=false;h.metadata={dynamicScenery:true};this.continueHandle=h;
+    }
+    const h=this.continueHandle,m=h.material as StandardMaterial,c=Color3.FromHexString(colour??sectorDrawingAppearance.handle);m.emissiveColor=c;m.diffuseColor=c;
+    h.position.set(point.x,(this.cameraFrame?.height(point)??0)+.35,point.z);h.isVisible=true;
   }
   setLayout(mode: string) { this.layoutMode = mode; const menu=['welcome','setup','results'].includes(mode);this.scene.imageProcessingConfiguration.exposure = this.scenery==='night-city' ? (menu?nightAppearance.menuExposure:nightAppearance.gameExposure) : (menu ? 0.45 : 1.12); this.resize(); }
   setTheme(theme: PresentationTheme) {
@@ -544,6 +597,12 @@ export class GameScene {
       if (next && next !== this.graphicsLevel) { this.setGraphicsLevel(next); this.onGraphicsChange?.(next); }
     }
     SurfaceDetailPlugin.time = reduced ? 0 : time;
+    if(this.cameraTween){
+      const t=this.cameraTween,u=Math.min(1,(performance.now()-t.start)/t.duration),e=u*u*(3-2*u);
+      this.applyCameraFit(Vector3.Lerp(t.fromPos,t.toPos,e),Vector3.Lerp(t.fromTarget,t.toTarget,e),t.distance);
+      if(u>=1)this.cameraTween=undefined;
+    }
+    if(this.continueHandle?.isVisible){const k=reduced?1:1+Math.sin(time*5)*.12;this.continueHandle.scaling.set(k,1,k);}
     this.post.update();
     (this.marker.material as StandardMaterial).alpha = reduced ? 0.32 : 0.29 + Math.sin(time * 3) * 0.05;
     this.sceneryRuntime.update(time, reduced);

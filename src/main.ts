@@ -22,8 +22,10 @@ import { challengesPanel, challengeResults } from './ui/panels/challenges';
 import { FixedStepClock, RULES } from './core/simulation';
 import { CONTACT_RULES } from './core/vehicle-contact';
 import { assetUrl } from './presentation/urls';
-import { circuits, findCircuit } from './content/circuits';
-import { canStartDrawing } from './core/start-finish';
+import { circuits, findCircuit, phoneDrawingSectors } from './content/circuits';
+import { continuationOffset, drawingSectors, drawnProgress, sectorAt, upcomingCourse, type DrawingSector } from './core/drawing-sectors';
+import { phoneSizedTouchScreen } from './app/drawing-mode';
+import { canStartDrawing, drawingStartBounds } from './core/start-finish';
 import type { Ability, CompiledRoute, DrawSample, DrawingTrim } from './core/types';
 import { PointerOwnership } from './input/ownership';
 import { InputRouter } from './input/router';
@@ -48,7 +50,7 @@ import { TUTORIAL_COPY, tutorialCoach, tutorialCompletePanel, tutorialIntroPanel
 import { TUTORIAL_CIRCUIT, TUTORIAL_LAPS, answerPrompt, duePrompt, freshTutorial, type TutorialProgress } from './app/tutorial';
 import { GameAudio } from './presentation/audio';
 import { GameScene } from './presentation/scene';
-import { applyPlayerColors, applyTheme, themes, hopEffects, heroImages, heroArtRevision, interfaceMotion } from './presentation/themes';
+import { applyPlayerColors, applyTheme, themes, hopEffects, heroImages, heroArtRevision, interfaceMotion, sectorDrawingAppearance } from './presentation/themes';
 import { cleanDriverName, escapeHtml, finishFor, loadPreferences, savePreferences } from './presentation/race-settings';
 import { raceSetupMarkup } from './presentation/race-setup';
 import { isGraphicsChoice, isRendererChoice, loadGraphicsPreference, saveGraphicsPreference, type RendererChoice } from './presentation/graphics';
@@ -127,6 +129,10 @@ const bestTimes = new Map<string, number>();
 const bestKey = () => `${activeTrack.id}:${activeTrack.version}:${lapCount}:${RULES.version}:${COMPILER_VERSION}`;
 let drawingTrim: DrawingTrim | undefined;
 let stroke: DrawSample[] = [], drawingPointer: number | null = null;
+/** Phone sector drawing: the lap's sectors, the one on screen, where each lifted stroke began, and the clock shift that joins strokes as one. */
+let sectors: DrawingSector[] = [], sectorIndex = 0, strokeStarts: number[] = [], strokeClockOffset = 0;
+const sectorMode = () => sectors.length > 1;
+const sectorZoom = () => sectorDrawingAppearance.zoomPerSector[sectors.length] ?? 1;
 let drawingDirty = false;
 let countdownRemaining = 0, resuming = false, best: number | null = null, previousPoses: { x: number; z: number; heading: number; y: number }[] = [], noticeUntil = 0, lastFrame = performance.now();
 let pauseReason='';
@@ -326,6 +332,7 @@ function clearRaceInput() { race?.clearCommands(); input.clear(); clock.reset();
 function setPhase(next: Phase) {
   // Coaching is a frozen race: it keeps the racing layout and is marked separately for the coach styles.
   if (arrivesHome(heroIndex === null ? null : phase, next)) showHero();
+  if (next !== 'drawing') world?.showContinueHandle(null);
   phase = next; playground.dataset.phase = phase === 'coaching' ? 'racing' : phase; playground.dataset.coaching = String(phase === 'coaching'); playground.dataset.players = String(humans()); playground.dataset.mode=sessionOptions.mode; playground.dataset.tournament = String(!!activeTour);
   staleBuild.phaseChanged();
   const layout = phaseLayout(phase);
@@ -360,7 +367,7 @@ function panelMarkup(message?: string): string | null {
     case 'tour-replace': return tourReplacePanel();
     case 'tour-resume': return tourDiscardPanel();
     case 'handoff': return handoffPanel({ confirmedCount: confirmedRoutes.length, playerCount, turn, playerName });
-    case 'drawing': case 'preview': return planningPanel({ preview: phase === 'preview', playerCount, turn, playerName, humans, inTour: !!activeTour, tutorial: sessionOptions.mode === 'tutorial', message, note: phase === 'preview' ? planningNote : undefined });
+    case 'drawing': case 'preview': return planningPanel({ preview: phase === 'preview', playerCount, turn, playerName, humans, inTour: !!activeTour, tutorial: sessionOptions.mode === 'tutorial', message, note: phase === 'preview' ? planningNote : undefined, sector: phase === 'drawing' && sectorMode() ? { index: sectorIndex, total: sectors.length, continuing: stroke.length > 0 && drawingPointer === null, canUndo: stroke.length > 0 && drawingPointer === null } : undefined });
     case 'ready': return readyPanel({ playerCount, lapCount, readyPlayers, ghostSeconds: CONTACT_RULES.ghostStartSeconds, playerName });
     case 'paused': return pausedPanel({ soundOn: !audio.muted, status: pauseStatus() });
     case 'results':
@@ -383,6 +390,9 @@ function newSession(count: number) {
 function beginDrawing() {
   practiceTurns.delete(turn);
   clearRaceInput(); race = null; route = null; drawingTrim = undefined; stroke = []; drawingPointer = null;
+  strokeStarts = []; strokeClockOffset = 0; sectorIndex = 0;
+  sectors = phoneSizedTouchScreen() ? drawingSectors(activeTrack, phoneDrawingSectors[activeTrack.id] ?? 1) : [];
+  world.showContinueHandle(null); world.setDrawingFocus(sectorMode() ? { course: upcomingCourse(activeTrack, -12, sectorDrawingAppearance.courseAhead), anchors: drawingStartBounds(activeTrack).corners, zoom: sectorZoom() } : null, false);
   world.setPlanningPlayer(playerCount > 1 ? turn : null); world.showVehicles(-1, playerCount);
   world.vehicles.forEach(vehicle => vehicle.clearEffects());
   planningNote = undefined; world.drawLine(null); world.showError(); world.vehicles[turn].update(startPose()); notice.textContent = ''; setPhase('drawing');
@@ -396,6 +406,7 @@ function usePractice(jumpBranch: boolean | string = false) {
 }
 /** The accepted line, with any crash stretches marked. Nothing here blocks racing it. */
 function showPreview(compiled: CompiledRoute, trim?: DrawingTrim) {
+  world.showContinueHandle(null); world.setDrawingFocus(null, false);
   route = compiled; drawingTrim = trim; world.drawLine(route, drawingTrim);
   const hazards = compiled.hazards ?? [];
   if (hazards.length) {
@@ -553,6 +564,7 @@ app.addEventListener('click', e => {
   if (action === 'home') goHome();
   if (action === 'configure-race') { const count = challengeReturn?.setupCount ?? humans(); goHome(); setupCount = count; setPhase('setup'); }
   if (action === 'redraw') { if (phase === 'results') newSession(playerCount); else beginDrawing(); }
+  if (action === 'undo-sector' && phase === 'drawing') undoSector();
   if (action === 'redraw-all') newSession(playerCount);
   if (action === 'confirm' && phase === 'preview') { if (!audio.muted) audio.unlock(); confirmRoute(); }
   if (action === 'retry') { if (!audio.muted) audio.unlock(); if (humans() > 1) enterReady(); else startRace(); }
@@ -584,16 +596,37 @@ panel.addEventListener('change', event => {
 function appendSample(event: PointerEvent) {
   const point = world.groundPoint(event.clientX, event.clientY, stroke.at(-1)); if (!point) return;
   // Preserve pauses and sub-metre motion; metre-based filtering belongs in the compiler.
-  const sample = { ...point, time: event.timeStamp }, last = stroke.at(-1);
+  const sample = { ...point, time: event.timeStamp + strokeClockOffset }, last = stroke.at(-1);
   if (last && sample.time < last.time) return;
   if (!last || sample.time > last.time || distance(sample, last) > 0.001) { stroke.push(sample); drawingDirty = true; }
 }
 canvas.addEventListener('pointerdown', e => {
   if (phase !== 'drawing' || drawingPointer !== null || (e.pointerType === 'mouse' && e.button !== 0)) return;
+  if (world.cameraMoving) { e.preventDefault(); return; }
+  if (sectorMode() && stroke.length) { if (continueStroke(e)) { e.preventDefault(); drawingPointer = e.pointerId; world.showError(); world.showContinueHandle(null); canvas.setPointerCapture(e.pointerId); appendSample(e); } return; }
   const point = world.groundPoint(e.clientX, e.clientY);
   if (!point || !canStartDrawing(point, activeTrack)) { world.showError(activeTrack.start); renderPanel('Start anywhere across the line or up to 12 metres behind it.'); return; }
-  e.preventDefault(); drawingPointer = e.pointerId; stroke = []; world.showError(); canvas.setPointerCapture(e.pointerId); appendSample(e);
+  e.preventDefault(); drawingPointer = e.pointerId; stroke = []; strokeStarts = [0]; strokeClockOffset = 0; world.showError(); canvas.setPointerCapture(e.pointerId); appendSample(e);
 });
+/**
+ * Phone sectors: a new touch continues the line only at its glowing end, or a little behind it
+ * to retake the last metres (the overlap is trimmed). The clock is shifted so the joined
+ * samples read as one continuous stroke at the line's recent pace: lifting costs no time.
+ */
+function continueStroke(e: PointerEvent) {
+  const art = sectorDrawingAppearance;
+  let best = -1, bestPx = Infinity, travelled = 0;
+  for (let i = stroke.length - 1; i >= 0 && travelled <= art.retakeMetres; i--) {
+    if (i < stroke.length - 1) travelled += distance(stroke[i], stroke[i + 1]);
+    const p = world.project(stroke[i]), px = Math.hypot(p.x - e.clientX, p.y - e.clientY);
+    if (px < bestPx - 0.5) { bestPx = px; best = i; }
+  }
+  if (best < 0 || bestPx > art.continueRadiusPx) { renderPanel('Touch the glowing end of your line to continue.'); return false; }
+  const end = stroke[best], point = world.groundPoint(e.clientX, e.clientY, end) ?? end;
+  strokeClockOffset = continuationOffset(stroke, best, point, e.timeStamp);
+  stroke.length = best + 1; strokeStarts = strokeStarts.filter(i => i <= best); strokeStarts.push(stroke.length);
+  return true;
+}
 canvas.addEventListener('pointermove', e => {
   if (phase !== 'drawing' || drawingPointer !== e.pointerId) return;
   e.preventDefault(); const events = e.getCoalescedEvents?.() ?? []; for (const p of events) appendSample(p); appendSample(e);
@@ -601,10 +634,37 @@ canvas.addEventListener('pointermove', e => {
 canvas.addEventListener('pointerup', e => {
   if (drawingPointer !== e.pointerId || phase !== 'drawing') return;
   appendSample(e); drawingPointer = null; if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
+  const progress = sectorMode() ? drawnProgress(stroke, activeTrack) : Infinity;
+  if (progress < activeTrack.length * SECTOR_LAP_SHARE) { showSector(); return; }
   const result = compileRoute(stroke, activeTrack);
-  if (result.ok) showPreview(result.route, result.drawing); else { world.showError(result.point, result.section); renderPanel(result.message); }
+  if (result.ok) { showPreview(result.route, result.drawing); return; }
+  // Phones: a line that has not yet reached the finish simply continues.
+  if (sectorMode() && progress < activeTrack.length) { showSector(); return; }
+  world.showError(result.point, result.section);
+  if (sectorMode() && stroke.length) showSector(false, result.message); else renderPanel(result.message);
 });
-function cancelStroke() { if (drawingPointer === null) return; drawingPointer = null; drawingDirty = false; stroke = []; world.drawLine(null); if (phase === 'drawing') renderPanel('That drawing was interrupted. Start a fresh lap at the start line.'); }
+/** Below this share of the lap, a lifted phone stroke continues in a sector instead of compiling. */
+const SECTOR_LAP_SHARE = 0.9;
+/** Moves the zoomed camera on to the course ahead of the line's end and lights the continue handle. */
+function showSector(move = true, message?: string) {
+  const end = stroke.at(-1); if (!end) return;
+  const progress = drawnProgress(stroke, activeTrack);
+  sectorIndex = sectorAt(sectors, progress).index;
+  if (move) world.setDrawingFocus({ course: upcomingCourse(activeTrack, progress - 6, sectorDrawingAppearance.courseAhead), anchors: [end], zoom: sectorZoom() }, true);
+  world.showContinueHandle(end);
+  world.drawLine(stroke); renderPanel(message);
+}
+function undoSector() {
+  if (!sectorMode() || drawingPointer !== null || world.cameraMoving) return;
+  if (strokeStarts.length <= 1) { beginDrawing(); return; }
+  stroke.length = strokeStarts.pop()!; world.showError(); showSector();
+}
+function cancelStroke() {
+  if (drawingPointer === null) return; drawingPointer = null; drawingDirty = false;
+  // On phones, an interruption discards only the stroke in progress; earlier sectors stay.
+  if (sectorMode() && strokeStarts.length > 1) { stroke.length = strokeStarts.pop()!; if (phase === 'drawing') { showSector(false); renderPanel('That stroke was interrupted. Touch the glowing end to continue.'); } return; }
+  stroke = []; world.drawLine(null); if (phase === 'drawing') renderPanel('That drawing was interrupted. Start a fresh lap at the start line.');
+}
 canvas.addEventListener('pointercancel', cancelStroke); canvas.addEventListener('lostpointercapture', cancelStroke);
 function interrupt() {
   audio.silence(); pauseRace('app-interruption'); clearRaceInput(); ownership.clear(); updateDiagnostics(); cancelStroke();
