@@ -69,6 +69,8 @@ export class GameScene {
   private cameraTween?:{fromPos:Vector3;fromTarget:Vector3;toPos:Vector3;toTarget:Vector3;distance:number;start:number;duration:number};
   private continueHandle?:Mesh;
   /** True while the drawing camera glides between sectors; drawing input waits. */
+  /** A finger that catches the moving continuation handle owns the camera until release. */
+  holdDrawingView() { this.cameraTween = undefined; }
   get cameraMoving(){return !!this.cameraTween;}
   readonly engine: AbstractEngine;
   readonly scene: Scene;
@@ -455,7 +457,7 @@ export class GameScene {
    * Phone sector drawing: the overview's own orientation, `zoom` times closer, positioned to show
    * as much of the upcoming `course` (ordered points from the end of the line onwards) as fits,
    * with every `anchor` (the line's end, or the start box) comfortably inside. null returns to
-   * the overview. With `animate` the camera glides there; drawing waits (`cameraMoving`).
+   * the overview. A continuation touch can catch and hold an animated glide.
    */
   setDrawingFocus(focus:{course:Point[];anchors?:Point[];zoom:number}|null,animate=true){
     const previousFocus = this.drawingFocus;
@@ -480,7 +482,7 @@ export class GameScene {
     }
     const center=new Vector3(best.x,0,best.z);
     const target=f.right.scale(-f.cx*f.tangent*f.aspect*d).add(f.up.scale(-f.cy*f.tangent*d)).add(center),position=f.away.scale(d).add(target);
-    if(animate&&!this.reducedMotion.matches){
+    if(animate&&!this.reducedMotion.matches && Vector3.DistanceSquared(position, this.camera.position) > .01){
       this.cameraTween={fromPos:this.camera.position.clone(),fromTarget:this.camera.getTarget().clone(),toPos:position,toTarget:target,distance:d,start:performance.now(),duration:sectorDrawingAppearance.glideMs};
     }else{this.cameraTween=undefined;this.applyCameraFit(position,target,d);}
     return true;

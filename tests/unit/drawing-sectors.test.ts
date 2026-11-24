@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { circuits, findCircuit, phoneDrawingSectors } from '../../src/content/circuits';
-import { continuationOffset, drawingSectors, drawnProgress, sectorAt, SECTOR_RULES, upcomingCourse } from '../../src/core/drawing-sectors';
+import { joinSectorTail, sectorSampleDuration, drawingSectors, drawnProgress, sectorAt, SECTOR_RULES, upcomingCourse } from '../../src/core/drawing-sectors';
 import { compileRoute, createPracticeSamples } from '../../src/core/route';
 import { distance } from '../../src/core/geometry';
 import { phoneSizedTouchScreen, PHONE_SHORT_SIDE_MAX } from '../../src/app/drawing-mode';
@@ -46,10 +46,16 @@ describe('phone drawing sectors', () => {
       const cuts = [Math.floor(lap.length / 3), Math.floor(lap.length * 2 / 3)];
       let joined: DrawSample[] = lap.slice(0, cuts[0] + 1);
       for (const [k, cut] of cuts.entries()) {
-        const next = cuts[k + 1] ?? lap.length - 1, from = joined.length - 3, touch = { x: joined[from].x + .3, z: joined[from].z };
-        const lifted = 3000 * (k + 1), offset = continuationOffset(joined, from, touch, lap[cut].time + lifted);
+        const next = cuts[k + 1] ?? lap.length - 1, from = joined.length - 3;
+        const lifted = 3000 * (k + 1);
         joined = joined.slice(0, from + 1);
-        for (const p of lap.slice(cut, next + 1)) joined.push({ ...p, time: p.time + lifted + offset });
+        const incoming = joinSectorTail(joined);
+        let elapsedDistance = 0, previousEvent = lap[cut].time + lifted;
+        for (const p of lap.slice(cut, next + 1)) {
+          const last = joined.at(-1)!, ds = distance(last, p), event = p.time + lifted;
+          joined.push({ ...p, time: last.time + sectorSampleDuration(event - previousEvent, 1, ds, elapsedDistance, incoming) });
+          elapsedDistance += ds; previousEvent = event;
+        }
       }
       expect(joined.every((p, i) => i === 0 || p.time >= joined[i - 1].time)).toBe(true);
       const result = compileRoute(joined, t);
@@ -59,6 +65,17 @@ describe('phone drawing sectors', () => {
       expect(Math.abs(result.route.drawingDuration - whole.route.drawingDuration) / whole.route.drawingDuration, id).toBeLessThan(.05);
       expect(distance(result.route.points[0], whole.route.points[0])).toBeLessThan(1);
     }
+  });
+
+  it('carries a fast line across a held lift and a resting touchdown at LAX zoom', () => {
+    const line = Array.from({length: 25}, (_, x) => ({x, z: 0, time: x * 3}));
+    line.push({...line[24], time: 700});
+    const pace = joinSectorTail(line);
+    expect(pace).toBe(3);
+    expect(line.at(-1)!.time).toBe(72);
+    expect(sectorSampleDuration(450, 2.3, 0, 0, pace)).toBe(0);
+    for (let d = 0; d < 16; d++) expect(sectorSampleDuration(6.9, 2.3, 1, d, pace)).toBeCloseTo(3);
+    expect(sectorSampleDuration(69, 2.3, 1, 8, pace)).toBeCloseTo(30);
   });
 
   it('detects phone-sized touch screens, not iPads, desktops or automation', () => {

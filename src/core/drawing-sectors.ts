@@ -6,9 +6,8 @@ import type { DrawSample, Point, TrackDefinition } from './types';
  * Zoomed drawing sectors for small (phone-sized) screens. A sector is a stretch of the lap's
  * course distance [from, to); the count sets the drawing zoom. The camera follows the line in
  * steps: after each lift it shows as much of the upcoming course as fits, and the player
- * continues from the end of the line. Sectors only change the drawing camera and how
- * strokes are joined: the joined samples are timed exactly like one continuous stroke, so the
- * route compiler, rules and records are unchanged.
+ * continues from the end of the line. The input adapter normalizes zoom and blends recontacts
+ * before passing the joined gesture to the ordinary route compiler.
  */
 export interface DrawingSector { index: number; from: number; to: number }
 
@@ -67,16 +66,18 @@ export function sectorAt(sectors: readonly DrawingSector[], progress: number) {
  * How far around the course a partial drawing has travelled (m, unwrapped, from the start line).
  * Samples may begin up to 12 m behind the line, which counts as slightly negative.
  */
-export function drawnProgress(points: readonly Point[], track: TrackDefinition) {
+export function drawnProgress(points: readonly Point[], track: TrackDefinition, visit?: (index: number, progress: number) => void) {
   if (!points.length) return 0;
-  const step: Point[] = [points[0]];
-  for (const p of points) if (distance(p, step.at(-1)!) >= 1.5) step.push(p);
-  if (step.at(-1) !== points.at(-1)) step.push(points.at(-1)!);
-  let previous = projectCourse(step[0], track);
+  let last = points[0], previous = projectCourse(last, track);
   let unwrapped = previous.progress > track.length / 2 ? previous.progress - track.length : previous.progress;
-  for (let i = 1; i < step.length; i++) {
-    const next = projectCourse(step[i], track, { point: step[i - 1], progress: previous.progress });
-    unwrapped += next.progress - previous.progress; previous = next;
+  for (let i = 1; i < points.length; i++) {
+    const point = points[i];
+    if (i < points.length - 1 && distance(point, last) < 1.5) continue;
+    const next = projectCourse(point, track, { point: last, progress: previous.progress });
+    unwrapped += next.progress - previous.progress;
+    visit?.(i, unwrapped);
+    last = point;
+    previous = next;
   }
   return unwrapped;
 }
@@ -88,17 +89,33 @@ export function upcomingCourse(track: TrackDefinition, from: number, ahead: numb
   return out;
 }
 
-/**
- * Clock shift for a stroke that continues a lifted line at sample `from` (the line is trimmed
- * there first). The first new sample is timed as if the finger had travelled from that point at
- * the line's pace over its last 0.4 s, so the lift and the camera glide cost no time and the
- * joined samples read as one continuous stroke.
- */
-export function continuationOffset(stroke: readonly DrawSample[], from: number, touch: Point, timeStamp: number) {
-  const end = stroke[from];
-  let k = from; while (k > 0 && end.time - stroke[k - 1].time < 400) k--;
-  let length = 0; for (let i = k + 1; i <= from; i++) length += distance(stroke[i - 1], stroke[i]);
-  const span = (end.time - stroke[k].time) / 1000, speed = span > 0.05 ? Math.max(2, length / span) : 15;
-  const gap = Math.min(400, Math.max(16, distance(touch, end) / speed * 1000));
-  return end.time + gap - timeStamp;
+/** Reconstruct the last five metres at the incoming pace, ignoring hesitation to lift. */
+export function joinSectorTail(stroke: DrawSample[], preservedCount = 0) {
+  let pivot = stroke.length - 1, tail = 0;
+  while (pivot > 0 && tail < 5) {
+    tail += distance(stroke[pivot], stroke[pivot - 1]);
+    pivot--;
+  }
+  let start = pivot, approach = 0;
+  while (start > 0 && approach < 12) {
+    approach += distance(stroke[start], stroke[start - 1]);
+    start--;
+  }
+  if (approach < 1) return tail > .1 ? (stroke.at(-1)!.time - stroke[pivot].time) / tail : undefined;
+  const msPerMetre = (stroke[pivot].time - stroke[start].time) / approach;
+  for (let i = Math.max(pivot + 1, preservedCount); i < stroke.length; i++) {
+    const previous = stroke[i - 1], p = stroke[i];
+    stroke[i] = { ...p, time: previous.time + distance(previous, p) * msPerMetre };
+  }
+  return msPerMetre;
+}
+
+/** Match the overview finger speed. Ease from incoming pace into measured movement after recontact. */
+export function sectorSampleDuration(rawMs: number, zoom: number, metres: number, fromJoin: number, incoming?: number) {
+  const measured = rawMs / zoom;
+  if (incoming === undefined || fromJoin >= 6) return measured;
+  if (rawMs === 0 && fromJoin === 0) return metres * incoming;
+  const t = Math.max(0, Math.min(1, (fromJoin + metres / 2 - 1) / 5));
+  const blend = t * t * (3 - 2 * t);
+  return metres * incoming * (1 - blend) + measured * blend;
 }

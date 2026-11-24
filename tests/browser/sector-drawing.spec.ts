@@ -16,20 +16,22 @@ const roadPixels = (page: Page) => page.evaluate(() => {
 });
 
 /** Draws from the end of the current line (or the start box) along the centreline while it stays on screen. */
-async function strokeOnScreen(page: Page, from: number, t0: number) {
+async function strokeOnScreen(page: Page, from: number, t0: number, interval = .03, settle = 0) {
   const plan = await page.evaluate(([from]) => {
     const api = (window as any).__roadster, t = api.getTrack(), raw = api.getRawStroke(), cl = t.centerline, L = t.length;
     const ds = [0]; for (let i = 1; i < cl.length; i++) ds.push(ds[i - 1] + Math.hypot(cl[i].x - cl[i - 1].x, cl[i].z - cl[i - 1].z));
     const at = (s: number) => { s = ((s % L) + L) % L; let i = 0; while (i < ds.length - 2 && ds[i + 1] < s) i++; const u = (s - ds[i]) / ((ds[i + 1] - ds[i]) || 1); return { x: cl[i].x + (cl[i + 1].x - cl[i].x) * u, z: cl[i].z + (cl[i + 1].z - cl[i].z) * u }; };
     const pts = [api.project(raw.length ? raw[raw.length - 1] : at(-4))];
-    for (let s = from + 2; s <= L + 6; s += 2) { const q = api.project(at(s)); if (q.x < 30 || q.y < 20 || q.x > innerWidth - 110 || q.y > innerHeight - 20) break; pts.push(q); }
+    const portrait = innerHeight > innerWidth;
+    const right = innerWidth - (portrait ? 20 : 110), bottom = innerHeight - (portrait ? 110 : 20);
+    for (let s = from + 2; s <= L + 6; s += 2) { const q = api.project(at(s)); if (q.x < 30 || q.y < 20 || q.x > right || q.y > bottom) break; pts.push(q); }
     return { pts, to: from + 2 * (pts.length - 1) };
   }, [from]);
   const cdp = await page.context().newCDPSession(page);
   const touch = (type: string, pt: { x: number; y: number } | null, t: number) => cdp.send('Input.dispatchTouchEvent', { type: type as 'touchStart', touchPoints: pt ? [{ x: pt.x, y: pt.y, id: 1 }] : [], timestamp: t });
   await touch('touchStart', plan.pts[0], t0);
-  for (let i = 1; i < plan.pts.length; i++) await touch('touchMove', plan.pts[i], t0 + i * .03);
-  await touch('touchEnd', null, t0 + plan.pts.length * .03 + .02);
+  for (let i = 1; i < plan.pts.length; i++) await touch('touchMove', plan.pts[i], t0 + settle + i * interval);
+  await touch('touchEnd', null, t0 + plan.pts.length * interval + .02 + 2 * settle);
   await cdp.detach();
   return plan.to;
 }
@@ -57,6 +59,10 @@ test('an iPhone draws Santa Monica in zoomed sectors, lifting and continuing, th
   await openDrawing(page, 'santa-monica', '&sectors=off');
   const overview = await roadPixels(page);
   await openDrawing(page, 'santa-monica');
+  await expect(page.locator('.planning-note')).toContainText('Circuit overview');
+  expect(await roadPixels(page)).toBeCloseTo(overview, 3);
+  await page.getByRole('button', {name:'Start sector 1'}).click();
+  await page.waitForFunction(() => !(window as any).__roadster.getWorld().cameraMoving);
   await expect(page.locator('.planning-note')).toContainText('Sector 1 of 2');
   expect(await roadPixels(page)).toBeGreaterThan(overview * 1.4);
   let done = 0, strokes = 0;
@@ -107,8 +113,89 @@ test('iPad-sized touch screens and desktops keep the single-stroke overview', as
   const context = await browser.newContext(iphone), page = await context.newPage();
   await page.addInitScript(() => Object.defineProperty(navigator, 'webdriver', { get: () => false }));
   await openDrawing(page, 'lax', '');
-  await expect(page.locator('.planning-note')).toContainText('Sector 1 of 4');
+  await expect(page.locator('.planning-note')).toContainText('4 sectors');
   await openDrawing(page, 'coastal-launch', '');
   await expect(page.locator('.planning-note')).toHaveCount(0);
   await context.close();
+});
+
+for (const portrait of [false, true]) test(`LAX ${portrait ? 'portrait' : 'landscape'} preserves earlier sectors on Retry and Previous and carries pace through joins`, async ({ browser }) => {
+  test.setTimeout(360000);
+  const context = await browser.newContext({ ...iphone, viewport: portrait ? {width:390, height:844} : iphone.viewport });
+  try {
+    const page = await context.newPage();
+    await openDrawing(page, 'lax');
+    await page.getByRole('button', { name: 'Start sector 1' }).click();
+    let progress = 0, clock = 1000;
+    const joins: number[] = [];
+    for (let i = 0; i < 18; i++) {
+      await page.waitForFunction(() => !(window as any).__roadster.getWorld().cameraMoving);
+      progress = await strokeOnScreen(page, progress, clock, .009, .18);
+      clock += 100;
+      await page.waitForFunction(() => document.querySelector('main')?.dataset.phase === 'preview' ||
+        (window as any).__roadster.getWorld().scene.getMeshByName('continue-handle')?.isVisible);
+      if (await page.locator('main').getAttribute('data-phase') === 'preview') break;
+      joins.push(progress);
+    }
+    await expect(page.getByRole('button', {name:'Race this line'})).toBeVisible();
+    const result = await page.evaluate((joins) => {
+      const api = (window as any).__roadster;
+      const points = api.getRoute().points as {distance:number; desiredSpeed:number}[];
+      return joins.map(at => points.filter(p => Math.abs(p.distance - at) < 6).map(p => p.desiredSpeed));
+    }, joins.filter(s => s > 20 && s < progress - 20));
+    expect(result.length).toBeGreaterThan(2);
+    await test.info().attach('LAX join speeds in metres per second', {
+      body: JSON.stringify(result.map(speeds => Math.min(...speeds))), contentType: 'application/json',
+    });
+    for (const speeds of result) {
+      expect(speeds.length).toBeGreaterThan(0);
+      expect(Math.min(...speeds)).toBeGreaterThan(27);
+    }
+    const raw = () => page.evaluate(() => (window as any).__roadster.getRawStroke() as {x:number;z:number;time:number}[]);
+    const full = await raw();
+    await page.getByRole('button', {name:'Restart this sector'}).click();
+    await expect(page.locator('.planning-note')).toContainText('Sector 4 of 4');
+    const anchor = await page.evaluate(() => {
+      const api = (window as any).__roadster;
+      return {point: api.project(api.getRawStroke().at(-1)), moving: api.getWorld().cameraMoving};
+    });
+    expect(anchor.moving).toBe(true);
+    const cdp = await context.newCDPSession(page);
+    await cdp.send('Input.dispatchTouchEvent', {type:'touchStart', touchPoints:[{x:anchor.point.x, y:anchor.point.y, id:1}]});
+    expect(await page.evaluate(() => {
+      const world = (window as any).__roadster.getWorld();
+      return !world.cameraMoving && !world.scene.getMeshByName('continue-handle').isVisible;
+    })).toBe(true);
+    await cdp.send('Input.dispatchTouchEvent', {type:'touchCancel', touchPoints:[]});
+    await cdp.detach();
+    const fourth = await raw();
+    expect(fourth.length).toBeLessThan(full.length);
+    expect(fourth).toEqual(full.slice(0, fourth.length));
+    await page.getByRole('button', {name:'Edit previous sector'}).click();
+    await expect(page.locator('.planning-note')).toContainText('Sector 3 of 4');
+    const third = await raw();
+    expect(third.length).toBeLessThan(fourth.length);
+    expect(third.length).toBeGreaterThan(30);
+    expect(third).toEqual(full.slice(0, third.length));
+    progress = await page.evaluate(() => {
+      const api = (window as any).__roadster, track = api.getTrack(), end = api.getRawStroke().at(-1);
+      let best = Infinity, at = 0;
+      track.centerline.forEach((point: {x:number;z:number}, i:number) => {
+        const d = Math.hypot(point.x - end.x, point.z - end.z);
+        if (d < best) { best = d; at = track.distances[i]; }
+      });
+      return at;
+    });
+    for (let i = 0; i < 12; i++) {
+      await page.waitForFunction(() => !(window as any).__roadster.getWorld().cameraMoving);
+      progress = await strokeOnScreen(page, progress, clock, .02);
+      clock += 100;
+      await page.waitForFunction(() => document.querySelector('main')?.dataset.phase === 'preview' ||
+        (window as any).__roadster.getWorld().scene.getMeshByName('continue-handle')?.isVisible);
+      if (await page.locator('main').getAttribute('data-phase') === 'preview') break;
+    }
+    await expect(page.getByRole('button', {name:'Race this line'})).toBeVisible();
+    const revised = await raw();
+    expect(revised.slice(0, third.length)).toEqual(third);
+  } finally { await context.close(); }
 });
