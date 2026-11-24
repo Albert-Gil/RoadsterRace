@@ -5,6 +5,32 @@ import { closeSettings, openSettings, waitForPhase } from './ui';
 const graphics = (page: Page) => page.evaluate(() => (window as any).__roadster.getGraphics());
 const ready = (page: Page) => page.waitForFunction(() => (window as any).__roadster?.getGraphics().renderReady, null, { timeout: 120000 });
 
+test('Home idles the circuit and Low defers venue lighting until a higher tier needs it', async ({ page }) => {
+  const maps: string[] = [];
+  page.on('request', r => { if (r.url().includes('/assets/venue-light/')) maps.push(r.url()); });
+  await page.goto('/?circuit=orbital-launchyard&graphics=low');
+  const frame = () => page.evaluate(() => (window as any).__roadster.getWorld().scene.getFrameId());
+  await page.waitForFunction(() => (window as any).__roadster?.getWorld().scene.getFrameId() > 0);
+  const home = await frame();
+  await page.waitForTimeout(350);
+  expect(await frame()).toBe(home);
+  await page.getByRole('button', { name: 'Time Trial', exact: true }).click();
+  await expect.poll(frame).toBeGreaterThan(home);
+  await ready(page);
+  expect(maps).toEqual([]);
+  await openSettings(page);
+  const quality = page.getByRole('group', { name: 'Graphics quality' });
+  for (const tier of ['Medium','Low','Medium']) {
+    await quality.getByRole('button', { name: tier, exact: true }).click();
+    await page.waitForFunction(on => {
+      const defines = (window as any).__roadster.getWorld().scene.getMeshByName('asphalt').subMeshes[0].effect?.defines;
+      return !!defines && defines.includes('#define VENUE_SKY_VISIBILITY') === on;
+    }, tier === 'Medium');
+  }
+  expect(maps).toHaveLength(1);
+  expect(maps[0]).toMatch(/orbital-launchyard\.webp$/);
+});
+
 test('baked venue lighting and unshaded kerb paint draw together without GPU errors', async ({page})=>{
   const errors:string[]=[];
   page.on('console',m=>{if(/GL_INVALID_OPERATION|Unable to compile effect/.test(m.text()))errors.push(m.text());});

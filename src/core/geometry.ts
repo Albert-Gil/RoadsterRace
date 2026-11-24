@@ -24,14 +24,16 @@ export function samplePolyline(points: Point[], distances: number[], s: number):
 }
 
 export function projectToPolyline(point: Point, points: Point[], distances: number[]) {
-  let best = { distance: Infinity, progress: 0, point: points[0] };
+  let bestGap = Infinity, bestIndex = 0, bestT = 0;
   for (let i = 0; i < points.length - 1; i++) {
     const a = points[i], b = points[i + 1], dx = b.x - a.x, dz = b.z - a.z;
     const t = clamp(((point.x - a.x) * dx + (point.z - a.z) * dz) / (dx * dx + dz * dz || 1), 0, 1);
-    const candidate = mix(a, b, t), gap = distance(point, candidate);
-    if (gap < best.distance) best = { distance: gap, progress: lerp(distances[i], distances[i + 1], t), point: candidate };
+    const gap = Math.hypot(point.x - lerp(a.x, b.x, t), point.z - lerp(a.z, b.z, t));
+    if (gap < bestGap) { bestGap = gap; bestIndex = i; bestT = t; }
   }
-  return best;
+  if (bestGap === Infinity) return { distance: Infinity, progress: 0, point: points[0] };
+  return { distance: bestGap, progress: lerp(distances[bestIndex], distances[bestIndex + 1], bestT),
+    point: mix(points[bestIndex], points[bestIndex + 1], bestT) };
 }
 
 export function closedSpline(controls: Point[], subdivisions = 18): Point[] {

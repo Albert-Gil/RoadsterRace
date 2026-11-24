@@ -223,6 +223,15 @@ rendering (Launchsite at 844×390: about 0.75 s → 0.60 s per frame in the 2-co
 That pushed CI frames past the 0.5 s render-delay pause, and the Launchsite smoke check
 failed (2026-11-23).
 
+A fresh Low session also skips the venue-light download. The first switch to
+Medium or higher loads one map for the current venue. Later tier changes reuse
+that map, and switching to Low disables the shader lookup immediately.
+
+Home and the saved-tour resume menu cover the canvas with opaque artwork. One
+initial 3D frame starts deferred scenery loading. These menus then skip scene
+rendering, shadow copies and scenery animation until the circuit is visible again.
+Time spent on Home is excluded from automatic graphics-tier decisions.
+
 Run `pnpm bake:venue-light` with the local Vite preview running on port 5173
 after changing large buildings or terrain. The baker reads the loaded stationary
 meshes, writes one lossless WebP per venue and records its world bounds.

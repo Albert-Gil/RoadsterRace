@@ -5,15 +5,39 @@ import { locateRoad } from './elevation';
 
 export const DRAWING_RULES = Object.freeze({ minimumLapProgress: 0.72, minimumPhysicalLap: 0.45, backwardTolerance: 0.08, backwardShare: 0.25, localLoopRoadWidths: 2.5, longestPause: 0.4, coverageBins: 40, coverageRoadWidths: 0.75, longestStepRoadWidths: 2 });
 
+interface CourseBlock { first: number; end: number; minX: number; maxX: number; minZ: number; maxZ: number }
+const courseBlocks = new WeakMap<Point[], CourseBlock[]>();
+function blocksFor(points: Point[]) {
+  let blocks = courseBlocks.get(points);
+  if (blocks) return blocks;
+  blocks = [];
+  for (let first = 0; first < points.length - 1; first += 16) {
+    const end = Math.min(first + 16, points.length - 1);
+    const block = { first, end, minX: Infinity, maxX: -Infinity, minZ: Infinity, maxZ: -Infinity };
+    for (let i = first; i <= end; i++) {
+      const p = points[i];
+      block.minX = Math.min(block.minX, p.x); block.maxX = Math.max(block.maxX, p.x);
+      block.minZ = Math.min(block.minZ, p.z); block.maxZ = Math.max(block.maxZ, p.z);
+    }
+    blocks.push(block);
+  }
+  courseBlocks.set(points, blocks);
+  return blocks;
+}
+function blockDistance(p: Point, b: CourseBlock) {
+  return Math.max(0, b.minX - p.x, p.x - b.maxX, b.minZ - p.z, p.z - b.maxZ);
+}
+
 /** Keep course association continuous when a wide line passes near another part of a hairpin. */
 export function projectCourse(point: Point, track: TrackDefinition, previous?: { point: Point; progress: number }, expectedProgress?: number) {
   if(track.sections){const r=locateRoad(point,track,previous?.progress,previous?Math.max(12,distance(point,previous.point)*1.75+2):12);return {distance:r.distance,progress:r.progress,score:r.score};}
   let best = { distance: Infinity, progress: 0, score: Infinity };
   const movement = previous ? distance(point, previous.point) : 0;
-  for (let i = 0; i < track.centerline.length - 1; i++) {
+  let winningSegment = Infinity;
+  function considerSegment(i: number) {
     const a = track.centerline[i], b = track.centerline[i + 1], dx = b.x - a.x, dz = b.z - a.z;
     const t = clamp(((point.x - a.x) * dx + (point.z - a.z) * dz) / (dx * dx + dz * dz || 1), 0, 1);
-    const gap = distance(point, mix(a, b, t));
+    const gap = Math.hypot(point.x - lerp(a.x, b.x, t), point.z - lerp(a.z, b.z, t));
     const baseProgress = lerp(track.distances[i], track.distances[i + 1], t);
     const nearestLap = previous ? Math.round((previous.progress - baseProgress) / track.length) : 0;
     for (let shift = 0, variants = previous ? 2 : 1; shift < variants; shift++) {
@@ -22,8 +46,23 @@ export function projectCourse(point: Point, track: TrackDefinition, previous?: {
       const forwardJump = previous ? Math.max(0, delta - movement * 1.75 - 2) : 0;
       const backwardJump = previous ? Math.max(0, -delta - Math.max(3, movement * 0.4)) : 0;
       const score = gap + forwardJump * 0.65 + backwardJump * 20 + (expectedProgress === undefined ? 0 : Math.abs(progress - expectedProgress) * 0.8);
-      if (score < best.score) best = { distance: gap, progress, score };
+      if (score < best.score || (score === best.score && i < winningSegment)) {
+        best = { distance: gap, progress, score }; winningSegment = i;
+      }
     }
+  }
+  // All progression penalties are nonnegative. Once a nearby block supplies a score,
+  // any block farther away than that score cannot win, even on another lap or a hairpin.
+  const blocks = blocksFor(track.centerline);
+  let nearest: CourseBlock | undefined, lowerBound = Infinity;
+  for (const block of blocks) {
+    const d = blockDistance(point, block);
+    if (d < lowerBound) { nearest = block; lowerBound = d; }
+  }
+  if (nearest) for (let i = nearest.first; i < nearest.end; i++) considerSegment(i);
+  for (const block of blocks) {
+    if (block === nearest || blockDistance(point, block) > best.score + 1e-8) continue;
+    for (let i = block.first; i < block.end; i++) considerSegment(i);
   }
   const branch = branchProjection(point, track);
   // Near a fork, a normal inside line belongs to the safe road, not the manual branch.

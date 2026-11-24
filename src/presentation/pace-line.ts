@@ -11,19 +11,26 @@ import { planningHeight } from './planning-height';
 import type { TrackDefinition } from '../core/types';
 import { PACE_RANGE } from '../core/route';
 
-export function paceColor(speed: number, theme: PresentationTheme) {
-  const t = Math.max(0, Math.min(1, (speed - PACE_RANGE.min) / (PACE_RANGE.max - PACE_RANGE.min)));
-  return Color3.Lerp(Color3.FromHexString(t < 0.5 ? theme.pace.slow : theme.pace.medium), Color3.FromHexString(t < 0.5 ? theme.pace.medium : theme.pace.fast), t < 0.5 ? t * 2 : t * 2 - 1);
+export function pacePalette(theme: PresentationTheme) {
+  return [theme.pace.slow, theme.pace.medium, theme.pace.fast].map(c => Color3.FromHexString(c));
+}
+export function paceColorToRef(speed: number, palette: Color3[], out: Color3) {
+  const t = Math.max(0, Math.min(1, (speed - PACE_RANGE.min) / (PACE_RANGE.max - PACE_RANGE.min))) * 2;
+  const band = t < 1 ? 0 : 1;
+  Color3.LerpToRef(palette[band], palette[band + 1], t - band, out);
+  return out;
 }
 export class PaceLine {
   readonly meshes: GreasedLineMesh[];
   constructor(private scene: Scene, points: Point[], speeds: number[], private theme: PresentationTheme, player = 0, private racing = false, error = false, ignored = false, track?: TrackDefinition) {
+    const heights = points.map(p => (track ? planningHeight(p, track) : 0) + 0.32 + player * 0.012);
+    const palette = pacePalette(theme);
     this.meshes = [true, false].map(outline => {
-      const mesh = CreateGreasedLine('pace-route', { points: points.flatMap(p => [p.x, (track ? planningHeight(p, track) : 0) + 0.32 + player * 0.012 + (outline ? 0 : 0.005), p.z]) }, {
+      const mesh = CreateGreasedLine('pace-route', { points: points.flatMap((p,i) => [p.x, heights[i] + (outline ? 0 : 0.005), p.z]) }, {
         materialType: GreasedLineMeshMaterialType.MATERIAL_TYPE_STANDARD,
         sizeAttenuation: true, width: outline ? theme.pace.outlineWidth : theme.pace.width,
         color: outline ? Color3.FromHexString('#111820') : ignored ? Color3.FromHexString('#aebdc5') : error ? Color3.FromHexString('#ff6ce1') : undefined,
-        colors: outline || error || ignored ? undefined : speeds.map(speed => paceColor(speed, theme)), useColors: !outline && !error && !ignored,
+        colors: outline || error || ignored ? undefined : speeds.map(speed => paceColorToRef(speed, palette, new Color3())), useColors: !outline && !error && !ignored,
         useDash: ignored || racing && player > 0, dashCount: ignored ? 22 : player === 1 ? 28 : player === 2 ? 54 : 85, dashRatio: ignored ? 0.45 : player === 3 ? 0.7 : 0.25,
       }, scene) as GreasedLineMesh;
       // The simple shader can be ready/active yet draw no pixels on desktop ANGLE. The standard
@@ -51,5 +58,12 @@ export class PaceLine {
     const engine = this.scene.getEngine(), scale = engine.getRenderWidth() / engine.getRenderingCanvas()!.clientWidth;
     return this.meshes.map(mesh => mesh.greasedLineMaterial!.width / (scale * 2));
   }
-  dispose() { this.meshes.forEach(mesh => mesh.dispose(false, true)); }
+  dispose() {
+    const excluded = this.scene.prePassRenderer?.excludedMaterials;
+    for (const mesh of this.meshes) {
+      const index = excluded && mesh.material ? excluded.indexOf(mesh.material) : -1;
+      if (index >= 0) excluded!.splice(index, 1);
+      mesh.dispose(false, true);
+    }
+  }
 }

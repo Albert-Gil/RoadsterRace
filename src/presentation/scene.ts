@@ -52,6 +52,7 @@ import { yosemiteAppearance, fleetCamera, laxAppearance, laxFramingAppearance, s
 import { surfaceTexture } from './textures';
 import { createReflectionSky, loadSky } from './environment';
 import { PaceLine } from './pace-line';
+import { LivePaceLine } from './live-pace-line';
 import { jumpCoordinates, flightGravity, FLIGHT_RULES } from '../core/support';
 import { RULES } from '../core/simulation';
 import { planningHeight } from './planning-height';
@@ -60,7 +61,7 @@ import { JumpFeedback } from './jump-feedback';
 interface CameraFrame{away:Vector3;right:Vector3;up:Vector3;cx:number;cy:number;rx:number;ry:number;tangent:number;aspect:number;distance:number;height:(p:Point)=>number}
 
 export class GameScene {
-  private terrainCameraFits=new Map<string,{position:Vector3;target:Vector3;distance:number;frame:CameraFrame}>();
+  private overviewFits = new Map<string, {position:Vector3;target:Vector3;distance:number;frame:CameraFrame}>();
   /** Overview orientation and safe rectangle from the last fit; sector zoom reuses them. */
   private cameraFrame?:CameraFrame;
   /** Phone drawing: the road of the current sector (plus the line's end) that the camera frames. */
@@ -104,6 +105,7 @@ export class GameScene {
   private post: PostEffects;
   private governor = new FrameGovernor();
   private lastFrame = 0;
+  private renderedOnce = false;
   private stepDownPending = false;
   /** The tier currently rendered; `graphicsChoice` is the player's setting (auto or fixed). */
   graphicsLevel: GraphicsLevel = 'medium';
@@ -364,7 +366,6 @@ export class GameScene {
     this.camera.minZ=Math.max(1,distance/100);this.camera.maxZ=Math.max(1000,distance+600);
     this.camera.position.copyFrom(position);this.camera.setTarget(target);
     this.scene.updateTransformMatrix(true);this.post?.resize();
-    this.lines.forEach(line=>line.resize());this.ignoredLines.forEach(line=>line.resize());this.errorLine?.resize();
   }
   resize() {
     const box = this.canvas.getBoundingClientRect(), ratio = renderPixelRatio(this.graphicsLevel, box.width, box.height, window.devicePixelRatio || 1);
@@ -383,7 +384,7 @@ export class GameScene {
     this.camera.viewport = new Viewport(0, 0, 1, 1);
     const aspect = this.engine.getRenderWidth() / this.engine.getRenderHeight();
     const fitTerrain=!!this.track.terrain&&interactive,key=[w,h,left,rightInset,top,bottom,aspect].map(n=>n.toFixed(5)).join('/');
-    const cached=fitTerrain?this.terrainCameraFits.get(key):undefined;
+    const cached = interactive ? this.overviewFits.get(key) : undefined;
     if(cached){this.cameraFrame=cached.frame;if(!this.applyDrawingFocus(false))this.applyCameraFit(cached.position,cached.target,cached.distance);return;}
     const elevation = (this.scenery==='airport'?(w<h?laxFramingAppearance.portraitElevation:laxAppearance.cameraElevation):this.scenery==='naval'?(w<h?fleetCamera.portraitElevation:Math.min(w,h)<=500?fleetCamera.phoneElevation:fleetCamera.desktopElevation):Math.max(this.scenery==='yosemite'?yosemiteAppearance.cameraElevation:0,Math.min(w,h)<=500?sceneTuning.camera.compactElevationDegrees:sceneTuning.camera.elevationDegrees)) * Math.PI / 180;
     const tangent = Math.tan(this.camera.fov / 2);
@@ -443,7 +444,10 @@ export class GameScene {
     // Keep the whole venue visible and retain depth precision at the road surface.
     const position=away.scale(cameraDistance).add(offset);
     this.cameraFrame={away,right,up,cx,cy,rx,ry,tangent,aspect,distance:cameraDistance,height:(p:Point)=>this.track.decks?(deckPlanningHeight(p,this.track)??0):this.track.terrain?terrainElevation(p,this.track):planningHeight(p,this.track)};
-    if(fitTerrain){if(this.terrainCameraFits.size>=8)this.terrainCameraFits.delete(this.terrainCameraFits.keys().next().value!);this.terrainCameraFits.set(key,{position:position.clone(),target:offset.clone(),distance:cameraDistance,frame:this.cameraFrame});}
+    if (interactive) {
+      if (this.overviewFits.size >= 8) this.overviewFits.delete(this.overviewFits.keys().next().value!);
+      this.overviewFits.set(key, { position, target: offset, distance: cameraDistance, frame: this.cameraFrame });
+    }
     // Input/projection can run before the next rendered frame after a mode change.
     if(!this.applyDrawingFocus(false))this.applyCameraFit(position,offset,cameraDistance);
   }
@@ -454,8 +458,10 @@ export class GameScene {
    * the overview. With `animate` the camera glides there; drawing waits (`cameraMoving`).
    */
   setDrawingFocus(focus:{course:Point[];anchors?:Point[];zoom:number}|null,animate=true){
+    const previousFocus = this.drawingFocus;
     this.drawingFocus=focus?{course:focus.course,anchors:focus.anchors??[],zoom:focus.zoom}:null;
-    if(!focus){this.cameraTween=undefined;this.resize();return;}
+    if (this.layoutMode !== 'drawing') return; // The upcoming drawing layout will fit the new viewport.
+    if(!focus){this.cameraTween=undefined;if(previousFocus)this.resize();return;}
     if(!this.applyDrawingFocus(animate))this.resize();
   }
   private applyDrawingFocus(animate:boolean){
@@ -489,7 +495,13 @@ export class GameScene {
     const h=this.continueHandle,m=h.material as StandardMaterial,c=Color3.FromHexString(colour??sectorDrawingAppearance.handle);m.emissiveColor=c;m.diffuseColor=c;
     h.position.set(point.x,(this.cameraFrame?.height(point)??0)+.35,point.z);h.isVisible=true;
   }
-  setLayout(mode: string) { this.layoutMode = mode; const menu=['welcome','setup','results'].includes(mode);this.scene.imageProcessingConfiguration.exposure = this.scenery==='night-city' ? (menu?nightAppearance.menuExposure:nightAppearance.gameExposure) : (menu ? 0.45 : 1.12); this.resize(); }
+  setLayout(mode: string) {
+    if (mode !== 'drawing') { this.drawingFocus = null; this.cameraTween = undefined; }
+    this.layoutMode = mode;
+    const menu=['welcome','setup','results'].includes(mode);
+    this.scene.imageProcessingConfiguration.exposure = this.scenery==='night-city' ? (menu?nightAppearance.menuExposure:nightAppearance.gameExposure) : (menu ? 0.45 : 1.12);
+    this.resize();
+  }
   setTheme(theme: PresentationTheme) {
     theme = sceneryTheme(theme, this.scenery);
     this.theme = theme;
@@ -561,22 +573,41 @@ export class GameScene {
     const v = Vector3.Project(new Vector3(point.x, point.y ?? planningHeight(point, this.track) + 0.15, point.z), Matrix.Identity(), this.scene.getTransformMatrix(), viewport);
     return { x: rect.left + v.x / this.engine.getRenderWidth() * rect.width, y: rect.top + v.y / this.engine.getRenderHeight() * rect.height };
   }
+  private updateLiveLine(lines: PaceLine[], index: number, points: Point[], speeds: number[], ignored: boolean) {
+    let current = lines[index];
+    if (!(current instanceof LivePaceLine) || current.capacity < points.length || current.appearance !== this.theme) {
+      current?.dispose();
+      const capacity = Math.max(64, 2 ** Math.ceil(Math.log2(points.length)));
+      current = lines[index] = new LivePaceLine(this.scene, capacity, this.theme, ignored);
+    }
+    (current as LivePaceLine).update(points, speeds, this.track);
+  }
   drawLine(samples: DrawSample[] | CompiledRoute | null, drawing?: DrawingTrim) {
+    if (Array.isArray(samples)) {
+      const start = drawingStart(samples, this.track);
+      let mutedCount = 0;
+      const muted = (points: Point[]) => {
+        if (points.length > 1) this.updateLiveLine(this.ignoredLines, mutedCount++, points, [], true);
+      };
+      let counted: DrawSample[] = [];
+      if (start) {
+        const trimmed = trimDrawing(samples, this.track);
+        muted(start.leadIn);
+        if (trimmed.ok) muted(trimmed.tail);
+        counted = prepareDrawingSamples(trimmed.ok ? trimmed.samples : [start.sample, ...samples.slice(start.next)]);
+      } else muted(samples);
+      this.ignoredLines.splice(mutedCount).forEach(line => line.dispose());
+      if (counted.length > 1) this.updateLiveLine(this.lines, 0, counted, gestureSpeeds(counted, this.track.length), false);
+      this.lines.splice(counted.length > 1 ? 1 : 0).forEach(line => line.dispose());
+      return;
+    }
     this.lines.forEach(line => line.dispose()); this.lines = [];
     this.ignoredLines.forEach(line => line.dispose()); this.ignoredLines = [];
     if (!samples) return;
-    let points = Array.isArray(samples) ? samples : samples.points;
-    let speeds: number[];
+    const points = samples.points;
     const muted = (stroke: DrawSample[]) => { if (stroke.length > 1) this.ignoredLines.push(new PaceLine(this.scene, stroke, stroke.map(() => 9), this.theme, 0, false, false, true, this.track)); };
-    if (Array.isArray(samples)) {
-      const start = drawingStart(samples, this.track);
-      if (!start) { muted(samples); return; }
-      const trimmed = trimDrawing(samples, this.track);
-      muted(start.leadIn); if (trimmed.ok) muted(trimmed.tail);
-      const counted = prepareDrawingSamples(trimmed.ok ? trimmed.samples : [start.sample, ...samples.slice(start.next)]);
-      points = counted; speeds = gestureSpeeds(counted, this.track.length);
-    } else { speeds = samples.points.map(p => p.desiredSpeed); if (drawing) { muted(drawing.leadIn); muted(drawing.tail); } }
-    if (points.length > 1) this.lines.push(new PaceLine(this.scene, points, speeds, this.theme, 0, false, false, false, this.track));
+    if (drawing) { muted(drawing.leadIn); muted(drawing.tail); }
+    if (points.length > 1) this.lines.push(new PaceLine(this.scene, points, points.map(p => p.desiredSpeed), this.theme, 0, false, false, false, this.track));
   }
   drawRaceLines(routes: CompiledRoute[]) {
     this.drawLine(null);
@@ -587,7 +618,10 @@ export class GameScene {
   showError(point?: Point, section?: Point[]) { this.errorLine?.dispose(); this.errorLine = undefined; this.errorMarker.isVisible = !!point; if (point) this.errorMarker.position.set(point.x, (this.track.decks?planningHeight(point,this.track):0)+0.3, point.z); if (section) this.errorLine = new PaceLine(this.scene, section, section.map(() => 9), this.theme, 0, false, true, false, this.track); }
   showStart(show: boolean) { this.marker.isVisible = show; this.approach.isVisible = show; }
   get depthFeatures() { return { refinements: this.sceneryRuntime.refinements ?? [], hopCores: this.scene.meshes.filter(m=>m.name === 'four-downward-cold-gas-cores' && m.isEnabled() && m.isVisible).length, vehicleScale: sceneTuning.vehicle.racingScale, ghostVisible:this.lapGhost.visible, graphicsLevel: this.graphicsLevel, graphicsChoice: this.graphicsChoice, renderer: this.engine.isWebGPU ? 'webgpu' : 'webgl2', postPasses: this.post.passes, sky: this.scene.environmentTexture?.name ?? null, decorativeMotion: this.scene.meshes.filter(m => m.metadata?.dynamicScenery).map(m => ({name: m.name, rotation: m.rotation.asArray(), position: m.position.asArray()})), perspective: this.camera.mode === Camera.PERSPECTIVE_CAMERA, shadowMapSize: this.shadows.getShadowMap()?.getSize().width ?? 0, shadowCasters: [...this.shadowCasters].filter(m => !m.isDisposed()).length, staticShadows: { enabled: this.shadowCache?.enabled ?? false, ...this.shadowCache?.stats, perFrameCasters: this.shadows.getShadowMap()?.renderList?.length ?? 0 }, renderReady: this.scene.isReady(), worldReady: this.scene.isReady(), pending: this.scene.meshes.filter(m => !m.isReady(true)).map(m => m.name), carTriangles: this.vehicle.triangleCount, pace: this.theme.pace, lineWidths: this.lines.map(line => line.cssWidths), ignoredStrokeCount: this.ignoredLines.length }; }
-  render(time: number) {
+  render(time: number, covered = false) {
+    // The first frame starts deferred scenery loading. Once Home covers the canvas,
+    // the DOM artwork and menus can run without redrawing the hidden track or its shadows.
+    if (covered && this.renderedOnce) { this.lastFrame = 0; return; }
     const reduced = this.reducedMotion.matches, frameMs = this.lastFrame ? (time - this.lastFrame) * 1000 : 0; this.lastFrame = time;
     if (this.graphicsChoice === 'auto' && this.governor.sample(frameMs)) this.stepDownPending = true;
     // Rebuilding shadows and passes can stall a frame; never do it mid-race (it would trigger the slow-frame pause).
@@ -609,6 +643,7 @@ export class GameScene {
     this.jumpFeedback.update(time, reduced);
     // Each instrumented scene restarts the shared engine counter as it begins rendering.
     this.scene.render();
+    this.renderedOnce = true;
     this.drawCalls = this.instrumentation?.drawCallsCounter.current ?? 0;
   }
   dispose(disposeEngine = true) { this.ready = false; this.canvasResizeObserver.disconnect(); this.post.dispose(); this.instrumentation?.dispose(); this.scene.dispose(); if (disposeEngine) this.engine.dispose(); }

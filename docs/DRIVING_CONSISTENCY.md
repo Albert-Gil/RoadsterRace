@@ -22,6 +22,12 @@ device. Live colors and compilation share this preparation and the 5 m gesture w
 the confirmed profile retains the existing 8 m smoothing filter. Live trailing colors are
 provisional until subsequent samples arrive, and geometry cleanup can still adjust a hook.
 
+The live ink, outline and ignored stroke sections reuse their graphics buffers.
+On release, a background worker validates the recorded stroke with the same route
+compiler used for practice and CPU fixtures. A new stroke, a canceled result or
+a change of drawing turn supersedes the pending preview. Browsers that cannot
+start a worker use the same compiler on the main thread.
+
 ## Computers
 
 Each CPU plans an independent, clearance/hazard-checked route, with modest lateral variation

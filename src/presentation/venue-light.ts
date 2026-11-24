@@ -17,21 +17,22 @@ type Frame = typeof frames[keyof typeof frames];
 // them to the fragment, so a ship's upper deck and the water below can sample
 // the same atlas and still receive different amounts of fill light.
 class VenueLightPlugin extends MaterialPluginBase {
-  private enabled = true;
-  constructor(material: StandardMaterial, private map: Texture, private frame: Frame, private strength: number) {
+  private map?: Texture;
+  constructor(material: StandardMaterial, private frame: Frame, private strength: number) {
     super(material, 'VenueSkyVisibility', 205, { VENUE_SKY_VISIBILITY: false });
     this._enable(true);
   }
   /** Tier switch: off on Low, where the extra per-pixel lookup cost about 20 % of frame time in software rendering. */
-  setEnabled(value: boolean) { if (this.enabled === value) return; this.enabled = value; this.markAllDefinesAsDirty(); }
+  setMap(map?: Texture) { if (this.map === map) return; this.map = map; this.markAllDefinesAsDirty(); }
   getClassName() { return 'VenueLightPlugin'; }
   isCompatible(language: ShaderLanguage) { return language === ShaderLanguage.GLSL || language === ShaderLanguage.WGSL; }
-  prepareDefines(defines: MaterialDefines) { defines.VENUE_SKY_VISIBILITY = this.enabled && this.map.isReady(); }
+  prepareDefines(defines: MaterialDefines) { defines.VENUE_SKY_VISIBILITY = this.map?.isReady() ?? false; }
   getSamplers(samplers: string[]) { samplers.push('venueHorizon'); }
   // External uniforms leave the engine's material buffer layout identical for
   // included surfaces and excluded paint, even while the atlas is loading.
   getUniforms() { return {externalUniforms:['venueUV','venueHeight','venueShade']}; }
   bindForSubMesh(buffer: UniformBuffer, _scene:Scene, _engine:AbstractEngine, subMesh:SubMesh) {
+    if (!this.map) return;
     const f = this.frame;
     const effect=subMesh.effect;
     effect?.setFloat4('venueUV', f.left, f.bottom, 1/f.width, 1/f.depth);
@@ -62,22 +63,29 @@ class VenueLightPlugin extends MaterialPluginBase {
   }
 }
 
-const installed = new WeakMap<Scene, VenueLightPlugin[]>();
+const installed = new WeakMap<Scene, { id: string; plugins: VenueLightPlugin[]; map?: Texture }>();
 /** Enables the baked venue light for the current graphics tier (Medium and above). */
-export function setVenueLightEnabled(scene:Scene, on:boolean) { for (const plugin of installed.get(scene) ?? []) plugin.setEnabled(on); }
+export function setVenueLightEnabled(scene: Scene, on: boolean) {
+  const state = installed.get(scene);
+  if (!state) return;
+  if (on && !state.map) {
+    const map = new Texture(assetUrl('assets/venue-light/'+state.id+'.webp'), scene, false, false, Texture.TRILINEAR_SAMPLINGMODE,
+      () => { if (!scene.isDisposed) for (const plugin of state.plugins) plugin.markAllDefinesAsDirty(); });
+    map.gammaSpace = false;
+    map.wrapU = map.wrapV = Texture.CLAMP_ADDRESSMODE;
+    state.map = map;
+  }
+  for (const plugin of state.plugins) plugin.setMap(on ? state.map : undefined);
+}
 
 export function installVenueLight(scene:Scene, id:string, materials:Map<string,StandardMaterial>) {
   const frame = frames[id as keyof typeof frames];
   if (!frame) return;
   const plugins:VenueLightPlugin[] = [];
-  const map = new Texture(assetUrl('assets/venue-light/'+id+'.webp'), scene, false, false, Texture.TRILINEAR_SAMPLINGMODE,
-    () => { for (const plugin of plugins) plugin.markAllDefinesAsDirty(); });
-  map.gammaSpace = false;
-  map.wrapU = map.wrapV = Texture.CLAMP_ADDRESSMODE;
   for (const [role, material] of materials) {
     if (material.disableLighting || material.alpha < .98 || material.metadata?.roadsterOverlay ||
         ['error','start-glow','checker','curb','accent'].includes(role)) continue;
-    plugins.push(new VenueLightPlugin(material,map,frame,id==='la-nights'?art.nightStrength:art.strength));
+    plugins.push(new VenueLightPlugin(material,frame,id==='la-nights'?art.nightStrength:art.strength));
   }
-  installed.set(scene, plugins);
+  installed.set(scene, { id, plugins });
 }

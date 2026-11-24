@@ -36,11 +36,12 @@ landscape overview (844×390):
 3. Touch within 46 px of the end, or of any point in the last 30 m (a retake: the overlap is
    trimmed), and keep drawing. A touch anywhere else shows "Touch the glowing end of your
    line to continue." Drawing input waits while the camera glides.
-4. **Undo** removes the last stroke (the first Undo returns to a fresh start); **Redraw**
-   starts again. An interrupted stroke (pointer cancel, app switch) discards only itself.
-5. Once the line reaches the finish, it compiles as usual. The preview, race and replay use the
-   whole-circuit overview. A line that is not yet at the finish keeps going instead of showing
-   an error.
+4. **Undo** removes the last stroke, including during the camera glide or while the final preview
+   is being prepared. Undoing the first stroke returns to the start. **Redraw** starts a fresh
+   line. An interrupted stroke (pointer cancel, app switch) discards only itself.
+5. At the finish, a background worker checks the joined line using the same compiler as overview
+   drawing. Undoing or redrawing while it runs discards its result. A valid preview, race and
+   replay use the whole-circuit overview. An unfinished line can continue from the glowing end.
 6. The panel shows "Sector k of N" (`drawingSectors()`: boundaries on straights, at least
    14 m outside every jump/Hop corridor and 30 m from the start line).
 

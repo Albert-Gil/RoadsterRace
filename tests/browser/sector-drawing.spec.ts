@@ -38,6 +38,22 @@ test('an iPhone draws Santa Monica in zoomed sectors, lifting and continuing, th
   test.setTimeout(600000);
   const context = await browser.newContext(iphone), page = await context.newPage();
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
+  // Hold one valid result to exercise Undo while a slower device is still preparing the preview.
+  await page.addInitScript(() => {
+    const NativeWorker = window.Worker;
+    window.Worker = class extends NativeWorker {
+      constructor(url: string | URL, options?: WorkerOptions) {
+        super(url, options);
+        this.addEventListener('message', event => {
+          const host = window as any;
+          if (!host.holdPreview || !event.data?.result?.ok) return;
+          host.holdPreview = false;
+          event.stopImmediatePropagation();
+          host.releasePreview = () => this.dispatchEvent(new MessageEvent('message', { data: event.data }));
+        });
+      }
+    };
+  });
   await openDrawing(page, 'santa-monica', '&sectors=off');
   const overview = await roadPixels(page);
   await openDrawing(page, 'santa-monica');
@@ -45,8 +61,11 @@ test('an iPhone draws Santa Monica in zoomed sectors, lifting and continuing, th
   expect(await roadPixels(page)).toBeGreaterThan(overview * 1.4);
   let done = 0, strokes = 0;
   const L = await page.evaluate(() => (window as any).__roadster.getTrack().length);
+  await page.evaluate(() => { (window as any).holdPreview = true; });
+  let lastStart = 0;
   while (await page.evaluate(() => (window as any).__roadster.getState().phase) === 'drawing' && strokes < 12) {
     await page.waitForFunction(() => !(window as any).__roadster.getWorld().cameraMoving);
+    lastStart = done;
     done = await strokeOnScreen(page, done, 1000 + strokes * 100); strokes++;
     if (strokes === 1) {
       await expect(page.locator('.planning-note')).toContainText('glowing end');
@@ -56,9 +75,19 @@ test('an iPhone draws Santa Monica in zoomed sectors, lifting and continuing, th
       done = 0; await page.waitForFunction(() => !(window as any).__roadster.getWorld().cameraMoving);
       done = await strokeOnScreen(page, done, 5000);
     }
+    await page.waitForFunction(() => (window as any).releasePreview ||
+      (window as any).__roadster.getWorld().scene.getMeshByName('continue-handle')?.isVisible);
+    if (await page.evaluate(() => !!(window as any).releasePreview)) break;
   }
   expect(strokes).toBeGreaterThan(1);
   expect(done).toBeGreaterThan(L);
+  await page.locator('[data-action="undo-sector"]').click();
+  const afterUndo = await page.evaluate(() => (window as any).__roadster.getRawStroke().length);
+  await page.evaluate(() => (window as any).releasePreview());
+  expect(await page.locator('main').getAttribute('data-phase')).toBe('drawing');
+  expect(await page.evaluate(() => (window as any).__roadster.getRawStroke().length)).toBe(afterUndo);
+  await page.waitForFunction(() => !(window as any).__roadster.getWorld().cameraMoving);
+  await strokeOnScreen(page, lastStart, 8000);
   await expect(page.getByRole('button', { name: 'Race this line' })).toBeVisible();
   // The preview returns to the whole-circuit overview.
   expect(Math.abs(await roadPixels(page) - overview)).toBeLessThan(overview * .1);

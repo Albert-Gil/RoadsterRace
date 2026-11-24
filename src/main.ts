@@ -9,6 +9,7 @@ import { roadGrade, supportBelow } from './core/elevation';
 import { angleDelta, clamp, distance, lerp } from './core/geometry';
 import { LocalRace, startingGrid } from './core/local-race';
 import { compileRoute, createPracticeSamples, sampleRoute, COMPILER_VERSION } from './core/route';
+import { StrokeCompiler } from './app/stroke-compiler';
 import { createTournament, finalizeRound, championshipStandings } from './core/tournament';
 import { incompatibleTournament, loadTournament, storeTournament, discardTournament, type SavedTournament } from './presentation/tournament-storage';
 import {tourSchedule,type TourSetup} from './presentation/tournament-ui';
@@ -134,6 +135,7 @@ let sectors: DrawingSector[] = [], sectorIndex = 0, strokeStarts: number[] = [],
 const sectorMode = () => sectors.length > 1;
 const sectorZoom = () => sectorDrawingAppearance.zoomPerSector[sectors.length] ?? 1;
 let drawingDirty = false;
+const strokeCompiler = new StrokeCompiler();
 let countdownRemaining = 0, resuming = false, best: number | null = null, previousPoses: { x: number; z: number; heading: number; y: number }[] = [], noticeUntil = 0, lastFrame = performance.now();
 let pauseReason='';
 /** Preview heads-up about stretches of the line the car cannot drive (it crashes there and is reset). */
@@ -330,6 +332,8 @@ function renderControls() {
 }
 function clearRaceInput() { race?.clearCommands(); input.clear(); clock.reset(); }
 function setPhase(next: Phase) {
+  if (next === 'drawing') strokeCompiler.prepare(activeTrack);
+  else if (phase === 'drawing') strokeCompiler.close();
   // Coaching is a frozen race: it keeps the racing layout and is marked separately for the coach styles.
   if (arrivesHome(heroIndex === null ? null : phase, next)) showHero();
   if (next !== 'drawing') world?.showContinueHandle(null);
@@ -406,7 +410,7 @@ function usePractice(jumpBranch: boolean | string = false) {
 }
 /** The accepted line, with any crash stretches marked. Nothing here blocks racing it. */
 function showPreview(compiled: CompiledRoute, trim?: DrawingTrim) {
-  world.showContinueHandle(null); world.setDrawingFocus(null, false);
+  world.showContinueHandle(null);
   route = compiled; drawingTrim = trim; world.drawLine(route, drawingTrim);
   const hazards = compiled.hazards ?? [];
   if (hazards.length) {
@@ -603,10 +607,10 @@ function appendSample(event: PointerEvent) {
 canvas.addEventListener('pointerdown', e => {
   if (phase !== 'drawing' || drawingPointer !== null || (e.pointerType === 'mouse' && e.button !== 0)) return;
   if (world.cameraMoving) { e.preventDefault(); return; }
-  if (sectorMode() && stroke.length) { if (continueStroke(e)) { e.preventDefault(); drawingPointer = e.pointerId; world.showError(); world.showContinueHandle(null); canvas.setPointerCapture(e.pointerId); appendSample(e); } return; }
+  if (sectorMode() && stroke.length) { if (continueStroke(e)) { e.preventDefault(); strokeCompiler.cancel(); drawingPointer = e.pointerId; world.showError(); world.showContinueHandle(null); canvas.setPointerCapture(e.pointerId); appendSample(e); } return; }
   const point = world.groundPoint(e.clientX, e.clientY);
   if (!point || !canStartDrawing(point, activeTrack)) { world.showError(activeTrack.start); renderPanel('Start anywhere across the line or up to 12 metres behind it.'); return; }
-  e.preventDefault(); drawingPointer = e.pointerId; stroke = []; strokeStarts = [0]; strokeClockOffset = 0; world.showError(); canvas.setPointerCapture(e.pointerId); appendSample(e);
+  e.preventDefault(); strokeCompiler.cancel(); drawingPointer = e.pointerId; stroke = []; strokeStarts = [0]; strokeClockOffset = 0; world.showError(); canvas.setPointerCapture(e.pointerId); appendSample(e);
 });
 /**
  * Phone sectors: a new touch continues the line only at its glowing end, or a little behind it
@@ -635,27 +639,28 @@ canvas.addEventListener('pointerup', e => {
   if (drawingPointer !== e.pointerId || phase !== 'drawing') return;
   appendSample(e); drawingPointer = null; if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
   const progress = sectorMode() ? drawnProgress(stroke, activeTrack) : Infinity;
-  if (progress < activeTrack.length * SECTOR_LAP_SHARE) { showSector(); return; }
-  const result = compileRoute(stroke, activeTrack);
-  if (result.ok) { showPreview(result.route, result.drawing); return; }
-  // Phones: a line that has not yet reached the finish simply continues.
-  if (sectorMode() && progress < activeTrack.length) { showSector(); return; }
-  world.showError(result.point, result.section);
-  if (sectorMode() && stroke.length) showSector(false, result.message); else renderPanel(result.message);
+  if (progress < activeTrack.length * SECTOR_LAP_SHARE) { showSector(true, undefined, progress); return; }
+  strokeCompiler.compile(stroke, activeTrack, result => {
+    if (result.ok) { showPreview(result.route, result.drawing); return; }
+    // Phones: a line that has not yet reached the finish simply continues.
+    if (sectorMode() && progress < activeTrack.length) { showSector(true, undefined, progress); return; }
+    world.showError(result.point, result.section);
+    if (sectorMode() && stroke.length) showSector(false, result.message, progress); else renderPanel(result.message);
+  });
 });
 /** Below this share of the lap, a lifted phone stroke continues in a sector instead of compiling. */
 const SECTOR_LAP_SHARE = 0.9;
 /** Moves the zoomed camera on to the course ahead of the line's end and lights the continue handle. */
-function showSector(move = true, message?: string) {
+function showSector(move = true, message?: string, progress = drawnProgress(stroke, activeTrack)) {
   const end = stroke.at(-1); if (!end) return;
-  const progress = drawnProgress(stroke, activeTrack);
   sectorIndex = sectorAt(sectors, progress).index;
   if (move) world.setDrawingFocus({ course: upcomingCourse(activeTrack, progress - 6, sectorDrawingAppearance.courseAhead), anchors: [end], zoom: sectorZoom() }, true);
   world.showContinueHandle(end);
-  world.drawLine(stroke); renderPanel(message);
+  drawingDirty = true; renderPanel(message);
 }
 function undoSector() {
-  if (!sectorMode() || drawingPointer !== null || world.cameraMoving) return;
+  if (!sectorMode() || drawingPointer !== null) return;
+  strokeCompiler.cancel();
   if (strokeStarts.length <= 1) { beginDrawing(); return; }
   stroke.length = strokeStarts.pop()!; world.showError(); showSector();
 }
@@ -667,7 +672,9 @@ function cancelStroke() {
 }
 canvas.addEventListener('pointercancel', cancelStroke); canvas.addEventListener('lostpointercapture', cancelStroke);
 function interrupt() {
+  const awaitingPreview = strokeCompiler.cancel();
   audio.silence(); pauseRace('app-interruption'); clearRaceInput(); ownership.clear(); updateDiagnostics(); cancelStroke();
+  if (awaitingPreview && phase === 'drawing' && sectorMode()) showSector(false);
   if (phase === 'ready') { readyPlayers.fill(false); renderPanel(); updateHud(); }
 }
 window.addEventListener('blur', interrupt); document.addEventListener('visibilitychange', () => { if (document.hidden) interrupt(); });
@@ -740,7 +747,8 @@ try {
         if (due) { tutorial.awaiting = due; clearRaceInput(); audio.cue('ready'); setPhase('coaching'); }
       }
     } else if (phase === 'ready' || phase === 'countdown' || phase === 'paused' || phase === 'coaching') updateVehicles(1);
-    if (now > noticeUntil) notice.textContent = ''; world.render(now / 1000);
+    if (now > noticeUntil && notice.textContent) notice.textContent = '';
+    world.render(now / 1000, phase === 'welcome' || phase === 'tour-resume');
   });
   if (import.meta.env.DEV) installDevApi(() => ({ phase, pauseReason, sessionOptions, humans, playerCount, personalLap, preferences, activeTour, roundIndex, race, activeCircuit, theme, lapCount, turn, confirmedRoutes, readyPlayers, world, route, drawingTrim, best, stroke, activeTrack, raceTouches: input.touches, ownership, audio, usePractice, driverName, driverPaint, tutorial, activeChallenge }));
 } catch (error) { console.error(error); canvas.hidden = true; setPhase('error'); renderPanel(error instanceof Error ? error.message : undefined); }
