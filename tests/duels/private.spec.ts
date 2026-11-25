@@ -21,7 +21,27 @@ async function draw(page:Page,touch:boolean){
 }
 for(const [venue,count] of [['coastal-launch',2],['coastal-launch',4],['golden-gate',4],['santa-monica',4]] as const){
   test(venue+' with '+count+' devices',async({browser})=>{
-    const contexts=await Promise.all(Array.from({length:count},()=>browser.newContext({viewport:{width:800,height:600}})));
+    // CI renders every client's WebGL scene on one CPU. Keep the real canvas,
+    // input, clocks and network, but spend fewer pixels on each client.
+    const softwareGraphics = process.env.WEBGL_BACKEND !== 'd3d11';
+    if (softwareGraphics) test.setTimeout(360_000);
+    const contexts=await Promise.all(Array.from({length:count},()=>browser.newContext({
+      viewport: softwareGraphics ? {width:640,height:440} : {width:800,height:600},
+      deviceScaleFactor: softwareGraphics ? 0.5 : 1,
+    })));
+    if (softwareGraphics) {
+      await Promise.all(contexts.map(context => context.addInitScript(() => {
+        // Limit only Babylon presentation, including the reloaded guest. The
+        // server still steps at 60 Hz and pointer and socket clocks stay real.
+        const timer = window.setInterval(() => {
+          const engine = (window as any).__roadster?.getWorld()?.engine;
+          if (engine) {
+            engine.maxFPS = 10;
+            window.clearInterval(timer);
+          }
+        }, 100);
+      })));
+    }
     const pages=await Promise.all(contexts.map(c=>c.newPage()));const [host,...guests]=pages;
     const errors:string[]=[];pages.forEach(p=>p.on('pageerror',e=>{errors.push(e.message);console.error('Page error:',e.message);}));
     try{
@@ -30,19 +50,34 @@ for(const [venue,count] of [['coastal-launch',2],['coastal-launch',4],['golden-g
       await host.getByRole('dialog').getByLabel('Circuit',{exact:true}).selectOption(venue);
       await host.getByRole('button',{name:'Create room'}).click();
       await expect(host.getByText('Private room',{exact:true})).toBeVisible({timeout:45000});
-      await Promise.all(guests.map(p=>p.goto(host.url())));
-      await expect(host.getByRole('dialog').locator('p').filter({hasText:'Joined'})).toHaveCount(count);
+      const invite = host.url();
+      for (const guest of guests) {
+        await guest.goto(invite, {waitUntil:'domcontentloaded'});
+        await expect(guest.getByRole('dialog').getByText('Private room',{exact:true})).toBeVisible({timeout:60000});
+      }
+      await expect(host.getByRole('dialog').locator('p').filter({hasText:'Joined'})).toHaveCount(count,{timeout:30000});
       await host.getByRole('button',{name:'Start drawing'}).click();
       await test.step('Draw and lock every private line',async()=>{await Promise.all(pages.map((p,i)=>draw(p,i===1)));});
       await Promise.all(pages.map(p=>waitForPhase(p,'racing',20000)));
-      await host.locator('#hop-button').click();await host.locator('#thrust-button').click();
-      await guests[0].reload();
-      await waitForPhase(guests[0],'racing',45000);
+      await Promise.all([
+        guests[0].reload({waitUntil:'domcontentloaded'}),
+        (async()=>{await host.locator('#hop-button').click();await host.locator('#thrust-button').click();})(),
+      ]);
+      // The server keeps racing during reload. A short sprint can already be
+      // over when the reclaimed seat receives its first authoritative frame.
+      await guests[0].waitForFunction(() => ['racing','results'].includes(
+        document.querySelector<HTMLElement>('.playground')?.dataset.phase ?? ''
+      ), undefined, {timeout:45000});
       const results=await Promise.all(pages.map(async p=>{
         const d=p.getByRole('dialog');await expect(d.getByRole('heading',{name:'Race results'})).toBeVisible({timeout:120000});
         return d.locator('section > p').allTextContents();
       }));
-      for(const result of results)expect(result.slice(0,count)).toEqual(results[0].slice(0,count));
+      for(const result of results){
+        const standings = result.slice(0,count);
+        expect(standings).toHaveLength(count);
+        expect(standings.every(row=>/^\d+\. .+ · \d+\.\d{2} s$/.test(row))).toBe(true);
+        expect(standings).toEqual(results[0].slice(0,count));
+      }
       const redraw=venue==='santa-monica';
       await Promise.all(pages.map(p=>p.getByRole('button',{name:redraw?'Draw New Lines':'Race Again',exact:true}).click()));
       await Promise.all(pages.map(p=>waitForPhase(p,redraw?'drawing':'racing')));
