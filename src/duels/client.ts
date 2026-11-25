@@ -1,0 +1,159 @@
+import { Client, type Room } from '@colyseus/sdk';
+import { DUEL_PROTOCOL, duelVenues, unpackFrame, type WireFrame, type DuelVenue, type RoomView, type RaceFrame, type DrawingPacket } from './protocol';
+import { RULES } from '../core/simulation';
+import { COMPILER_VERSION } from '../core/route';
+import type { Ability, DrawSample } from '../core/types';
+
+interface Hooks {
+  driver: { name: string; paint: string };
+  versions: Record<string,number>;
+  draw(view:RoomView):void;
+  frame(frame:RaceFrame,view:RoomView):void;
+  ownLine(samples:DrawSample[]):void;
+  home():void;
+}
+function el<K extends keyof HTMLElementTagNameMap>(tag:K,content='') {
+  const e=document.createElement(tag);e.textContent=content;return e;
+}
+function stored(key:string,value?:string|null) {
+  try { if(value===null) sessionStorage.removeItem(key); else if(value!==undefined) sessionStorage.setItem(key,value); else return sessionStorage.getItem(key); } catch { /* private browser */ }
+  return null;
+}
+export class DuelClient {
+  private room?: Room;
+  view?:RoomView;
+  latest?:RaceFrame;
+  private sequence=0;
+  private roundDrawn=0;
+  private dialog=el('dialog');
+  private content=el('section');
+  private status=el('p');
+  private tokenKey='roadster-duel-seat-v1';
+  private closed=false;
+  private connecting=false;
+  private menu=false;
+  private disconnected=false;
+  private waiting=false;
+  get overlayOpen(){return this.dialog.open;}
+  get seatIndex(){return this.view?.drivers.findIndex(s=>s.id===this.room?.sessionId)??0;}
+  constructor(private hooks:Hooks){
+    this.dialog.className='duel-dialog';this.status.setAttribute('role','status');
+    this.dialog.append(this.content,this.status);
+    document.body.append(this.dialog);
+    this.dialog.addEventListener('cancel',e=>{e.preventDefault();if(this.menu)this.resume();});
+  }
+  private show(title:string) {
+    this.content.replaceChildren(el('h2',title));this.status.textContent='';
+    if(!this.dialog.open)this.dialog.showModal();
+  }
+  private button(label:string,action:()=>void,primary=false){
+    const b=el('button',label);b.type='button';b.className=primary?'primary-button':'secondary-button';b.onclick=action;
+    this.content.append(b);return b;
+  }
+  private get endpoint() {
+    return import.meta.env.VITE_DUEL_SERVER || (import.meta.env.DEV ? location.protocol+'//'+location.hostname+':2567' : '');
+  }
+  open(initialCode='') {
+    this.show('Private Duel');
+    const circuit=el('select');circuit.setAttribute('aria-label','Circuit');
+    for(const [id,name] of Object.entries(duelVenues)) circuit.add(new Option(name,id));
+    const laps=el('select');laps.setAttribute('aria-label','Race distance');
+    for(let i=1;i<=6;i++)laps.add(new Option(i+' lap'+(i===1?'':'s'),String(i)));
+    const code=el('input');code.placeholder='Room code';code.setAttribute('aria-label','Room code');code.maxLength=10;code.value=initialCode;code.autocapitalize='characters';
+    this.content.append(circuit,laps);
+    this.button('Create room',()=>void this.connect('',circuit.value as DuelVenue,Number(laps.value)),true);
+    this.content.append(code);
+    this.button('Join room',()=>{const id=code.value.trim().toUpperCase();if(/^[A-F0-9]{10}$/.test(id))void this.connect(id);else this.status.textContent='Enter the 10-character room code.';});
+    this.button('Home',()=>this.leave());
+    if(initialCode)void this.connect(initialCode);
+  }
+  private async connect(code:string,circuit:DuelVenue='coastal-launch',laps=1) {
+    if(this.connecting||this.closed)return;
+    if(!this.endpoint){this.status.textContent='The private race server is not configured for this build.';return;}
+    this.connecting=true;this.status.textContent='Connecting to the race server…';
+    const wake=window.setTimeout(()=>{this.status.textContent='Waking race server… The first room can take a minute.';},2500);
+    try {
+      const url=new URL(this.endpoint);url.protocol=url.protocol==='wss:'?'https:':url.protocol==='ws:'?'http:':url.protocol;
+      // Wake a sleeping free instance before the SDK starts its shorter seat-reservation timeout.
+      const abort=new AbortController();const timer=setTimeout(()=>abort.abort(),100_000);
+      let response:Response;
+      try{response=await fetch(new URL('/health',url),{signal:abort.signal});}finally{clearTimeout(timer);}
+      if(!response.ok)throw new Error('The race server is unavailable. Try again shortly.');
+      if(this.closed)return;
+      const client=new Client(this.endpoint);
+      const options={protocol:DUEL_PROTOCOL,physics:RULES.version,compiler:COMPILER_VERSION,versions:this.hooks.versions,...this.hooks.driver,circuit,laps};
+      const token=stored(this.tokenKey);
+      let room:Room;
+      if(code && token?.startsWith(code+':')){
+        try {room=await client.reconnect(token);} catch{stored(this.tokenKey,null);room=await client.joinById(code,options);}
+      }else room=code?await client.joinById(code,options):await client.create('private_duel',options);
+      if(this.closed){await room.leave();return;}
+      this.room=room;stored(this.tokenKey,room.reconnectionToken);
+      const address=new URL(location.href);address.searchParams.set('duel',room.roomId);history.replaceState(null,'',address);
+      room.onMessage('room',(view:RoomView)=>this.receive(view));
+      room.onMessage('frame',(wire:WireFrame)=>{
+        const frame=unpackFrame(wire);
+        if(this.closed||!this.view||frame.round!==this.view.round)return;
+        this.latest=frame;this.hooks.frame(frame,this.view);
+        if(this.view.phase==='results')this.present();
+      });
+      room.onMessage('ownLine',(data:{samples:DrawingPacket;sequence:number})=>{this.sequence=Math.max(this.sequence,data.sequence);this.hooks.ownLine(data.samples.map(([x,z,time])=>({x,z,time})));});
+      room.onMessage('notice',(s:string)=>{this.waiting=false;this.present();this.status.textContent=s;if(!this.dialog.open){this.show('Check your line');this.status.textContent=s;this.button('Return to drawing',()=>this.dialog.close(),true);}});
+      room.onDrop(()=>{this.disconnected=true;this.show('Reconnecting…');this.content.append(el('p','Your car is following its line.'));this.button('Home',()=>this.leave());});
+      room.onReconnect(()=>{this.disconnected=false;stored(this.tokenKey,room.reconnectionToken);room.send('sync');});
+      room.onLeave(()=>{if(!this.closed){stored(this.tokenKey,null);this.show('Room closed');this.button('Home',()=>this.leave(),true);}});
+      room.send('sync');
+    }catch(e){if(!this.closed)this.status.textContent=e instanceof Error?e.message:'Could not connect. Check the room code and try again.';}
+    finally{clearTimeout(wake);this.connecting=false;}
+  }
+  private receive(view:RoomView) {
+    if(this.closed)return;
+    if(view.phase==='lobby'){this.roundDrawn=0;this.waiting=false;}
+    if(this.view?.round!==view.round){this.latest=undefined;this.sequence=0;this.waiting=false;this.menu=false;}
+    const previousPhase=this.view?.phase;
+    this.view=view;
+    if(view.phase==='results' && previousPhase!=='results' && this.latest)this.hooks.frame({...this.latest,events:[]},view);
+    if(view.phase==='drawing' && this.roundDrawn!==view.round){
+      this.roundDrawn=view.round;this.hooks.draw(view);
+    }
+    this.present();
+  }
+  private present(){
+    const view=this.view;if(!view||!this.room||this.disconnected)return;
+    const seat=view.drivers[this.seatIndex];
+    if(view.phase==='results'){
+      this.show('Race results');
+      for(const s of this.latest?.order??[]){const driver=view.drivers[s.player];this.content.append(el('p',(driver.withdrawn?'DNF':s.rank+'.')+' '+driver.name+(s.finishTime!=null?' · '+s.finishTime.toFixed(2)+' s':'')));}
+      const vote=(v:string)=>this.room?.send('rematch',{round:view.round,vote:v});
+      this.button('Race Again',()=>vote('same'),true);this.button('Draw New Lines',()=>vote('redraw'));
+      this.content.append(el('p',view.drivers.filter(d=>d.connected).map(d=>d.name+' · '+(d.vote==='same'?'Race again':d.vote==='redraw'?'New lines':'Choosing')).join(' / ')));
+    }else if(view.phase==='lobby'||view.phase==='drawing'&&(seat?.ready||this.waiting)){
+      this.show(view.phase==='lobby'?'Private room':'Waiting for lines');
+      this.content.append(el('p',duelVenues[view.circuit]+' · '+view.laps+' lap'+(view.laps===1?'':'s')));
+      if(view.phase==='lobby'){
+        this.content.append(el('strong',this.room.roomId));this.button('Copy invite',async()=>{try{await navigator.clipboard.writeText(location.href);this.status.textContent='Invite copied.';}catch{this.status.textContent=location.href;}});
+      }
+      for(const d of view.drivers)this.content.append(el('p',d.name+(d.id===this.room.sessionId?' (you)':'')+' · '+(!d.connected?'Reconnecting':view.phase==='lobby'?'Joined':d.ready?'Ready':'Drawing')));
+      if(view.phase==='lobby'&&view.host===this.room.sessionId)this.button('Start drawing',()=>this.room?.send('start'),true).disabled=view.drivers.length<2||view.drivers.some(s=>!s.connected);
+    }else if(this.menu){this.show('Race menu');this.content.append(el('p','The race continues.'));this.button('Resume',()=>this.resume(),true);}
+    else {this.dialog.close();return;}
+    this.button('Home',()=>this.leave());
+  }
+  lock(samples:DrawSample[]){
+    if(!samples.length||!this.room||!this.view)return;
+    const start=samples[0].time;this.waiting=true;
+    this.room.send('line',{round:this.view.round,samples:samples.map(p=>[p.x,p.z,p.time-start])});this.present();
+  }
+  press(ability:Ability){
+    if(this.menu||this.disconnected||!this.latest||this.view?.phase!=='racing')return;
+    this.room?.send('ability',{round:this.view.round,ability,sequence:++this.sequence,tick:this.latest.tick});
+  }
+  pause(){this.menu=true;this.present();}
+  private resume(){this.menu=false;this.present();}
+  leave(){
+    this.closed=true;this.dialog.remove();stored(this.tokenKey,null);
+    if(this.room)void this.room.leave().catch(()=>{});
+    const url=new URL(location.href);url.searchParams.delete('duel');history.replaceState(null,'',url);
+    this.hooks.home();
+  }
+}

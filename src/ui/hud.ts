@@ -1,5 +1,6 @@
 import { clamp } from '../core/geometry';
 import { RULES } from '../core/simulation';
+import type { CarView } from '../duels/protocol';
 import type { LocalRace } from '../core/local-race';
 import type { GameMode } from '../core/session';
 import type { Phase } from '../app/phases';
@@ -8,11 +9,11 @@ import { THRUST_KEYS } from '../input/router';
 
 /** Everything the race HUD and ability pads display; read from the session each frame. */
 export interface HudView {
-  phase: Phase; race: LocalRace | null; mode: GameMode; playerCount: number; lapCount: number; trackLength: number;
+  phase: Phase; race: (Pick<LocalRace,'standings'|'time'|'ghostStartRemaining'> & {racers: {state: CarView}[]}) | null; ownSeat?: number; mode: GameMode; playerCount: number; lapCount: number; trackLength: number;
   tourLabel: string; personalBest?: number; readyPlayers: boolean[]; driverName: (player: number) => string;
   hud: HTMLElement; controls: HTMLElement; raceProgress: HTMLElement;
 }
-export function renderHud({ phase, race, mode, playerCount, lapCount, trackLength, tourLabel, personalBest, readyPlayers, driverName, hud, controls, raceProgress }: HudView) {
+export function renderHud({ phase, race, mode, ownSeat, playerCount, lapCount, trackLength, tourLabel, personalBest, readyPlayers, driverName, hud, controls, raceProgress }: HudView) {
   const standings = race?.standings() ?? [], first = race?.racers[0].state;
   if (first && race) {
     const ghost = phase === 'racing' && race.ghostStartRemaining > 0;
@@ -25,7 +26,7 @@ export function renderHud({ phase, race, mode, playerCount, lapCount, trackLengt
     raceProgress.querySelector<HTMLElement>('span')!.style.width = `${standings[0].progress / (trackLength * lapCount) * 100}%`;
   }
   controls.querySelectorAll<HTMLButtonElement>('.ability-control').forEach(pad => {
-    const i = Number(pad.dataset.racer), hop = pad.dataset.ability === 'hop';
+    const i = ownSeat ?? Number(pad.dataset.racer), hop = pad.dataset.ability === 'hop';
     const s = race?.racers[i].state, remaining = s ? Math.max(0, (hop ? s.hopReadyAt : s.thrustReadyAt) - s.time) : 0;
     const recovering = !!s && (s.time < s.recoveringUntil || s.recoveryWaiting);
     pad.disabled = phase === 'countdown' || (phase === 'racing' && (!!s?.finished || recovering || hop && s?.movement === 'airborne'));
@@ -39,6 +40,6 @@ export function renderHud({ phase, race, mode, playerCount, lapCount, trackLengt
     pad.dataset.ready = String(phase === 'ready' ? readyPlayers[i] : remaining < 0.001); pad.dataset.firing = String(phase === 'racing' && !!s && s.time < s.thrustUntil);
     pad.querySelector('.pod-title')!.textContent = phase === 'ready' ? readyPlayers[i] ? 'READY ✓' : 'TAP READY' : recovering ? 'RECOVERING' : s?.finished ? 'FINISHED' : 'THRUST';
     pad.querySelector('.pod-status')!.textContent = phase === 'ready' ? readyPlayers[i] ? 'WAIT FOR FRIENDS' : driverName(i) : s?.finished ? formatTime(s.finishTime!) : remaining < 0.001 ? 'READY' : `${remaining.toFixed(1)}s`;
-    if (playerCount > 1) { pad.querySelector('.pod-rank')!.textContent = s ? `#${standings.find(item => item.player === i)!.rank}` : ''; pad.querySelector('.pod-lap')!.textContent = `${s && !s.finished ? s.surface === 'sand' ? 'SAND · ' : s.drifting ? 'DRIFT · ' : '' : ''}LAP ${s?.lap ?? 1}/${lapCount} · ${THRUST_KEYS[i].slice(3)}`; }
+    if (playerCount > 1) { pad.querySelector('.pod-rank')!.textContent = s ? `#${standings.find(item => item.player === i)!.rank}` : ''; pad.querySelector('.pod-lap')!.textContent = `${s && !s.finished ? s.surface === 'sand' ? 'SAND · ' : s.drifting ? 'DRIFT · ' : '' : ''}LAP ${s?.lap ?? 1}/${lapCount} · ${ownSeat === undefined ? THRUST_KEYS[i].slice(3) : 'SPACE'}`; }
   });
 }

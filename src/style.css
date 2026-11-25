@@ -9,6 +9,14 @@
 
 /* ---------- Base ---------- */
 * { box-sizing: border-box; }
+.duel-entry { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; }
+.duel-dialog { box-sizing:border-box; width:min(430px,calc(100vw - 24px)); max-height:calc(100dvh - 24px); overflow:auto; padding:clamp(16px,4vw,30px); border:1px solid var(--raised-border); border-radius:12px; color:var(--text); background:var(--ink); box-shadow:var(--shadow); }
+.duel-dialog::backdrop { background:rgb(5 10 15 / 78%); }
+.duel-dialog section { display:grid; gap:10px; }
+.duel-dialog :is(h2,p) { margin:0; }
+.duel-dialog section > strong { font:700 1.4rem monospace; letter-spacing:.12em; }
+.duel-dialog :is(select,input) { min-height:44px; width:100%; box-sizing:border-box; padding:6px 12px; color:var(--text); background:var(--ink); border:1px solid var(--raised-border); font:inherit; font-size:16px; }
+.duel-dialog [role=status]:not(:empty) { margin-top:12px; }
 :root { --ink: #0b1016; --raised: rgb(255 255 255 / 7%); --raised-border: rgb(255 255 255 / 13%); --shadow: 0 18px 50px rgb(0 0 0 / 45%); font-family: var(--font-body); color: var(--text); background: var(--ink); font-synthesis: none; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; }
 html, body { touch-action: manipulation; overscroll-behavior: none; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body { margin: 0; background: var(--ink); }

@@ -12,3 +12,4 @@ dist-app/
 
 # Third-party art source packs (CC0); only baked outputs ship. See docs/ASSET_RIGHTS.md.
 asset-sources/
+dist-server/

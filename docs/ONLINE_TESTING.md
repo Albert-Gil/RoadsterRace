@@ -4,7 +4,7 @@ Testing address: https://albert-gil.github.io/RoadsterRace/
 
 Golden Gate: https://albert-gil.github.io/RoadsterRace/?circuit=golden-gate
 
-The repository and testing website are public. There is no login or backend. Multiplayer still means two to four people sharing one device. The noindex/nofollow tag discourages search indexing; it does not restrict access.
+The repository and testing website are public. The ordinary game runs without a login or backend. Same-device multiplayer shares one screen. The Private Duels beta uses a separate free room server; deployment, versions and verification are documented in [Private Duels](PRIVATE_DUELS.md). The noindex/nofollow tag discourages search indexing; it does not restrict access.
 
 ## Release workflow
 
@@ -43,7 +43,7 @@ Clear VITE_BASE_PATH/ROADSTER_BUILD_ID afterward to return to ordinary root buil
 
 Browser touch emulation supplements these checks; it does not certify physical Safari. There is no service worker or offline mode, so the link needs internet and cannot keep serving an old cached application shell. Ordinary browser/HTTP caching still applies; reload after a deployment when checking a new build label.
 
-Preferences and tournament progress remain on each browser/device. The hosted origin has separate storage from localhost and home-network URLs. Home Screen storage behavior must be checked on the actual iOS version. No analytics, accounts, leaderboards or remote multiplayer are included.
+Preferences and tournament progress remain on each browser/device. The hosted origin has separate storage from localhost and home-network URLs. Home Screen storage behavior must be checked on the actual iOS version. Private Duels use a separate free room service when its origin is configured. The game stores ordinary preferences locally.
 
 ### Reusing a local inspector preview
 

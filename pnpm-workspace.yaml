@@ -4,3 +4,5 @@ storeDir: .pnpm-store
 nodeLinker: hoisted
 saveExact: true
 verifyDepsBeforeRun: false
+allowBuilds:
+  msgpackr-extract: false

@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: roadster-race-duels
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm duel:build
+    startCommand: node dist-server/index.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "24"

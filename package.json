@@ -23,13 +23,18 @@
     "build:app": "tsc --noEmit && vite build --mode app",
     "ios:sync": "pnpm build:app && cap sync ios",
     "test:legacy": "node --experimental-vm-modules tools/check-legacy-handling.mjs",
-    "bake:production": "node tools/bake-native-production.mjs"
+    "bake:production": "node tools/bake-native-production.mjs",
+    "duel:build": "vite build --config server/vite.config.ts",
+    "duel:serve": "node dist-server/index.js"
   },
   "dependencies": {
     "@babylonjs/core": "9.31.0",
     "@babylonjs/loaders": "9.31.0",
     "@capacitor/core": "8.5.3",
-    "@capacitor/ios": "8.5.3"
+    "@capacitor/ios": "8.5.3",
+    "@colyseus/core": "0.18.29",
+    "@colyseus/sdk": "0.18.10",
+    "@colyseus/ws-transport": "0.18.5"
   },
   "devDependencies": {
     "@capacitor/cli": "8.5.3",

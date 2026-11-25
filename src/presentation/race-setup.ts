@@ -52,7 +52,7 @@ export function raceSetupMarkup(preferences: RacePreferences, count: number, tou
       : options.mode === 'time-trial' ? `Time trial · ${laps(preferences.laps)} · ghost ${ghost ? 'on' : 'off'}`
         : `${count} drivers · ${laps(preferences.laps)}`;
   const start = touring ? 'Start tournament' : count === 1 ? 'Draw racing line' : 'Plan your lines';
-  return `<div class="setup-scroll"><div class="setup-columns"><div class="setup-main">${format}${circuitSection}</div>
+  return `<div class="setup-scroll"><div class="setup-columns"><div class="setup-main">${options.mode === 'multiplayer' && (import.meta.env.DEV || import.meta.env.VITE_DUEL_SERVER) ? '<div class="duel-entry"><strong>Same device</strong><button class="secondary-button" data-action="private-duel">Private Duel ↗</button></div>':''}${format}${circuitSection}</div>
       <div class="setup-side"><section class="setup-section">${grid}</section><section class="setup-section">${distance}</section><section class="setup-section">${drivers}</section></div></div></div>
     <div class="setup-footer"><div class="setup-summary"><strong>${escapeHtml(selected.track.name.toUpperCase())}</strong><span>${detail}</span></div><div class="panel-actions"><button class="text-button" data-action="collection">Collection</button><button class="primary-button" data-action="start-session">${start} ${chevron}</button></div></div>`;
 }

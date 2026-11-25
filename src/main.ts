@@ -1,3 +1,5 @@
+import type { DuelClient } from './duels/client';
+import type { RaceFrame, RoomView } from './duels/protocol';
 import { rampAt, supported, groundHeight, FLIGHT_RULES } from './core/support';
 import{snowSurfaceHeight}from'./presentation/surface-height';
 import { CPU_DRIVERS, humanCount, racerCount, controllerFor, type SessionOptions } from './core/session';
@@ -109,7 +111,9 @@ let graphicsChoice = graphicsPreference.choice;
 /** The backend actually running (WebGPU falls back to WebGL 2 when unavailable). */
 let activeRenderer: RendererChoice = 'webgl2';
 const sessionOptions:SessionOptions={mode:'solo-race',difficulty:'normal',seed:1};
-const humans=()=>humanCount(sessionOptions.mode,playerCount);
+let duel:DuelClient | undefined, openingDuel=false;
+let remote:RaceFrame | undefined, frameAt=0;
+const humans=()=>duel ? 1 : humanCount(sessionOptions.mode,playerCount);
 let recorder:LapRecorder|null=null, personalLap:LapRecord|null=null, activeGhost:LapRecord|null=null;
 let sessionLapRecord = false;
 let lapLoad=0;
@@ -150,7 +154,7 @@ let previewGrid: { routes: CompiledRoute[]; track: typeof activeTrack; rotation:
 const clock = new FixedStepClock();
 // Thrust/hop pads and keys. Drawing input stays on the canvas handlers below.
 const input = new InputRouter(controls, {
-  humans, padsActive: () => ['ready', 'racing', 'coaching'].includes(phase), keysActive: () => ['ready', 'racing', 'countdown', 'coaching'].includes(phase),
+  humans, padsActive: () => ['ready', 'racing', 'coaching'].includes(phase), keysActive: () => !duel?.overlayOpen && ['ready', 'racing', 'countdown', 'coaching'].includes(phase),
   activate, pause: () => pauseRace(),
   extraKey: e => {
     if (import.meta.env.DEV && e.code === 'KeyT' && !e.repeat) {
@@ -160,8 +164,10 @@ const input = new InputRouter(controls, {
     }
   },
 });
-const driverName=(i:number)=>activeTour?.drivers[i]?activeTour.drivers[i].name:sessionOptions.mode==='solo-race'&&i>0?CPU_DRIVERS[i-1].name:cleanDriverName(preferences.drivers[i].name,i);
-const driverPaint=(i:number)=>activeTour?.drivers[i]?activeTour.drivers[i].paint:sessionOptions.mode==='solo-race'&&i>0?CPU_DRIVERS[i-1].paint:preferences.drivers[i].paint;
+const driverName=(i:number):string=>duel?.view?.drivers[i]?.name ?? localDriverName(i);
+const localDriverName=(i:number)=>activeTour?.drivers[i]?activeTour.drivers[i].name:sessionOptions.mode==='solo-race'&&i>0?CPU_DRIVERS[i-1].name:cleanDriverName(preferences.drivers[i].name,i);
+const driverPaint=(i:number):string=>duel?.view?.drivers[i]?.paint ?? localDriverPaint(i);
+const localDriverPaint=(i:number)=>activeTour?.drivers[i]?activeTour.drivers[i].paint:sessionOptions.mode==='solo-race'&&i>0?CPU_DRIVERS[i-1].paint:preferences.drivers[i].paint;
 const cpuTag=(i:number)=>sessionOptions.mode==='solo-race'&&i>0?' <small class="cpu-tag">CPU</small>':phase==='results'?badgeMarkup(activeTour?.drivers[i]?.badge??preferences.drivers[i]?.badge):'';
 const playerName = (i: number) => escapeHtml(driverName(i));
 function applyDriverPresentation() {
@@ -332,7 +338,8 @@ brand();
 document.querySelector<HTMLImageElement>('.brand-mark')!.addEventListener('error', e => { (e.currentTarget as HTMLImageElement).hidden = true; });
 
 function renderControls() {
-  controls.innerHTML = abilityControlsMarkup({ humans: humans(), playerCount, lapCount, playerName });
+  controls.innerHTML = abilityControlsMarkup({ humans: humans(), playerCount, lapCount, playerName: duel ? ()=>playerName(Math.max(0,duel!.seatIndex)) : playerName });
+  if(duel && playerCount>1){const i=Math.max(0,duel.seatIndex);controls.querySelector<HTMLElement>('.ability-cluster')?.style.setProperty('--identity', 'var(--player-'+(i+1)+')');const chip=controls.querySelector('.pod-identity');if(chip?.firstChild)chip.firstChild.textContent='P'+(i+1)+' ';}
 }
 function clearRaceInput() { race?.clearCommands(); input.clear(); clock.reset(); }
 function setPhase(next: Phase) {
@@ -359,7 +366,7 @@ function setPhase(next: Phase) {
 /** Writes the phase panel. Phases without a panel of their own keep the previous content (hidden). */
 function renderPanel(message?: string) {
   const displayedCount = phase === 'setup' ? setupCount : playerCount;
-  document.querySelector('#mode-label')!.textContent = modeLabel(sessionOptions.mode, displayedCount);
+  document.querySelector('#mode-label')!.textContent = duel ? 'PRIVATE DUEL' : modeLabel(sessionOptions.mode, displayedCount);
   const html = panelMarkup(message);
   if (html !== null) panel.innerHTML = html+(phase==='results'&&sessionOptions.mode!=='tutorial'?((activeChallenge ? challengeResults(activeChallenge, challengeAttemptComplete, challengeTracker?.vessels ?? 0, practiceTurns.size > 0 || activeTour?.challengeEligible === false, !!activeTour && activeTour.state.results.length === activeTour.state.rounds.length) : '')+'<div class="collection-results">'+(resultAwards.length?'<p role="status">'+resultAwards.map(escapeHtml).join(' · ')+'</p>':'')+'<button class="text-button" data-action="collection">Collection ↗</button><button class="text-button" data-action="challenges">Challenges ↗</button></div>'):'');
 }
@@ -375,7 +382,7 @@ function panelMarkup(message?: string): string | null {
     case 'tour-replace': return tourReplacePanel();
     case 'tour-resume': return tourDiscardPanel();
     case 'handoff': return handoffPanel({ confirmedCount: confirmedRoutes.length, playerCount, turn, playerName });
-    case 'drawing': case 'preview': return planningPanel({ preview: phase === 'preview', playerCount, turn, playerName, humans, inTour: !!activeTour, tutorial: sessionOptions.mode === 'tutorial', message, note: phase === 'preview' ? planningNote : undefined, sector: sectorMode() && (phase === 'drawing' || stroke.length > 0) ? { index: sectorIndex, total: sectors.length, overview: sectorOverview, continuing: stroke.length > 0 && drawingPointer === null, canUndo: strokeStarts.length > 0 && stroke.length > 0 && drawingPointer === null } : undefined });
+    case 'drawing': case 'preview': return planningPanel({ preview: phase === 'preview', playerCount, turn, playerName, humans, inTour: !!activeTour, privateDuel: !!duel, tutorial: sessionOptions.mode === 'tutorial', message, note: phase === 'preview' ? planningNote : undefined, sector: sectorMode() && (phase === 'drawing' || stroke.length > 0) ? { index: sectorIndex, total: sectors.length, overview: sectorOverview, continuing: stroke.length > 0 && drawingPointer === null, canUndo: strokeStarts.length > 0 && stroke.length > 0 && drawingPointer === null } : undefined });
     case 'ready': return readyPanel({ playerCount, lapCount, readyPlayers, ghostSeconds: CONTACT_RULES.ghostStartSeconds, playerName });
     case 'paused': return pausedPanel({ soundOn: !audio.muted, status: pauseStatus() });
     case 'results':
@@ -427,6 +434,7 @@ function showPreview(compiled: CompiledRoute, trim?: DrawingTrim) {
 }
 function confirmRoute() {
   if (!route) return;
+  if(duel){duel.lock(stroke);return;}
   world.showError();
   confirmedRoutes[turn] = route;
   if (humans()===1) { if(sessionOptions.mode==='solo-race'){try{confirmedRoutes=[route,...[0,1,2].map(i=>computerRoute(activeTrack,sessionOptions.difficulty,i,sessionOptions.seed+roundIndex))];}catch(error){renderPanel(error instanceof Error?error.message:'Computer plans could not start.');return;}} startRace(); return; }
@@ -451,8 +459,9 @@ function startRace(resume = false) {
   world.showVehicles(null, playerCount); world.drawRaceLines(sessionOptions.mode==='solo-race'?confirmedRoutes.slice(0,1):confirmedRoutes);
   setPhase('countdown'); updateVehicles(1); audio.cue('countdown');
 }
-function pauseRace(reason='user') { if (phase !== 'racing' && phase !== 'countdown' && phase !== 'coaching') return;pauseReason=reason; clearRaceInput(); setPhase('paused'); }
+function pauseRace(reason='user') { if(duel){if(reason==='user' && phase==='racing')duel.pause();return;} if (phase !== 'racing' && phase !== 'countdown' && phase !== 'coaching') return;pauseReason=reason; clearRaceInput(); setPhase('paused'); }
 function goHome(force = false) {
+  if(duel){duel.leave();return;}
   if (activeTour && activeTour.state.results.length < activeTour.state.rounds.length && !force) { exitReturn = phase === 'racing' || phase === 'countdown' ? 'paused' : phase; cancelStroke(); clearRaceInput(); persistTour(); setPhase('tour-exit'); return; }
   if (activeTour && activeTour.state.results.length === activeTour.state.rounds.length) { savedTour = null; discardTournament(); }
   activeTour = null; exitTutorial(); leaveChallenge();
@@ -461,6 +470,7 @@ function goHome(force = false) {
 }
 function activate(player: number, ability: Ability = 'thrust') {
   if(player<0||player>=humans())return;
+  if(duel){if(phase==='racing')duel.press(ability);return;}
   if (phase === 'ready' && ability === 'thrust') { readyPlayers[player] = true; renderPanel(); updateHud(); if (readyPlayers.every(Boolean)) { if (!audio.muted) audio.unlock(); startRace(); } }
   else if (phase === 'coaching' && race && tutorial && answerPrompt(tutorial, ability, race.racers[player].state.time)) {
     // The frozen race resumes with the requested ability; the other pad is ignored until then.
@@ -474,19 +484,22 @@ function activate(player: number, ability: Ability = 'thrust') {
 }
 function showNotice(message: string, seconds = 1.7) { notice.textContent = message; noticeUntil = performance.now() + seconds * 1000; }
 function updateHud() {
-  renderHud({ phase, race, mode: sessionOptions.mode, playerCount, lapCount, trackLength: activeTrack.length,
+  const session=duel && remote ? {racers:remote.cars.map(state=>({state})),standings:()=>remote!.order,time:remote.tick*RULES.dt,ghostStartRemaining:Math.max(0,CONTACT_RULES.ghostStartSeconds-remote.tick*RULES.dt)} : race;
+  renderHud({ phase, race:session, ownSeat:duel?Math.max(0,duel.seatIndex):undefined, mode: sessionOptions.mode, playerCount, lapCount, trackLength: activeTrack.length,
     tourLabel: activeTour ? `ROUND ${roundIndex + 1}/${activeTour.state.rounds.length} · ${activeTrack.name.toUpperCase()}` : '',
     personalBest: personalLap?.duration, readyPlayers, driverName, hud, controls, raceProgress });
 }
 function updateVehicles(alpha: number) {
   const rotation = activeTour ? roundIndex % playerCount : 0;
-  if (playerCount > 1 && !race && (!previewGrid || previewGrid.routes !== confirmedRoutes || previewGrid.poses.length !== confirmedRoutes.length || previewGrid.track !== activeTrack || previewGrid.rotation !== rotation)) {
+  if (!remote && playerCount > 1 && !race && (!previewGrid || previewGrid.routes !== confirmedRoutes || previewGrid.poses.length !== confirmedRoutes.length || previewGrid.track !== activeTrack || previewGrid.rotation !== rotation)) {
     previewGrid = { routes: confirmedRoutes, track: activeTrack, rotation, poses: startingGrid(activeTrack, confirmedRoutes, rotation) };
   }
-  const grid = playerCount > 1 && !race ? previewGrid!.poses : null;
+  const grid = !remote && playerCount > 1 && !race ? previewGrid!.poses : null;
   const chipAnchors: { car: number; anchor: GridLabelAnchor }[] = [];
-  confirmedRoutes.forEach((line, i) => {
-    const s = race?.racers[i].state, previous = previousPoses[i];
+  const carCount=remote?.cars.length??confirmedRoutes.length;
+  for(let i=0;i<carCount;i++) {
+    const line=confirmedRoutes[i];
+    const s = remote?.cars[i] ?? race?.racers[i].state, previous = previousPoses[i];
     const pose = s ? {
       x: previous && !s.finished ? lerp(previous.x, s.position.x, alpha) : s.position.x,
       z: previous && !s.finished ? lerp(previous.z, s.position.z, alpha) : s.position.z,
@@ -509,7 +522,7 @@ function updateVehicles(alpha: number) {
       const back = activeTrack.carLength / 2, tail = { x: pose.x - Math.sin(pose.heading) * back, z: pose.z - Math.cos(pose.heading) * back, y: 'y' in pose ? pose.y : undefined };
       chipAnchors.push({ car: i, anchor: { car: world.project(pose), tail: world.project(tail) } });
     }
-  });
+  }
   if (chipAnchors.length) {
     const safe = document.querySelector('#course-space')!.getBoundingClientRect();
     gridLabelPositions(chipAnchors.map(c => c.anchor)).forEach((p, k) => {
@@ -521,6 +534,7 @@ function updateVehicles(alpha: number) {
 
 app.addEventListener('click', e => {
   const target = (e.target as HTMLElement).closest<HTMLElement>('[data-action]'), action = target?.dataset.action;
+  if(action==='private-duel'){void openDuel();return;}
   if (action === 'tutorial') startTutorial();
   if (action === 'tutorial-draw' && phase === 'tutorial-intro') newSession(1);
   if (action === 'tutorial-example') usePractice(false);
@@ -775,15 +789,61 @@ document.querySelectorAll<HTMLButtonElement>('.diagnostic-pad').forEach(pad => {
   for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) pad.addEventListener(name, e => { ownership.up((e as PointerEvent).pointerId, name !== 'pointerup'); updateDiagnostics(); });
 });
 
+async function openDuel(code=''){
+  if(duel||openingDuel)return;
+  openingDuel=true;
+  const previous={circuit:activeCircuit.id,laps:lapCount,mode:sessionOptions.mode};
+  try {
+    const { DuelClient }=await import('./duels/client');
+    sessionOptions.mode='multiplayer';
+    duel=new DuelClient({
+      driver:{...preferences.drivers[0],name:cleanDriverName(preferences.drivers[0].name,0)},
+      versions:Object.fromEntries(circuits.map(c=>[c.id,c.track.version])),
+      draw(view){remote=undefined;loadDuelVenue(view);turn=Math.max(0,duel!.seatIndex);beginDrawing();},
+      ownLine(samples){if(duel?.view && activeCircuit.id!==duel.view.circuit)loadDuelVenue(duel.view);const result=compileRoute(samples,activeTrack);if(result.ok){route=result.route;if(remote)world.drawRaceLines([route]);else world.drawLine(route,result.drawing);}},
+      frame:receiveDuelFrame,
+      home(){duel=undefined;remote=undefined;lapCount=previous.laps;sessionOptions.mode=previous.mode;if(activeCircuit.id!==previous.circuit)loadCircuit(previous.circuit,false);goHome();},
+    });
+    duel.open(code);
+  } catch {showNotice('Could not load Private Duels. Please refresh.',5);}
+  finally{openingDuel=false;}
+}
+function loadDuelVenue(view:RoomView){
+  if(activeCircuit.id!==view.circuit)loadCircuit(view.circuit,false);
+  playerCount=view.drivers.length;lapCount=view.laps;world.setPlayers(playerCount);
+  applyDriverPresentation();renderControls();
+}
+function receiveDuelFrame(frame:RaceFrame,view:RoomView){
+  const first=!remote || remote.round!==frame.round;
+  if(first){
+    loadDuelVenue(view);world.setDrawingFocus(null,false);world.showContinueHandle(null);world.showError();world.setPlanningPlayer(null);
+    world.showVehicles(null,playerCount);world.drawRaceLines(route?[route]:[]);world.vehicles.forEach(v=>v.clearEffects());
+  }
+  previousPoses=first?[]:remote!.cars.map((s,i)=>{const p=frame.cars[i];return s.recoveryCount===p.recoveryCount?s:p;}).map(s=>({...s.position,y:s.elevation,heading:s.heading}));
+  remote=frame;frameAt=performance.now();
+  const next=frame.countdown?'countdown':view.phase==='results'?'results':'racing';
+  if(phase!==next){setPhase(next);if(next==='racing')audio.cue('start');}
+  if(frame.countdown){const beat=Math.ceil(frame.countdown/60);countdownElement.dataset.lights=String(4-beat);document.querySelector('#countdown-value')!.textContent=String(beat);if(first||beat!==countdownBeat)audio.cue('countdown');countdownBeat=beat;}
+  if(!document.hidden){for(const e of frame.events){audio.cue(e.type,e.intensity);if(e.type==='landing'||e.type==='collision'||e.type==='car-impact')world.vehicles[e.player].impact(e.time,e.type==='landing');if(e.point&&(e.type==='landing'||e.type==='splash'))world.feedback(e.point,e.type==='splash');}
+    const s=frame.cars[duel!.seatIndex];if(s)audio.mix({active:next==='racing'&&!s.finished,speed:s.speed,slip:s.drifting?Math.abs(s.slipAngle):0,sand:s.sandAmount});}
+  updateHud();
+}
+
 async function start() {
 try {
   const created = await createEngine(canvas, graphicsPreference.renderer); activeRenderer = created.renderer;
   world = new GameScene(canvas, activeTrack, theme, activeCircuit.scenery, created.engine, graphicsChoice); world.onGraphicsChange = onGraphicsChange; applyDriverPresentation(); renderControls(); refreshLap(); refreshSettings(); setPhase('welcome');
+  const invitation=new URL(location.href).searchParams.get('duel');
+  if(invitation && /^[0-9a-f]{10}$/i.test(invitation))void openDuel(invitation.toUpperCase());
   canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); pauseRace(); showNotice('The graphics were interrupted. Reload if the circuit does not recover.', 10); });
   world.engine.runRenderLoop(() => {
     const now = performance.now(), elapsed = (now - lastFrame) / 1000; lastFrame = now;
     // Capture every timestamp, but rebuild the live line at most once per rendered frame.
     if (phase === 'drawing' && drawingDirty) { drawingDirty = false; world.drawLine(stroke); }
+    if(duel && remote){
+      updateVehicles(clamp((now-frameAt)/50,0,1));
+      world.render(now/1000,false);return;
+    }
     if (phase === 'racing' && elapsed > 0.5) pauseRace('render-delay');
     // A resumed tutorial race returns to its unanswered prompt before any further step.
     if (phase === 'racing' && tutorial?.awaiting) setPhase('coaching');
