@@ -30,11 +30,11 @@ describe('momentum, steering recovery and real surfaces', () => {
   test('excess slip smoothly loses lateral authority while clean corner grip stays unchanged',()=>{
     expect(lateralGrip(48,7.5,20,.1)).toBe(48);
     expect(lateralGrip(48,7.5,30,.3)).toBeLessThan(48);
-    expect(lateralGrip(48,7.5,30,.8)).toBeCloseTo(48*.86);
-    expect(lateralGrip(38.4,7.5,30,.8)).toBeCloseTo(38.4*.86);
+    expect(lateralGrip(48,7.5,30,.8)).toBeCloseTo(48*.8);
+    expect(lateralGrip(38.4,7.5,30,.8)).toBeCloseTo(38.4*.8);
     for(let slip=.05;slip<1;slip+=.01){
       expect(lateralGrip(48,7.5,30,slip)).toBeLessThanOrEqual(lateralGrip(48,7.5,30,slip-.01));
-      expect(lateralGrip(48,7.5,30,slip)).toBeGreaterThanOrEqual(48*.86);
+      expect(lateralGrip(48,7.5,30,slip)).toBeGreaterThanOrEqual(48*.8);
     }
   });
   test('a fast plan can exceed the former 28 m/s cruising speed without thrust', () => {
@@ -52,9 +52,21 @@ describe('momentum, steering recovery and real surfaces', () => {
     expect(fast.recovered).toBe(true); expect(fast.simulation.state.finished).toBe(true);
     expect(careful.maxError).toBeLessThan(1.2); expect(careful.sandTime).toBe(0);
     expect(careful.simulation.state.driftCount).toBe(0);
-    // Tire saturation never invokes a one-frame speed multiplier or a delayed speed cap.
-    expect(fast.maxAsphaltSpeedLoss).toBeLessThanOrEqual(RULES.braking * RULES.dt + 1e-8);
+    expect(fast.maxAsphaltSpeedLoss).toBeLessThanOrEqual((RULES.braking + RULES.driftScrub * RULES.maxSpeed) * RULES.dt + 1e-8);
     expect(fast.maxSandSpeedLoss).toBeGreaterThan(fast.maxAsphaltSpeedLoss);
+  });
+  test('a sideways slide scrubs speed immediately while an aligned car carries its pace', () => {
+    const line = route(2);
+    const speeds = [0, Math.PI / 3].map(slip => {
+      const sim = new RaceSimulation(line, coastalTrack);
+      const direction = sim.state.heading + slip;
+      Object.assign(sim.state, { speed: 30, desiredSpeed: 30,
+        velocity: { x: 30 * Math.sin(direction), z: 30 * Math.cos(direction) } });
+      sim.step();
+      return sim.state.speed;
+    });
+    expect(speeds[0]).toBeCloseTo(30, 2);
+    expect(speeds[1]).toBeCloseTo(speeds[0] * Math.exp(-RULES.driftScrub * RULES.dt), 6);
   });
   test('sand has lower grip/response and actual-position drag reduces speed immediately', () => {
     const r = route(7), road = new RaceSimulation(r, coastalTrack), sand = new RaceSimulation(r, coastalTrack);
@@ -84,18 +96,21 @@ describe('momentum, steering recovery and real surfaces', () => {
     }
     expect(observed).toBe(true);
   });
-  test('drifting on asphalt preserves constant requested speed with no grip penalty', () => {
+  test('a sustained asphalt slide loses speed at the same requested pace', () => {
     const points = Array.from({ length: 181 }, (_, i) => ({ x: Math.sin(i / 180 * Math.PI * 2) * 9, z: Math.cos(i / 180 * Math.PI * 2) * 9 }));
     const distances = cumulative(points), length = distances.at(-1)!;
     const track: TrackDefinition = { id: 'wide-circle', version: 1, name: 'Tire test', centerline: points, distances, length, roadWidth: 100, carWidth: 2.2, carLength: 5.2, barriers: [], start: points[0] };
     const r: CompiledRoute = { version: COMPILER_VERSION, trackId: track.id, trackVersion: track.version, length, drawingDuration: 2, points: points.map((p, i) => ({ ...p, distance: distances[i], desiredSpeed: 25, curvature: 1 / 9 })) };
     const sim = new RaceSimulation(r, track); sim.state.speed = 25; sim.state.velocity = { x: 25, z: 0 };
     let driftSeen = false;
+    let lowestSpeed = 25;
     for (let i = 0; i < 300 && !sim.state.finished; i++) {
       sim.step(); driftSeen ||= sim.state.drifting;
-      expect(sim.state.sandAmount).toBe(0); expect(sim.state.speed).toBeCloseTo(25, 6); expect(sim.state.desiredSpeed).toBe(25);
+      lowestSpeed = Math.min(lowestSpeed, sim.state.speed);
+      expect(sim.state.sandAmount).toBe(0); expect(sim.state.desiredSpeed).toBe(25);
     }
     expect(driftSeen).toBe(true);
+    expect(lowestSpeed).toBeLessThan(24.5);
   });
   test('the same sideways momentum aligns more slowly on sand', () => {
     const r = route(7), road = new RaceSimulation(r, coastalTrack), sand = new RaceSimulation(r, coastalTrack);

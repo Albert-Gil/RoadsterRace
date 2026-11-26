@@ -14,10 +14,15 @@ import { trackSurface } from './surfaces';
 
 export { RULES };
 
-/** Tires lose a little lateral authority past peak slip; no timed speed cap or asphalt drag. */
-export function lateralGrip(grip: number, response: number, speed: number, slip: number) {
+/** Excess steering demand, normalized from peak grip to a fully saturated slide. */
+function tireSaturation(grip: number, response: number, speed: number, slip: number) {
   const demand = Math.abs(slip) * response * speed;
-  const saturation = clamp((demand / Math.max(1e-9, grip) - 1) / RULES.driftSaturationRange, 0, 1);
+  return clamp((demand / Math.max(1e-9, grip) - 1) / RULES.driftSaturationRange, 0, 1);
+}
+export function lateralGrip(grip: number, response: number, speed: number, slip: number) {
+  return gripAtSaturation(grip, tireSaturation(grip, response, speed, slip));
+}
+function gripAtSaturation(grip: number, saturation: number) {
   return grip * (1 - RULES.driftGripLoss * saturation);
 }
 
@@ -207,10 +212,12 @@ export class RaceSimulation {
     let travelHeading = s.speed > 0.05 ? Math.atan2(s.velocity.x, s.velocity.z) : s.heading;
     const slip = angleDelta(travelHeading, s.heading);
     // Tire force bends momentum toward the steered heading. At high speed it cannot turn fast enough.
-    const grip = lateralGrip(surface.grip, surface.response, s.speed, slip);
+    const saturation = tireSaturation(surface.grip, surface.response, s.speed, slip);
+    const grip = gripAtSaturation(surface.grip, saturation);
     const turnRate = clamp(slip * surface.response, -grip / Math.max(2, s.speed), grip / Math.max(2, s.speed));
     travelHeading += turnRate * dt;
-    let speed = Math.max(0, s.speed + s.acceleration * dt) * Math.exp(-surface.drag * surface.sandAmount * dt);
+    const scrub = RULES.driftScrub * saturation * saturation;
+    let speed = Math.max(0, s.speed + s.acceleration * dt) * Math.exp(-(surface.drag * surface.sandAmount + scrub) * dt);
     let vx = Math.sin(travelHeading) * speed, vz = Math.cos(travelHeading) * speed;
     if (now < s.thrustUntil) { vx += Math.sin(s.heading) * RULES.thrustAcceleration * dt; vz += Math.cos(s.heading) * RULES.thrustAcceleration * dt; }
     speed = Math.hypot(vx, vz);

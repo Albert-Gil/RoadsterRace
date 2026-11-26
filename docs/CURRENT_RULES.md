@@ -8,7 +8,7 @@ Conventions: SI units; horizontal plane (x, z) with y up; heading 0 points along
 
 | Item | Version |
 |---|---:|
-| Vehicle rules (`RULES.version`) | 21 |
+| Vehicle rules (`RULES.version`) | 22 |
 | Computer planning/controller (`COMPUTER_VERSION`) | 2 |
 | Route compiler (`COMPILER_VERSION`) | 21 |
 | Newport Island track (`coastal-launch`) | 8 |
@@ -83,7 +83,7 @@ Human-only Finish (selected distance), Clean (one lap without barrier/car contac
 
 | Key | Value | Unit | Meaning |
 |---|---:|---|---|
-| `version` | 21 | — | Vehicle rules version; stored with records and championships |
+| `version` | 22 | — | Vehicle rules version; stored with records and championships |
 | `dt` | 0.0166667 | s | Fixed simulation step (two equal substeps per step) |
 | `laps` | 2 | laps | Default race distance |
 | `acceleration` | 6 | m/s² | Maximum pace-following acceleration |
@@ -116,8 +116,9 @@ Human-only Finish (selected distance), Clean (one lap without barrier/car contac
 | `surfaceTransition` | 1.2 | m | Distance over which asphalt blends to sand |
 | `driftStartAngle` | 0.17 (9.74028°) | rad | Slip angle that starts a drift |
 | `driftEndAngle` | 0.09 (5.15662°) | rad | Slip angle below which a drift ends |
-| `driftGripLoss` | 0.14 | fraction | Largest loss of lateral authority beyond peak tire slip; no speed multiplier |
+| `driftGripLoss` | 0.2 | fraction | Largest loss of lateral grip from excess steering demand |
 | `driftSaturationRange` | 2 | peak-demand multiples | Excess tire demand over which lateral grip falls smoothly |
+| `driftScrub` | 0.12 | 1/s | Peak tire scrub rate, scaled by squared saturation |
 | `recoveryHold` | 1 | s | Time a reset car waits before driving on |
 | `hazardApproach` | 12 | m | A crash this far before a drawn hazard resets the car past it |
 | `hazardPenaltySpeed` | 20 | m/s | Extra reset wait is the skipped circuit distance divided by this |

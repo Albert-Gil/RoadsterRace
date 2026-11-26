@@ -2,7 +2,7 @@
 
 ## Current tuning
 
-Rules and compiler **21** use 45 m/s² of peak paved-road grip, a 30.5 m/s top drawn pace and a 43 m/s absolute speed cap. Packed dirt retains 38.4 m/s² and packed snow 26.4 m/s². The sector view and whole-circuit view share this pace mapping.
+Physics **22** and compiler **21** use 45 m/s² of peak paved-road grip, a 30.5 m/s top drawn pace and a 43 m/s absolute speed cap. Packed dirt retains 38.4 m/s² and packed snow 26.4 m/s². Overloaded tires progressively lose up to 20% of lateral grip and scrub speed at up to 0.12 per second. The sector view and whole-circuit view share this pace mapping.
 
 The sections below record the original 2026-10-28 handling update.
 

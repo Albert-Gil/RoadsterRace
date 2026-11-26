@@ -1,39 +1,39 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`coastal-launch has a repeatable v21 baseline on frozen geometry 1`] = `
+exports[`coastal-launch has a repeatable v22 baseline on frozen geometry 1`] = `
 {
-  "collisions": 2,
-  "drifts": 8,
-  "finish": 42.260846,
+  "collisions": 0,
+  "drifts": 7,
+  "finish": 42.060615,
   "laps": [
-    22.364395,
-    19.89645,
+    22.788837,
+    19.271778,
   ],
   "recoveries": 0,
 }
 `;
 
-exports[`golden-gate has a repeatable v21 baseline on frozen geometry 1`] = `
+exports[`golden-gate has a repeatable v22 baseline on frozen geometry 1`] = `
 {
-  "collisions": 5,
-  "drifts": 12,
-  "finish": 75.914073,
+  "collisions": 3,
+  "drifts": 15,
+  "finish": 74.284616,
   "laps": [
-    39.763181,
-    36.150892,
+    38.601469,
+    35.683147,
   ],
-  "recoveries": 3,
+  "recoveries": 2,
 }
 `;
 
-exports[`orbital-launchyard has a repeatable v21 baseline on frozen geometry 1`] = `
+exports[`orbital-launchyard has a repeatable v22 baseline on frozen geometry 1`] = `
 {
   "collisions": 1,
-  "drifts": 12,
-  "finish": 54.350552,
+  "drifts": 11,
+  "finish": 56.177791,
   "laps": [
-    25.158157,
-    29.192395,
+    29.713789,
+    26.464002,
   ],
   "recoveries": 0,
 }

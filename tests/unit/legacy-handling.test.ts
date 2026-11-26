@@ -5,8 +5,8 @@ import type { TrackDefinition, CompiledRoute } from '../../src/core/types';
 import { LocalRace } from '../../src/core/local-race';
 import { RULES } from '../../src/core/simulation';
 
-// Keep historic geometry and pace frozen. Rules v21 reduce paved-road grip and raise the speed cap.
-test.each(fixtures)('$track.id has a repeatable v21 baseline on frozen geometry', ({ track: data, route: line }) => {
+// Keep historic geometry and pace frozen. Rules v22 reduce paved-road grip and raise the speed cap.
+test.each(fixtures)('$track.id has a repeatable v22 baseline on frozen geometry', ({ track: data, route: line }) => {
   const track=data as TrackDefinition, route={...line,version:COMPILER_VERSION} as CompiledRoute;
   const race = new LocalRace([route], track, 2);
   for (let tick = 0; tick < 18000 && !race.finished; tick++) {
@@ -25,5 +25,5 @@ test('ground force tuning retains established grip, response, acceleration and t
     grip: 45, sandGrip: 6.5, response: 7.5, sandResponse: 1.8, acceleration: 6, braking: 8.5, thrust: 25, max: 43,
   });
   expect(RULES.sandDrag).toBe(0.95);
-  expect(RULES.driftGripLoss).toBe(.14); expect(RULES.driftSaturationRange).toBe(2);
+  expect(RULES.driftGripLoss).toBe(.20); expect(RULES.driftSaturationRange).toBe(2);
 });
