@@ -58,10 +58,9 @@ async function fixture(circuit, count = 1, options = phone, jump = false) {
     await page.goto(`${devURL}?circuit=${circuit}`, { waitUntil: 'domcontentloaded', timeout: 90000 });
     await page.getByRole('button', { name: count === 1 ? "Time Trial" : 'Multiplayer' }).click();
     if (count > 1) await page.getByRole('button', { name: `${count} players`, exact: true }).click();
-    // Software WebGL can keep the animated setup panel moving for several frames.
-    // A forced pointer click still exercises the real button and is followed by
-    // the drawing/render assertions below.
-    await page.getByRole('button', { name: count === 1 ? 'Draw racing line' : 'Plan your lines' }).click({ force: true });
+    // The button enters the DOM before the setup panel finishes opening. Wait
+    // for the ordinary actionable state before sending the pointer click.
+    await page.getByRole('button', { name: count === 1 ? 'Draw racing line' : 'Plan your lines' }).click();
     await page.waitForFunction(() => window.__roadster.getGraphics().renderReady && window.__roadster.getGraphics().roadVisible);
     await page.evaluate(() => document.fonts.ready);
     const variants = await page.evaluate(() => {

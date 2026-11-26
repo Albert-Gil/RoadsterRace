@@ -3,7 +3,13 @@ import { WebSocketTransport } from '@colyseus/ws-transport';
 import { DuelRoom } from './duel-room';
 
 const server = new Server({
-  transport: new WebSocketTransport({ maxPayload: 768 * 1024, perMessageDeflate: false }),
+  transport: new WebSocketTransport({
+    maxPayload: 768 * 1024, perMessageDeflate: false,
+    // A reclaimed browser can stall during its first WebGL scene upload. Allow
+    // that socket to answer a ping when the scene is ready. Explicit socket
+    // closes still start the room's 30-second reconnect timer immediately.
+    pingInterval: 10_000, pingMaxRetries: 6,
+  }),
   greet: false,
   express(app) { app.get('/health', (_req: unknown,res: import('node:http').ServerResponse)=>{res.setHeader('Access-Control-Allow-Origin','*');res.setHeader('Content-Type','application/json');res.end('{"ok":true}');}); },
 });

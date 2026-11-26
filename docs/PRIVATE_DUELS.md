@@ -33,6 +33,8 @@ A dropped connection has 30 seconds to reclaim its seat. Its car follows the loc
 
 When a driver reloads an invite, the saved credential reclaims the seat before the browser starts the 3D circuit. Once the scene is ready it requests the current round, the driver's own line and the latest standings, including a result reached during loading. Choosing Home explicitly releases the seat and clears its credential.
 
+The transport pings every ten seconds and tolerates six unanswered pings. This lets a connected browser finish a slow graphics upload. A silent network loss can therefore take about a minute to detect. Once the socket closes, the room gives the driver its usual 30 seconds to reconnect.
+
 A future Unity client can use the Colyseus C# SDK to consume the same messages. `tests/fixtures/duel-reference.json` contains actual timestamped lines, command ticks, car checkpoints, contacts, flight/recovery events and finishing order. The three reference races are renderer independent. Run `pnpm exec vitest run tests/unit/duel-reference.test.ts` to check them, and regenerate deliberately with `node --experimental-transform-types tools/duel-references.mjs` when the contract or physics changes.
 
 ## Verification and capacity
