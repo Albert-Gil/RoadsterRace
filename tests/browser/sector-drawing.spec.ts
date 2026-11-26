@@ -119,6 +119,39 @@ test('iPad-sized touch screens and desktops keep the single-stroke overview', as
   await context.close();
 });
 
+test('drawing view persists and portrait guidance clears the controls', async ({ browser }) => {
+  const context = await browser.newContext({ ...iphone, viewport: { width: 375, height: 812 } });
+  try {
+    const page = await context.newPage();
+    await page.goto('/?circuit=lax');
+    const setup = () => page.getByRole('button', { name: 'Time Trial', exact: true }).click();
+    const start = () => page.getByRole('button', { name: 'Draw racing line', exact: true }).click();
+    await setup();
+    await page.getByRole('button', { name: 'Whole circuit', exact: true }).click();
+    await page.reload();
+    await setup();
+    await expect(page.getByRole('button', { name: 'Whole circuit', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await start();
+    await expect(page.getByRole('button', { name: 'Start again' })).toBeVisible();
+    await expect(page.locator('.planning-note')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Race setup' }).click();
+    await page.getByRole('button', {name:'By sector', exact:true}).click();
+    await start();
+    await page.getByRole('button', {name:'Draw whole circuit'}).click();
+    await expect(page.getByRole('button', {name:'Start again'})).toBeVisible();
+    await page.getByRole('button', { name: 'Race setup' }).click();
+    await start();
+    await page.getByRole('button', {name:'Start sector 1'}).click();
+    const note = page.locator('.planning-note');
+    await expect(note.locator('strong')).toHaveText('Sector 1 of 4');
+    const bottom = await note.evaluate(el => el.getBoundingClientRect().bottom);
+    expect(bottom).toBeLessThanOrEqual(await page.locator('#course-space').evaluate(el => el.getBoundingClientRect().top));
+    expect(bottom).toBeLessThan(await page.locator('.panel-actions').evaluate(el => el.getBoundingClientRect().top));
+    expect(await note.evaluate(el => getComputedStyle(el).pointerEvents)).toBe('none');
+    await page.screenshot({path:test.info().outputPath('portrait-sector-header.png')});
+  } finally { await context.close(); }
+});
+
 for (const portrait of [false, true]) test(`LAX ${portrait ? 'portrait' : 'landscape'} preserves earlier sectors on Retry and Previous and carries pace through joins`, async ({ browser }) => {
   test.setTimeout(360000);
   const context = await browser.newContext({ ...iphone, viewport: portrait ? {width:390, height:844} : iphone.viewport });
@@ -128,8 +161,20 @@ for (const portrait of [false, true]) test(`LAX ${portrait ? 'portrait' : 'lands
     await page.getByRole('button', { name: 'Start sector 1' }).click();
     let progress = 0, clock = 1000;
     const joins: number[] = [];
+    let secondSectorJoin: number | undefined;
     for (let i = 0; i < 18; i++) {
       await page.waitForFunction(() => !(window as any).__roadster.getWorld().cameraMoving);
+      const heading = page.locator('.planning-note strong');
+      if (secondSectorJoin === undefined && await heading.textContent() === 'Sector 2 of 4') {
+        secondSectorJoin = progress;
+        if (portrait) {
+          const header = await page.locator('.planning-note').boundingBox();
+          const retry = await page.getByRole('button', {name:'Restart this sector'}).boundingBox();
+          const previous = await page.getByRole('button', {name:'Edit previous sector'}).boundingBox();
+          expect(header!.y + header!.height).toBeLessThan(Math.min(retry!.y, previous!.y));
+          await page.screenshot({path:test.info().outputPath('lax-portrait-sector-two.png')});
+        }
+      }
       progress = await strokeOnScreen(page, progress, clock, .009, .18);
       clock += 100;
       await page.waitForFunction(() => document.querySelector('main')?.dataset.phase === 'preview' ||
@@ -138,6 +183,7 @@ for (const portrait of [false, true]) test(`LAX ${portrait ? 'portrait' : 'lands
       joins.push(progress);
     }
     await expect(page.getByRole('button', {name:'Race this line'})).toBeVisible();
+    expect(joins).toContain(secondSectorJoin);
     const result = await page.evaluate((joins) => {
       const api = (window as any).__roadster;
       const points = api.getRoute().points as {distance:number; desiredSpeed:number}[];

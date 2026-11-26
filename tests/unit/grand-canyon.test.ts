@@ -28,7 +28,7 @@ test.each([20,30,42].flatMap(speed=>[-20,0,20].map(yaw=>({speed,yaw}))))('automa
  expect(events).toContain('takeoff');expect(events).toContain('landing');expect(s.recoveryCount).toBe(0);expect(s.elevation).toBeCloseTo(6);expect(s.position.x).toBeGreaterThan(j.from.x+j.gap+track.carLength/2);
 });
 test('dirt is grippier than loose runoff and does not apply an on-track drag fraction',()=>{
- const p=roadPoint({x:-55,z:-52},track,0);expect(sampleSurface(p,track).grip).toBe(38.4);expect(sampleSurface(p,track).sandAmount).toBe(0);expect(RULES.maxSpeed).toBe(42);
+ const p=roadPoint({x:-55,z:-52},track,0);expect(sampleSurface(p,track).grip).toBe(38.4);expect(sampleSurface(p,track).sandAmount).toBe(0);expect(RULES.maxSpeed).toBe(43);
 });
 
 test.each([false,true])('six-lap Grand Canyon finishes (hidden trail=%s)',branch=>{

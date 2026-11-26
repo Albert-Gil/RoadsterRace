@@ -278,7 +278,21 @@ p.resume-tour { color: #ffd15a; font-size: 12px; }
 .playground:is([data-phase="drawing"], [data-phase="preview"]) .planning-button span { font: 700 calc(9px * var(--ui-scale, 1))/1 var(--font-body); letter-spacing: .06em; text-transform: uppercase; }
 .planning-driver { display: flex; justify-content: center; }
 .planning-driver .player-chip { width: 34px; height: 34px; border-radius: 50%; box-shadow: 0 0 0 2px rgb(255 255 255 / 55%), 0 4px 12px rgb(0 0 0 / 40%); font-size: 18px; }
-.playground:is([data-phase="drawing"], [data-phase="preview"]) .planning-error { position: fixed; left: calc(env(safe-area-inset-left, 0px) + 12px); bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); max-width: min(calc(420px * var(--ui-scale, 1)), calc(100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 112px)); padding: 9px 12px; border-left: 3px solid var(--accent); border-radius: 8px; background: var(--glass); color: var(--text); font: 500 calc(12px * var(--ui-scale, 1))/1.35 var(--font-body); box-shadow: 0 6px 18px rgb(0 0 0 / 35%); pointer-events: none; }
+.playground:is([data-phase="drawing"], [data-phase="preview"]) .planning-error {
+  position: fixed; top: calc(env(safe-area-inset-top, 0px) + 6px);
+  left: calc(env(safe-area-inset-left, 0px) + 10px); right: calc(env(safe-area-inset-right, 0px) + var(--rail-button) + 20px);
+  width: fit-content; max-width: 480px; margin-inline: auto; display: flex; align-items: center; gap: 10px;
+  padding: 6px 12px; border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 8px;
+  background: var(--glass); color: var(--text); font: 500 15px/1.25 var(--font-body);
+  box-shadow: 0 3px 12px rgb(0 0 0 / 32%); pointer-events: none;
+}
+.planning-error strong { flex: none; font: italic 700 23px/1.05 var(--font-display); }
+@media (orientation: portrait) {
+  .playground:is([data-phase="drawing"], [data-phase="preview"]) .planning-error {
+    right: calc(env(safe-area-inset-right, 0px) + 10px); flex-direction: column; gap: 3px; text-align: center;
+  }
+  .planning-error strong { font-size: 25px; }
+}
 .playground:is([data-phase="drawing"], [data-phase="preview"]) .planning-note { border-left-color: #e3b341; }
 
 /* ---------- Race chrome ----------

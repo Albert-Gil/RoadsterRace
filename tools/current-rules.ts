@@ -40,7 +40,7 @@ const documentation: Record<string, Record<string, Unit>> = {
     flightLaunchCorrection: ['rad', 'Largest momentum rotation at launch'],
     flightTurnRate: ['rad/s', 'Largest momentum rotation rate in flight'],
     dirtGrip: ['m/s²', 'Packed-dirt lateral grip'],
-    snowGrip: ['m/s²', 'Packed-snow lateral grip, 55% of asphalt and below packed dirt'],
+    snowGrip: ['m/s²', 'Packed-snow lateral grip, below asphalt and packed dirt'],
     snowLooseGrip: ['m/s²', 'Deep-powder lateral grip outside the packed lane'],
     snowDrag: ['1/s', 'Exponential speed decay at full deep-powder contact'],
     asphaltGrip: ['m/s²', 'Lateral acceleration limit on asphalt'],

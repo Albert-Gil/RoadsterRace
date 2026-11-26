@@ -5,7 +5,8 @@ import { defaultCircuit, findCircuit } from '../content/circuits';
 import { defaultPaintId, paintFinishes,rewardPaintFinishes } from './themes';
 export { paintFinishes } from './themes';
 export interface DriverProfile { name: string; paint: string;badge?:string }
-export interface RacePreferences { version: 1; laps: number; drivers: DriverProfile[]; circuitId: string; ghost?: boolean }
+export type DrawingMode = 'auto' | 'sectors' | 'whole';
+export interface RacePreferences { version: 1; laps: number; drivers: DriverProfile[]; circuitId: string; ghost?: boolean; drawingMode?: DrawingMode }
 export const PREFERENCES_KEY = 'roadster-race.preferences.v1';
 const defaults = [defaultPaintId, 'cobalt', 'solar', 'verdant'];
 export const defaultDriverName = (index: number) => `Player ${index + 1}`;
@@ -23,7 +24,8 @@ export function parsePreferences(serialized: string | null): RacePreferences {
     const data = JSON.parse(serialized ?? 'null');
     if (!data || data.version !== 1) return defaults;
     const laps = Number.isInteger(data.laps) && data.laps >= MIN_LAPS && data.laps <= MAX_LAPS ? data.laps : DEFAULT_LAPS;
-    return { version: 1, laps, ghost: data.ghost !== false, circuitId: findCircuit(data.circuitId).id, drivers: defaults.drivers.map((driver, index) => {
+    return { version: 1, laps, ghost: data.ghost !== false,
+      ...(data.drawingMode === 'whole' || data.drawingMode === 'sectors' ? { drawingMode: data.drawingMode } : {}), circuitId: findCircuit(data.circuitId).id, drivers: defaults.drivers.map((driver, index) => {
       const saved = Array.isArray(data.drivers) ? data.drivers[index] : null;
       return { name: typeof saved?.name === 'string' ? cleanDriverName(saved.name, index) : driver.name,
         paint: [...paintFinishes,...rewardPaintFinishes].some(paint => paint.id === saved?.paint) ? saved.paint : driver.paint,

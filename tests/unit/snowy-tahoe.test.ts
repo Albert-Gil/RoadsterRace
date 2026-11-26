@@ -16,9 +16,9 @@ test('a compact full-width snow course has open bends, a clear gate and an appro
     if(result.ok){expect(result.route.hazards).toBeUndefined();expect(result.route.hopShortcuts?.length??0).toBe(branch?1:0);}
   }
 });
-test('packed snow has 55% asphalt grip, less than canyon dirt, and no on-lane drag',()=>{
+test('packed snow retains its established grip, less than canyon dirt, and no on-lane drag',()=>{
   const road=sampleSurface(track.start,track),powder=sampleSurface({...track.start,z:track.start.z-12},track);
-  expect(road.grip).toBeCloseTo(RULES.asphaltGrip*.55);expect(road.grip).toBeLessThan(RULES.dirtGrip);expect(road.sandAmount).toBe(0);expect(road.surface).toBe('packed-snow');
+  expect(road.grip).toBeCloseTo(26.4);expect(road.grip).toBeLessThan(RULES.dirtGrip);expect(road.sandAmount).toBe(0);expect(road.surface).toBe('packed-snow');
   expect(powder.surface).toBe('deep-snow');expect(powder.grip).toBeLessThan(road.grip);expect(powder.drag).toBe(1.1);
 });
 test('snow plans finish and CPU plans use real snow grip',()=>{

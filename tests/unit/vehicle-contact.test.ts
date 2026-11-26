@@ -114,7 +114,7 @@ describe('physical multiplayer contact', () => {
     raceWithWall.racers.forEach((sim, i) => { Object.assign(sim.state, body(i ? 0 : 3.5, 0, i ? 42 : 0, 0, 0), { speed: i ? 42 : 0 }); sim.gridPending = false; });
     for (let i = 0; i < 180; i++) {
       raceWithWall.step();
-      for (const sim of raceWithWall.racers) { expect(Number.isFinite(sim.state.position.x + sim.state.position.z + sim.state.speed)).toBe(true); expect(barrierContact(sim.state.position, sim.state.heading, wallTrack)?.depth ?? 0).toBeLessThan(0.01); expect(sim.state.speed).toBeLessThanOrEqual(42.000001); }
+      for (const sim of raceWithWall.racers) { expect(Number.isFinite(sim.state.position.x + sim.state.position.z + sim.state.speed)).toBe(true); expect(barrierContact(sim.state.position, sim.state.heading, wallTrack)?.depth ?? 0).toBeLessThan(0.01); expect(sim.state.speed).toBeLessThanOrEqual(RULES.maxSpeed + 1e-6); }
     }
   });
   test('stronger thrust exceeds the previous cap while off-road drag retains more momentum', () => {
@@ -125,7 +125,7 @@ describe('physical multiplayer contact', () => {
       for (let i = 0; i < 42; i++) { sim.step(); maximum = Math.max(maximum, sim.state.speed); }
       return maximum;
     });
-    expect(measured[1]).toBeGreaterThan(38.5); expect(measured[1] - measured[0]).toBeGreaterThan(8); expect(measured[1]).toBeLessThanOrEqual(42.000001);
+    expect(measured[1]).toBeGreaterThan(38.5); expect(measured[1] - measured[0]).toBeGreaterThan(8); expect(measured[1]).toBeLessThanOrEqual(RULES.maxSpeed + 1e-6);
     const sim = new RaceSimulation(result.route, coastalTrack); sim.state.position.z -= 10; sim.state.speed = 20; sim.state.velocity = { x: 20, z: 0 }; sim.state.desiredSpeed = 20; sim.step();
     expect(sim.state.sandAmount).toBe(1); expect(sim.state.speed / 20).toBeGreaterThan(Math.exp(-1.25 / 60)); expect(sim.state.speed).toBeLessThan(20);
   });

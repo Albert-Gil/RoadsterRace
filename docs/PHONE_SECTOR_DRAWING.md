@@ -14,6 +14,8 @@ user-agent sniffing. `?sectors=on|off` overrides the detection. Automated browse
 (`navigator.webdriver`) keep the overview unless `?sectors=on`, so the existing whole-lap
 touch fixtures and Pages smoke checks are unchanged (as automation also starts on Low).
 
+Race setup offers **Auto**, **By sector** and **Whole circuit** under Drawing view. Explicit choices persist on this device and take precedence over automatic detection. By sector uses two sectors on shorter circuits. The tutorial uses the whole circuit. Each sector overview also has a **Whole lap** button for trying that drawing without zooming or changing the saved preference.
+
 ## Which circuits
 
 `phoneDrawingSectors` in `src/content/circuits.ts`, from the road width measured in the iPhone
@@ -28,7 +30,7 @@ landscape overview (844×390):
 
 ## How it plays
 
-1. Each driver sees the whole circuit and chooses **Start** to glide into sector one.
+1. Each sector driver sees the whole circuit and chooses **Sectors** to glide into sector one. The top card gives the current sector and one short instruction, above the bottom controls in portrait.
 2. Draw and lift as needed. The camera frames the end of the line and the remaining road in that sector, with some overlap into the next. The glowing end is the next touchdown target. Touching the glowing end during a glide holds the camera there so drawing can resume immediately. Reduced motion uses an immediate transition.
 3. **Undo** removes one stroke. **Retry** takes the driver back to the start of the current sector. **Previous** opens the preceding sector for redrawing. Earlier sectors are retained. From the chosen sector, draw forward again to the finish. Both sector controls also work from the final preview before the driver locks in the line.
 4. A retake can start within 46 CSS pixels of the end or along the last 30 metres of the active sector. Preview and racing use the whole-circuit camera.

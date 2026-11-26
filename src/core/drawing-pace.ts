@@ -2,7 +2,7 @@ import { clamp, cumulative, distance, lerp, mix } from './geometry';
 import { DRAWING_RULES } from './route-cleanup';
 import type { DrawSample } from './types';
 
-export const PACE_RANGE = Object.freeze({ min: 9, max: 30 });
+export const PACE_RANGE = Object.freeze({ min: 9, max: 30.5 });
 export const PACE_FILTER = Object.freeze({ gestureRadius: 5, compiledRadius: 8, sampleSpacing: 1, pauseRadius: 0.35 });
 
 /** Fraction of the circuit per second: independent of camera, CSS size and pixel density. */

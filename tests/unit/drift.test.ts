@@ -38,7 +38,7 @@ describe('momentum, steering recovery and real surfaces', () => {
     }
   });
   test('a fast plan can exceed the former 28 m/s cruising speed without thrust', () => {
-    expect(PACE_RANGE.max).toBe(30);
+    expect(PACE_RANGE.max).toBe(30.5);
     const sim = new RaceSimulation(route(2), coastalTrack);
     sim.state.speed = 28;
     sim.state.velocity = { x: Math.sin(sim.state.heading) * 28, z: Math.cos(sim.state.heading) * 28 };

@@ -408,7 +408,10 @@ function beginDrawing() {
   practiceTurns.delete(turn);
   clearRaceInput(); race = null; route = null; drawingTrim = undefined; stroke = []; drawingPointer = null;
   strokeStarts = []; sectorStarts = [0]; preservedSectorSamples = 0; beforeTouch = undefined; incomingPace = undefined; sectorIndex = 0;
-  sectors = phoneSizedTouchScreen() ? drawingSectors(activeTrack, phoneDrawingSectors[activeTrack.id] ?? 1) : [];
+  const authored = phoneDrawingSectors[activeTrack.id];
+  const mode = preferences.drawingMode ?? 'auto';
+  const count = mode === 'sectors' ? authored ?? 2 : mode === 'auto' && phoneSizedTouchScreen() ? authored ?? 1 : 1;
+  sectors = count > 1 && sessionOptions.mode !== 'tutorial' ? drawingSectors(activeTrack, count) : [];
   sectorOverview = sectorMode();
   world.showContinueHandle(null); world.setDrawingFocus(null, false);
   world.setPlanningPlayer(playerCount > 1 ? turn : null); world.showVehicles(-1, playerCount);
@@ -545,6 +548,14 @@ app.addEventListener('click', e => {
   if (action === 'friends') { sessionOptions.mode='multiplayer';setupCount = 2; applyDriverPresentation(); setPhase('setup'); }
   if (action === 'circuit' && phase === 'setup') selectCircuit(target!.dataset.circuit!);
   if(action==='difficulty'&&phase==='setup'){sessionOptions.difficulty=target!.dataset.difficulty as SessionOptions['difficulty'];refreshSetup();}
+  if (action === 'drawing-mode' && phase === 'setup') {
+    const mode = target?.dataset.mode;
+    if (mode === 'auto' || mode === 'sectors' || mode === 'whole') {
+      preferences.drawingMode = mode;
+      saveSettings();
+      refreshSetup(`[data-mode="${mode}"]`);
+    }
+  }
   if(action==='ghost-toggle'&&phase==='setup'){preferences.ghost=preferences.ghost===false;saveSettings();refreshSetup();}
   if (action === 'settings' && ['welcome', 'setup'].includes(phase)) openSettings();
   if (action === 'close-settings') closeSettings();
@@ -589,6 +600,10 @@ app.addEventListener('click', e => {
   if (action === 'home') goHome();
   if (action === 'configure-race') { const count = challengeReturn?.setupCount ?? humans(); goHome(); setupCount = count; setPhase('setup'); }
   if (action === 'redraw') { if (phase === 'results') newSession(playerCount); else beginDrawing(); }
+  if (action === 'draw-whole' && sectorOverview && phase === 'drawing') {
+    sectors = []; sectorOverview = false;
+    renderPanel();
+  }
   if (action === 'start-sector' && sectorOverview && phase === 'drawing') restartSector(0);
   if ((action === 'retry-sector' || action === 'previous-sector') && (phase === 'drawing' || phase === 'preview')) {
     restartSector(action === 'previous-sector' ? sectorIndex - 1 : sectorIndex);
@@ -653,7 +668,7 @@ canvas.addEventListener('pointerdown', e => {
     return;
   }
   const point = world.groundPoint(e.clientX, e.clientY);
-  if (!point || !canStartDrawing(point, activeTrack)) { world.showError(activeTrack.start); renderPanel('Start anywhere across the line or up to 12 metres behind it.'); return; }
+  if (!point || !canStartDrawing(point, activeTrack)) { world.showError(activeTrack.start); renderPanel('Start inside the outlined box by the finish line.'); return; }
   e.preventDefault(); strokeCompiler.cancel(); drawingPointer = e.pointerId; stroke = []; strokeStarts = [0]; previousInputTime = e.timeStamp; incomingPace = undefined; world.showError(); canvas.setPointerCapture(e.pointerId); appendSample(e);
 });
 /**

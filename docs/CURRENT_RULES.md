@@ -8,9 +8,9 @@ Conventions: SI units; horizontal plane (x, z) with y up; heading 0 points along
 
 | Item | Version |
 |---|---:|
-| Vehicle rules (`RULES.version`) | 20 |
+| Vehicle rules (`RULES.version`) | 21 |
 | Computer planning/controller (`COMPUTER_VERSION`) | 2 |
-| Route compiler (`COMPILER_VERSION`) | 20 |
+| Route compiler (`COMPILER_VERSION`) | 21 |
 | Newport Island track (`coastal-launch`) | 8 |
 | Launchsite track (`orbital-launchyard`) | 12 |
 | Golden Gate track (`golden-gate`) | 8 |
@@ -83,7 +83,7 @@ Human-only Finish (selected distance), Clean (one lap without barrier/car contac
 
 | Key | Value | Unit | Meaning |
 |---|---:|---|---|
-| `version` | 20 | — | Vehicle rules version; stored with records and championships |
+| `version` | 21 | — | Vehicle rules version; stored with records and championships |
 | `dt` | 0.0166667 | s | Fixed simulation step (two equal substeps per step) |
 | `laps` | 2 | laps | Default race distance |
 | `acceleration` | 6 | m/s² | Maximum pace-following acceleration |
@@ -91,7 +91,7 @@ Human-only Finish (selected distance), Clean (one lap without barrier/car contac
 | `accelerationJerk` | 14 | m/s³ | Maximum rate of change of acceleration |
 | `paceResponse` | 1.6 | 1/s | Proportional gain from speed error to requested acceleration |
 | `paceDeadband` | 0.4 | m/s | Speed error ignored by the pace controller |
-| `maxSpeed` | 42 | m/s | Horizontal speed cap |
+| `maxSpeed` | 43 | m/s | Horizontal speed cap |
 | `thrustAcceleration` | 25 | m/s² | Thrust acceleration while a burst is active |
 | `thrustDuration` | 0.7 | s | Thrust burst length |
 | `thrustRecharge` | 5 | s | Thrust recharge, measured from activation |
@@ -99,13 +99,13 @@ Human-only Finish (selected distance), Clean (one lap without barrier/car contac
 | `hopLaunchSpeed` | 34 | m/s | Upward velocity of a manual hop |
 | `flightLaunchCorrection` | 0.349066 (20°) | rad | Largest momentum rotation at launch |
 | `flightTurnRate` | 0.523599 (30°/s) | rad/s | Largest momentum rotation rate in flight |
-| `asphaltGrip` | 48 | m/s² | Lateral acceleration limit on asphalt |
+| `asphaltGrip` | 45 | m/s² | Lateral acceleration limit on asphalt |
 | `dirtGrip` | 38.4 | m/s² | Packed-dirt lateral grip |
 | `sandGrip` | 6.5 | m/s² | Lateral acceleration limit on sand |
 | `asphaltResponse` | 7.5 | 1/s | Velocity alignment gain per radian of slip on asphalt |
 | `sandResponse` | 1.8 | 1/s | Velocity alignment gain per radian of slip on sand |
 | `sandDrag` | 0.95 | 1/s | Exponential speed decay at full sand contact |
-| `snowGrip` | 26.4 | m/s² | Packed-snow lateral grip, 55% of asphalt and below packed dirt |
+| `snowGrip` | 26.4 | m/s² | Packed-snow lateral grip, below asphalt and packed dirt |
 | `snowLooseGrip` | 7.5 | m/s² | Deep-powder lateral grip outside the packed lane |
 | `snowDrag` | 1.1 | 1/s | Exponential speed decay at full deep-powder contact |
 | `steeringResponse` | 4.8 | 1/s | Yaw-rate gain per radian of heading error |
@@ -158,7 +158,7 @@ Derived: level-ground manual hop peak 8.028 m and airtime 0.944 s. Santa Monica 
 | Key | Value | Unit | Meaning |
 |---|---:|---|---|
 | `min` | 9 | m/s | Slowest drawn target speed |
-| `max` | 30 | m/s | Fastest drawn target speed |
+| `max` | 30.5 | m/s | Fastest drawn target speed |
 
 ## PACE_FILTER
 

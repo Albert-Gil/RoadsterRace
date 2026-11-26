@@ -34,7 +34,7 @@ for(const speed of[20,30,42])test(`all eight crossings land with ${speed} m/s mo
  }
 },120000);
 test('finite hulls do not become support across water and old handling constants remain intact',()=>{
- const j=t.jumps![0];expect(deckAt(jumpPoint(j,j.rampLength+j.gap/2),t)).toBeUndefined();expect(t.carWidth).toBeCloseTo(2.9095);expect(RULES.hopLaunchSpeed).toBe(34);expect(RULES.maxSpeed).toBe(42);
+ const j=t.jumps![0];expect(deckAt(jumpPoint(j,j.rampLength+j.gap/2),t)).toBeUndefined();expect(t.carWidth).toBeCloseTo(2.9095);expect(RULES.hopLaunchSpeed).toBe(34);expect(RULES.maxSpeed).toBe(43);
  const g=fleetGeometry(t);expect(Object.values(g).reduce((n,x)=>n+x.triangleCount,0)).toBeLessThan(120000);for(const part of Object.values(g))expect(part.toVertexData().normals!.every(Number.isFinite)).toBe(true);
 });
 test('both shortcut variants complete six laps with one legal timed hop per branch per lap',()=>{

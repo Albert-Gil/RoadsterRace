@@ -1,5 +1,11 @@
 # Drawing pace, CPU decisions and overspeed drift — 2026-10-28
 
+## Current tuning
+
+Rules and compiler **21** use 45 m/s² of peak paved-road grip, a 30.5 m/s top drawn pace and a 43 m/s absolute speed cap. Packed dirt retains 38.4 m/s² and packed snow 26.4 m/s². The sector view and whole-circuit view share this pace mapping.
+
+The sections below record the original 2026-10-28 handling update.
+
 Vehicle rules **15**, compiler **16**. Circuit geometry and versions are unchanged.
 This handling update was verified locally before release. GitHub Pages publishes successful
 main builds through the existing verification workflow.
