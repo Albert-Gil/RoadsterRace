@@ -51,6 +51,7 @@ for(const [venue,count] of [['coastal-launch',2],['coastal-launch',4],['golden-g
       await host.getByRole('button',{name:'Create room'}).click();
       await expect(host.getByText('Private room',{exact:true})).toBeVisible({timeout:45000});
       const invite = host.url();
+      expect(new URL(invite).searchParams.get('duelCircuit')).toBe(venue);
       for (const guest of guests) {
         await guest.goto(invite, {waitUntil:'domcontentloaded'});
         await expect(guest.getByRole('dialog').getByText('Private room',{exact:true})).toBeVisible({timeout:60000});
@@ -71,7 +72,7 @@ for(const [venue,count] of [['coastal-launch',2],['coastal-launch',4],['golden-g
           phase, document.querySelector('dialog[open] h2')?.textContent,
           document.querySelector('dialog[open] [role=status]')?.textContent,
         ].filter(Boolean).join(' · ');
-      }), {timeout:45000}).toMatch(/^(racing|results)$/);
+      }), {timeout:softwareGraphics ? 90000 : 45000}).toMatch(/^(racing|results)$/);
       const results=await Promise.all(pages.map(async p=>{
         const d=p.getByRole('dialog');await expect(d.getByRole('heading',{name:'Race results'})).toBeVisible({timeout:120000});
         return d.locator('section > p').allTextContents();

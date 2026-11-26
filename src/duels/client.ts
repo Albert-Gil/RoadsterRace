@@ -103,6 +103,11 @@ export class DuelClient {
   }
   private receive(view:RoomView) {
     if(this.closed)return;
+    if (!this.view && this.room) {
+      const invite = new URL(location.href);
+      invite.searchParams.set('duelCircuit', view.circuit);
+      history.replaceState(null, '', invite);
+    }
     if(view.phase==='lobby'){this.roundDrawn=0;this.waiting=false;}
     if(this.view?.round!==view.round){this.latest=undefined;this.sequence=0;this.waiting=false;this.menu=false;}
     const previousPhase=this.view?.phase;
@@ -148,7 +153,7 @@ export class DuelClient {
   leave(){
     this.closed=true;this.dialog.remove();storeSeat(null);
     if(this.room)void this.room.leave().catch(()=>{});
-    const url=new URL(location.href);url.searchParams.delete('duel');history.replaceState(null,'',url);
+    const url=new URL(location.href);url.searchParams.delete('duel');url.searchParams.delete('duelCircuit');history.replaceState(null,'',url);
     this.hooks.home();
   }
 }

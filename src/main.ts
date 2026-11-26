@@ -1,7 +1,7 @@
 import type { DuelClient } from './duels/client';
 import { reclaimBeforeGraphics } from './duels/seat';
 import type { Room } from '@colyseus/sdk';
-import type { RaceFrame, RoomView } from './duels/protocol';
+import { duelVenues, type RaceFrame, type RoomView } from './duels/protocol';
 import { rampAt, supported, groundHeight, FLIGHT_RULES } from './core/support';
 import{snowSurfaceHeight}from'./presentation/surface-height';
 import { CPU_DRIVERS, humanCount, racerCount, controllerFor, type SessionOptions } from './core/session';
@@ -791,10 +791,10 @@ document.querySelectorAll<HTMLButtonElement>('.diagnostic-pad').forEach(pad => {
   for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) pad.addEventListener(name, e => { ownership.up((e as PointerEvent).pointerId, name !== 'pointerup'); updateDiagnostics(); });
 });
 
-async function openDuel(code='', reclaimed?:Room){
+async function openDuel(code='', reclaimed?:Room, returnCircuit=activeCircuit.id){
   if(duel||openingDuel)return;
   openingDuel=true;
-  const previous={circuit:activeCircuit.id,laps:lapCount,mode:sessionOptions.mode};
+  const previous={circuit:returnCircuit,laps:lapCount,mode:sessionOptions.mode};
   try {
     const { DuelClient }=await import('./duels/client');
     sessionOptions.mode='multiplayer';
@@ -836,10 +836,17 @@ let reclaimed:Room|undefined;
 try {
   const invitation=new URL(location.href).searchParams.get('duel')?.toUpperCase();
   const validInvite=invitation && /^[0-9A-F]{10}$/.test(invitation) ? invitation : undefined;
+  const returnCircuit=activeCircuit.id;
   if(validInvite)reclaimed=await reclaimBeforeGraphics(validInvite);
+  // Use the room's invite hint to build its course once on a cold start.
+  // Room messages still decide which venue to race and which rules to use.
+  const venueHint=circuitQuery.get('duelCircuit');
+  if(validInvite && venueHint && Object.prototype.hasOwnProperty.call(duelVenues,venueHint)) {
+    activeCircuit=findCircuit(venueHint);activeTrack=activeCircuit.track;audio.setVenue(activeCircuit.scenery);
+  }
   const created = await createEngine(canvas, graphicsPreference.renderer); activeRenderer = created.renderer;
   world = new GameScene(canvas, activeTrack, theme, activeCircuit.scenery, created.engine, graphicsChoice); world.onGraphicsChange = onGraphicsChange; applyDriverPresentation(); renderControls(); refreshLap(); refreshSettings(); setPhase('welcome');
-  if(validInvite)void openDuel(validInvite,reclaimed);
+  if(validInvite)void openDuel(validInvite,reclaimed,returnCircuit);
   canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); pauseRace(); showNotice('The graphics were interrupted. Reload if the circuit does not recover.', 10); });
   world.engine.runRenderLoop(() => {
     const now = performance.now(), elapsed = (now - lastFrame) / 1000; lastFrame = now;
