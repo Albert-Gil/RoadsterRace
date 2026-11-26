@@ -1,4 +1,6 @@
 import type { DuelClient } from './duels/client';
+import { reclaimBeforeGraphics } from './duels/seat';
+import type { Room } from '@colyseus/sdk';
 import type { RaceFrame, RoomView } from './duels/protocol';
 import { rampAt, supported, groundHeight, FLIGHT_RULES } from './core/support';
 import{snowSurfaceHeight}from'./presentation/surface-height';
@@ -789,7 +791,7 @@ document.querySelectorAll<HTMLButtonElement>('.diagnostic-pad').forEach(pad => {
   for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) pad.addEventListener(name, e => { ownership.up((e as PointerEvent).pointerId, name !== 'pointerup'); updateDiagnostics(); });
 });
 
-async function openDuel(code=''){
+async function openDuel(code='', reclaimed?:Room){
   if(duel||openingDuel)return;
   openingDuel=true;
   const previous={circuit:activeCircuit.id,laps:lapCount,mode:sessionOptions.mode};
@@ -804,7 +806,7 @@ async function openDuel(code=''){
       frame:receiveDuelFrame,
       home(){duel=undefined;remote=undefined;lapCount=previous.laps;sessionOptions.mode=previous.mode;if(activeCircuit.id!==previous.circuit)loadCircuit(previous.circuit,false);goHome();},
     });
-    duel.open(code);
+    duel.open(code,reclaimed);
   } catch {showNotice('Could not load Private Duels. Please refresh.',5);}
   finally{openingDuel=false;}
 }
@@ -830,11 +832,14 @@ function receiveDuelFrame(frame:RaceFrame,view:RoomView){
 }
 
 async function start() {
+let reclaimed:Room|undefined;
 try {
+  const invitation=new URL(location.href).searchParams.get('duel')?.toUpperCase();
+  const validInvite=invitation && /^[0-9A-F]{10}$/.test(invitation) ? invitation : undefined;
+  if(validInvite)reclaimed=await reclaimBeforeGraphics(validInvite);
   const created = await createEngine(canvas, graphicsPreference.renderer); activeRenderer = created.renderer;
   world = new GameScene(canvas, activeTrack, theme, activeCircuit.scenery, created.engine, graphicsChoice); world.onGraphicsChange = onGraphicsChange; applyDriverPresentation(); renderControls(); refreshLap(); refreshSettings(); setPhase('welcome');
-  const invitation=new URL(location.href).searchParams.get('duel');
-  if(invitation && /^[0-9a-f]{10}$/i.test(invitation))void openDuel(invitation.toUpperCase());
+  if(validInvite)void openDuel(validInvite,reclaimed);
   canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); pauseRace(); showNotice('The graphics were interrupted. Reload if the circuit does not recover.', 10); });
   world.engine.runRenderLoop(() => {
     const now = performance.now(), elapsed = (now - lastFrame) / 1000; lastFrame = now;
@@ -894,6 +899,6 @@ try {
     world.render(now / 1000, phase === 'welcome' || phase === 'tour-resume');
   });
   if (import.meta.env.DEV) installDevApi(() => ({ phase, pauseReason, sessionOptions, humans, playerCount, personalLap, preferences, activeTour, roundIndex, race, activeCircuit, theme, lapCount, turn, confirmedRoutes, readyPlayers, world, route, drawingTrim, best, stroke, activeTrack, raceTouches: input.touches, ownership, audio, usePractice, driverName, driverPaint, tutorial, activeChallenge }));
-} catch (error) { console.error(error); canvas.hidden = true; setPhase('error'); renderPanel(error instanceof Error ? error.message : undefined); }
+} catch (error) { if(reclaimed)void reclaimed.leave().catch(()=>{}); console.error(error); canvas.hidden = true; setPhase('error'); renderPanel(error instanceof Error ? error.message : undefined); }
 }
 void start();

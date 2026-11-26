@@ -31,6 +31,8 @@ Protocol 1 is defined in `src/duels/protocol.ts`. X/Z are horizontal metres, ele
 
 A dropped connection has 30 seconds to reclaim its seat. Its car follows the locked line without new inputs. A withdrawn, unfinished racer receives DNF and leaves contact. A finished driver keeps their finishing time. Local play runs without a room service.
 
+When a driver reloads an invite, the saved credential reclaims the seat before the browser starts the 3D circuit. Once the scene is ready it requests the current round, the driver's own line and the latest standings, including a result reached during loading. Choosing Home explicitly releases the seat and clears its credential.
+
 A future Unity client can use the Colyseus C# SDK to consume the same messages. `tests/fixtures/duel-reference.json` contains actual timestamped lines, command ticks, car checkpoints, contacts, flight/recovery events and finishing order. The three reference races are renderer independent. Run `pnpm exec vitest run tests/unit/duel-reference.test.ts` to check them, and regenerate deliberately with `node --experimental-transform-types tools/duel-references.mjs` when the contract or physics changes.
 
 ## Verification and capacity

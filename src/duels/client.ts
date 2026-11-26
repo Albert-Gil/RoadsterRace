@@ -3,6 +3,7 @@ import { DUEL_PROTOCOL, duelVenues, unpackFrame, type WireFrame, type DuelVenue,
 import { RULES } from '../core/simulation';
 import { COMPILER_VERSION } from '../core/route';
 import type { Ability, DrawSample } from '../core/types';
+import { duelEndpoint, savedSeat, storeSeat } from './seat';
 
 interface Hooks {
   driver: { name: string; paint: string };
@@ -15,10 +16,6 @@ interface Hooks {
 function el<K extends keyof HTMLElementTagNameMap>(tag:K,content='') {
   const e=document.createElement(tag);e.textContent=content;return e;
 }
-function stored(key:string,value?:string|null) {
-  try { if(value===null) sessionStorage.removeItem(key); else if(value!==undefined) sessionStorage.setItem(key,value); else return sessionStorage.getItem(key); } catch { /* private browser */ }
-  return null;
-}
 export class DuelClient {
   private room?: Room;
   view?:RoomView;
@@ -28,7 +25,6 @@ export class DuelClient {
   private dialog=el('dialog');
   private content=el('section');
   private status=el('p');
-  private tokenKey='roadster-duel-seat-v1';
   private closed=false;
   private connecting=false;
   private menu=false;
@@ -50,10 +46,7 @@ export class DuelClient {
     const b=el('button',label);b.type='button';b.className=primary?'primary-button':'secondary-button';b.onclick=action;
     this.content.append(b);return b;
   }
-  private get endpoint() {
-    return import.meta.env.VITE_DUEL_SERVER || (import.meta.env.DEV ? location.protocol+'//'+location.hostname+':2567' : '');
-  }
-  open(initialCode='') {
+  open(initialCode='', reclaimed?: Room) {
     this.show('Private Duel');
     const circuit=el('select');circuit.setAttribute('aria-label','Circuit');
     for(const [id,name] of Object.entries(duelVenues)) circuit.add(new Option(name,id));
@@ -65,30 +58,30 @@ export class DuelClient {
     this.content.append(code);
     this.button('Join room',()=>{const id=code.value.trim().toUpperCase();if(/^[A-F0-9]{10}$/.test(id))void this.connect(id);else this.status.textContent='Enter the 10-character room code.';});
     this.button('Home',()=>this.leave());
-    if(initialCode)void this.connect(initialCode);
+    if(initialCode)void this.connect(initialCode,undefined,undefined,reclaimed);
   }
-  private async connect(code:string,circuit:DuelVenue='coastal-launch',laps=1) {
+  private async connect(code:string,circuit:DuelVenue='coastal-launch',laps=1,reclaimed?:Room) {
     if(this.connecting||this.closed)return;
-    if(!this.endpoint){this.status.textContent='The private race server is not configured for this build.';return;}
+    if(!duelEndpoint){this.status.textContent='The private race server is not configured for this build.';return;}
     this.connecting=true;this.status.textContent='Connecting to the race server…';
     const wake=window.setTimeout(()=>{this.status.textContent='Waking race server… The first room can take a minute.';},2500);
     try {
-      const url=new URL(this.endpoint);url.protocol=url.protocol==='wss:'?'https:':url.protocol==='ws:'?'http:':url.protocol;
-      // Wake a sleeping free instance before the SDK starts its shorter seat-reservation timeout.
-      const abort=new AbortController();const timer=setTimeout(()=>abort.abort(),100_000);
-      let response:Response;
-      try{response=await fetch(new URL('/health',url),{signal:abort.signal});}finally{clearTimeout(timer);}
-      if(!response.ok)throw new Error('The race server is unavailable. Try again shortly.');
-      if(this.closed)return;
-      const client=new Client(this.endpoint);
-      const options={protocol:DUEL_PROTOCOL,physics:RULES.version,compiler:COMPILER_VERSION,versions:this.hooks.versions,...this.hooks.driver,circuit,laps};
-      const token=stored(this.tokenKey);
-      let room:Room;
-      if(code && token?.startsWith(code+':')){
-        try {room=await client.reconnect(token);} catch{stored(this.tokenKey,null);room=await client.joinById(code,options);}
-      }else room=code?await client.joinById(code,options):await client.create('private_duel',options);
+      let room = reclaimed;
+      if (!room) {
+        const url=new URL(duelEndpoint);url.protocol=url.protocol==='wss:'?'https:':url.protocol==='ws:'?'http:':url.protocol;
+        // Wake a sleeping free instance before the SDK starts its shorter seat-reservation timeout.
+        const abort=new AbortController();const timer=setTimeout(()=>abort.abort(),100_000);
+        let response:Response;
+        try{response=await fetch(new URL('/health',url),{signal:abort.signal});}finally{clearTimeout(timer);}
+        if(!response.ok)throw new Error('The race server is unavailable. Try again shortly.');
+        if(this.closed)return;
+        const client=new Client(duelEndpoint);
+        const options={protocol:DUEL_PROTOCOL,physics:RULES.version,compiler:COMPILER_VERSION,versions:this.hooks.versions,...this.hooks.driver,circuit,laps};
+        const token=code && savedSeat(code);
+        room=token ? await client.reconnect(token) : code ? await client.joinById(code,options) : await client.create('private_duel',options);
+      }
       if(this.closed){await room.leave();return;}
-      this.room=room;stored(this.tokenKey,room.reconnectionToken);
+      this.room=room;storeSeat(room.reconnectionToken);
       const address=new URL(location.href);address.searchParams.set('duel',room.roomId);history.replaceState(null,'',address);
       room.onMessage('room',(view:RoomView)=>this.receive(view));
       room.onMessage('frame',(wire:WireFrame)=>{
@@ -100,8 +93,10 @@ export class DuelClient {
       room.onMessage('ownLine',(data:{samples:DrawingPacket;sequence:number})=>{this.sequence=Math.max(this.sequence,data.sequence);this.hooks.ownLine(data.samples.map(([x,z,time])=>({x,z,time})));});
       room.onMessage('notice',(s:string)=>{this.waiting=false;this.present();this.status.textContent=s;if(!this.dialog.open){this.show('Check your line');this.status.textContent=s;this.button('Return to drawing',()=>this.dialog.close(),true);}});
       room.onDrop(()=>{this.disconnected=true;this.show('Reconnecting…');this.content.append(el('p','Your car is following its line.'));this.button('Home',()=>this.leave());});
-      room.onReconnect(()=>{this.disconnected=false;stored(this.tokenKey,room.reconnectionToken);room.send('sync');});
-      room.onLeave(()=>{if(!this.closed){stored(this.tokenKey,null);this.show('Room closed');this.button('Home',()=>this.leave(),true);}});
+      room.onReconnect(()=>{this.disconnected=false;storeSeat(room.reconnectionToken);room.send('sync');});
+      // A tab can receive a close callback while navigating away. Retain its
+      // credential through reload; the explicit Home action releases the seat.
+      room.onLeave(()=>{if(!this.closed){this.show('Room closed');this.button('Home',()=>this.leave(),true);}});
       room.send('sync');
     }catch(e){if(!this.closed)this.status.textContent=e instanceof Error?e.message:'Could not connect. Check the room code and try again.';}
     finally{clearTimeout(wake);this.connecting=false;}
@@ -151,7 +146,7 @@ export class DuelClient {
   pause(){this.menu=true;this.present();}
   private resume(){this.menu=false;this.present();}
   leave(){
-    this.closed=true;this.dialog.remove();stored(this.tokenKey,null);
+    this.closed=true;this.dialog.remove();storeSeat(null);
     if(this.room)void this.room.leave().catch(()=>{});
     const url=new URL(location.href);url.searchParams.delete('duel');history.replaceState(null,'',url);
     this.hooks.home();

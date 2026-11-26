@@ -65,9 +65,13 @@ for(const [venue,count] of [['coastal-launch',2],['coastal-launch',4],['golden-g
       ]);
       // The server keeps racing during reload. A short sprint can already be
       // over when the reclaimed seat receives its first authoritative frame.
-      await guests[0].waitForFunction(() => ['racing','results'].includes(
-        document.querySelector<HTMLElement>('.playground')?.dataset.phase ?? ''
-      ), undefined, {timeout:45000});
+      await expect.poll(() => guests[0].evaluate(() => {
+        const phase = document.querySelector<HTMLElement>('.playground')?.dataset.phase;
+        return ['racing','results'].includes(phase ?? '') ? phase : [
+          phase, document.querySelector('dialog[open] h2')?.textContent,
+          document.querySelector('dialog[open] [role=status]')?.textContent,
+        ].filter(Boolean).join(' · ');
+      }), {timeout:45000}).toMatch(/^(racing|results)$/);
       const results=await Promise.all(pages.map(async p=>{
         const d=p.getByRole('dialog');await expect(d.getByRole('heading',{name:'Race results'})).toBeVisible({timeout:120000});
         return d.locator('section > p').allTextContents();
