@@ -45,6 +45,8 @@ async function server(args, url) {
 // rendering four cars does not repeatedly trigger the real frame-gap pause.
 // Local touch/layout suites additionally verify 2x/3x density.
 const phone = { viewport: { width: 844, height: 390 }, deviceScaleFactor: process.env.CI ? 1 : 2, hasTouch: true, isMobile: true };
+// Four-car input checks use fewer render pixels on software-rendered CI.
+const fourCarPhone = process.env.CI ? { ...phone, deviceScaleFactor: 0.5 } : phone;
 const fixtureCache = new Map();
 
 async function fixture(circuit, count = 1, options = phone, jump = false) {
@@ -304,8 +306,8 @@ try {
   // Four private drawing turns and shared start; optional complete race locally.
   if (sessionChecks || selection === 'multiplayer') {
     console.log('Checking four-player drawing, readiness and racing');
-    const points = await fixture('coastal-launch', 4);
-    const { context, page } = await productionPage();
+    const points = await fixture('coastal-launch', 4, fourCarPhone);
+    const { context, page } = await productionPage(fourCarPhone);
     try {
       await page.goto(productionURL); await page.getByRole('button', { name: 'Multiplayer' }).click();
       await page.getByRole('button', { name: '4 players', exact: true }).click();
@@ -325,13 +327,8 @@ try {
   }
   if (sessionChecks || selection === 'solo') {
     console.log('Checking Solo Race: three CPU cars and one human input');
-    // CI's CPU renderer can exceed the real 500 ms interruption guard with four
-    // cars. Keep the phone's CSS layout, real inputs, pause guard and fixed clock;
-    // reduce only the physical render pixels for this control/ownership check.
-    // Full-density phone drawing/layout is covered by its separate matrix group.
-    const soloOptions = process.env.CI ? { ...phone, deviceScaleFactor: 0.5 } : phone;
-    const points = await fixture('coastal-launch', 1, soloOptions);
-    const { context, page } = await productionPage(soloOptions);
+    const points = await fixture('coastal-launch', 1, fourCarPhone);
+    const { context, page } = await productionPage(fourCarPhone);
     try {
       await page.goto(productionURL);
       await page.getByRole('button', { name: 'Solo Race', exact: true }).click();
