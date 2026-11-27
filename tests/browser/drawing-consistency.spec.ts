@@ -1,5 +1,6 @@
 import { expect,test } from '@playwright/test';
 import { mkdirSync,writeFileSync } from 'node:fs';
+import { sendTouchStroke } from './ui';
 
 for(const circuit of ['coastal-launch','canyon-south-rim'])test(`${circuit}: recorded touch pace survives phone framing, zoom and pixel density`,async({browser})=>{
   test.setTimeout(300000);mkdirSync('artifacts/driving-update',{recursive:true});
@@ -17,10 +18,8 @@ for(const circuit of ['coastal-launch','canyon-south-rim'])test(`${circuit}: rec
       await new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve())));
       return t.centerline.filter((_:any,i:number)=>i%2===0||i===t.centerline.length-1).map((p:any)=>({...g.project(p),fraction:t.distances[t.centerline.indexOf(p)]/t.length}));
     },view.zoom);
-    const cdp=await context.newCDPSession(page),epoch=Date.now()/1000;
-    await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:points[0].x,y:points[0].y,id:7}],timestamp:epoch});
-    for(const p of points.slice(1))await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:p.x,y:p.y,id:7}],timestamp:epoch+10*p.fraction});
-    await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[],timestamp:epoch+10});await cdp.detach();
+    const cdp=await context.newCDPSession(page);
+    await sendTouchStroke(cdp,points.map((p:{x:number;y:number;fraction:number})=>({x:p.x,y:p.y,time:10*p.fraction})),7,10);await cdp.detach();
     await expect(page.getByRole('button',{name:'Race this line',exact:true})).toBeVisible();
     const record=await page.evaluate(()=>{
       const r=(window as any).__roadster.getRoute();

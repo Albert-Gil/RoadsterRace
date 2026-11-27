@@ -29,9 +29,11 @@ async function strokeOnScreen(page: Page, from: number, t0: number, interval = .
   }, [from]);
   const cdp = await page.context().newCDPSession(page);
   const touch = (type: string, pt: { x: number; y: number } | null, t: number) => cdp.send('Input.dispatchTouchEvent', { type: type as 'touchStart', touchPoints: pt ? [{ x: pt.x, y: pt.y, id: 1 }] : [], timestamp: t });
-  await touch('touchStart', plan.pts[0], t0);
-  for (let i = 1; i < plan.pts.length; i++) await touch('touchMove', plan.pts[i], t0 + settle + i * interval);
-  await touch('touchEnd', null, t0 + plan.pts.length * interval + .02 + 2 * settle);
+  // Sent without waiting for each acknowledgement (timestamps are explicit; see sendTouchStroke in ./ui).
+  const sends = [touch('touchStart', plan.pts[0], t0)];
+  for (let i = 1; i < plan.pts.length; i++) sends.push(touch('touchMove', plan.pts[i], t0 + settle + i * interval));
+  sends.push(touch('touchEnd', null, t0 + plan.pts.length * interval + .02 + 2 * settle));
+  await Promise.all(sends);
   await cdp.detach();
   return plan.to;
 }

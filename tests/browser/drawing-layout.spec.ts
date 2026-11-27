@@ -45,9 +45,11 @@ for (const spec of cases) test(`edge-to-edge ${spec.circuit} ${spec.width}x${spe
   // The context already enables touch. A second session-level override is undone
   // on detach and switches desktop-sized contexts to mouse layouts mid-test.
   const points = plan.points.filter((_: any, i: number) => i % 2 === 0 || i === plan.points.length - 1);
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: points[0].x, y: points[0].y, id: 1 }], timestamp: epoch });
-  for (const p of points.slice(1)) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: p.x, y: p.y, id: 1 }], timestamp: epoch + p.time });
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [], timestamp: epoch + 7 }); await cdp.detach();
+  await Promise.all([
+    cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: points[0].x, y: points[0].y, id: 1 }], timestamp: epoch }),
+    ...points.slice(1).map((p: { x: number; y: number; time: number }) => cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: p.x, y: p.y, id: 1 }], timestamp: epoch + p.time })),
+    cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [], timestamp: epoch + 7 }),
+  ]); await cdp.detach();
   await expect(page.getByRole('button', { name: 'Race this line' })).toBeVisible();
   await expect(page.locator('#panel p, .route-stats')).toHaveCount(0);
   const preview = await page.evaluate(() => { const g = (window as any).__roadster; return { points: g.getTrack().centerline.map((p: any) => g.project(p)), route: g.getState().route }; });
