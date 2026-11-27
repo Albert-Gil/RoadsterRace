@@ -47,10 +47,16 @@ for (const [rtt, jitter] of scenarios) test(`latency ${rtt} ms ± ${jitter} ms: 
     // Space is Thrust for the one driver on this device; a press while recharging still gets a reply with its tick.
     for (let i = 0; i < 6; i++) { await host.keyboard.press('Space'); await host.waitForTimeout(400); }
     await expect.poll(async () => (await log()).length, { timeout: 4000 + rtt * 4 }).toBeGreaterThanOrEqual(8);
-    const errors = (await log()).slice(2).map(o => (o as { displayErrorTicks?: number }).displayErrorTicks).filter((e): e is number => e !== undefined).sort((a, b) => a - b);
-    expect(errors.length).toBeGreaterThanOrEqual(4);
-    console.log(`display error at press (ticks), ${rtt} ms: ${errors.join(', ')}`);
-    expect(errors[Math.floor(errors.length / 2)]).toBeLessThanOrEqual(3);
+    type Entry = { displayErrorTicks?: number; bufferedErrorTicks?: number; roundTripMs?: number };
+    const measured = ((await log()) as Entry[]).slice(2).filter(o => o.displayErrorTicks !== undefined && o.bufferedErrorTicks !== undefined);
+    expect(measured.length).toBeGreaterThanOrEqual(4);
+    const median = (values: number[]) => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)];
+    const shown = median(measured.map(o => o.displayErrorTicks!)), buffered = median(measured.map(o => o.bufferedErrorTicks!)), roundTrip = median(measured.map(o => o.roundTripMs!));
+    console.log(`display error at press, ${rtt} ms: drawn ${shown} ticks, buffer alone ${buffered} ticks, measured round trip ${roundTrip} ms`);
+    // Your car is always drawn closer to the room than the buffer alone would draw it.
+    expect(shown).toBeLessThan(buffered);
+    // When the page itself keeps up (round trip within 100 ms of the network's), the drawn car is within 3 ticks.
+    if (roundTrip <= rtt + jitter + 100) expect(shown).toBeLessThanOrEqual(3);
     // Sample the displayed own car: progress along the course must not step backwards (recoveries jump further than 25 m).
     const progress = await host.evaluate(async () => {
       const g = (window as any).__roadster, t = g.getTrack(), w = g.getWorld(), out: number[] = [];

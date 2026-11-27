@@ -5,7 +5,7 @@ import{deckAt,onDeck,deckElevation,crossingCoords}from'../../src/core/decks';
 import{projectToPolyline,mix}from'../../src/core/geometry';
 import{fleetGeometry}from'../../src/presentation/fleet';
 import{fleetAppearance}from'../../src/presentation/themes';
-import{computerRoute}from'../../src/core/computer';
+import{AI_TUNING,TRACK_AI_TUNING,computerRoute}from'../../src/core/computer';
 import{compileRoute,createPracticeSamples}from'../../src/core/route';
 
 test('ramp axes match the straight racing ribbon and mouths are square to the world-space launch axis',()=>{
@@ -46,5 +46,5 @@ test('each stationary ship has a supported navigation structure; raised auxiliar
 test('CPU approach targets brake before the uphill carrier landings without changing human pace or other courses',()=>{
  const authored=t.jumps!.filter(j=>j.planningSpeed!==undefined);expect(authored.map(j=>j.id)).toEqual(['destroyer-a-return','destroyer-b-return']);
  const cpu=computerRoute(t,'normal',0,71),human=compileRoute(createPracticeSamples(t,2),t);expect(human.ok).toBe(true);if(!human.ok)return;
- for(const j of authored){const window=cpu.points.filter(p=>p.courseProgress!>=j.entryProgress-30&&p.courseProgress!<=j.exitProgress);expect(window.length).toBeGreaterThan(20);expect(window.every(p=>p.desiredSpeed<=j.planningSpeed!*.97*.99+.001)).toBe(true);expect(human.route.points.filter(p=>p.courseProgress!>=j.entryProgress&&p.courseProgress!<=j.exitProgress).some(p=>p.desiredSpeed>j.planningSpeed!)).toBe(true);}
+ for(const j of authored){const window=cpu.points.filter(p=>p.courseProgress!>=j.entryProgress-30&&p.courseProgress!<=j.exitProgress);expect(window.length).toBeGreaterThan(20);expect(window.every(p=>p.desiredSpeed<=j.planningSpeed!*(TRACK_AI_TUNING[t.id]?.normal??AI_TUNING.normal)*.99+.001)).toBe(true);expect(human.route.points.filter(p=>p.courseProgress!>=j.entryProgress&&p.courseProgress!<=j.exitProgress).some(p=>p.desiredSpeed>j.planningSpeed!)).toBe(true);}
 });

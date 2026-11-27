@@ -129,6 +129,8 @@ const sessionOptions:SessionOptions={mode:'solo-race',difficulty:'normal',seed:1
 let duel:DuelClient | undefined, openingDuel=false;
 /** Latest authoritative duel frame (HUD, standings) and the buffered frame the cars are drawn from. */
 let remote:RaceFrame | undefined, shown:RaceFrame | undefined;
+/** Diagnostics: where the 100 ms buffer alone would draw your own car this frame. */
+let ownBuffered:{x:number;z:number}|undefined;
 const playback = new FramePlayback();
 const humans=()=>duel ? 1 : humanCount(sessionOptions.mode,playerCount);
 let recorder:LapRecorder|null=null, personalLap:LapRecord|null=null, activeGhost:LapRecord|null=null;
@@ -844,7 +846,7 @@ async function openDuel(code='', reclaimed?:Room, returnCircuit=activeCircuit.id
       draw(view){remote=undefined;shown=undefined;playback.reset();loadDuelVenue(view);turn=Math.max(0,duel!.seatIndex);beginDrawing();},
       ownLine(samples){if(duel?.view && activeCircuit.id!==duel.view.circuit)loadDuelVenue(duel.view);const result=compileRoute(samples,activeTrack);if(result.ok){route=result.route;if(remote)world.drawLine(null);else world.drawLine(route,result.drawing);}},
       frame:receiveDuelFrame,
-      ownShown(){const v=world.vehicles[duel?.seatIndex??0]?.root.position;return v?{x:v.x,z:v.z}:undefined;},
+      ownShown(){const v=world.vehicles[duel?.seatIndex??0]?.root.position;return v?{x:v.x,z:v.z,buffered:ownBuffered}:undefined;},
       home(){duel=undefined;remote=undefined;shown=undefined;playback.reset();lapCount=previous.laps;sessionOptions.mode=previous.mode;if(activeCircuit.id!==previous.circuit)loadCircuit(previous.circuit,false);goHome();},
     });
     duel.open(code,reclaimed);
@@ -901,6 +903,7 @@ try {
       if(sample){shown=sample.to;previousPoses=sample.to.cars.map((car,i)=>{const a=sample.from.cars[i]??car,src=a.recoveryCount===car.recoveryCount?a:car;return{...src.position,y:src.elevation,heading:src.heading};});}
       // Your own car: where it will be when a press sent now reaches the room (other cars stay 100 ms behind).
       const latest=playback.latest,own=duel.seatIndex,ownCar=latest?.cars[own];
+      if(sample){const f=sample.from.cars[own],t=sample.to.cars[own];if(f&&t)ownBuffered={x:f.position.x+(t.position.x-f.position.x)*Math.min(1,sample.alpha),z:f.position.z+(t.position.z-f.position.z)*Math.min(1,sample.alpha)};}
       const ahead=sample&&latest&&ownCar&&route?ownCarAhead(route,ownCar,playback.aheadOf(latest,now,duel.oneWayMs),activeTrack.decks?p=>supported(p,activeTrack)?groundHeight(p,activeTrack):undefined:undefined):null;
       if(sample&&ahead&&ownCar){shown={...sample.to,cars:sample.to.cars.map((car,i)=>i===own?{...ownCar,position:{x:ahead.x,z:ahead.z},elevation:ahead.y,heading:ahead.heading}:car)};previousPoses[own]={x:ahead.x,z:ahead.z,y:ahead.y,heading:ahead.heading};}
       updateVehicles(sample?.alpha??1);

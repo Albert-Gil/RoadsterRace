@@ -21,7 +21,7 @@ interface Hooks {
   ownLine(samples:DrawSample[]):void;
   home():void;
   /** Where your own car is drawn right now (diagnostics: display error against the server at press time). */
-  ownShown?():{x:number;z:number}|undefined;
+  ownShown?():{x:number;z:number;buffered?:{x:number;z:number}}|undefined;
 }
 /** Matches the server's DRAWING_GRACE_SECONDS (server/duel-room.ts). */
 const DRAWING_GRACE=90;
@@ -39,12 +39,12 @@ export class DuelClient {
   /** A press made in the last countdown beat, sent with the first racing frame. */
   private queued?:Ability;
   /** Sent commands awaiting the server's private reply, matched by round and sequence. */
-  private pending:{round:number;sequence:number;ability:Ability;at:number;shown?:{x:number;z:number}}[]=[];
+  private pending:{round:number;sequence:number;ability:Ability;at:number;shown?:{x:number;z:number;buffered?:{x:number;z:number}}}[]=[];
   /** Your car's recent server positions by tick, to measure how far the drawn car was from the room. */
   private ownTrail:{tick:number;x:number;z:number;speed:number}[]=[];
-  private measuring:{entry:DuelClient['commandLog'][number];shown:{x:number;z:number};tick:number}[]=[];
+  private measuring:{entry:DuelClient['commandLog'][number];shown:{x:number;z:number;buffered?:{x:number;z:number}};tick:number}[]=[];
   /** Development and test diagnostics: every command's outcome, or `unconfirmed` after 1.5 s. Never shown to players. */
-  readonly commandLog:{round:number;sequence:number;ability:Ability;outcome:AbilityOutcome|'unconfirmed';roundTripMs?:number;displayErrorTicks?:number}[]=[];
+  readonly commandLog:{round:number;sequence:number;ability:Ability;outcome:AbilityOutcome|'unconfirmed';roundTripMs?:number;displayErrorTicks?:number;bufferedErrorTicks?:number}[]=[];
   /** Smoothed one-way delay to the room, from command round trips (ms). */
   oneWayMs=0;
   private roundDrawn=0;
@@ -340,7 +340,12 @@ export class DuelClient {
     this.measuring=this.measuring.filter(m=>{
       const k=this.ownTrail.findIndex(e=>e.tick>=m.tick),b=this.ownTrail[k],a=this.ownTrail[k-1]??b;
       if(!b)return this.measuring.length<20;
-      if(b.speed>1){const t=(m.tick-a.tick)/Math.max(1,b.tick-a.tick),x=a.x+(b.x-a.x)*t,z=a.z+(b.z-a.z)*t;m.entry.displayErrorTicks=Math.round(Math.hypot(m.shown.x-x,m.shown.z-z)/b.speed*60*10)/10;}
+      if(b.speed>1){
+        const t=(m.tick-a.tick)/Math.max(1,b.tick-a.tick),x=a.x+(b.x-a.x)*t,z=a.z+(b.z-a.z)*t,ticks=(p:{x:number;z:number})=>Math.round(Math.hypot(p.x-x,p.z-z)/b.speed*60*10)/10;
+        m.entry.displayErrorTicks=ticks(m.shown);
+        // For comparison: where the 100 ms buffer alone would have drawn your car.
+        if(m.shown.buffered)m.entry.bufferedErrorTicks=ticks(m.shown.buffered);
+      }
       return false;
     });
   }
