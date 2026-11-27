@@ -2,7 +2,7 @@ import type { DuelClient } from './duels/client';
 import { reclaimBeforeGraphics } from './duels/seat';
 import { checkRoomCode } from './duels/codes';
 import { FramePlayback } from './duels/playback';
-import { ownCarAhead } from './duels/own-car';
+import { ownCarAhead, routeDistanceNear } from './duels/own-car';
 import type { Room } from '@colyseus/sdk';
 import { duelVenues, type RaceFrame, type RoomView } from './duels/protocol';
 import { rampAt, supported, groundHeight, FLIGHT_RULES } from './core/support';
@@ -134,6 +134,7 @@ let ownBuffered:{x:number;z:number}|undefined;
 /** Your car's last drawn lead pose, and the hand-back to the buffer when the lead must end (flight, recovery, finish). */
 let ownLead:{pose:{x:number;z:number;y:number;heading:number};buffered?:{x:number;z:number;y:number;heading:number};recoveries:number}|undefined;
 let ownHandoff:{offset:{x:number;z:number;y:number};start:number;duration:number;recoveries:number}|undefined;
+let ownShownAt:{pose:{x:number;z:number;y:number;heading:number};distance:number;recoveries:number}|undefined;
 const playback = new FramePlayback();
 const humans=()=>duel ? 1 : humanCount(sessionOptions.mode,playerCount);
 let recorder:LapRecorder|null=null, personalLap:LapRecord|null=null, activeGhost:LapRecord|null=null;
@@ -846,7 +847,7 @@ async function openDuel(code='', reclaimed?:Room, returnCircuit=activeCircuit.id
       finishes:[...paintFinishes,...rewardPaintFinishes].filter(p=>paintUnlocked(p.id,collection.state)),
       saveDriver(driver){Object.assign(preferences.drivers[0],driver);saveSettings();},
       versions:Object.fromEntries(circuits.map(c=>[c.id,c.track.version])),
-      draw(view){remote=undefined;shown=undefined;playback.reset();ownLead=undefined;ownHandoff=undefined;loadDuelVenue(view);turn=Math.max(0,duel!.seatIndex);beginDrawing();},
+      draw(view){remote=undefined;shown=undefined;playback.reset();ownLead=undefined;ownHandoff=undefined;ownShownAt=undefined;loadDuelVenue(view);turn=Math.max(0,duel!.seatIndex);beginDrawing();},
       ownLine(samples){if(duel?.view && activeCircuit.id!==duel.view.circuit)loadDuelVenue(duel.view);const result=compileRoute(samples,activeTrack);if(result.ok){route=result.route;if(remote)world.drawLine(null);else world.drawLine(route,result.drawing);}},
       frame:receiveDuelFrame,
       ownShown(){const v=world.vehicles[duel?.seatIndex??0]?.root.position;return v?{x:v.x,z:v.z,buffered:ownBuffered}:undefined;},
@@ -910,7 +911,13 @@ try {
       const buffered=f&&t?{x:f.position.x+(t.position.x-f.position.x)*a,z:f.position.z+(t.position.z-f.position.z)*a,y:f.elevation+(t.elevation-f.elevation)*a,heading:t.heading}:undefined;
       ownBuffered=buffered&&{x:buffered.x,z:buffered.z};
       const ahead=sample&&latest&&ownCar&&route?ownCarAhead(route,ownCar,playback.aheadOf(latest,now,duel.oneWayMs),activeTrack.decks?p=>supported(p,activeTrack)?groundHeight(p,activeTrack):undefined:undefined):null;
-      const drawOwn=(pose:{x:number;z:number;y:number;heading:number})=>{if(!sample||!ownCar)return;shown={...sample.to,cars:sample.to.cars.map((car,i)=>i===own?{...ownCar,position:{x:pose.x,z:pose.z},elevation:pose.y,heading:pose.heading}:car)};previousPoses[own]={...pose};};
+      const drawOwn=(next:{x:number;z:number;y:number;heading:number})=>{if(!sample||!ownCar||!route)return;
+        // Never step your car backwards along your line: a lead that shrinks (a slower round trip, braking the
+        // extrapolation did not foresee) holds the car briefly instead. A recovery resets this.
+        let pose=next;const d=routeDistanceNear(route,next);
+        if(ownShownAt&&ownShownAt.recoveries===ownCar.recoveryCount){let back=ownShownAt.distance-d;if(back>route.length/2)back-=route.length;if(back>0&&back<25)pose=ownShownAt.pose;}
+        if(pose===next)ownShownAt={pose:next,distance:d,recoveries:ownCar.recoveryCount};
+        shown={...sample.to,cars:sample.to.cars.map((car,i)=>i===own?{...ownCar,position:{x:pose.x,z:pose.z},elevation:pose.y,heading:pose.heading}:car)};previousPoses[own]={...pose};};
       if(ahead&&ownCar){drawOwn(ahead);ownLead={pose:ahead,buffered,recoveries:ownCar.recoveryCount};ownHandoff=undefined;}
       else if(buffered&&ownCar){
         // Flight, recovery or finish: hand the car back to the buffer without stepping it backwards. The lead
@@ -922,6 +929,7 @@ try {
         ownLead=undefined;
         if(ownHandoff&&(ownHandoff.recoveries!==ownCar.recoveryCount||now-ownHandoff.start>=ownHandoff.duration))ownHandoff=undefined;
         if(ownHandoff){const k=1-(now-ownHandoff.start)/ownHandoff.duration;drawOwn({x:buffered.x+ownHandoff.offset.x*k,z:buffered.z+ownHandoff.offset.z*k,y:buffered.y+ownHandoff.offset.y*k,heading:buffered.heading});}
+        else drawOwn(buffered);
       }
       updateVehicles(sample?.alpha??1);
       world.render(now/1000,false);return;
