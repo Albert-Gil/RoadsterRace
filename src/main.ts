@@ -1,6 +1,7 @@
 import type { DuelClient } from './duels/client';
 import { reclaimBeforeGraphics } from './duels/seat';
 import { checkRoomCode } from './duels/codes';
+import { FramePlayback } from './duels/playback';
 import type { Room } from '@colyseus/sdk';
 import { duelVenues, type RaceFrame, type RoomView } from './duels/protocol';
 import { rampAt, supported, groundHeight, FLIGHT_RULES } from './core/support';
@@ -121,7 +122,9 @@ let graphicsChoice = graphicsPreference.choice;
 let activeRenderer: RendererChoice = 'webgl2';
 const sessionOptions:SessionOptions={mode:'solo-race',difficulty:'normal',seed:1};
 let duel:DuelClient | undefined, openingDuel=false;
-let remote:RaceFrame | undefined, frameAt=0;
+/** Latest authoritative duel frame (HUD, standings) and the buffered frame the cars are drawn from. */
+let remote:RaceFrame | undefined, shown:RaceFrame | undefined;
+const playback = new FramePlayback();
 const humans=()=>duel ? 1 : humanCount(sessionOptions.mode,playerCount);
 let recorder:LapRecorder|null=null, personalLap:LapRecord|null=null, activeGhost:LapRecord|null=null;
 let sessionLapRecord = false;
@@ -565,10 +568,10 @@ function updateVehicles(alpha: number) {
   }
   const grid = !remote && playerCount > 1 && !race ? previewGrid!.poses : null;
   const chipAnchors: { car: number; anchor: GridLabelAnchor }[] = [];
-  const carCount=remote?.cars.length??confirmedRoutes.length;
+  const drawn=shown??remote, carCount=drawn?.cars.length??confirmedRoutes.length;
   for(let i=0;i<carCount;i++) {
     const line=confirmedRoutes[i];
-    const s = remote?.cars[i] ?? race?.racers[i].state, previous = previousPoses[i];
+    const s = drawn?.cars[i] ?? race?.racers[i].state, previous = previousPoses[i];
     const pose = s ? {
       x: previous && !s.finished ? lerp(previous.x, s.position.x, alpha) : s.position.x,
       z: previous && !s.finished ? lerp(previous.z, s.position.z, alpha) : s.position.z,
@@ -592,7 +595,7 @@ function updateVehicles(alpha: number) {
       chipAnchors.push({ car: i, anchor: { car: world.project(pose), tail: world.project(tail) } });
     }
   }
-  placeOwnBracket(remote && duel ? remote.cars[duel.seatIndex] : undefined);
+  placeOwnBracket(drawn && duel ? drawn.cars[duel.seatIndex] : undefined);
   if (chipAnchors.length) {
     const safe = document.querySelector('#course-space')!.getBoundingClientRect();
     gridLabelPositions(chipAnchors.map(c => c.anchor)).forEach((p, k) => {
@@ -884,11 +887,11 @@ async function openDuel(code='', reclaimed?:Room, returnCircuit=activeCircuit.id
       finishes:[...paintFinishes,...rewardPaintFinishes].filter(p=>paintUnlocked(p.id,collection.state)),
       saveDriver(driver){Object.assign(preferences.drivers[0],driver);saveSettings();},
       versions:Object.fromEntries(circuits.map(c=>[c.id,c.track.version])),
-      draw(view){remote=undefined;loadDuelVenue(view);turn=Math.max(0,duel!.seatIndex);beginDrawing();},
+      draw(view){remote=undefined;shown=undefined;playback.reset();loadDuelVenue(view);turn=Math.max(0,duel!.seatIndex);beginDrawing();},
       ownLine(samples){if(duel?.view && activeCircuit.id!==duel.view.circuit)loadDuelVenue(duel.view);const result=compileRoute(samples,activeTrack);if(result.ok){route=result.route;if(remote)world.drawLine(null);else world.drawLine(route,result.drawing);}},
       frame:receiveDuelFrame,
       missed(ability){showNotice(`${ability==='hop'?'Hop':'Thrust'} missed: the room did not get it in time.`,1.4);},
-      home(){duel=undefined;remote=undefined;lapCount=previous.laps;sessionOptions.mode=previous.mode;if(activeCircuit.id!==previous.circuit)loadCircuit(previous.circuit,false);goHome();},
+      home(){duel=undefined;remote=undefined;shown=undefined;playback.reset();lapCount=previous.laps;sessionOptions.mode=previous.mode;if(activeCircuit.id!==previous.circuit)loadCircuit(previous.circuit,false);goHome();},
     });
     duel.open(code,reclaimed);
   } catch {showNotice('Could not load Private Duels. Please refresh.',5);}
@@ -905,8 +908,9 @@ function receiveDuelFrame(frame:RaceFrame,view:RoomView){
     loadDuelVenue(view);world.setDrawingFocus(null,false);world.showContinueHandle(null);world.showError();world.setPlanningPlayer(null);
     world.showVehicles(null,playerCount);world.drawLine(null);world.vehicles.forEach(v=>v.clearEffects());
   }
-  previousPoses=first?[]:remote!.cars.map((s,i)=>{const p=frame.cars[i];return s.recoveryCount===p.recoveryCount?s:p;}).map(s=>({...s.position,y:s.elevation,heading:s.heading}));
-  remote=frame;frameAt=performance.now();
+  if(first)playback.reset();
+  playback.push(frame,performance.now());
+  remote=frame;
   const next=frame.countdown?'countdown':view.phase==='results'?'results':'racing';
   if(phase!==next){setPhase(next);if(next==='racing')audio.cue('start');}
   if(frame.countdown){const beat=Math.ceil(frame.countdown/60);countdownElement.dataset.lights=String(4-beat);document.querySelector('#countdown-value')!.textContent=String(beat);if(first||beat!==countdownBeat)audio.cue('countdown');countdownBeat=beat;}
@@ -938,7 +942,10 @@ try {
     // Capture every timestamp, but rebuild the live line at most once per rendered frame.
     if (phase === 'drawing' && drawingDirty) { drawingDirty = false; world.drawLine(stroke); }
     if(duel && remote){
-      updateVehicles(clamp((now-frameAt)/50,0,1));
+      // Draw the cars 100 ms behind the server from buffered frames, never blending across a recovery.
+      const sample=playback.sample(now);
+      if(sample){shown=sample.to;previousPoses=sample.to.cars.map((car,i)=>{const a=sample.from.cars[i]??car,src=a.recoveryCount===car.recoveryCount?a:car;return{...src.position,y:src.elevation,heading:src.heading};});}
+      updateVehicles(sample?.alpha??1);
       world.render(now/1000,false);return;
     }
     if (phase === 'racing' && elapsed > 0.5) pauseRace('render-delay');
