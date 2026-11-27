@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { waitForPhase } from '../browser/ui';
 import { draw } from './draw';
 
-for(const [venue,count] of [['coastal-launch',2],['coastal-launch',4],['golden-gate',4],['santa-monica',4],['san-diego-fleet',4]] as const){
+for(const [venue,count] of [['coastal-launch',2],['coastal-launch',4],['golden-gate',4],['santa-monica',4]] as const){
   test(venue+' with '+count+' devices',async({browser})=>{
     // CI renders every client's WebGL scene on one CPU. Keep the real canvas,
     // input, clocks and network, but spend fewer pixels on each client.

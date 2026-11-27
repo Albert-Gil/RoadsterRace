@@ -23,9 +23,10 @@ class Driver {
   notice='';
   line:unknown;
   cooldowns?:{round:number;hopReadyAt:number;thrustReadyAt:number};
+  frames:RaceFrame[]=[];
   constructor(readonly room:Room) {
     room.onMessage('room',(v:RoomView)=>this.view=v);
-    room.onMessage('frame',(f:WireFrame)=>this.frame=unpackFrame(f));
+    room.onMessage('frame',(f:WireFrame)=>{this.frame=unpackFrame(f);this.frames.push(this.frame);});
     room.onMessage('ownLine',data=>this.line=data);
     room.onMessage('notice',message=>this.notice=message);
     room.onMessage('cooldowns',c=>this.cooldowns=c);
@@ -61,7 +62,7 @@ describe('private duel transport and authority',()=>{
     expect(offeredVenues({})).toEqual(['coastal-launch','golden-gate','santa-monica']);
     expect(offeredVenues({venues:[]})).toEqual(['coastal-launch','golden-gate','santa-monica']);
   });
-  it('races San Diego Fleet online with the same jumps, recoveries and finish times as a local race',async()=>{
+  it('races San Diego Fleet online with the same routes, presses, flights, recoveries and finish times as a local race',async()=>{
     const track=findCircuit('san-diego-fleet').track, before=process.env.DUEL_EXTRA_VENUES;
     process.env.DUEL_EXTRA_VENUES='san-diego-fleet';
     const options={name:'A',paint:'glacier',protocol:DUEL_PROTOCOL,physics:RULES.version,compiler:COMPILER_VERSION,versions:{[track.id]:track.version},circuit:track.id,laps:1};
@@ -73,19 +74,54 @@ describe('private duel transport and authority',()=>{
       await until(()=>drivers[0].view?.drivers.length===4);
       drivers[0].room.send('start');
       await until(()=>drivers.every(d=>d.view?.phase==='drawing'));
-      // 8 s and 8.5 s clear every ramp or splash once; 9 s and 12 s fall short repeatedly.
-      const lines=[8,8.5,9,12].map(seconds=>createPracticeSamples(track,seconds).map(p=>[p.x,p.z,p.time]));
+      // Main route at 8 s (clears every ramp), main route at 9 s (misses landings and
+      // recovers), and both support-ship shortcuts, whose Hop is pressed over the wire.
+      const lines=[createPracticeSamples(track,8),createPracticeSamples(track,9),createPracticeSamples(track,8,'support-a-lane'),createPracticeSamples(track,8,'support-b-lane')].map(line=>line.map(p=>[p.x,p.z,p.time]));
+      const presses=new Map([[700,3],[1100,2]]);
       drivers.forEach((d,i)=>d.room.send('line',{round:1,samples:lines[i]}));
       await until(()=>drivers.every(d=>d.frame?.countdown));
       const room=matchMaker.getLocalRoomById(code) as DuelRoom;
       room.setTimestep();
-      for(let i=0;i<400 && drivers[0].view?.phase!=='results';i++){room['advance'](60*1000/60);await delay(0);}
+      const routes=lines.map(line=>{const r=compileRoute(line.map(([x,z,time])=>({x,z,time})),track);if(!r.ok)throw new Error(r.message);return r.route;});
+      // The server compiled each private line to exactly the deck crossings the client compiles.
+      routes.forEach((route,i)=>expect(JSON.parse(JSON.stringify(room['seats'][i].route))).toEqual(JSON.parse(JSON.stringify(route))));
+      expect(routes[2].crossings?.map(c=>c.id)).toContain('support-a-hop');
+      expect(routes[3].crossings?.map(c=>c.id)).toContain('support-b-hop');
+      const tickMs=1000/60, race=()=>room['race']!;
+      for(let i=0;i<4000 && drivers[0].view?.phase!=='results';i++){
+        const next=[...presses.keys()].find(t=>t>=(race()?.tick??0)&&t<(race()?.tick??0)+60);
+        if(race() && next!==undefined){
+          while(race().tick<next)room['advance'](tickMs);
+          expect(race().tick).toBe(next);
+          const seat=presses.get(next)!;
+          drivers[seat].room.send('ability',{round:1,sequence:next,tick:next,ability:'hop'});
+          await until(()=>room['seats'][seat].lastSequence===next);
+          presses.delete(next);
+        }
+        room['advance'](12*tickMs);await delay(0);
+      }
+      expect(presses.size).toBe(0);
       await until(()=>drivers.every(d=>d.view?.phase==='results'));
-      const local=new LocalRace(lines.map(line=>{const r=compileRoute(line.map(([x,z,time])=>({x,z,time})),track);if(!r.ok)throw new Error(r.message);return r.route;}),track,1);
+      const local=new LocalRace(routes,track,1), states=new Map<number,{elevation:number;recoveryCount:number;movement:string}[]>();
       const kinds=new Set<string>();
-      while(!local.finished&&local.tick<20000){local.step();for(const e of local.drainEvents())kinds.add(e.type);}
+      while(!local.finished&&local.tick<20000){
+        if(local.tick===700)local.pressHop(3);
+        if(local.tick===1100)local.pressHop(2);
+        local.step();for(const e of local.drainEvents())kinds.add(e.type);
+        states.set(local.tick,local.racers.map(({state:s})=>({elevation:s.elevation,recoveryCount:s.recoveryCount,movement:s.movement})));
+      }
       expect(local.finished).toBe(true);
       expect([...kinds]).toEqual(expect.arrayContaining(['takeoff','landing','recovery','finish']));
+      // Every snapshot the host saw matches the local race at that tick through flight and recovery.
+      const seen=drivers[0].frames.filter(f=>f.round===1&&states.has(f.tick));
+      expect(seen.length).toBeGreaterThan(100);
+      expect(seen.some(f=>f.cars.some(c=>c.movement==='airborne'))).toBe(true);
+      expect(seen.some(f=>f.cars.some(c=>c.recoveryCount>0))).toBe(true);
+      for(const f of seen)f.cars.forEach((c,i)=>{
+        const s=states.get(f.tick)![i];
+        expect(Math.abs(c.elevation-s.elevation)).toBeLessThanOrEqual(.006);
+        expect(c.recoveryCount).toBe(s.recoveryCount);expect(c.movement).toBe(s.movement);
+      });
       const online=drivers[0].frame!.order;
       expect(online.map(s=>s.player)).toEqual(local.standings().map(s=>s.player));
       online.forEach(s=>expect(s.finishTime).toBeCloseTo(local.racers[s.player].state.finishTime!,3));
