@@ -1,3 +1,5 @@
+/** Race time (s) for which the numbered chips stay on each car after the start, so identical paints stay identifiable. */
+export const RACE_CHIP_SECONDS = 2;
 export interface ScreenPoint { x: number; y: number }
 /** One car on the starting grid, in screen pixels: its centre and the middle of its rear bumper. */
 export interface GridLabelAnchor { car: ScreenPoint; tail: ScreenPoint }
@@ -7,7 +9,7 @@ export interface GridLabelAnchor { car: ScreenPoint; tail: ScreenPoint }
  * the cars' order, at least `spacing` px apart so side-by-side cars never hide each other's number.
  * Chips move as little as that spacing allows (least-squares, pool-adjacent-violators).
  */
-export function gridLabelPositions(anchors: GridLabelAnchor[], spacing = 24, clearance = 13): ScreenPoint[] {
+export function gridLabelPositions(anchors: GridLabelAnchor[], spacing = 32, clearance = 16): ScreenPoint[] {
   if (!anchors.length) return [];
   let bx = 0, by = 0;
   for (const a of anchors) { bx += a.tail.x - a.car.x; by += a.tail.y - a.car.y; }

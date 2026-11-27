@@ -47,7 +47,7 @@ import { newerBuildDeployed, staleBuildRecovery } from './app/stale-build';
 import { formatTime } from './ui/format';
 import { renderHud } from './ui/hud';
 import { abilityControlsMarkup } from './ui/controls';
-import { gridLabelPositions, type GridLabelAnchor } from './ui/grid-labels';
+import { gridLabelPositions, RACE_CHIP_SECONDS, type GridLabelAnchor } from './ui/grid-labels';
 import { welcomePanel } from './ui/panels/welcome';
 import { tourDiscardPanel, tourExitPanel, tourIntroPanel, tourReplacePanel, tournamentResultsMarkup } from './ui/panels/tournament';
 import { settingsPanel } from './ui/panels/settings';
@@ -567,7 +567,7 @@ function updateVehicles(alpha: number) {
       heading: previous && !s.finished ? previous.heading + angleDelta(previous.heading, s.heading) * alpha : s.heading,
     } : grid ? grid[i] : sampleRoute(line, 0);
     const absent = !!s && (playerCount > 1 && s.finished || s.time < s.recoveringUntil || s.recoveryWaiting);
-    world.vehicles[i].setEnabled(!absent); if (playerCount > 1) labels[i].hidden = absent || !['ready', 'countdown'].includes(phase);
+    world.vehicles[i].setEnabled(!absent); if (playerCount > 1) labels[i].hidden = absent || !(['ready', 'countdown'].includes(phase) || phase === 'racing' && (humans() > 1 || !!duel) && (s?.time ?? 0) < RACE_CHIP_SECONDS);
     world.vehicles[i].update(pose, s?.finished ? 0 : s?.speed, !!s && !s.finished && s.time < s.thrustUntil, s?.time, s&&activeTrack.surface?Math.max(.12,s.sandAmount):s?.sandAmount, s?.drifting, s?.steeringRate, s?.acceleration);
     if (playerCount > 1 && !labels[i].hidden) {
       const back = activeTrack.carLength / 2, tail = { x: pose.x - Math.sin(pose.heading) * back, z: pose.z - Math.cos(pose.heading) * back, y: 'y' in pose ? pose.y : undefined };

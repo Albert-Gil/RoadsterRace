@@ -198,7 +198,7 @@ Verified when: CI is green, performance budgets hold, the owner's real-device te
 | --- | --- |
 | 0 Release safety | done (0.1, 0.2) |
 | 1 Fleet (no rule change) | done (1.1–1.7); 1.7 Easy/Normal short of target, see note |
-| 2 Local multiplayer | not started |
+| 2 Local multiplayer | done (2.1–2.4); championship replay covered by the existing tournament spec, run at release |
 | 3 Private Duels | not started |
 | 4 Fleet in duels (flag) | not started |
 | 5 Release | not started |

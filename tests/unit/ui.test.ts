@@ -39,7 +39,7 @@ describe('phase layout', () => {
     const ready = phaseLayout('ready'), racing = phaseLayout('racing'), countdown = phaseLayout('countdown');
     expect(ready.padVisible('thrust')).toBe(true); expect(ready.padVisible('hop')).toBe(false); expect(ready.hudVisible).toBe(false);
     expect(countdown.padsDisabled).toBe(true); expect(countdown.panelVisible).toBe(false); expect(countdown.labelsVisible).toBe(true);
-    expect(racing.pauseVisible).toBe(true); expect(racing.labelsVisible).toBe(false); expect(racing.driveAudio).toBe(true);
+    expect(racing.pauseVisible).toBe(true); expect(racing.labelsVisible).toBe(true); expect(racing.driveAudio).toBe(true);
     expect(phaseLayout('tour-exit').sceneLayout).toBe('results'); expect(phaseLayout('paused').silence).toBe(true);
     expect(phaseLayout('welcome').startGateVisible).toBe(true); expect(phaseLayout('setup').startGateVisible).toBe(false);
   });

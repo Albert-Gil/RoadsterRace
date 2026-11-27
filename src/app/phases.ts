@@ -19,8 +19,8 @@ export function phaseLayout(phase: Phase) {
     diagnosticsVisible: phase === 'diagnostics',
     progressVisible: among(phase, ['racing', 'paused', 'coaching']),
     panelVisible: !among(phase, ['racing', 'countdown', 'diagnostics', 'coaching']),
-    /** Numbered pre-start labels; floating tags stay hidden while racing. */
-    labelsVisible: among(phase, ['ready', 'countdown']),
+    /** Numbered car chips: on the grid, and while racing only for the opening RACE_CHIP_SECONDS (main.ts). */
+    labelsVisible: among(phase, ['ready', 'countdown', 'racing']),
     startGateVisible: among(phase, ['welcome', 'tutorial-intro', 'drawing', 'preview']),
     sceneLayout: phase==='collection'||phase==='challenges'?'setup':phase.startsWith('tour-') ? 'results' : phase === 'tutorial-intro' ? 'welcome' : phase === 'coaching' ? 'racing' : phase,
     ghostAllowed: among(phase, ['racing', 'paused', 'countdown', 'coaching']),

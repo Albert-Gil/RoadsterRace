@@ -203,3 +203,23 @@ test('the results vote waits for every seat, can be changed, and any redraw or H
   await seatButton(page, 0, 'New lines').click(); await seatButton(page, 1, 'Home').click(); await seatButton(page, 2, 'Race again').click();
   expect((await state(page)).phase).toBe('welcome');
 });
+
+test('numbered chips identify identical cars on the grid and for the first two seconds of racing', async ({ page }) => {
+  await planFriends(page, 4, true);
+  const chips = () => page.evaluate(() => {
+    const pads = [...document.querySelectorAll<HTMLElement>('.racer-pad')].map(p => p.getBoundingClientRect());
+    return [...document.querySelectorAll<HTMLElement>('.vehicle-label')].filter(l => !l.hidden && getComputedStyle(l).display !== 'none').map(l => {
+      const r = l.getBoundingClientRect();
+      return { text: l.textContent, x: r.x, y: r.y, w: r.width, h: r.height, onPad: pads.some(p => r.right > p.left && r.left < p.right && r.bottom > p.top && r.top < p.bottom) };
+    });
+  });
+  const separate = (list: { x: number; y: number; w: number; h: number }[]) => list.every((a, i) => list.every((b, j) => i >= j || a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y));
+  let grid = await chips();
+  expect(grid.map(c => c.text).sort()).toEqual(['1', '2', '3', '4']); expect(separate(grid)).toBe(true); expect(grid.some(c => c.onPad)).toBe(false);
+  for (const key of ['KeyA', 'KeyL', 'KeyQ', 'KeyP']) await page.keyboard.press(key);
+  await page.waitForFunction(() => { const s = (window as any).__roadster.getState(); return s.phase === 'racing' && s.race.time > 0.3 && s.race.time < 1.6; }, undefined, { polling: 50 });
+  const early = await chips();
+  expect(early.map(c => c.text).sort()).toEqual(['1', '2', '3', '4']); expect(separate(early)).toBe(true); expect(early.some(c => c.onPad)).toBe(false);
+  await page.waitForFunction(() => (window as any).__roadster.getState().race.time > 2.3);
+  expect(await chips()).toEqual([]);
+});
