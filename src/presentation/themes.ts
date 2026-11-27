@@ -47,7 +47,8 @@ export const fleetEscortHullAppearance={side:'#5d7180',sheer:'#9aabb4',band:'#e3
 export const fleetRampGuideAppearance={color:'#f6f4ea',stripWidth:.75,stripInset:.2,lift:.05,touchdownBars:3,touchdownStart:3,touchdownSpacing:4,touchdownDepth:.9,touchdownInset:1.2};
 export const fleetLaneAppearance={surface:'#26333c',edge:'#e4e8dd',centre:'#d8cba4',kerbRed:'#b84c49',kerbWhite:'#d9dfdb',edgeWidth:.40,edgeInset:.30,kerbWidth:.85,kerbHeight:.08};
 export const fleetFlagAppearance={red:'#b53f45',white:'#ecece5',blue:'#294765'};
-export const fleetCamera={desktopElevation:64,phoneElevation:68,portraitElevation:56,desktopAzimuth:180,phoneAzimuth:210,portraitAzimuth:135};
+/** Portrait 165°/68° (2026-11-27, tools/capture-fleet-portrait.mjs): narrowest ramp 20.3 px at 390×844 vs 17.8 px at 135°/56°, everything still framed. */
+export const fleetCamera={desktopElevation:64,phoneElevation:68,portraitElevation:68,desktopAzimuth:180,phoneAzimuth:210,portraitAzimuth:165};
 /** Solo Thrust/Hop keep the standard red interface (`--control-1`) whatever the car paint; with two or more cars the pads use each driver's paint instead (ui/controls.ts). */
 export const abilityControlColors = ['#d51f35', '#3b79e6', '#f1be37', '#45a77b'] as const;
 export const vehicleMaterials = {
