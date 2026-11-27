@@ -9,7 +9,9 @@
         "carrier-b-crossing": 17.25,
         "destroyer-b-return": 12.75,
         "support-a-return": 15.75,
-        "support-b-return": 17
+        "support-b-return": 17,
+        "support-a-hop": 16.25,
+        "support-b-hop": 17.25
       }
     }
   }

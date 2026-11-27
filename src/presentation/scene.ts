@@ -97,6 +97,8 @@ export class GameScene {
   /** Amber rings at automatic ramps whose drawn approach is too slow (preview guidance only). */
   private rampWarning: Mesh;
   private rampWarningRings: InstancedMesh[] = [];
+  /** During a race, a ring at the support-ship lip on your own shortcut: press Hop here. */
+  private hopCue: Mesh;
   private theme: PresentationTheme;
   private roadMaterial: StandardMaterial;
   private terrainMaterial: StandardMaterial;
@@ -254,10 +256,12 @@ export class GameScene {
     this.errorMarker = MeshBuilder.CreateTorus('route-error', { diameter: 4, thickness: 0.25, tessellation: 32 }, this.scene); this.errorMarker.material = err; this.errorMarker.isVisible = false;
     const caution = mat('ramp-caution', '#ffbf3c'); caution.emissiveColor = Color3.FromHexString('#ffbf3c');
     this.rampWarning = MeshBuilder.CreateTorus('ramp-warning', { diameter: 15, thickness: 1.6, tessellation: 40 }, this.scene); this.rampWarning.material = caution; this.rampWarning.setEnabled(false);
+    const cue = mat('hop-cue', '#7fe3ff'); cue.emissiveColor = Color3.FromHexString('#7fe3ff'); cue.disableLighting = true;
+    this.hopCue = MeshBuilder.CreateTorus('hop-cue', { diameter: 10, thickness: 1, tessellation: 36 }, this.scene); this.hopCue.material = cue; this.hopCue.isPickable = false; this.hopCue.setEnabled(false);
     // Bake static scenery by material: curbs and foliage should not each cost a draw call.
     const staticGroups = new Map<number, Mesh[]>();
     for (const m of [...this.scene.meshes]) {
-      if (!(m instanceof Mesh) || m.metadata?.dynamicScenery || m.getClassName() === 'LinesMesh' || m === this.marker || m === this.approach || m === this.startFill || m === this.errorMarker || m === this.rampWarning || !m.material) continue;
+      if (!(m instanceof Mesh) || m.metadata?.dynamicScenery || m.getClassName() === 'LinesMesh' || m === this.marker || m === this.approach || m === this.startFill || m === this.errorMarker || m === this.rampWarning || m === this.hopCue || !m.material) continue;
       const group = staticGroups.get(m.material.uniqueId) ?? []; group.push(m); staticGroups.set(m.material.uniqueId, group);
     }
     for (const group of staticGroups.values()) {
@@ -632,6 +636,11 @@ export class GameScene {
       const ring = this.rampWarning.createInstance('ramp-warning-' + i); place(ring, point); this.rampWarningRings.push(ring);
     });
   }
+  /** Shows the Hop cue at a lip (race only, your own shortcut), or hides it. */
+  showHopCue(point: Point | null) {
+    this.hopCue.setEnabled(!!point);
+    if (point) this.hopCue.position.set(point.x, (this.track.decks ? planningHeight(point, this.track) : 0) + 0.6, point.z);
+  }
   /** Clears the preview markers; with a point, marks the first crash stretch. Ramp rings are cleared only by a bare call. */
   showError(point?: Point, section?: Point[]) { if (!point) this.showRampWarnings([]); this.errorLine?.dispose(); this.errorLine = undefined; this.errorMarker.isVisible = !!point; if (point) this.errorMarker.position.set(point.x, (this.track.decks?planningHeight(point,this.track):0)+0.3, point.z); if (section) this.errorLine = new PaceLine(this.scene, section, section.map(() => 9), this.theme, 0, false, true, false, this.track); }
   showStart(show: boolean) { this.marker.isVisible = show; this.approach.isVisible = show; this.startFill.isVisible = show; }
@@ -641,6 +650,8 @@ export class GameScene {
     // the DOM artwork and menus can run without redrawing the hidden track or its shadows.
     if (covered && this.renderedOnce) { this.lastFrame = 0; return; }
     const reduced = this.reducedMotion.matches, frameMs = this.lastFrame ? (time - this.lastFrame) * 1000 : 0; this.lastFrame = time;
+    // The Hop cue pulses in size (steady with reduced motion).
+    if (this.hopCue.isEnabled()) this.hopCue.scaling.setAll(reduced ? 1 : 1 + 0.12 * Math.sin(time * Math.PI * 2 * 1.2));
     // The start box border and arrows breathe gently while visible, so a first-time player finds them.
     if (this.approach.isVisible && this.approach.material) { const z = startZoneAppearance; this.approach.material.alpha = reduced ? z.guideAlpha : z.pulseLow + (z.guideAlpha - z.pulseLow) * (0.5 + 0.5 * Math.cos(time * Math.PI * 2 * z.pulseHz)); }
     if (this.graphicsChoice === 'auto' && this.governor.sample(frameMs)) this.stepDownPending = true;

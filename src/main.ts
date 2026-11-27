@@ -393,7 +393,15 @@ function castVote(seat: number, vote: string | undefined) {
   else if (outcome === 'same') { if (!audio.muted) audio.unlock(); enterReady(); }
   else newSession(playerCount);
 }
+/** Your own shortcut Hop lips, shown as a cue while racing: solo play and your own line online only (never other players' hidden lines). */
+function hopCuePoint(next: Phase) {
+  if (next !== 'racing' || !route || (humans() > 1 && !duel)) return null;
+  const id = route.crossings?.find(c => c.activation === 'hop' && activeTrack.hopShortcuts?.some(h => h.crossings?.includes(c.id)))?.id;
+  const jump = id ? activeTrack.jumps?.find(j => j.id === id) : undefined;
+  return jump ? { x: jump.from.x, z: jump.from.z } : null;
+}
 function setPhase(next: Phase) {
+  world?.showHopCue(hopCuePoint(next));
   if (next === 'results' && phase !== 'results') ballot = [];
   if (next === 'drawing') strokeCompiler.prepare(activeTrack);
   else if (phase === 'drawing') strokeCompiler.close();
@@ -487,7 +495,9 @@ function showPreview(compiled: CompiledRoute, trim?: DrawingTrim) {
     notes.push(`Your line hits a wall or leaves the road in ${hazards.length === 1 ? 'one place' : `${hazards.length} places`}. The car will crash there and restart just past it.`);
   } else world.showError();
   world.showRampWarnings(ramps.map(w => w.point));
-  if (ramps.length) notes.push(`${ramps.length === 1 ? 'One ramp' : `${ramps.length} ramps`} may need more speed: draw faster before the ringed ${ramps.length === 1 ? 'ramp' : 'ramps'} or the car can fall short into the water.`);
+  const rampOnly = ramps.filter(w => w.kind === 'ramp'), hops = ramps.filter(w => w.kind === 'hop');
+  if (rampOnly.length) notes.push(`${rampOnly.length === 1 ? 'One ramp' : `${rampOnly.length} ramps`} may need more speed: draw faster before the ringed ${rampOnly.length === 1 ? 'ramp' : 'ramps'} or the car can fall short into the water.`);
+  if (hops.length) notes.push('The support-ship shortcut needs a faster line: draw faster up to the ringed Hop, then press Hop just before the edge.');
   planningNote = notes.length ? notes.join(' ') : undefined;
   setPhase('preview');
 }
