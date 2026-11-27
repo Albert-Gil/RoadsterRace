@@ -20,6 +20,8 @@ import { ShadowGenerator } from '@babylonjs/core/Lights/Shadows/shadowGenerator'
 import { StaticShadowCache } from './static-shadows';
 import { GlowLayer } from '@babylonjs/core/Layers/glowLayer';
 import { Mesh } from '@babylonjs/core/Meshes/mesh';
+import '@babylonjs/core/Meshes/instancedMesh';
+import type { InstancedMesh } from '@babylonjs/core/Meshes/instancedMesh';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
 import { VertexBuffer } from '@babylonjs/core/Buffers/buffer';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
@@ -89,6 +91,9 @@ export class GameScene {
   private driverColors?: string[];
   private marker: Mesh;
   private errorMarker: Mesh;
+  /** Amber rings at automatic ramps whose drawn approach is too slow (preview guidance only). */
+  private rampWarning: Mesh;
+  private rampWarningRings: InstancedMesh[] = [];
   private theme: PresentationTheme;
   private roadMaterial: StandardMaterial;
   private terrainMaterial: StandardMaterial;
@@ -240,6 +245,8 @@ export class GameScene {
     const approach = MeshBuilder.CreateLineSystem('drawing-approach-zone', { lines: guides }, this.scene); approach.color = Color3.FromHexString(track.surface==='packed-snow'?theme.scene.structure:'#d4e6df'); approach.alpha = 0.8; this.approach = approach;
     const err = mat('error', '#ec765a'); err.emissiveColor = Color3.FromHexString('#ec765a');
     this.errorMarker = MeshBuilder.CreateTorus('route-error', { diameter: 4, thickness: 0.25, tessellation: 32 }, this.scene); this.errorMarker.material = err; this.errorMarker.isVisible = false;
+    const caution = mat('ramp-caution', '#ffbf3c'); caution.emissiveColor = Color3.FromHexString('#ffbf3c');
+    this.rampWarning = MeshBuilder.CreateTorus('ramp-warning', { diameter: 15, thickness: 1.6, tessellation: 40 }, this.scene); this.rampWarning.material = caution; this.rampWarning.setEnabled(false);
     // Small arrows teach direction without a screen-space overlay covering the circuit.
     if(!track.decks)for (const fraction of [10, 45, 95, 150, 195].map(value => value / 216)) {
       const i = Math.min(n - 1, Math.floor(fraction * n));
@@ -251,7 +258,7 @@ export class GameScene {
     // Bake static scenery by material: curbs and foliage should not each cost a draw call.
     const staticGroups = new Map<number, Mesh[]>();
     for (const m of [...this.scene.meshes]) {
-      if (!(m instanceof Mesh) || m.metadata?.dynamicScenery || m.getClassName() === 'LinesMesh' || m === this.marker || m === this.approach || m === this.errorMarker || !m.material) continue;
+      if (!(m instanceof Mesh) || m.metadata?.dynamicScenery || m.getClassName() === 'LinesMesh' || m === this.marker || m === this.approach || m === this.errorMarker || m === this.rampWarning || !m.material) continue;
       const group = staticGroups.get(m.material.uniqueId) ?? []; group.push(m); staticGroups.set(m.material.uniqueId, group);
     }
     for (const group of staticGroups.values()) {
@@ -617,7 +624,17 @@ export class GameScene {
       this.lines.push(new PaceLine(this.scene, route.points, route.points.map(p => p.desiredSpeed), this.theme, player, true, false, false, this.track));
     });
   }
-  showError(point?: Point, section?: Point[]) { this.errorLine?.dispose(); this.errorLine = undefined; this.errorMarker.isVisible = !!point; if (point) this.errorMarker.position.set(point.x, (this.track.decks?planningHeight(point,this.track):0)+0.3, point.z); if (section) this.errorLine = new PaceLine(this.scene, section, section.map(() => 9), this.theme, 0, false, true, false, this.track); }
+  showRampWarnings(points: Point[]) {
+    this.rampWarningRings.forEach(ring => ring.dispose()); this.rampWarningRings = [];
+    const place = (mesh: Mesh | InstancedMesh, point: Point) => mesh.position.set(point.x, (this.track.decks ? planningHeight(point, this.track) : 0) + 0.8, point.z);
+    this.rampWarning.setEnabled(points.length > 0);
+    points.forEach((point, i) => {
+      if (!i) { place(this.rampWarning, point); return; }
+      const ring = this.rampWarning.createInstance('ramp-warning-' + i); place(ring, point); this.rampWarningRings.push(ring);
+    });
+  }
+  /** Clears the preview markers; with a point, marks the first crash stretch. Ramp rings are cleared only by a bare call. */
+  showError(point?: Point, section?: Point[]) { if (!point) this.showRampWarnings([]); this.errorLine?.dispose(); this.errorLine = undefined; this.errorMarker.isVisible = !!point; if (point) this.errorMarker.position.set(point.x, (this.track.decks?planningHeight(point,this.track):0)+0.3, point.z); if (section) this.errorLine = new PaceLine(this.scene, section, section.map(() => 9), this.theme, 0, false, true, false, this.track); }
   showStart(show: boolean) { this.marker.isVisible = show; this.approach.isVisible = show; }
   get depthFeatures() { return { refinements: this.sceneryRuntime.refinements ?? [], hopCores: this.scene.meshes.filter(m=>m.name === 'four-downward-cold-gas-cores' && m.isEnabled() && m.isVisible).length, vehicleScale: sceneTuning.vehicle.racingScale, ghostVisible:this.lapGhost.visible, graphicsLevel: this.graphicsLevel, graphicsChoice: this.graphicsChoice, renderer: this.engine.isWebGPU ? 'webgpu' : 'webgl2', postPasses: this.post.passes, sky: this.scene.environmentTexture?.name ?? null, decorativeMotion: this.scene.meshes.filter(m => m.metadata?.dynamicScenery).map(m => ({name: m.name, rotation: m.rotation.asArray(), position: m.position.asArray()})), perspective: this.camera.mode === Camera.PERSPECTIVE_CAMERA, shadowMapSize: this.shadows.getShadowMap()?.getSize().width ?? 0, shadowCasters: [...this.shadowCasters].filter(m => !m.isDisposed()).length, staticShadows: { enabled: this.shadowCache?.enabled ?? false, ...this.shadowCache?.stats, perFrameCasters: this.shadows.getShadowMap()?.renderList?.length ?? 0 }, renderReady: this.scene.isReady(), worldReady: this.scene.isReady(), pending: this.scene.meshes.filter(m => !m.isReady(true)).map(m => m.name), carTriangles: this.vehicle.triangleCount, pace: this.theme.pace, lineWidths: this.lines.map(line => line.cssWidths), ignoredStrokeCount: this.ignoredLines.length }; }
   render(time: number, covered = false) {

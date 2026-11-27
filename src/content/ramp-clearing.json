@@ -1,0 +1,16 @@
+{
+  "rules": 22,
+  "tracks": {
+    "san-diego-fleet": {
+      "version": 6,
+      "crossings": {
+        "carrier-a-crossing": 16,
+        "destroyer-a-return": 16.5,
+        "carrier-b-crossing": 17.25,
+        "destroyer-b-return": 12.75,
+        "support-a-return": 15.75,
+        "support-b-return": 17
+      }
+    }
+  }
+}

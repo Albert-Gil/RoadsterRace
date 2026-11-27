@@ -24,7 +24,7 @@ export interface DevContext {
   confirmedRoutes: CompiledRoute[]; readyPlayers: boolean[]; world: GameScene; route: CompiledRoute | null;
   drawingTrim: DrawingTrim | undefined; best: number | null; stroke: DrawSample[]; activeTrack: TrackDefinition;
   raceTouches: PointerOwnership; ownership: PointerOwnership; audio: GameAudio;
-  usePractice: (jumpBranch?: boolean | string) => void; driverName: (i: number) => string; driverPaint: (i: number) => string;
+  usePractice: (jumpBranch?: boolean | string, seconds?: number) => void; driverName: (i: number) => string; driverPaint: (i: number) => string;
   tutorial: TutorialProgress | null;
   activeChallenge: ChallengeId | null;
 }

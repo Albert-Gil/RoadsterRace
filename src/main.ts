@@ -3,6 +3,7 @@ import { reclaimBeforeGraphics } from './duels/seat';
 import type { Room } from '@colyseus/sdk';
 import { duelVenues, type RaceFrame, type RoomView } from './duels/protocol';
 import { rampAt, supported, groundHeight, FLIGHT_RULES } from './core/support';
+import { rampWarnings } from './core/ramp-warnings';
 import{snowSurfaceHeight}from'./presentation/surface-height';
 import { CPU_DRIVERS, humanCount, racerCount, controllerFor, type SessionOptions } from './core/session';
 import { computerRoute, stepComputers } from './core/computer';
@@ -419,23 +420,27 @@ function beginDrawing() {
   world.vehicles.forEach(vehicle => vehicle.clearEffects());
   planningNote = undefined; world.drawLine(null); world.showError(); world.vehicles[turn].update(startPose()); notice.textContent = ''; setPhase('drawing');
 }
-function usePractice(jumpBranch: boolean | string = false) {
+function usePractice(jumpBranch: boolean | string = false, seconds = 7) {
   if (phase !== 'drawing') return;
   practiceTurns.add(turn);
   if (activeTour?.challengeId) { activeTour.challengeEligible = false; persistTour(); }
-  const result = compileRoute(createPracticeSamples(activeTrack, 7, jumpBranch), activeTrack);
+  const result = compileRoute(createPracticeSamples(activeTrack, seconds, jumpBranch), activeTrack);
   if (result.ok) showPreview(result.route, result.drawing);
 }
 /** The accepted line, with any crash stretches marked. Nothing here blocks racing it. */
 function showPreview(compiled: CompiledRoute, trim?: DrawingTrim) {
   world.showContinueHandle(null);
   route = compiled; drawingTrim = trim; world.drawLine(route, drawingTrim);
-  const hazards = compiled.hazards ?? [];
+  const hazards = compiled.hazards ?? [], ramps = rampWarnings(compiled, activeTrack);
+  const notes: string[] = [];
   if (hazards.length) {
     const first = hazards[0], section = compiled.points.filter(p => p.distance >= first.from && p.distance <= Math.min(first.to, compiled.length));
     world.showError(sampleRoute(compiled, first.from), section.length > 1 ? section : undefined);
-    planningNote = `Your line hits a wall or leaves the road in ${hazards.length === 1 ? 'one place' : `${hazards.length} places`}. The car will crash there and restart just past it.`;
-  } else { world.showError(); planningNote = undefined; }
+    notes.push(`Your line hits a wall or leaves the road in ${hazards.length === 1 ? 'one place' : `${hazards.length} places`}. The car will crash there and restart just past it.`);
+  } else world.showError();
+  world.showRampWarnings(ramps.map(w => w.point));
+  if (ramps.length) notes.push(`${ramps.length === 1 ? 'One ramp' : `${ramps.length} ramps`} may need more speed: draw faster before the ringed ${ramps.length === 1 ? 'ramp' : 'ramps'} or the car can fall short into the water.`);
+  planningNote = notes.length ? notes.join(' ') : undefined;
   setPhase('preview');
 }
 function confirmRoute() {
