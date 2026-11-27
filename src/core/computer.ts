@@ -10,7 +10,7 @@ import { trackSurface } from './surfaces';
 
 export const AI_TUNING = { easy: 0.90, normal: 0.97, hard: 1 } as const;
 /** Planning/controller compatibility is independent of unchanged human vehicle physics. */
-export const COMPUTER_VERSION = 3;
+export const COMPUTER_VERSION = 4;
 export const AI_DRIVING = Object.freeze({ decisionTicks: 12, cornerGripShare: 0.64, brakingShare: 0.65, responseSeconds: 0.45, followingSeconds: 0.65, trafficRange: 32, minimumGap: 2.5, lineOffset: 1.8, lineVariation: .22, gripSampleSpacing: 4, thrustGripShare: .82 });
 /**
  * Per-circuit thrust confidence. San Diego Fleet's crossings are taken airborne, so a burst
@@ -19,6 +19,13 @@ export const AI_DRIVING = Object.freeze({ decisionTicks: 12, cornerGripShare: 0.
  * rules-20 decisions (see plans/pending/multiplayer-rematch-fleet.md, step 1.7).
  */
 const THRUST_GRIP_SHARE: Readonly<Record<string, number>> = Object.freeze({ 'san-diego-fleet': .92 });
+/**
+ * Per-circuit pace for the easier levels. Fleet's ramps punish a slow approach, so the default Easy and
+ * Normal paces fell short of their lap targets there (Easy 64.97 s, Normal 62.62 s over seeds 1/71/502).
+ * With these (computer version 4): Easy 62.96 s, Normal 60.58 s, Hard 59.80 s, no Easy recoveries
+ * (tools/benchmark-computers.mjs, 2 laps). Every other circuit keeps AI_TUNING.
+ */
+export const TRACK_AI_TUNING: Readonly<Record<string, Partial<Record<Difficulty, number>>>> = Object.freeze({ 'san-diego-fleet': { easy: 0.915, normal: 0.975 } });
 const gripProfiles = new WeakMap<CompiledRoute, { track: TrackDefinition; values: Float64Array }>();
 /** Immutable planned terrain is sampled once, not repeatedly on every ability decision.
  * The lower neighbouring grip is conservative at a surface transition. Curvature
@@ -49,7 +56,7 @@ export function computerRoute(track: TrackDefinition, difficulty: Difficulty, op
   if(!safe(result)) result=compileRoute(raw,track);
   if(!safe(result)) result=compileRoute(createPracticeSamples(track,7,false),track);
   if(!result.ok || result.route.hazards?.length)throw new Error(`No safe computer plan for ${track.name}`);
-  const route=result.route, factor=AI_TUNING[difficulty]*(0.99+opponent*0.01);
+  const route=result.route, factor=(TRACK_AI_TUNING[track.id]?.[difficulty]??AI_TUNING[difficulty])*(0.99+opponent*0.01);
   route.points.forEach(p=>{p.desiredSpeed=clamp(Math.sqrt(trackSurface(track).grip*AI_DRIVING.cornerGripShare/Math.max(0.008,Math.abs(p.curvature)))*factor,PACE_RANGE.min,Math.min(PACE_RANGE.max,PACE_RANGE.max*factor));});
   if(track.sections)for(const p of route.points)for(const j of track.jumps??[])if(j.kind==='crest'&&p.courseProgress!>=j.entryProgress&&p.courseProgress!<=j.exitProgress)p.desiredSpeed=Math.max(22,p.desiredSpeed);
   // Authored receiving bends constrain the planned approach, never the physical car.

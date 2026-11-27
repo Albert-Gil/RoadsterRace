@@ -9,7 +9,7 @@ Conventions: SI units; horizontal plane (x, z) with y up; heading 0 points along
 | Item | Version |
 |---|---:|
 | Vehicle rules (`RULES.version`) | 22 |
-| Computer planning/controller (`COMPUTER_VERSION`) | 3 |
+| Computer planning/controller (`COMPUTER_VERSION`) | 4 |
 | Route compiler (`COMPILER_VERSION`) | 21 |
 | Newport Island track (`coastal-launch`) | 8 |
 | Launchsite track (`orbital-launchyard`) | 12 |
@@ -212,6 +212,13 @@ Derived: level-ground manual hop peak 8.028 m and airtime 0.944 s. Santa Monica 
 | `easy` | 0.9 | — | Fraction of the safe pace profile |
 | `normal` | 0.97 | — | Fraction of the safe pace profile |
 | `hard` | 1 | — | Fraction of the safe pace profile |
+
+## TRACK_AI_TUNING (san-diego-fleet)
+
+| Key | Value | Unit | Meaning |
+|---|---:|---|---|
+| `easy` | 0.915 | — | San Diego Fleet only: replaces AI_TUNING.easy |
+| `normal` | 0.975 | — | San Diego Fleet only: replaces AI_TUNING.normal |
 
 ## AI_DRIVING
 

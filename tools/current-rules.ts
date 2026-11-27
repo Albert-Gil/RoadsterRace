@@ -7,7 +7,7 @@ import { COMPILER_VERSION, PACE_RANGE, PACE_FILTER } from '../src/core/route';
 import { DRAWING_RULES } from '../src/core/route-cleanup';
 import { GATE_RULES } from '../src/core/start-finish';
 import { SHORTCUT_RULES } from '../src/core/hop-shortcuts';
-import { AI_TUNING, AI_DRIVING, COMPUTER_VERSION } from '../src/core/computer';
+import { AI_TUNING, AI_DRIVING, COMPUTER_VERSION, TRACK_AI_TUNING } from '../src/core/computer';
 import { CHAMPIONSHIP_POINTS } from '../src/core/tournament';
 import { DEFAULT_LAPS, MAX_LAPS, MIN_LAPS } from '../src/core/race-options';
 import { circuits } from '../src/content/circuits';
@@ -106,6 +106,7 @@ const documentation: Record<string, Record<string, Unit>> = {
     commitAlignment: ['—', 'Minimum cosine between the line and the hop lane where the line meets the named obstacle (0.5 = within 60°)'],
   },
   AI_TUNING: { easy: ['—', 'Fraction of the safe pace profile'], normal: ['—', 'Fraction of the safe pace profile'], hard: ['—', 'Fraction of the safe pace profile'] },
+  'TRACK_AI_TUNING (san-diego-fleet)': { easy: ['—', 'San Diego Fleet only: replaces AI_TUNING.easy'], normal: ['—', 'San Diego Fleet only: replaces AI_TUNING.normal'] },
   AI_DRIVING: {
     decisionTicks: ['ticks', 'Fixed-clock interval between each computer driver decision'],
     cornerGripShare: ['fraction', 'Nominal grip used for the safe planned corner pace'],
@@ -201,5 +202,6 @@ ${table('DRAWING_RULES', DRAWING_RULES)}
 ${table('GATE_RULES', GATE_RULES)}
 ${table('SHORTCUT_RULES', SHORTCUT_RULES)}
 ${table('AI_TUNING', AI_TUNING)}
+${table('TRACK_AI_TUNING (san-diego-fleet)', TRACK_AI_TUNING['san-diego-fleet'] as Record<string, number>)}
 ${table('AI_DRIVING', AI_DRIVING)}`;
 }
