@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { Server } from '@colyseus/core';
 import { WebSocketTransport } from '@colyseus/ws-transport';
 import { DuelRoom, duelTracks } from './duel-room';
+import { guardJoins } from './join-limiter';
 import { DUEL_PROTOCOL, duelVenues } from '../src/duels/protocol';
 import { RULES } from '../src/core/simulation';
 import { COMPILER_VERSION } from '../src/core/route';
@@ -39,3 +40,6 @@ const server = new Server({
 });
 server.define('private_duel',DuelRoom);
 await server.listen(Number(process.env.PORT || 2567),'0.0.0.0');
+// Repeated failed joins from one address (guessed room codes) are refused for a minute.
+const http = (server.transport as unknown as { server?: import('node:http').Server }).server;
+if (http) guardJoins(http);

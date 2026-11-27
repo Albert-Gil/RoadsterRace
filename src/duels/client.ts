@@ -4,7 +4,7 @@ import { RULES } from '../core/simulation';
 import { COMPILER_VERSION } from '../core/route';
 import type { Ability, DrawSample } from '../core/types';
 import { duelEndpoint, savedSeat, storeSeat } from './seat';
-import { checkRoomCode } from './codes';
+import { checkRoomCode, decodeSince, encodeSince } from './codes';
 import { describeDuelError, duelError, duelErrorAction, DuelFailure, mapConnectionFailure, type DuelError } from './errors';
 import { judgeHealth, recheckWhileUpdating, type HealthReply, type HealthVerdict } from './compatibility';
 import { newerBuildDeployed } from '../app/stale-build';
@@ -98,13 +98,13 @@ export class DuelClient {
     const laps=el('select');laps.setAttribute('aria-label','Race distance');
     for(let i=1;i<=6;i++)laps.add(new Option(i+' lap'+(i===1?'':'s'),String(i)));
     const invite=initialCode?checkRoomCode(initialCode):undefined;
-    const code=el('input');code.placeholder='Room word, e.g. TIGER';code.setAttribute('aria-label','Room code');code.maxLength=8;code.value=invite?.ok?invite.code:'';code.autocapitalize='characters';code.autocomplete='off';
+    const code=el('input');code.placeholder='Room code, e.g. TIGER7';code.setAttribute('aria-label','Room code');code.maxLength=8;code.value=invite?.ok?invite.code:'';code.autocapitalize='characters';code.autocomplete='off';
     this.content.append(circuit,laps);
     const notice=el('div');notice.className='duel-updating';notice.setAttribute('role','status');notice.hidden=true;
     this.content.prepend(notice);
     const create=this.button('Create room',()=>{saveDriver();void this.connect('',circuit.value as DuelVenue,Number(laps.value));},true);
     this.content.append(code);
-    const join=this.button('Join room',()=>{const check=checkRoomCode(code.value);if(check.ok){saveDriver();void this.connect(check.code);}else this.status.textContent=check.reason==='old-invite'?describeDuelError(duelError('old-invite')):'Enter the room word from your invite, for example TIGER.';});
+    const join=this.button('Join room',()=>{const check=checkRoomCode(code.value);if(check.ok){saveDriver();void this.connect(check.code);}else this.status.textContent=check.reason==='old-invite'?describeDuelError(duelError('old-invite')):'Enter the room code from your invite, for example TIGER7.';});
     this.button('Home',()=>this.leave());
     this.entry={buttons:[create,join],notice,fillVenues};
     if(invite?.ok&&!reclaimed&&savedSeat(invite.code)){
@@ -163,7 +163,9 @@ export class DuelClient {
         this.venues=verdict.venues;
         if(this.closed)return;
         const client=new Client(duelEndpoint);
-        const options={protocol:DUEL_PROTOCOL,physics:RULES.version,compiler:COMPILER_VERSION,versions:this.hooks.versions,...this.hooks.driver,circuit,laps};
+        // Joining from an invite link names the room it was made for (its creation stamp); a typed code does not.
+        const link=new URL(location.href),since=code&&link.searchParams.get('duel')?.toUpperCase()===code?decodeSince(link.searchParams.get('since')):undefined;
+        const options={protocol:DUEL_PROTOCOL,physics:RULES.version,compiler:COMPILER_VERSION,versions:this.hooks.versions,...this.hooks.driver,circuit,laps,...(since!==undefined?{since}:{})};
         const token=code && savedSeat(code);
         if(token){
           try{room=await client.reconnect(token);}
@@ -178,7 +180,7 @@ export class DuelClient {
       }
       if(this.closed){await room.leave();return;}
       this.room=room;storeSeat(room.reconnectionToken);
-      const address=new URL(location.href);address.searchParams.set('duel',room.roomId);history.replaceState(null,'',address);
+      const address=new URL(location.href);if(address.searchParams.get('duel')!==room.roomId)address.searchParams.delete('since');address.searchParams.set('duel',room.roomId);history.replaceState(null,'',address);
       room.onMessage('room',(view:RoomView)=>this.receive(view));
       room.onMessage('frame',(wire:WireFrame)=>{
         const frame=unpackFrame(wire);
@@ -209,6 +211,7 @@ export class DuelClient {
     if (!this.view && this.room) {
       const invite = new URL(location.href);
       invite.searchParams.set('duelCircuit', view.circuit);
+      invite.searchParams.set('since', encodeSince(view.created * 1000));
       history.replaceState(null, '', invite);
     }
     if(view.phase==='lobby'){this.roundDrawn=0;this.waiting=false;}
@@ -329,7 +332,7 @@ export class DuelClient {
   leave(){
     this.closed=true;this.dialog.remove();storeSeat(null);
     if(this.room)void this.room.leave().catch(()=>{});
-    const url=new URL(location.href);url.searchParams.delete('duel');url.searchParams.delete('duelCircuit');history.replaceState(null,'',url);
+    const url=new URL(location.href);url.searchParams.delete('duel');url.searchParams.delete('duelCircuit');url.searchParams.delete('since');history.replaceState(null,'',url);
     this.hooks.home();
   }
 }

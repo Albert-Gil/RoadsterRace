@@ -37,6 +37,8 @@ export interface RoomView {
   physics: number;
   compiler: number;
   trackVersion: number;
+  /** When the room was created (seconds); invite links carry it so a reused code cannot admit an old link. */
+  created: number;
 }
 // Axes in metres, heading in radians clockwise from +Z. Times in seconds except drawing timestamps (ms).
 export interface RaceFrame {

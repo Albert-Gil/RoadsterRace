@@ -40,7 +40,7 @@ function recordStep(ms: number) {
   stepLog.unref?.();
 }
 const creations: number[] = [];
-type Options = { protocol: number; physics: number; compiler: number; circuit: DuelVenue; laps: number; name: string; paint: string; versions: Record<string,number> };
+type Options = { protocol: number; physics: number; compiler: number; circuit: DuelVenue; laps: number; name: string; paint: string; versions: Record<string,number>; since?: number };
 interface Seat extends DriverSeat { versions: Record<string, number>; route?: CompiledRoute; samples?: DrawSample[]; lastSequence: number; lastUpload: number; sentCooldowns?: string }
 
 function readStroke(input: unknown, track: TrackDefinition) {
@@ -95,7 +95,7 @@ export class DuelRoom extends Room {
     while (matchMaker.getLocalRoomById(code)) code = newRoomCode(n => randomBytes(n));
     this.roomId = code;
     await this.setPrivate(true);
-    this.view = {phase:'lobby', circuit:options.circuit, laps:options.laps, round:0, host:'', drivers:[], physics:RULES.version, compiler:COMPILER_VERSION, trackVersion:this.track.version};
+    this.view = {created:Math.floor(Date.now()/1000), phase:'lobby', circuit:options.circuit, laps:options.laps, round:0, host:'', drivers:[], physics:RULES.version, compiler:COMPILER_VERSION, trackVersion:this.track.version};
     this.onMessage('sync', c => this.sync(c));
     this.onMessage('start', c => {
       if (c.sessionId !== this.view.host || this.view.phase !== 'lobby' || this.seats.length < 2 || this.seats.some(s=>!s.connected)) return;
@@ -145,7 +145,12 @@ export class DuelRoom extends Room {
   private compatible(o: Options) {
     if (o.protocol!==DUEL_PROTOCOL || o.physics!==RULES.version || o.compiler!==COMPILER_VERSION || o.versions?.[this.track.id]!==this.track.version) throw new ServerError(409,'version-mismatch' satisfies DuelReason);
   }
-  onAuth(_c: Client,o: Options) { this.compatible(o); return true; }
+  onAuth(_c: Client,o: Options) {
+    this.compatible(o);
+    // An invite link names the room it was made for; a newer room reusing the code is not that room.
+    if (o.since!==undefined && o.since!==this.view.created) throw new ServerError(410,'invite-expired' satisfies DuelReason);
+    return true;
+  }
   onJoin(c: Client,o: Options) {
     if(this.view.phase!=='lobby') throw new ServerError(409,'room-started' satisfies DuelReason);
     this.seats.push({ versions:{...(o.versions??{})}, id:c.sessionId, name:String(o.name??'Driver').trim().slice(0,24)||'Driver', paint:String(o.paint??'glacier').slice(0,24), ready:false, connected:true, withdrawn:false, vote:null, lastSequence:0, lastUpload:-Infinity });

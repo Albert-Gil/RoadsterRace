@@ -101,9 +101,9 @@ test('an invite from the old 10-character format explains itself instead of fail
   await expect(page.getByRole('dialog')).toContainText('older version of the game');
   await page.getByRole('dialog').getByLabel('Room code').fill('tigger');
   await page.getByRole('button', { name: 'Join room', exact: true }).click();
-  await expect(page.getByRole('dialog')).toContainText('Enter the room word');
+  await expect(page.getByRole('dialog')).toContainText('Enter the room code');
   // A real word with no open room reaches the server and says so.
-  await page.getByRole('dialog').getByLabel('Room code').fill('zebra');
+  await page.getByRole('dialog').getByLabel('Room code').fill('zebra9');
   await page.getByRole('button', { name: 'Join room', exact: true }).click();
   await expect(page.getByRole('dialog')).toContainText('No open race uses this code', { timeout: 30000 });
 });
@@ -111,12 +111,12 @@ test('an invite from the old 10-character format explains itself instead of fail
 test('an outdated room server shows Online play is updating, keeps the invite and offers Try again', async ({ page }) => {
   // A server from before version reporting answers /health without a protocol.
   await page.route('**/health', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true }) }));
-  await page.goto('/?duel=TIGER');
+  await page.goto('/?duel=TIGER7');
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByText('Online play is updating')).toBeVisible({ timeout: 30000 });
   await expect(dialog.getByRole('button', { name: 'Create room' })).toBeDisabled();
   await expect(dialog.getByRole('button', { name: 'Join room', exact: true })).toBeDisabled();
-  await expect(dialog.getByLabel('Room code')).toHaveValue('TIGER');
+  await expect(dialog.getByLabel('Room code')).toHaveValue('TIGER7');
   await expect(dialog.getByRole('button', { name: 'Try again' })).toBeVisible({ timeout: 30000 });
   await expect(page.getByText('Private room', { exact: true })).toHaveCount(0);
   // The server catches up: Try again re-enables Create and Join.

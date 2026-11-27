@@ -169,6 +169,21 @@ describe('private duel transport and authority',()=>{
       expect(guest.results).toEqual([]);
     }finally{await Promise.allSettled([host,guest].map(d=>d.room.leave()));}
   },60000);
+  it('refuses an invite link made for an earlier room that used the same code',async()=>{
+    const track=findCircuit('coastal-launch').track;
+    const opts={circuit:track.id,laps:1,protocol:DUEL_PROTOCOL,physics:RULES.version,compiler:COMPILER_VERSION,versions:{[track.id]:track.version},name:'A',paint:'glacier'};
+    const host=new Driver(await client.create('private_duel',opts));
+    try{
+      await until(()=>host.view?.created);
+      const created=host.view!.created;
+      expect(host.room.roomId).toMatch(/^[A-Z]{3,7}[2-9]$/);
+      await expect(client.joinById(host.room.roomId,{...opts,since:created-600})).rejects.toThrow('invite-expired');
+      const guest=new Driver(await client.joinById(host.room.roomId,{...opts,since:created}));
+      const typed=new Driver(await client.joinById(host.room.roomId,opts));
+      await until(()=>host.view?.drivers.length===3);
+      await Promise.allSettled([guest,typed].map(d=>d.room.leave()));
+    }finally{await host.room.leave();}
+  });
   it('lets only the host change circuit and laps, forces fresh lines after a circuit change, and removes a slow drawer after the grace period',async()=>{
     const newport=findCircuit('coastal-launch').track,gate=findCircuit('golden-gate').track,versions={[newport.id]:newport.version,[gate.id]:gate.version};
     const opts={circuit:newport.id,laps:1,protocol:DUEL_PROTOCOL,physics:RULES.version,compiler:COMPILER_VERSION,versions,name:'A',paint:'glacier'};
