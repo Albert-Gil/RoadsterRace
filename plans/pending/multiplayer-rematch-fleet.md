@@ -70,6 +70,7 @@ Files to touch: `tools/fleet-ramp-speeds.mjs` (new), `src/content/ramp-clearing.
 - Blocked by: none
 
 #### Step 1.7: CPU retune for rules 22 (Size: M)
+- **Executed 2026-11-27:** cause found: at rules 22 (45 m/s² grip, 43 m/s cap) the thrust look-ahead rejected every pre-ramp burst on Fleet, so lone computer laps lost up to ~3.5 s. Fix: Fleet-only thrust grip share 0.92 (default 0.82 elsewhere, so every other circuit's results are identical), `COMPUTER_VERSION` 3. Fleet means (2 laps, seeds 1/71/502) 52c0301 → now: Easy 66.71 → 64.97 s (target ≤ 63.2, **missed by 1.8 s**), Normal 63.72 → 62.62 s (target ≤ 62.5, **missed by 0.1 s**), Hard 62.96 → 59.80 s (target met); order Easy > Normal > Hard holds. The remaining Easy gap is traffic: cars bunched after the 5 s ghost start brake hard behind each other; a following-speed floor fixed Easy only by breaking the difficulty order and adding collisions, so it was not kept.
 - Acceptance criteria: `COMPUTER_VERSION` 3. Fleet CPU mean (2 laps, seeds 1/71/502) within 2% of the pre-rules-21 values: Easy ≤ 63.2 s, Normal ≤ 62.5 s, Hard ≤ 61.4 s; difficulty order Easy > Normal > Hard by mean; no other circuit's Hard mean slower than at 52c0301. Solo championships from computer 2 do not resume (existing scoping).
 - Verification command: `CPU_CIRCUIT=san-diego-fleet node --experimental-vm-modules tools/benchmark-computers.mjs current out.json` + full-circuit run with seed 1 + `npx vitest run tests/unit/computer*.test.ts`.
 - Blocked by: none
@@ -196,7 +197,7 @@ Verified when: CI is green, performance budgets hold, the owner's real-device te
 | Phase | Status |
 | --- | --- |
 | 0 Release safety | done (0.1, 0.2) |
-| 1 Fleet (no rule change) | not started |
+| 1 Fleet (no rule change) | done (1.1–1.7); 1.7 Easy/Normal short of target, see note |
 | 2 Local multiplayer | not started |
 | 3 Private Duels | not started |
 | 4 Fleet in duels (flag) | not started |

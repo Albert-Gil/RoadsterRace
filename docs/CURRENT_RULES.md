@@ -9,7 +9,7 @@ Conventions: SI units; horizontal plane (x, z) with y up; heading 0 points along
 | Item | Version |
 |---|---:|
 | Vehicle rules (`RULES.version`) | 22 |
-| Computer planning/controller (`COMPUTER_VERSION`) | 2 |
+| Computer planning/controller (`COMPUTER_VERSION`) | 3 |
 | Route compiler (`COMPILER_VERSION`) | 21 |
 | Newport Island track (`coastal-launch`) | 8 |
 | Launchsite track (`orbital-launchyard`) | 12 |
@@ -227,3 +227,4 @@ Derived: level-ground manual hop peak 8.028 m and airtime 0.944 s. Santa Monica 
 | `lineOffset` | 1.8 | m | Validated left/right opponent line offset before curvature smoothing |
 | `lineVariation` | 0.22 | m | Maximum seeded lateral variation around an opponent lane |
 | `gripSampleSpacing` | 4 | m | Maximum spacing of cached planned-surface grip samples |
+| `thrustGripShare` | 0.82 | fraction | Share of planned surface grip a computer trusts in corners ahead of a Thrust burst (San Diego Fleet: 0.92, airborne crossings) |

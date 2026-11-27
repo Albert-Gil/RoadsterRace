@@ -117,6 +117,7 @@ const documentation: Record<string, Record<string, Unit>> = {
     lineOffset: ['m', 'Validated left/right opponent line offset before curvature smoothing'],
     lineVariation: ['m', 'Maximum seeded lateral variation around an opponent lane'],
     gripSampleSpacing: ['m', 'Maximum spacing of cached planned-surface grip samples'],
+    thrustGripShare: ['fraction', 'Share of planned surface grip a computer trusts in corners ahead of a Thrust burst (San Diego Fleet: 0.92, airborne crossings)'],
   },
 };
 

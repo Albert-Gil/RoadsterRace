@@ -10,8 +10,15 @@ import { trackSurface } from './surfaces';
 
 export const AI_TUNING = { easy: 0.90, normal: 0.97, hard: 1 } as const;
 /** Planning/controller compatibility is independent of unchanged human vehicle physics. */
-export const COMPUTER_VERSION = 2;
-export const AI_DRIVING = Object.freeze({ decisionTicks: 12, cornerGripShare: 0.64, brakingShare: 0.65, responseSeconds: 0.45, followingSeconds: 0.65, trafficRange: 32, minimumGap: 2.5, lineOffset: 1.8, lineVariation: .22, gripSampleSpacing: 4 });
+export const COMPUTER_VERSION = 3;
+export const AI_DRIVING = Object.freeze({ decisionTicks: 12, cornerGripShare: 0.64, brakingShare: 0.65, responseSeconds: 0.45, followingSeconds: 0.65, trafficRange: 32, minimumGap: 2.5, lineOffset: 1.8, lineVariation: .22, gripSampleSpacing: 4, thrustGripShare: .82 });
+/**
+ * Per-circuit thrust confidence. San Diego Fleet's crossings are taken airborne, so a burst
+ * before a ramp spends its speed in flight; at rules 22 (45 m/s² grip, 43 m/s cap) the default
+ * share stopped every pre-ramp burst and lone computer laps there lost ~3 s. 0.92 restores the
+ * rules-20 decisions (see plans/pending/multiplayer-rematch-fleet.md, step 1.7).
+ */
+const THRUST_GRIP_SHARE: Readonly<Record<string, number>> = Object.freeze({ 'san-diego-fleet': .92 });
 const gripProfiles = new WeakMap<CompiledRoute, { track: TrackDefinition; values: Float64Array }>();
 /** Immutable planned terrain is sampled once, not repeatedly on every ability decision.
  * The lower neighbouring grip is conservative at a surface transition. Curvature
@@ -113,7 +120,7 @@ export function shouldComputerThrust(race:LocalRace,player:number) {
     const inFlight=race.track.jumps?.some(j=>route.jumps?.includes(j.id)&&p.courseProgress!==undefined&&p.courseProgress>=j.entryProgress&&p.courseProgress<=j.exitProgress);
     if(inFlight)continue;
     const grip=plannedGrip(route,race.track,s.distance+ahead);
-    const corner=Math.min(RULES.maxSpeed,Math.sqrt(grip*.82/Math.max(.0001,Math.abs(p.curvature))));
+    const corner=Math.min(RULES.maxSpeed,Math.sqrt(grip*(THRUST_GRIP_SHARE[race.track.id]??AI_DRIVING.thrustGripShare)/Math.max(.0001,Math.abs(p.curvature))));
     const available=Math.max(0,ahead-burstDistance-responseDistance);
     const predicted=ahead<burstDistance?Math.min(boosted,Math.sqrt(s.speed*s.speed+2*(RULES.thrustAcceleration+RULES.acceleration)*ahead)):boosted;
     if(predicted*predicted>corner*corner+2*RULES.braking*AI_DRIVING.brakingShare*available)return false;
