@@ -4,7 +4,7 @@ import{fleetAppearance as art}from'./themes';
 import{navalEllipsoid}from'./fleet-outfit';
 import{navalEnsign}from'./fleet-flags';
 /** Original naval command kit: asymmetric island, integrated mast and compact service wheelhouse. */
-export function navalCommand(b:TrackBarrier,g:CompositionShapes,radar:CompositionShapes,w:number,d:number,h:number,cx:number,cz:number){
+export function navalCommand(b:TrackBarrier,g:CompositionShapes,radar:CompositionShapes,w:number,d:number,h:number,cx:number,cz:number,aft=1){
  const carrier=b.id.includes('carrier'),support=b.id.startsWith('support'),base=b.baseHeight??0;
  const block=(x:number,y:number,z:number,ww:number,hh:number,dd:number,inset:number,color:string)=>{
   const rings=[[y,ww/2,dd/2],[y+hh,ww/2-inset,dd/2-inset]];
@@ -45,14 +45,22 @@ export function navalCommand(b:TrackBarrier,g:CompositionShapes,radar:Compositio
   for(const side of[-1,1])for(const[n,digit]of[...(b.id.includes('-a-')?'07':'14')].entries())for(const key of digits[digit]){const [a,c]=segs[key],x=-w*.32+n*4.8,y=h*.11,z=side*d*.475;g.beam([x+a[0]*3.5,y+a[1]*3.2,z],[x+c[0]*3.5,y+c[1]*3.2,z],.22,art.line,4);}
 
  }else if(support){
-  block(-w*.04,0,0,w*.90,h*.30,d*.91,.15,art.hullShade);
-  block(w*.18,h*.30,0,w*.48,h*.23,d*.88,.15,art.superstructure);
-  windows(w*.18,h*.30,0,w*.48,h*.23,d*.88,.15,h*.45,h*.085);
-  balcony(w*.18,h*.37,0,w*.56,d*.95);
-  for(const sign of[-1,1])g.box(-w*.24,h*.15,sign*d*.46,w*.26,h*.12,.04,art.ribs);
-  g.box(-w*.28,h*.37,0,w*.14,h*.22,d*.65,art.hull);g.box(-w*.28,h*.49,0,w*.13,.14,d*.59,art.dark);
-  g.beam([0,h*.3,0],[0,h*.97,0],.12,art.coping,7);g.beam([-w*.09,h*.77,0],[w*.09,h*.77,0],.06,art.coping,5);
-  for(const x of[-w*.38,-w*.20])g.box(x,.3,0,w*.10,.6,d*.74,art.dark);
+  // Offshore support vessel: a tall bridge set aft, a low working deck forward with a crane and two workboats.
+  const x=(u:number)=>aft*u*w;
+  block(0,0,0,w*.94,h*.16,d*.92,.12,art.hullShade);
+  block(x(.27),h*.16,0,w*.36,h*.30,d*.90,.15,art.superstructure);
+  block(x(.30),h*.46,0,w*.27,h*.17,d*.86,.18,art.superstructure);
+  windows(x(.30),h*.46,0,w*.27,h*.17,d*.86,.18,h*.555,h*.09);
+  windows(x(.27),h*.16,0,w*.36,h*.30,d*.90,.15,h*.30,h*.06);
+  balcony(x(.30),h*.50,0,w*.32,d*.95);
+  g.box(x(.30),h*.635,0,w*.29,.16,d*.88,art.dark);
+  g.beam([x(.30),h*.63,0],[x(.30),h*.97,0],.12,art.coping,7);g.beam([x(.30)-w*.07,h*.80,0],[x(.30)+w*.07,h*.80,0],.06,art.coping,5);
+  g.box(x(.12),h*.16+h*.13,0,w*.07,h*.26,d*.55,art.hull);g.box(x(.12),h*.42,0,w*.065,.14,d*.5,art.dark);
+  // Knuckle crane on a pedestal, boom stowed forward along the parcel.
+  g.beam([x(-.18),h*.16,0],[x(-.18),h*.42,0],Math.min(.9,d*.16),art.equipment,8);
+  g.beam([x(-.18),h*.42,0],[x(-.42),h*.30,0],Math.min(.45,d*.09),art.equipment,6);g.beam([x(-.42),h*.30,0],[x(-.42),h*.18,0],.05,art.dark,4);
+  // Two orange workboats in cradles.
+  for(const u of[-.06,-.32]){g.box(x(u),h*.16+.55,0,w*.13,1.1,d*.62,art.rescueOrange);g.box(x(u),h*.16+1.15,0,w*.07,.7,d*.38,art.coping);g.box(x(u),h*.16+.15,0,w*.15,.3,d*.7,art.dark);}
  }else{
   block(0,0,0,w*.94,h*.28,d*.94,.35,art.hullShade);
   block(0,h*.28,d*.19,w*.94,h*.20,d*.47,.3,art.superstructure);

@@ -41,6 +41,8 @@ export const laRoadLightAppearance={spacing:22,size:21,offset:5,lift:.13,dash:3,
 export const fleetAppearance={deckOffset:.015,drivingOffset:.035,deckApron:'#3b4b54',superstructure:'#a6b6bc',navy:'#34516b',hangar:'#202f3a',oxide:'#aa6048',rescueOrange:'#ef873b',rescueYellow:'#edbc46',helmet:'#f2e8cc',jetBlue:'#59788b',hull:'#8d9da6',hullShade:'#637a89',hullFill:'#344b58',waterline:'#435968',bootTop:'#273d49',deck:'#39464e',supportDeck:'#39464e',rampSurface:'#48565e',rampEdge:'#d9b764',rampRibs:'#b2c0c2',asphalt:'#485b65',coping:'#c0cdd1',ribs:'#536c7c',line:'#e2dbbd',aircraft:'#c3cecc',glass:'#294955',dark:'#28343a',equipment:'#ca9e48',emergencyRed:'#b94d3d',navalHelicopter:'#95a9ad',water:'#246779',foam:'#70a3aa'};
 // Authored overview angles keep the normal route visible behind the tall islands.
 // Refit distance to the safe rectangle, but never rotate or follow cars during play.
+/** Escort (destroyer) hull contrast on San Diego Fleet: darker sides under a light sheer band. */
+export const fleetEscortHullAppearance={side:'#5d7180',sheer:'#9aabb4',band:'#e3e6df'};
 /** Automatic-ramp guidance on San Diego Fleet: bright edge strips up each ramp and matching touchdown bars on the receiving deck. */
 export const fleetRampGuideAppearance={color:'#f6f4ea',stripWidth:.75,stripInset:.2,lift:.05,touchdownBars:3,touchdownStart:3,touchdownSpacing:4,touchdownDepth:.9,touchdownInset:1.2};
 export const fleetLaneAppearance={surface:'#26333c',edge:'#e4e8dd',centre:'#d8cba4',kerbRed:'#b84c49',kerbWhite:'#d9dfdb',edgeWidth:.40,edgeInset:.30,kerbWidth:.85,kerbHeight:.08};
@@ -518,6 +520,7 @@ export const launchsiteCampusAppearance={
 /** San Diego Fleet harbour life (fleet-harbour.ts): vessels at least `clearance` m from every ship, lane and crossing. */
 export const fleetHarbourAppearance={
  clearance:30,foam:'#e8f2f0',foamLift:.02,scale:{tug:2.4,patrol:2,sail:2.2,buoy:1.6},
+ wake:{segments:4,spacing:3.2,length:2.8,trail:6},
  vessels:[
   {kind:'tug',x:-205,z:-40,heading:.6},{kind:'tug',x:160,z:45,heading:-1.0},{kind:'tug',x:205,z:160,heading:2.2},
   {kind:'patrol',x:-240,z:-150,heading:.3},{kind:'patrol',x:255,z:85,heading:-2.4},{kind:'patrol',x:215,z:-35,heading:1.9},

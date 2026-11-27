@@ -3,7 +3,7 @@ import {navalEquipment} from './fleet-equipment';
 import type { DeckSurface, Point, TrackBarrier } from '../core/types';
 import { CompositionShapes } from './composition-shapes';
 import { hex, mix } from './landscape/mesh';
-import { fleetAppearance as art } from './themes';
+import { fleetAppearance as art, fleetEscortHullAppearance as escortHull } from './themes';
 import {navalEllipsoid,deckCrew,hullOutfit} from './fleet-outfit';
 
 export function vesselFrame(d: DeckSurface) {
@@ -16,14 +16,16 @@ export function navalHull(d:DeckSurface,hull:CompositionShapes,paint:Composition
  const ps=outline.flatMap((a,i)=>{const b=outline[(i+1)%outline.length],n=Math.max(1,Math.ceil(Math.hypot(b.x-a.x,b.z-a.z)/8));return Array.from({length:n},(_,k)=>({x:a.x+(b.x-a.x)*k/n,z:a.z+(b.z-a.z)*k/n}));});
  const s0=Math.min(...ps.map(p=>p.x)),s1=Math.max(...ps.map(p=>p.x));
  const rows=[{y:height,s:1,t:1},{y:height-1.15,s:.997,t:.985},{y:height-2.4,s:.97,t:d.kind==='carrier'?.88:.96},{y:height*.51,s:.94,t:d.kind==='carrier'?.69:.83},{y:-1.6,s:.9,t:d.kind==='carrier'?.58:.71},{y:-5.5,s:.82,t:.34}];
- const atRing=(p:Point,row:number)=>{const r=rows[row],u=(p.x-s0)/(s1-s0),fine=Math.min(1,Math.max(.035,(1-u)/(d.kind==='carrier'?.22:.36)))*(.73+.27*Math.min(1,u/.07)),blend=(d.kind==='carrier'?[0,0,.12,.80,1,1]:[0,0,.38,.90,1,1])[row];return frame.world(p.x*r.s,p.z*r.t*(1-blend+blend*fine),r.y);};
+ const atRing=(p:Point,row:number)=>{const r=rows[row],u=(p.x-s0)/(s1-s0),fine=Math.min(1,Math.max(d.kind==='destroyer'?.02:.035,(1-u)/(d.kind==='carrier'?.22:d.kind==='destroyer'?.52:.36)))*(.73+.27*Math.min(1,u/.07)),blend=(d.kind==='carrier'?[0,0,.12,.80,1,1]:[0,0,.38,.90,1,1])[row];return frame.world(p.x*r.s,p.z*r.t*(1-blend+blend*fine),r.y);};
  // Use the same refined skin for labels, hangars and outfitting, not the old slab approximation.
  const skin=(p:Point,y:number)=>{const i=Math.max(0,rows.findIndex((r,i)=>i<rows.length-1&&y<=r.y&&y>=rows[i+1].y)),u=(rows[i].y-y)/(rows[i].y-rows[i+1].y),a=atRing(p,i),b=atRing(p,i+1),x=a[0]+(b[0]-a[0])*u,z=a[2]+(b[2]-a[2])*u,dx=x-d.vessel!.origin.x,dz=z-d.vessel!.origin.z,n=Math.hypot(dx,dz)||1;return[x+dx/n*.045,y,z+dz/n*.045];};
  for(let row=0;row<rows.length-1;row++)for(let i=0;i<ps.length;i++){
   const a=ps[i],b=ps[(i+1)%ps.length];
-  const shade=row===0?art.coping:row===4?art.bootTop:row===3?art.waterline:row===1?art.hullShade:art.hull;
+  const escort=d.kind==='destroyer',shade=row===0?art.coping:row===4?art.bootTop:row===3?art.waterline:row===1?(escort?escortHull.sheer:art.hullShade):escort?escortHull.side:art.hull;
   hull.quad([atRing(a,row),atRing(b,row),atRing(b,row+1),atRing(a,row+1)].reverse(),mix(hex(shade),hex('#273b48'),i%3===0?.12:0));
   if(row===3)paint.beam(atRing(a,row+1),atRing(b,row+1),.14,art.bootTop,5);
+  // Escorts: a light sheer band under the deck edge against a darker side reads as a warship hull from the overview.
+  if(row===1&&d.kind==='destroyer')paint.beam(atRing(a,row),atRing(b,row),.32,escortHull.band,4);
  }
  // Long steel strakes, drainage ports and under-flight-deck bracing are baked into the hull batch.
  for(let i=0;i<outline.length;i++){
@@ -80,7 +82,8 @@ function fighter(g:CompositionShapes,w:number,d:number,h:number,folded:boolean){
  for(const side of[-1,1]){g.box(-w*.06,.55,side*d*.23,w*.12,.27,.12,art.hullShade);g.beam([-w*.18,.4,side*d*.23],[w*.05,.4,side*d*.23],.16,art.coping,8);deckCrew(g,w*.34,side*d*.38,side===1?art.rescueYellow:art.rescueOrange);}
 }
 /** Each kit part remains inside the authoritative parked-aircraft / superstructure envelope. */
-export function navalProp(b:TrackBarrier,details:CompositionShapes,radar:CompositionShapes) {
+/** `aft` is +1 when the parcel's local +x axis points toward its ship's stern, -1 toward the bow. */
+export function navalProp(b:TrackBarrier,details:CompositionShapes,radar:CompositionShapes,aft=1) {
  const a=b.footprint[0],next=b.footprint[1],last=b.footprint.at(-1)!,w=Math.hypot(next.x-a.x,next.z-a.z),d=Math.hypot(last.x-a.x,last.z-a.z),center={x:b.footprint.reduce((v,p)=>v+p.x,0)/b.footprint.length,z:b.footprint.reduce((v,p)=>v+p.z,0)/b.footprint.length},base=b.baseHeight??0,g=new CompositionShapes(),h=b.height;
  if(navalEquipment(b,g,w,d,h)){
   // Native working equipment uses the same transformed physical rectangle as its collision.
@@ -106,7 +109,7 @@ export function navalProp(b:TrackBarrier,details:CompositionShapes,radar:Composi
   for(let i=0;i<6;i++){const a=i/6*Math.PI*2;g.beam([Math.cos(a)*.26,1.95+Math.sin(a)*.26,-.3],[Math.cos(a)*.26,2.2+Math.sin(a)*.26,-d*.47],.08,art.dark,6);}
   for(const side of[-1,1])g.box(side*w*.3,2.0,1.1,.28,.7,d*.17,art.ribs);
  }else{
-  navalCommand(b,g,radar,w,d,h,center.x,center.z);
+  navalCommand(b,g,radar,w,d,h,center.x,center.z,aft);
  }
  // Follow both authored footprint axes, including the staggered fleet's sheared rectangles.
  // Instance rotation alone would let parked equipment protrude beyond its actual collider.

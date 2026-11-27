@@ -47,8 +47,9 @@ export function fleetHarbour(track:TrackDefinition,water:number){
  // Bow wave and a V wake trailing behind (w is forward).
  const wake=(v:HarbourVessel,len:number,beam:number,speed:number)=>{
   flat(v,0,len/2+.4,beam*.9,1.2,.55*speed);
-  for(let k=0;k<6;k++){const back=-len/2-2-k*4.5,spread=beam/2+k*1.6*speed;for(const side of[-1,1])flat({...v,heading:v.heading+side*.32},side*spread*.94,back,.7,4.2,(.55-k*.08)*speed);}
-  flat(v,0,-len/2-6,beam*.7,10,.35*speed);
+  // Short, faint wakes keep the eye on the course (art.wake); the V still shows each boat's heading.
+  for(let k=0;k<art.wake.segments;k++){const back=-len/2-2-k*art.wake.spacing,spread=beam/2+k*1.3*speed;for(const side of[-1,1])flat({...v,heading:v.heading+side*.32},side*spread*.94,back,.55,art.wake.length,(.45-k*.09)*speed);}
+  flat(v,0,-len/2-4,beam*.6,art.wake.trail,.25*speed);
  };
  for(const v of vessels){
   const y=water;k=art.scale[v.kind];

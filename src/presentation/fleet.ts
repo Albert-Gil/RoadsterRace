@@ -4,7 +4,7 @@ import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import{FresnelParameters}from'@babylonjs/core/Materials/fresnelParameters';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import type { Scene } from '@babylonjs/core/scene';
-import type { Point, TrackDefinition } from '../core/types';
+import type { Point, TrackBarrier, TrackDefinition } from '../core/types';
 import { CompositionShapes } from './composition-shapes';
 import { hex } from './landscape/mesh';
 import { deckElevation, deckPlanningHeight, deckAt } from '../core/decks';
@@ -19,6 +19,12 @@ import { rampGuideQuads } from './fleet-ramp-guides';
 export { deckTriangles } from './fleet-deck-shapes';
 import { deckTriangles } from './fleet-deck-shapes';
 
+/** +1 when a parcel's first footprint edge points toward the stern of the ship it stands on. */
+function sternwardSign(b:TrackBarrier,track:TrackDefinition){
+ const c={x:b.footprint.reduce((v,p)=>v+p.x,0)/b.footprint.length,z:b.footprint.reduce((v,p)=>v+p.z,0)/b.footprint.length},deck=deckAt(c,track),f=deck?.vessel?.forward;
+ if(!f)return 1;
+ const a=b.footprint[0],n=b.footprint[1];return (n.x-a.x)*f.x+(n.z-a.z)*f.z>0?-1:1;
+}
 /** Native naval venue: actual support polygons form the flight decks; all detail shares six batches. */
 export function fleetGeometry(track:TrackDefinition){
  const hull=new CompositionShapes(),deck=new CompositionShapes(),paint=new CompositionShapes(),details=new CompositionShapes(),road=new CompositionShapes(),radar=new CompositionShapes();
@@ -69,7 +75,7 @@ export function fleetGeometry(track:TrackDefinition){
  for(const b of track.barriers.filter(b=>!b.deckSurfaceId)){
   if(b.id.startsWith('fleet-rail')){
    const a=b.footprint[0],c=b.footprint[1],base=b.baseHeight??0;details.beam([a.x,base+.8,a.z],[c.x,base+.8,c.z],.10,art.coping,5);details.beam([a.x,base+.35,a.z],[c.x,base+.35,c.z],.055,art.coping,4);const count=Math.ceil(Math.hypot(c.x-a.x,c.z-a.z)/3.2);for(let i=0;i<=count;i++){const t=i/count,x=a.x+(c.x-a.x)*t,z=a.z+(c.z-a.z)*t;details.beam([x,base,z],[x,base+1.1,z],.075,art.coping,4);}
-  }else {if(b.id.includes('parked-aircraft')||b.equipmentKind==='early-warning-aircraft'||b.equipmentKind==='transport-helicopter')aircraftApron(b,paint);navalProp(b,details,radar);}
+  }else {if(b.id.includes('parked-aircraft')||b.equipmentKind==='early-warning-aircraft'||b.equipmentKind==='transport-helicopter')aircraftApron(b,paint);navalProp(b,details,radar,sternwardSign(b,track));}
  }
  for(let i=0;i<road.indices.length;i+=3)[road.indices[i+1],road.indices[i+2]]=[road.indices[i+2],road.indices[i+1]];
  return{hull,deck,road,paint,details,radar};
