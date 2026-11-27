@@ -21,6 +21,8 @@ import { LocalRace, startingGrid } from './core/local-race';
 import { compileRoute, createPracticeSamples, sampleRoute, COMPILER_VERSION } from './core/route';
 import { StrokeCompiler } from './app/stroke-compiler';
 import { DrawingSession } from './drawing/session';
+import { installPressGuard, pressTracker } from './input/press-guard';
+installPressGuard();
 import { createTournament, finalizeRound, championshipStandings } from './core/tournament';
 import { incompatibleTournament, loadTournament, storeTournament, discardTournament, type SavedTournament } from './presentation/tournament-storage';
 import {tourSchedule,type TourSetup} from './presentation/tournament-ui';
@@ -394,6 +396,8 @@ function hopCuePoint(next: Phase) {
   return jump ? { x: jump.from.x, z: jump.from.z } : null;
 }
 function setPhase(next: Phase) {
+  // A press that began on the previous screen cannot activate anything on this one (src/input/press-context.ts).
+  if (next !== phase) pressTracker.nextScreen();
   world?.showHopCue(hopCuePoint(next));
   if (next === 'results' && phase !== 'results') ballot = [];
   if (next === 'drawing') strokeCompiler.prepare(activeTrack);
@@ -806,7 +810,7 @@ function cancelStroke() {
 canvas.addEventListener('pointercancel', cancelStroke); canvas.addEventListener('lostpointercapture', cancelStroke);
 function interrupt() {
   const awaitingPreview = strokeCompiler.cancel();
-  audio.silence(); pauseRace('app-interruption'); clearRaceInput(); ownership.clear(); updateDiagnostics(); cancelStroke();
+  audio.silence(); pauseRace('app-interruption'); clearRaceInput(); ownership.clear(); pressTracker.clear(); updateDiagnostics(); cancelStroke();
   if (awaitingPreview && phase === 'drawing' && drawing.sectorMode) showSector(false);
   if (phase === 'ready') { readyPlayers.fill(false); renderPanel(); updateHud(); }
 }

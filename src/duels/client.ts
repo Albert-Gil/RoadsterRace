@@ -8,6 +8,7 @@ import { checkRoomCode, decodeSince, encodeSince } from './codes';
 import { describeDuelError, duelError, duelErrorAction, DuelFailure, mapConnectionFailure, type DuelError } from './errors';
 import { judgeHealth, recheckWhileUpdating, type HealthReply, type HealthVerdict } from './compatibility';
 import { newerBuildDeployed } from '../app/stale-build';
+import { pressTracker } from '../input/press-guard';
 import { cleanDriverName } from '../presentation/race-settings';
 
 interface Hooks {
@@ -68,7 +69,10 @@ export class DuelClient {
     this.dialog.addEventListener('cancel',e=>{e.preventDefault();if(this.menu)this.resume();});
     if(import.meta.env.DEV)(window as unknown as {__roadsterDuel?:DuelClient}).__roadsterDuel=this;
   }
+  private shownTitle='';
   private show(title:string) {
+    // A new screen in the room overlay: presses that began on the previous one cannot act here.
+    if(title!==this.shownTitle||!this.dialog.open){pressTracker.nextScreen();this.shownTitle=title;}
     this.content.replaceChildren(el('h2',title));this.status.textContent='';
     if(!this.dialog.open)this.dialog.showModal();
   }
