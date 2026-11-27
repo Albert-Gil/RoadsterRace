@@ -4,7 +4,9 @@ import { RULES } from '../core/simulation';
 import { COMPILER_VERSION } from '../core/route';
 import type { Ability, DrawSample } from '../core/types';
 import { duelEndpoint, savedSeat, storeSeat } from './seat';
-import { checkRoomCode, compareVersions, type ServerVersions } from './codes';
+import { checkRoomCode } from './codes';
+import { judgeHealth, recheckWhileUpdating, type HealthReply, type HealthVerdict } from './compatibility';
+import { newerBuildDeployed } from '../app/stale-build';
 import { cleanDriverName } from '../presentation/race-settings';
 
 interface Hooks {
@@ -25,8 +27,6 @@ const REMOVED='The host removed you from the race because your line took too lon
 const OLD_INVITE='This invite is from an older version of the game. Ask your friend for a new invite.';
 const SERVER_ASLEEP='The race server did not wake up. Try again in a minute.';
 const SERVER_UNREACHABLE='The race server is unreachable right now. Check your connection and try again.';
-const SERVER_UPDATING='The race server is updating. Try again in a minute.';
-const GAME_OUTDATED='Your game is out of date. Reload the page (or update the app) and join again.';
 const SEAT_EXPIRED='Your seat in that race has expired. Join again with the room code.';
 const NO_SUCH_ROOM='No open race uses this code. Check it, or ask for a new invite.';
 function el<K extends keyof HTMLElementTagNameMap>(tag:K,content='') {
@@ -54,6 +54,9 @@ export class DuelClient {
   private menu=false;
   private disconnected=false;
   private waiting=false;
+  /** Entry-screen controls the updating state disables; the invite field and saved seat are left alone. */
+  private entry?:{buttons:HTMLButtonElement[];notice:HTMLElement;fillVenues():void};
+  private updatingRun=0;
   get overlayOpen(){return this.dialog.open;}
   get seatIndex(){return this.view?.drivers.findIndex(s=>s.id===this.room?.sessionId)??0;}
   constructor(private hooks:Hooks){
@@ -88,29 +91,62 @@ export class DuelClient {
     const fillVenues=()=>{const keep=circuit.value;circuit.replaceChildren(...this.venues.map(id=>new Option(duelVenues[id as DuelVenue],id)));if(this.venues.includes(keep))circuit.value=keep;};
     fillVenues();
     // Ask the server which circuits it offers; this also starts waking a sleeping free instance.
-    if(duelEndpoint)void this.fetchHealth(20_000).then(health=>{if(health&&!this.closed){this.venues=offeredVenues(health);fillVenues();}});
+    if(duelEndpoint)void this.probe(20_000).then(verdict=>{
+      if(this.closed)return;
+      if(verdict.kind==='ok'){this.venues=verdict.venues;fillVenues();}
+      else if(verdict.kind==='updating')void this.enterUpdating(verdict);
+    });
     const laps=el('select');laps.setAttribute('aria-label','Race distance');
     for(let i=1;i<=6;i++)laps.add(new Option(i+' lap'+(i===1?'':'s'),String(i)));
     const invite=initialCode?checkRoomCode(initialCode):undefined;
     const code=el('input');code.placeholder='Room word, e.g. TIGER';code.setAttribute('aria-label','Room code');code.maxLength=8;code.value=invite?.ok?invite.code:'';code.autocapitalize='characters';code.autocomplete='off';
     this.content.append(circuit,laps);
-    this.button('Create room',()=>{saveDriver();void this.connect('',circuit.value as DuelVenue,Number(laps.value));},true);
+    const notice=el('div');notice.className='duel-updating';notice.setAttribute('role','status');notice.hidden=true;
+    this.content.prepend(notice);
+    const create=this.button('Create room',()=>{saveDriver();void this.connect('',circuit.value as DuelVenue,Number(laps.value));},true);
     this.content.append(code);
-    this.button('Join room',()=>{const check=checkRoomCode(code.value);if(check.ok){saveDriver();void this.connect(check.code);}else this.status.textContent=check.reason==='old-invite'?OLD_INVITE:'Enter the room word from your invite, for example TIGER.';});
+    const join=this.button('Join room',()=>{const check=checkRoomCode(code.value);if(check.ok){saveDriver();void this.connect(check.code);}else this.status.textContent=check.reason==='old-invite'?OLD_INVITE:'Enter the room word from your invite, for example TIGER.';});
     this.button('Home',()=>this.leave());
+    this.entry={buttons:[create,join],notice,fillVenues};
     if(invite?.ok&&!reclaimed&&savedSeat(invite.code)){
       // A saved seat whose quick reclaim failed during startup: offer it explicitly.
-      const rejoin=this.button('Rejoin race',()=>void this.connect(invite.code),true);this.content.prepend(rejoin);
+      const rejoin=this.button('Rejoin race',()=>void this.connect(invite.code),true);notice.after(rejoin);this.entry.buttons.push(rejoin);
     }
     if(invite&&!invite.ok)this.status.textContent=invite.reason==='old-invite'?OLD_INVITE:'This invite link is not valid. Ask for a new one.';
     if(reclaimed&&invite?.ok)void this.connect(invite.code,undefined,undefined,reclaimed);
   }
-  private async fetchHealth(timeout:number):Promise<unknown>{
+  private async probe(timeout:number):Promise<HealthVerdict>{
     const url=new URL(duelEndpoint!);url.protocol=url.protocol==='wss:'?'https:':url.protocol==='ws:'?'http:':url.protocol;
     const abort=new AbortController();const timer=setTimeout(()=>abort.abort(),timeout);
-    try{const response=await fetch(new URL('/health',url),{signal:abort.signal,cache:'no-store'});return response.ok?await response.json():null;}
-    catch{return null;}
+    let reply:HealthReply;
+    try{const response=await fetch(new URL('/health',url),{signal:abort.signal,cache:'no-store'});reply={kind:'http',status:response.status,body:await response.json().catch(()=>null)};}
+    catch{reply=abort.signal.aborted?{kind:'timeout'}:{kind:'error'};}
     finally{clearTimeout(timer);}
+    return judgeHealth(reply,{protocol:DUEL_PROTOCOL,physics:RULES.version,compiler:COMPILER_VERSION,tracks:this.hooks.versions});
+  }
+  /**
+   * "Online play is updating": Create and Join stay disabled while /health is rechecked for up to 15 s. Then
+   * Reload game if a newer website build is deployed (this is the entry screen, never drawing or racing),
+   * otherwise Try again. The invite in the address and the saved seat are kept for the next attempt.
+   */
+  private async enterUpdating(first:HealthVerdict){
+    const entry=this.entry;if(!entry||this.closed)return;
+    const run=++this.updatingRun;
+    entry.buttons.forEach(b=>b.disabled=true);this.status.textContent='';
+    const say=(detail:string,action?:HTMLButtonElement)=>{entry.notice.hidden=false;entry.notice.replaceChildren(el('strong','Online play is updating'),el('p',detail),...(action?[action]:[]));};
+    say('Checking again…');
+    const verdict=await recheckWhileUpdating({probe:()=>this.probe(20_000),delay:ms=>new Promise(r=>setTimeout(r,ms)),now:()=>performance.now(),stopped:()=>this.closed||run!==this.updatingRun},first);
+    if(this.closed||run!==this.updatingRun)return;
+    if(verdict.kind!=='updating'){
+      entry.buttons.forEach(b=>b.disabled=false);entry.notice.hidden=true;
+      if(verdict.kind==='ok'){this.venues=verdict.venues;entry.fillVenues();}
+      return;
+    }
+    const newer=await newerBuildDeployed().catch(()=>false);
+    if(this.closed||run!==this.updatingRun)return;
+    const action=el('button',newer?'Reload game':'Try again');action.type='button';action.className='primary-button';
+    action.onclick=newer?()=>location.reload():()=>void this.probe(20_000).then(v=>this.enterUpdating(v));
+    say(newer?'A newer version of the game is ready.':verdict.ahead==='server'?'Online races need the newest version of the game, which is still being published.':'The race server is being updated. This usually takes a few minutes.',action);
   }
   private async connect(code:string,circuit:DuelVenue='coastal-launch',laps=1,reclaimed?:Room) {
     if(this.connecting||this.closed)return;
@@ -120,23 +156,12 @@ export class DuelClient {
     try {
       let room = reclaimed;
       if (!room) {
-        const url=new URL(duelEndpoint);url.protocol=url.protocol==='wss:'?'https:':url.protocol==='ws:'?'http:':url.protocol;
         // Wake a sleeping free instance before the SDK starts its shorter seat-reservation timeout.
-        const abort=new AbortController();const timer=setTimeout(()=>abort.abort(),100_000);
-        let response:Response;
-        try{response=await fetch(new URL('/health',url),{signal:abort.signal,cache:'no-store'});}
-        catch{throw new Error(abort.signal.aborted?SERVER_ASLEEP:SERVER_UNREACHABLE);}
-        finally{clearTimeout(timer);}
-        if(!response.ok)throw new Error(SERVER_UNREACHABLE);
-        const health=await response.json().catch(()=>null) as Partial<ServerVersions>|null;
-        this.venues=offeredVenues(health);
-        // A server too old to report its protocol would hand out rooms this game cannot join.
-        if(!health||typeof health.protocol!=='number')throw new Error(SERVER_UPDATING);
-        if(typeof health.physics==='number'&&typeof health.compiler==='number'){
-          const fit=compareVersions({protocol:health.protocol,physics:health.physics,compiler:health.compiler,tracks:health.tracks??{}},{protocol:DUEL_PROTOCOL,physics:RULES.version,compiler:COMPILER_VERSION,tracks:this.hooks.versions});
-          if(fit==='client-outdated')throw new Error(GAME_OUTDATED);
-          if(fit==='server-outdated')throw new Error(SERVER_UPDATING);
-        }
+        const verdict=await this.probe(100_000);
+        if(verdict.kind==='asleep')throw new Error(SERVER_ASLEEP);
+        if(verdict.kind==='unreachable')throw new Error(SERVER_UNREACHABLE);
+        if(verdict.kind==='updating'){this.status.textContent='';void this.enterUpdating(verdict);return;}
+        this.venues=verdict.venues;
         if(this.closed)return;
         const client=new Client(duelEndpoint);
         const options={protocol:DUEL_PROTOCOL,physics:RULES.version,compiler:COMPILER_VERSION,versions:this.hooks.versions,...this.hooks.driver,circuit,laps};

@@ -30,6 +30,7 @@ import { ChallengeLapTracker, findChallenge, frontierChallengeComplete, type Cha
 import { ChallengeStore } from './presentation/challenge-storage';
 import { challengesPanel, challengeResults } from './ui/panels/challenges';
 import { FixedStepClock, RULES } from './core/simulation';
+import { testSimRate } from './app/test-clock';
 import { CONTACT_RULES } from './core/vehicle-contact';
 import { assetUrl } from './presentation/urls';
 import { circuits, findCircuit, phoneDrawingSectors } from './content/circuits';
@@ -165,7 +166,10 @@ let ballot: (BallotChoice | null)[] = [];
 let countdownBeat = 3, rechargeAnnounced: boolean[] = [];
 let world: GameScene;
 let previewGrid: { routes: CompiledRoute[]; track: typeof activeTrack; rotation: number; poses: ReturnType<typeof startingGrid> } | null = null;
-const clock = new FixedStepClock();
+const simRate = testSimRate(location.search, import.meta.env.DEV);
+// The release smoke check (tools/public-smoke.mjs) waits for the page to report the build it published.
+document.documentElement.dataset.build = __BUILD_ID__;
+const clock = new FixedStepClock(simRate);
 // Thrust/hop pads and keys. Drawing input stays on the canvas handlers below.
 const input = new InputRouter(controls, {
   humans, padsActive: () => ['ready', 'racing', 'coaching'].includes(phase) || !!duel && phase === 'countdown', keysActive: () => !duel?.overlayOpen && ['ready', 'racing', 'countdown', 'coaching'].includes(phase),
@@ -948,11 +952,11 @@ try {
       updateVehicles(sample?.alpha??1);
       world.render(now/1000,false);return;
     }
-    if (phase === 'racing' && elapsed > 0.5) pauseRace('render-delay');
+    if (phase === 'racing' && elapsed > 0.5 && simRate === 1) pauseRace('render-delay');
     // A resumed tutorial race returns to its unanswered prompt before any further step.
     if (phase === 'racing' && tutorial?.awaiting) setPhase('coaching');
     if (phase === 'countdown') {
-      countdownRemaining -= Math.min(elapsed, 0.1); document.querySelector('#countdown-value')!.textContent = String(Math.max(1, Math.ceil(countdownRemaining)));
+      countdownRemaining -= Math.min(elapsed, 0.1) * simRate; document.querySelector('#countdown-value')!.textContent = String(Math.max(1, Math.ceil(countdownRemaining)));
       countdownElement.dataset.lights = String(Math.max(1, 4 - Math.ceil(countdownRemaining)));
       const beat = Math.ceil(countdownRemaining); if (beat > 0 && beat !== countdownBeat) { countdownBeat = beat; audio.cue('countdown'); }
       document.querySelector('#countdown-label')!.textContent = resuming ? 'BACK TO YOUR LINE.' : playerCount > 1 ? 'YOUR LINES. ONE MOMENT.' : 'YOUR LINE. YOUR MOMENT.';
