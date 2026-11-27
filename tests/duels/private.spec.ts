@@ -107,3 +107,11 @@ for(const [venue,count] of [['coastal-launch',2],['coastal-launch',4],['golden-g
     }finally{await Promise.all(contexts.map(c=>c.close()));}
   });
 }
+
+test('an invite from the old 10-character format explains itself instead of failing silently', async ({ page }) => {
+  await page.goto('/?duel=0A1B2C3D4E');
+  await expect(page.getByRole('dialog')).toContainText('older version of the game');
+  await page.getByRole('dialog').getByLabel('Room code').fill('ab3-d7');
+  await page.getByRole('button', { name: 'Join room', exact: true }).click();
+  await expect(page.getByRole('dialog')).toContainText(/Enter the 6-character|No open race uses this code/);
+});

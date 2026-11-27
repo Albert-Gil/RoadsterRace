@@ -4,6 +4,7 @@ import { RULES } from '../core/simulation';
 import { COMPILER_VERSION } from '../core/route';
 import type { Ability, DrawSample } from '../core/types';
 import { duelEndpoint, savedSeat, storeSeat } from './seat';
+import { checkRoomCode, compareVersions, type ServerVersions } from './codes';
 import { cleanDriverName } from '../presentation/race-settings';
 
 interface Hooks {
@@ -16,6 +17,13 @@ interface Hooks {
   ownLine(samples:DrawSample[]):void;
   home():void;
 }
+const OLD_INVITE='This invite is from an older version of the game. Ask your friend for a new invite.';
+const SERVER_ASLEEP='The race server did not wake up. Try again in a minute.';
+const SERVER_UNREACHABLE='The race server is unreachable right now. Check your connection and try again.';
+const SERVER_UPDATING='The race server is updating. Try again in a minute.';
+const GAME_OUTDATED='Your game is out of date. Reload the page (or update the app) and join again.';
+const SEAT_EXPIRED='Your seat in that race has expired. Join again with the room code.';
+const NO_SUCH_ROOM='No open race uses this code. Check it, or ask for a new invite.';
 function el<K extends keyof HTMLElementTagNameMap>(tag:K,content='') {
   const e=document.createElement(tag);e.textContent=content;return e;
 }
@@ -67,13 +75,19 @@ export class DuelClient {
     for(const [id,name] of Object.entries(duelVenues)) circuit.add(new Option(name,id));
     const laps=el('select');laps.setAttribute('aria-label','Race distance');
     for(let i=1;i<=6;i++)laps.add(new Option(i+' lap'+(i===1?'':'s'),String(i)));
-    const code=el('input');code.placeholder='Room code';code.setAttribute('aria-label','Room code');code.maxLength=10;code.value=initialCode;code.autocapitalize='characters';
+    const invite=initialCode?checkRoomCode(initialCode):undefined;
+    const code=el('input');code.placeholder='Room code';code.setAttribute('aria-label','Room code');code.maxLength=8;code.value=invite?.ok?invite.code:'';code.autocapitalize='characters';code.autocomplete='off';
     this.content.append(circuit,laps);
     this.button('Create room',()=>{saveDriver();void this.connect('',circuit.value as DuelVenue,Number(laps.value));},true);
     this.content.append(code);
-    this.button('Join room',()=>{const id=code.value.trim().toUpperCase();if(/^[A-F0-9]{10}$/.test(id)){saveDriver();void this.connect(id);}else this.status.textContent='Enter the 10-character room code.';});
+    this.button('Join room',()=>{const check=checkRoomCode(code.value);if(check.ok){saveDriver();void this.connect(check.code);}else this.status.textContent=check.reason==='old-invite'?OLD_INVITE:'Enter the 6-character room code.';});
     this.button('Home',()=>this.leave());
-    if(reclaimed)void this.connect(initialCode,undefined,undefined,reclaimed);
+    if(invite?.ok&&!reclaimed&&savedSeat(invite.code)){
+      // A saved seat whose quick reclaim failed during startup: offer it explicitly.
+      const rejoin=this.button('Rejoin race',()=>void this.connect(invite.code),true);this.content.prepend(rejoin);
+    }
+    if(invite&&!invite.ok)this.status.textContent=invite.reason==='old-invite'?OLD_INVITE:'This invite link is not valid. Ask for a new one.';
+    if(reclaimed&&invite?.ok)void this.connect(invite.code,undefined,undefined,reclaimed);
   }
   private async connect(code:string,circuit:DuelVenue='coastal-launch',laps=1,reclaimed?:Room) {
     if(this.connecting||this.closed)return;
@@ -87,13 +101,27 @@ export class DuelClient {
         // Wake a sleeping free instance before the SDK starts its shorter seat-reservation timeout.
         const abort=new AbortController();const timer=setTimeout(()=>abort.abort(),100_000);
         let response:Response;
-        try{response=await fetch(new URL('/health',url),{signal:abort.signal});}finally{clearTimeout(timer);}
-        if(!response.ok)throw new Error('The race server is unavailable. Try again shortly.');
+        try{response=await fetch(new URL('/health',url),{signal:abort.signal,cache:'no-store'});}
+        catch{throw new Error(abort.signal.aborted?SERVER_ASLEEP:SERVER_UNREACHABLE);}
+        finally{clearTimeout(timer);}
+        if(!response.ok)throw new Error(SERVER_UNREACHABLE);
+        const health=await response.json().catch(()=>null) as Partial<ServerVersions>|null;
+        if(health&&typeof health.protocol==='number'&&typeof health.physics==='number'&&typeof health.compiler==='number'){
+          const fit=compareVersions({protocol:health.protocol,physics:health.physics,compiler:health.compiler,tracks:health.tracks??{}},{protocol:DUEL_PROTOCOL,physics:RULES.version,compiler:COMPILER_VERSION,tracks:this.hooks.versions});
+          if(fit==='client-outdated')throw new Error(GAME_OUTDATED);
+          if(fit==='server-outdated')throw new Error(SERVER_UPDATING);
+        }
         if(this.closed)return;
         const client=new Client(duelEndpoint);
         const options={protocol:DUEL_PROTOCOL,physics:RULES.version,compiler:COMPILER_VERSION,versions:this.hooks.versions,...this.hooks.driver,circuit,laps};
         const token=code && savedSeat(code);
-        room=token ? await client.reconnect(token) : code ? await client.joinById(code,options) : await client.create('private_duel',options);
+        if(token){
+          try{room=await client.reconnect(token);}
+          catch{storeSeat(null);throw new Error(SEAT_EXPIRED);}
+        }else if(code){
+          try{room=await client.joinById(code,options);}
+          catch(error){throw new Error(error instanceof Error&&/not found|invalid|locked/i.test(error.message)?NO_SUCH_ROOM:error instanceof Error?error.message:NO_SUCH_ROOM);}
+        }else room=await client.create('private_duel',options);
       }
       if(this.closed){await room.leave();return;}
       this.room=room;storeSeat(room.reconnectionToken);
@@ -151,7 +179,10 @@ export class DuelClient {
       this.show(view.phase==='lobby'?'Private room':'Waiting for lines');
       this.content.append(el('p',duelVenues[view.circuit]+' · '+view.laps+' lap'+(view.laps===1?'':'s')));
       if(view.phase==='lobby'){
-        this.content.append(el('strong',this.room.roomId));this.button('Copy invite',async()=>{try{await navigator.clipboard.writeText(location.href);this.status.textContent='Invite copied.';}catch{this.status.textContent=location.href;}});
+        this.content.append(el('strong',this.room.roomId));
+        const link=location.href,share=navigator as Navigator&{share?:(data:ShareData)=>Promise<void>};
+        if(typeof share.share==='function')this.button('Share invite',async()=>{try{await share.share!({title:'Roadster Race duel',text:'Race me in Roadster Race. Room '+this.room!.roomId,url:link});}catch{/* Dismissed share sheets need no message. */}},true);
+        this.button('Copy link',async()=>{try{await navigator.clipboard.writeText(link);this.status.textContent='Invite link copied.';}catch{this.status.textContent=link;}});
       }
       for(const d of view.drivers)this.content.append(el('p',d.name+(d.id===this.room.sessionId?' (you)':'')+' · '+(!d.connected?'Reconnecting':view.phase==='lobby'?'Joined':d.ready?'Ready':'Drawing')));
       if(view.phase==='lobby'&&view.host===this.room.sessionId)this.button('Start drawing',()=>this.room?.send('start'),true).disabled=view.drivers.length<2||view.drivers.some(s=>!s.connected);

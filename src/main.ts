@@ -1,5 +1,6 @@
 import type { DuelClient } from './duels/client';
 import { reclaimBeforeGraphics } from './duels/seat';
+import { checkRoomCode } from './duels/codes';
 import type { Room } from '@colyseus/sdk';
 import { duelVenues, type RaceFrame, type RoomView } from './duels/protocol';
 import { rampAt, supported, groundHeight, FLIGHT_RULES } from './core/support';
@@ -899,7 +900,7 @@ async function start() {
 let reclaimed:Room|undefined;
 try {
   const invitation=new URL(location.href).searchParams.get('duel')?.toUpperCase();
-  const validInvite=invitation && /^[0-9A-F]{10}$/.test(invitation) ? invitation : undefined;
+  const inviteCheck=invitation ? checkRoomCode(invitation) : undefined, validInvite=inviteCheck?.ok ? inviteCheck.code : undefined;
   const returnCircuit=activeCircuit.id;
   if(validInvite)reclaimed=await reclaimBeforeGraphics(validInvite);
   // Use the room's invite hint to build its course once on a cold start.
@@ -910,7 +911,8 @@ try {
   }
   const created = await createEngine(canvas, graphicsPreference.renderer); activeRenderer = created.renderer;
   world = new GameScene(canvas, activeTrack, theme, activeCircuit.scenery, created.engine, graphicsChoice); world.onGraphicsChange = onGraphicsChange; applyDriverPresentation(); renderControls(); refreshLap(); refreshSettings(); setPhase('welcome');
-  if(validInvite)void openDuel(validInvite,reclaimed,returnCircuit);
+  // An old or broken invite still opens the duel dialog, which explains what to do.
+  if(validInvite || inviteCheck)void openDuel(validInvite ?? invitation!,reclaimed,returnCircuit);
   canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); pauseRace(); showNotice('The graphics were interrupted. Reload if the circuit does not recover.', 10); });
   world.engine.runRenderLoop(() => {
     const now = performance.now(), elapsed = (now - lastFrame) / 1000; lastFrame = now;

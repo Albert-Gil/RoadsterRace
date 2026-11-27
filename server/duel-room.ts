@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
-import { Room, ServerError, type Client } from '@colyseus/core';
+import { Room, ServerError, matchMaker, type Client } from '@colyseus/core';
+import { newRoomCode } from '../src/duels/codes';
 import { LocalRace } from '../src/core/local-race';
 import { compileRoute, COMPILER_VERSION } from '../src/core/route';
 import { RULES } from '../src/core/simulation';
@@ -58,7 +59,10 @@ export class DuelRoom extends Room {
     while (creations.length && creations[0] < Date.now()-60_000) creations.shift();
     if (rooms >= 4 || creations.length >= 30) throw new ServerError(429,'The test server is full. Try again shortly.');
     rooms++; this.counted = true; creations.push(Date.now());
-    this.roomId = randomBytes(5).toString('hex').toUpperCase();
+    // Six unambiguous characters players can type; retry on the (rare) clash with a live room.
+    let code = newRoomCode(n => randomBytes(n));
+    while (matchMaker.getLocalRoomById(code)) code = newRoomCode(n => randomBytes(n));
+    this.roomId = code;
     await this.setPrivate(true);
     this.view = {phase:'lobby', circuit:options.circuit, laps:options.laps, round:0, host:'', drivers:[], physics:RULES.version, compiler:COMPILER_VERSION, trackVersion:this.track.version};
     this.onMessage('sync', c => this.sync(c));
