@@ -1,7 +1,9 @@
 import type { Room } from '@colyseus/sdk';
 
 const seatStorageKey = 'roadster-duel-seat-v1';
-export const duelEndpoint = import.meta.env.VITE_DUEL_SERVER ||
+/** Development and test builds only: `?duelServer=` points a client at another room server (the latency proxy in tests/duels). */
+const testEndpoint = import.meta.env.DEV && typeof location !== 'undefined' ? new URLSearchParams(location.search).get('duelServer') : null;
+export const duelEndpoint = testEndpoint || import.meta.env.VITE_DUEL_SERVER ||
   (import.meta.env.DEV && typeof location !== 'undefined' ? location.protocol + '//' + location.hostname + ':2567' : '');
 
 export function storeSeat(token: string | null) {

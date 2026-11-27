@@ -18,6 +18,8 @@ let rooms = 0;
 const MAX_ROOMS = Math.max(1, Number(process.env.DUEL_MAX_ROOMS ?? 2));
 /** Seconds a driver may keep drawing before the host can remove them. */
 export const DRAWING_GRACE_SECONDS = 90;
+/** How stale a press's observed tick may be (1 s): a slow phone's press still counts, applied on arrival. */
+const ABILITY_WINDOW_TICKS = 60;
 const steps: number[] = [];
 let stepLog: ReturnType<typeof setInterval> | undefined;
 /** One line per minute: how long simulation steps take on this instance (ms), to size MAX_ROOMS. */
@@ -110,7 +112,7 @@ export class DuelRoom extends Room {
     this.onMessage('ability',(c,command: AbilityCommand) => {
       if (!command || command.round !== this.view.round || this.view.phase !== 'racing' || !this.race) return;
       const i=this.seats.findIndex(s=>s.id===c.sessionId), seat=this.seats[i];
-      if (!seat || seat.withdrawn || !Number.isSafeInteger(command.sequence) || command.sequence<=seat.lastSequence || !Number.isInteger(command.tick) || command.tick>this.race.tick || this.race.tick-command.tick>30) return;
+      if (!seat || seat.withdrawn || !Number.isSafeInteger(command.sequence) || command.sequence<=seat.lastSequence || !Number.isInteger(command.tick) || command.tick>this.race.tick || this.race.tick-command.tick>ABILITY_WINDOW_TICKS) return;
       seat.lastSequence=command.sequence;
       if(command.ability==='hop') this.race.pressHop(i);
       if(command.ability==='thrust') this.race.pressThrust(i);

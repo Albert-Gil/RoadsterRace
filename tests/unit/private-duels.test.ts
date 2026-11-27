@@ -21,11 +21,13 @@ class Driver {
   frame?:RaceFrame;
   notice='';
   line:unknown;
+  cooldowns?:{round:number;hopReadyAt:number;thrustReadyAt:number};
   constructor(readonly room:Room) {
     room.onMessage('room',(v:RoomView)=>this.view=v);
     room.onMessage('frame',(f:WireFrame)=>this.frame=unpackFrame(f));
     room.onMessage('ownLine',data=>this.line=data);
     room.onMessage('notice',message=>this.notice=message);
+    room.onMessage('cooldowns',c=>this.cooldowns=c);
     room.send('sync');
   }
 }
@@ -102,6 +104,9 @@ describe('private duel transport and authority',()=>{
       host.room.send('ability',command);host.room.send('ability',command);
       await delay(30);await advance(6);
       await until(()=>host.frame?.cars[0].hopCount===1);
+      // Only the pressing seat learns its new Hop readiness.
+      await until(()=>(host.cooldowns?.hopReadyAt??0)>0);
+      expect(drivers[1].cooldowns?.hopReadyAt??0).toBe(0);
       expect(host.frame!.cars.slice(1).every(s=>s.hopCount===0)).toBe(true);
       const dropped=drivers.at(-1)!;const token=dropped.room.reconnectionToken,id=dropped.room.sessionId;
       dropped.room.reconnection.enabled=false;
