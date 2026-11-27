@@ -70,7 +70,7 @@ test('Orbital phone touch drawing accepts a protected cut with a crash note and 
     addEventListener('blur', () => evidence.interruptions.push('blur'));
     document.addEventListener('visibilitychange', () => { if (document.hidden) evidence.interruptions.push('hidden'); });
   });
-  await page.goto('/?circuit=orbital-launchyard'); await page.getByRole('button', { name: "Time Trial" }).click();
+  await page.goto('/?circuit=orbital-launchyard&simRate=2'); await page.getByRole('button', { name: "Time Trial" }).click();
   await page.getByRole('button', { name: '1 lap', exact: true }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
   await touchLine(page, 'blocked'); await expect(page.locator('.planning-note')).toContainText('crash');
   await expect(page.getByRole('button', { name: 'Race this line' })).toBeVisible();
