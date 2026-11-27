@@ -92,11 +92,11 @@ export class DuelClient {
     const laps=el('select');laps.setAttribute('aria-label','Race distance');
     for(let i=1;i<=6;i++)laps.add(new Option(i+' lap'+(i===1?'':'s'),String(i)));
     const invite=initialCode?checkRoomCode(initialCode):undefined;
-    const code=el('input');code.placeholder='Room code';code.setAttribute('aria-label','Room code');code.maxLength=8;code.value=invite?.ok?invite.code:'';code.autocapitalize='characters';code.autocomplete='off';
+    const code=el('input');code.placeholder='Room word, e.g. TIGER';code.setAttribute('aria-label','Room code');code.maxLength=8;code.value=invite?.ok?invite.code:'';code.autocapitalize='characters';code.autocomplete='off';
     this.content.append(circuit,laps);
     this.button('Create room',()=>{saveDriver();void this.connect('',circuit.value as DuelVenue,Number(laps.value));},true);
     this.content.append(code);
-    this.button('Join room',()=>{const check=checkRoomCode(code.value);if(check.ok){saveDriver();void this.connect(check.code);}else this.status.textContent=check.reason==='old-invite'?OLD_INVITE:'Enter the 6-character room code.';});
+    this.button('Join room',()=>{const check=checkRoomCode(code.value);if(check.ok){saveDriver();void this.connect(check.code);}else this.status.textContent=check.reason==='old-invite'?OLD_INVITE:'Enter the room word from your invite, for example TIGER.';});
     this.button('Home',()=>this.leave());
     if(invite?.ok&&!reclaimed&&savedSeat(invite.code)){
       // A saved seat whose quick reclaim failed during startup: offer it explicitly.
@@ -130,7 +130,9 @@ export class DuelClient {
         if(!response.ok)throw new Error(SERVER_UNREACHABLE);
         const health=await response.json().catch(()=>null) as Partial<ServerVersions>|null;
         this.venues=offeredVenues(health);
-        if(health&&typeof health.protocol==='number'&&typeof health.physics==='number'&&typeof health.compiler==='number'){
+        // A server too old to report its protocol would hand out rooms this game cannot join.
+        if(!health||typeof health.protocol!=='number')throw new Error(SERVER_UPDATING);
+        if(typeof health.physics==='number'&&typeof health.compiler==='number'){
           const fit=compareVersions({protocol:health.protocol,physics:health.physics,compiler:health.compiler,tracks:health.tracks??{}},{protocol:DUEL_PROTOCOL,physics:RULES.version,compiler:COMPILER_VERSION,tracks:this.hooks.versions});
           if(fit==='client-outdated')throw new Error(GAME_OUTDATED);
           if(fit==='server-outdated')throw new Error(SERVER_UPDATING);

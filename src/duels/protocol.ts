@@ -1,7 +1,8 @@
 import type { RaceState, RaceEvent, Ability } from '../core/types';
 import type { Standing } from '../core/local-race';
 
-export const DUEL_PROTOCOL = 2;
+/** 3: room codes are one English word (frames are unchanged from 2). */
+export const DUEL_PROTOCOL = 3;
 export const duelVenues = {
   'coastal-launch': 'Newport Island', 'golden-gate': 'Golden Gate', 'santa-monica': 'Santa Monica', 'san-diego-fleet': 'San Diego Fleet',
 } as const;
@@ -46,7 +47,7 @@ export interface RaceFrame {
   order: Standing[];
   events: (RaceEvent & { player: number })[];
 }
-// Protocol 2: each car is a flat array of integers in this order, quantized to what the display
+// Protocol 2 and later: each car is a flat array of integers in this order, quantized to what the display
 // needs (positions in cm, angles in mrad, times in ms). Thrust/Hop cooldowns are not broadcast;
 // each seat receives its own through the 'cooldowns' message. Additions require a protocol bump.
 type Codec = readonly [key: string, kind: 'scale', factor: number] | readonly [key: string, kind: 'bool'] | readonly [key: string, kind: 'enum', values: readonly (string | null)[]];

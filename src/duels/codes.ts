@@ -1,24 +1,43 @@
-/** Room codes players can type on a phone: no 0/O, 1/I/L look-alikes. 31^6 ≈ 8.9 × 10^8 codes. */
-export const ROOM_CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-export const ROOM_CODE_LENGTH = 6;
+/**
+ * Room codes are one everyday English word, easy to say aloud or type on a phone (any case).
+ * 256 words, so one random byte picks a word uniformly. A server runs at most a few rooms,
+ * so collisions are retried; a word is guessable, which is acceptable for private beta rooms.
+ */
+export const ROOM_WORDS: readonly string[] = [
+  'APPLE','ARROW','BADGE','BAGEL','BAKER','BEACH','BEAN','BEAR','BELL','BERRY','BIKE','BIRD','BLAZE','BLOOM',
+  'BOAT','BOLT','BOOK','BOOT','BRAVE','BREAD','BREEZE','BRICK','BRIDGE','BROOK','BRUSH','BUNNY','CABIN',
+  'CACTUS','CAKE','CAMEL','CAMP','CANDY','CANOE','CANYON','CAPE','CARD','CARGO','CASTLE','CEDAR','CHALK',
+  'CHERRY','CHESS','CHIP','CIRCUS','CLIFF','CLOCK','CLOUD','CLOVER','COAST','COCOA','COMET','CORAL','CORN',
+  'COTTON','CRANE','CRAYON','CREEK','CROWN','CUBE','DAISY','DANCE','DELTA','DESERT','DIAMOND','DOLPHIN',
+  'DONUT','DRAGON','DREAM','DRUM','DUNE','EAGLE','EARTH','ECHO','EMBER','FALCON','FARM','FEATHER','FERN',
+  'FIELD','FIG','FINCH','FLAG','FLAME','FLASH','FLUTE','FOREST','FOX','FROG','FROST','GALAXY','GARDEN','GEAR',
+  'GECKO','GIANT','GINGER','GLOBE','GOAT','GOLD','GRAPE','GUITAR','HARBOR','HAWK','HAZEL','HERO','HILL',
+  'HONEY','HORSE','IGLOO','ISLAND','JACKET','JADE','JAZZ','JELLY','JUNGLE','KAYAK','KETTLE','KITE','KIWI',
+  'KOALA','LADDER','LAKE','LANTERN','LASER','LEMON','LIGHT','LILY','LION','LLAMA','LOTUS','LUCKY','MAGIC',
+  'MANGO','MAPLE','MARBLE','MEADOW','MELON','METEOR','MINT','MOON','MOOSE','MOTOR','MUFFIN','NEST','NOODLE',
+  'NORTH','OAK','OCEAN','OLIVE','ORANGE','ORBIT','OTTER','OWL','PANDA','PAPER','PARROT','PEACH','PEAR',
+  'PEBBLE','PENCIL','PEPPER','PIANO','PICNIC','PILOT','PINE','PIZZA','PLANET','PLUM','POLAR','PONY','POPCORN',
+  'PUFFIN','PUMPKIN','PUZZLE','QUAIL','QUEST','RABBIT','RACER','RADAR','RAIN','RAVEN','REEF','RIVER','ROBIN',
+  'ROBOT','ROCKET','ROSE','RUBY','SAFARI','SAIL','SALSA','SAND','SATURN','SCARF','SHELL','SHIP','SILVER',
+  'SKATE','SKY','SLED','SMILE','SNOW','SOCK','SOLAR','SONIC','SPARK','SPRING','SQUID','STAR','STONE','STORM',
+  'SUGAR','SUMMER','SUNNY','SWAN','TACO','TANGO','TIGER','TOAST','TOMATO','TOPAZ','TORCH','TOWER','TRAIN',
+  'TRUCK','TULIP','TURBO','TURTLE','UNICORN','VALLEY','VELVET','VIOLIN','VOLCANO','WAFFLE','WALNUT','WATER',
+  'WAVE','WHALE','WILLOW','WIND','WINTER','WIZARD','WOLF','YACHT','YOGURT','ZEBRA','ZIPPER','ZOOM','BANJO',
+  'BISON','BUTTER','CAMERA','CLAM','COBRA','COOKIE','COYOTE','DINGO'
+];
+const WORD_SET = new Set(ROOM_WORDS);
 
 export function newRoomCode(random: (n: number) => Uint8Array): string {
-  const bytes = random(ROOM_CODE_LENGTH * 2);
-  let code = '';
-  // Rejection sampling keeps every symbol equally likely (256 is not a multiple of 31).
-  for (let i = 0; code.length < ROOM_CODE_LENGTH; i++) {
-    const byte = i < bytes.length ? bytes[i] : random(1)[0];
-    if (byte < 248) code += ROOM_CODE_ALPHABET[byte % ROOM_CODE_ALPHABET.length];
-  }
-  return code;
+  return ROOM_WORDS[random(1)[0] % ROOM_WORDS.length];
 }
 
 export type CodeCheck = { ok: true; code: string } | { ok: false; reason: 'old-invite' | 'invalid' };
-/** Normalizes what a player typed or an invite carried. Old 10-character hex invites get their own message. */
+/** Normalizes what a player typed or an invite carried. Codes from older releases get their own message. */
 export function checkRoomCode(input: string): CodeCheck {
   const code = input.trim().toUpperCase().replace(/[\s-]/g, '');
-  if (code.length === ROOM_CODE_LENGTH && [...code].every(c => ROOM_CODE_ALPHABET.includes(c))) return { ok: true, code };
-  if (/^[0-9A-F]{10}$/.test(code)) return { ok: false, reason: 'old-invite' };
+  if (WORD_SET.has(code)) return { ok: true, code };
+  // Earlier releases used 6 characters from A–Z/2–9, and before that 9–10 random characters.
+  if (/^[A-Z0-9]{6}$/.test(code) && /\d/.test(code) || /^[A-Za-z0-9_-]{9,10}$/.test(input.trim())) return { ok: false, reason: 'old-invite' };
   return { ok: false, reason: 'invalid' };
 }
 

@@ -99,7 +99,21 @@ for(const [venue,count] of [['coastal-launch',2],['coastal-launch',4],['golden-g
 test('an invite from the old 10-character format explains itself instead of failing silently', async ({ page }) => {
   await page.goto('/?duel=0A1B2C3D4E');
   await expect(page.getByRole('dialog')).toContainText('older version of the game');
-  await page.getByRole('dialog').getByLabel('Room code').fill('ab3-d7');
+  await page.getByRole('dialog').getByLabel('Room code').fill('tigger');
   await page.getByRole('button', { name: 'Join room', exact: true }).click();
-  await expect(page.getByRole('dialog')).toContainText(/Enter the 6-character|No open race uses this code/);
+  await expect(page.getByRole('dialog')).toContainText('Enter the room word');
+  // A real word with no open room reaches the server and says so.
+  await page.getByRole('dialog').getByLabel('Room code').fill('zebra');
+  await page.getByRole('button', { name: 'Join room', exact: true }).click();
+  await expect(page.getByRole('dialog')).toContainText('No open race uses this code', { timeout: 30000 });
+});
+
+test('an outdated room server is reported instead of creating a room nobody can join', async ({ page }) => {
+  // A server from before version reporting answers /health without a protocol.
+  await page.route('**/health', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true }) }));
+  await page.goto('/'); await page.getByRole('button', { name: 'Multiplayer' }).click();
+  await page.getByRole('button', { name: 'Private Duel' }).click();
+  await page.getByRole('button', { name: 'Create room' }).click();
+  await expect(page.getByRole('dialog')).toContainText('The race server is updating');
+  await expect(page.getByText('Private room', { exact: true })).toHaveCount(0);
 });
