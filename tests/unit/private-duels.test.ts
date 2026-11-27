@@ -39,6 +39,22 @@ describe('private duel transport and authority',()=>{
     client=new Client('http://127.0.0.1:'+(http.address() as AddressInfo).port);
   });
   afterAll(async()=>{await server.gracefullyShutdown(false);});
+  it('lets only the host change circuit and laps, forces fresh lines after a circuit change, and removes a slow drawer after the grace period',async()=>{
+    const newport=findCircuit('coastal-launch').track,gate=findCircuit('golden-gate').track,versions={[newport.id]:newport.version,[gate.id]:gate.version};
+    const opts={circuit:newport.id,laps:1,protocol:DUEL_PROTOCOL,physics:RULES.version,compiler:COMPILER_VERSION,versions,name:'A',paint:'glacier'};
+    const host=new Driver(await client.create('private_duel',opts)),guest=new Driver(await client.joinById(host.room.roomId,{...opts,name:'B'}));
+    try{
+      await until(()=>host.view?.drivers.length===2);
+      guest.room.send('settings',{circuit:gate.id,laps:3});await delay(60);expect(host.view!.circuit).toBe(newport.id);
+      host.room.send('settings',{circuit:gate.id,laps:3});await until(()=>guest.view?.circuit===gate.id&&guest.view.laps===3);
+      host.room.send('start');await until(()=>guest.view?.phase==='drawing');
+      const room=matchMaker.getLocalRoomById(host.room.roomId) as DuelRoom;
+      host.room.send('remove',{id:guest.room.sessionId});await delay(60);expect(host.view!.drivers).toHaveLength(2);
+      (room as unknown as {drawingSince:number}).drawingSince=Date.now()-100_000;
+      host.room.send('remove',{id:guest.room.sessionId});await until(()=>host.view?.drivers.length===1);
+      expect(host.view!.phase).toBe('lobby');
+    }finally{await Promise.allSettled([host.room.leave(),guest.room.leave()]);}
+  });
   it('rejects mismatched versions, declines a fifth seat and hands room controls to the next driver',async()=>{
     const track=findCircuit('coastal-launch').track, opts={circuit:track.id,laps:1,protocol:DUEL_PROTOCOL,physics:RULES.version,compiler:COMPILER_VERSION,versions:{[track.id]:track.version}};
     await expect(client.create('private_duel',{...opts,protocol:0})).rejects.toThrow();

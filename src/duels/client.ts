@@ -19,6 +19,9 @@ interface Hooks {
   missed(ability:Ability):void;
   home():void;
 }
+/** Matches the server's DRAWING_GRACE_SECONDS (server/duel-room.ts). */
+const DRAWING_GRACE=90;
+const REMOVED='The host removed you from the race because your line took too long.';
 const OLD_INVITE='This invite is from an older version of the game. Ask your friend for a new invite.';
 const SERVER_ASLEEP='The race server did not wake up. Try again in a minute.';
 const SERVER_UNREACHABLE='The race server is unreachable right now. Check your connection and try again.';
@@ -34,6 +37,8 @@ export class DuelClient {
   view?:RoomView;
   latest?:RaceFrame;
   private sequence=0;
+  private drawingShownAt=0;
+  private graceTimer?:number;
   private cooldowns?:Cooldowns;
   /** A press made in the last countdown beat, sent with the first racing frame. */
   private queued?:Ability;
@@ -155,7 +160,7 @@ export class DuelClient {
       room.onReconnect(()=>{this.disconnected=false;storeSeat(room.reconnectionToken);room.send('sync');});
       // A tab can receive a close callback while navigating away. Retain its
       // credential through reload; the explicit Home action releases the seat.
-      room.onLeave(()=>{if(!this.closed){this.show('Room closed');this.button('Home',()=>this.leave(),true);}});
+      room.onLeave((code:number)=>{if(!this.closed){this.show('Room closed');if(code===4002)this.content.append(el('p',REMOVED));this.button('Home',()=>this.leave(),true);}});
       room.send('sync');
     }catch(e){if(!this.closed)this.status.textContent=e instanceof Error?e.message:'Could not connect. Check the room code and try again.';}
     finally{clearTimeout(wake);this.connecting=false;}
@@ -173,9 +178,21 @@ export class DuelClient {
     this.view=view;
     if(view.phase==='results' && previousPhase!=='results' && this.latest)this.hooks.frame({...this.latest,events:[]},view);
     if(view.phase==='drawing' && this.roundDrawn!==view.round){
-      this.roundDrawn=view.round;this.hooks.draw(view);
+      this.roundDrawn=view.round;this.drawingShownAt=performance.now();this.hooks.draw(view);
     }
     this.present();
+  }
+  /** Host-only circuit and lap pickers (lobby and results). A new circuit after a race means fresh lines. */
+  private hostSettings(view:RoomView){
+    if(view.host!==this.room?.sessionId)return;
+    const circuit=el('select'),laps=el('select');circuit.setAttribute('aria-label','Circuit');laps.setAttribute('aria-label','Race distance');
+    for(const [id,name] of Object.entries(duelVenues))circuit.add(new Option(name,id));
+    for(let i=1;i<=6;i++)laps.add(new Option(i+' lap'+(i===1?'':'s'),String(i)));
+    circuit.value=view.circuit;laps.value=String(view.laps);
+    const send=()=>this.room?.send('settings',{circuit:circuit.value,laps:Number(laps.value)});
+    circuit.onchange=send;laps.onchange=send;
+    this.content.append(circuit,laps);
+    if(view.phase==='results')this.content.append(el('p','Changing the circuit means everyone draws new lines.'));
   }
   private present(){
     const view=this.view;if(!view||!this.room||this.disconnected)return;
@@ -191,6 +208,7 @@ export class DuelClient {
       this.content.append(el('p',here.map(d=>d.name+' · '+(d.vote==='same'?'Race again':d.vote==='redraw'?'New lines':'Choosing')).join(' / ')));
       if(here.length<2)this.content.append(el('p','Another race needs at least two drivers.'));
       else if(waiting.length)this.content.append(el('p','Waiting for '+waiting.map(d=>d.name).join(', ')+'.'));
+      this.hostSettings(view);
     }else if(view.phase==='lobby'||view.phase==='drawing'&&(seat?.ready||this.waiting)){
       this.show(view.phase==='lobby'?'Private room':'Waiting for lines');
       this.content.append(el('p',duelVenues[view.circuit]+' · '+view.laps+' lap'+(view.laps===1?'':'s')));
@@ -201,7 +219,15 @@ export class DuelClient {
         this.button('Copy link',async()=>{try{await navigator.clipboard.writeText(link);this.status.textContent='Invite link copied.';}catch{this.status.textContent=link;}});
       }
       for(const d of view.drivers)this.content.append(el('p',d.name+(d.id===this.room.sessionId?' (you)':'')+' · '+(!d.connected?'Reconnecting':view.phase==='lobby'?'Joined':d.ready?'Ready':'Drawing')));
+      if(view.phase==='lobby')this.hostSettings(view);
       if(view.phase==='lobby'&&view.host===this.room.sessionId)this.button('Start drawing',()=>this.room?.send('start'),true).disabled=view.drivers.length<2||view.drivers.some(s=>!s.connected);
+      if(view.phase==='drawing'&&view.host===this.room.sessionId){
+        const waited=(performance.now()-this.drawingShownAt)/1000;
+        for(const d of view.drivers.filter(d=>!d.ready&&d.id!==this.room?.sessionId)){
+          if(waited>=DRAWING_GRACE)this.button('Remove '+d.name,()=>this.room?.send('remove',{id:d.id}));
+          else if(this.graceTimer===undefined)this.graceTimer=window.setTimeout(()=>{this.graceTimer=undefined;this.present();},Math.max(500,(DRAWING_GRACE-waited)*1000+200));
+        }
+      }
     }else if(this.menu){this.show('Race menu');this.content.append(el('p','The race continues.'));this.button('Resume',()=>this.resume(),true);}
     else {this.dialog.close();return;}
     this.button('Home',()=>this.leave());
