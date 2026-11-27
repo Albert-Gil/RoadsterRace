@@ -40,6 +40,15 @@ for (const [rtt, jitter] of scenarios) test(`latency ${rtt} ms ± ${jitter} ms: 
     for (const o of outcomes) expect(['fired', 'recharging', 'too-late', 'unavailable']).toContain(o.outcome);
     expect(await guest.evaluate(() => (window as any).__roadsterDuel.commandLog.length)).toBe(0);
     await expect(host.locator('.race-notice')).not.toContainText(/missed/i);
+    // Your own car is drawn where the room will be when a press lands: measured against the server's car at
+    // the tick each press was applied (Thrust only, so no flight interrupts the lead).
+    await host.waitForTimeout(1500);
+    for (let i = 0; i < 6; i++) { await host.locator('#thrust-button').click(); await host.waitForTimeout(400); }
+    await expect.poll(async () => (await log()).length, { timeout: 4000 + rtt * 4 }).toBeGreaterThanOrEqual(8);
+    const errors = (await log()).slice(2).map(o => (o as { displayErrorTicks?: number }).displayErrorTicks).filter((e): e is number => e !== undefined).sort((a, b) => a - b);
+    expect(errors.length).toBeGreaterThanOrEqual(4);
+    console.log(`display error at press (ticks), ${rtt} ms: ${errors.join(', ')}`);
+    expect(errors[Math.floor(errors.length / 2)]).toBeLessThanOrEqual(3);
     // Sample the displayed own car: progress along the course must not step backwards (recoveries jump further than 25 m).
     const progress = await host.evaluate(async () => {
       const g = (window as any).__roadster, t = g.getTrack(), w = g.getWorld(), out: number[] = [];

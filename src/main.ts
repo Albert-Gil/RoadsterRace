@@ -2,6 +2,7 @@ import type { DuelClient } from './duels/client';
 import { reclaimBeforeGraphics } from './duels/seat';
 import { checkRoomCode } from './duels/codes';
 import { FramePlayback } from './duels/playback';
+import { ownCarAhead } from './duels/own-car';
 import type { Room } from '@colyseus/sdk';
 import { duelVenues, type RaceFrame, type RoomView } from './duels/protocol';
 import { rampAt, supported, groundHeight, FLIGHT_RULES } from './core/support';
@@ -894,6 +895,7 @@ async function openDuel(code='', reclaimed?:Room, returnCircuit=activeCircuit.id
       draw(view){remote=undefined;shown=undefined;playback.reset();loadDuelVenue(view);turn=Math.max(0,duel!.seatIndex);beginDrawing();},
       ownLine(samples){if(duel?.view && activeCircuit.id!==duel.view.circuit)loadDuelVenue(duel.view);const result=compileRoute(samples,activeTrack);if(result.ok){route=result.route;if(remote)world.drawLine(null);else world.drawLine(route,result.drawing);}},
       frame:receiveDuelFrame,
+      ownShown(){const v=world.vehicles[duel?.seatIndex??0]?.root.position;return v?{x:v.x,z:v.z}:undefined;},
       home(){duel=undefined;remote=undefined;shown=undefined;playback.reset();lapCount=previous.laps;sessionOptions.mode=previous.mode;if(activeCircuit.id!==previous.circuit)loadCircuit(previous.circuit,false);goHome();},
     });
     duel.open(code,reclaimed);
@@ -948,6 +950,10 @@ try {
       // Draw the cars 100 ms behind the server from buffered frames, never blending across a recovery.
       const sample=playback.sample(now);
       if(sample){shown=sample.to;previousPoses=sample.to.cars.map((car,i)=>{const a=sample.from.cars[i]??car,src=a.recoveryCount===car.recoveryCount?a:car;return{...src.position,y:src.elevation,heading:src.heading};});}
+      // Your own car: where it will be when a press sent now reaches the room (other cars stay 100 ms behind).
+      const latest=playback.latest,own=duel.seatIndex,ownCar=latest?.cars[own];
+      const ahead=sample&&latest&&ownCar&&route?ownCarAhead(route,ownCar,playback.aheadOf(latest,now,duel.oneWayMs),activeTrack.decks?p=>supported(p,activeTrack)?groundHeight(p,activeTrack):undefined:undefined):null;
+      if(sample&&ahead&&ownCar){shown={...sample.to,cars:sample.to.cars.map((car,i)=>i===own?{...ownCar,position:{x:ahead.x,z:ahead.z},elevation:ahead.y,heading:ahead.heading}:car)};previousPoses[own]={x:ahead.x,z:ahead.z,y:ahead.y,heading:ahead.heading};}
       updateVehicles(sample?.alpha??1);
       world.render(now/1000,false);return;
     }

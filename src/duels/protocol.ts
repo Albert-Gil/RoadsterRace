@@ -1,8 +1,11 @@
 import type { RaceState, RaceEvent, Ability } from '../core/types';
 import type { Standing } from '../core/local-race';
 
-/** 3: room codes are one English word (frames are unchanged from 2). */
-export const DUEL_PROTOCOL = 3;
+/**
+ * 3: room codes became one English word. 4: private ability results, typed errors, word+digit codes and
+ * invite stamps (`RoomView.created`). Frames are unchanged since 2.
+ */
+export const DUEL_PROTOCOL = 4;
 export const duelVenues = {
   'coastal-launch': 'Newport Island', 'golden-gate': 'Golden Gate', 'santa-monica': 'Santa Monica', 'san-diego-fleet': 'San Diego Fleet',
 } as const;
@@ -107,5 +110,5 @@ export interface AbilityCommand { round: number; sequence: number; tick: number;
  * and `duplicate` (an old sequence, or the same ability already queued) are decided on receipt.
  */
 export type AbilityOutcome = 'fired' | 'recharging' | 'too-late' | 'unavailable' | 'duplicate';
-export interface AbilityResult { round: number; sequence: number; ability: Ability; outcome: AbilityOutcome }
+export interface AbilityResult { round: number; sequence: number; ability: Ability; outcome: AbilityOutcome; /** Server tick at which it was decided. */ tick: number }
 export type DrawingPacket = [x: number, z: number, milliseconds: number][];

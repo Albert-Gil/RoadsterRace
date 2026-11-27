@@ -27,6 +27,15 @@ export class FramePlayback {
   }
   reset() { this.frames = []; this.origin = Infinity; }
   get latest() { return this.frames.at(-1); }
+  /**
+   * How far ahead of `frame` the room will be when a press sent at `now` arrives (ms). The least-delayed
+   * arrival fixes the clock offset: arrival = server time + one-way delay, so the server is now at tick
+   * (now - origin + oneWay) / TICK and a press sent now lands one more one-way delay later. `oneWayMs` comes
+   * from command round trips (DuelClient.oneWayMs). Your own car is drawn there (src/duels/own-car.ts).
+   */
+  aheadOf(frame: RaceFrame, now: number, oneWayMs = 0) {
+    return Number.isFinite(this.origin) ? Math.max(0, (now - this.origin + 2 * oneWayMs) / TICK_MS - frame.tick) * TICK_MS : 0;
+  }
 
   sample(now: number): PlaybackSample | undefined {
     const frames = this.frames, last = frames.at(-1);

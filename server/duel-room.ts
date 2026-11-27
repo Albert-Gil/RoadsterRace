@@ -124,7 +124,7 @@ export class DuelRoom extends Room {
       const i=this.seats.findIndex(s=>s.id===c.sessionId), seat=this.seats[i];
       const ability=command.ability==='hop'||command.ability==='thrust'?command.ability:null;
       if (!seat || !ability || !Number.isSafeInteger(command.sequence)) return;
-      const reply=(outcome:AbilityOutcome)=>c.send('ability-result',{round:command.round,sequence:command.sequence,ability,outcome} satisfies AbilityResult);
+      const reply=(outcome:AbilityOutcome)=>c.send('ability-result',{round:command.round,sequence:command.sequence,ability,outcome,tick:this.race?.tick??0} satisfies AbilityResult);
       if (command.sequence<=seat.lastSequence) return reply('duplicate');
       seat.lastSequence=command.sequence;
       if (this.view.phase !== 'racing' || !this.race || seat.withdrawn) return reply('unavailable');
@@ -220,7 +220,7 @@ export class DuelRoom extends Room {
       if(a.round!==this.view.round)return false;
       const outcome=this.race!.racers[this.seats.indexOf(a.seat)]?.takeOutcome(a.ability);
       if(!outcome)return true;
-      this.clients.find(c=>c.sessionId===a.seat.id)?.send('ability-result',{round:a.round,sequence:a.sequence,ability:a.ability,outcome} satisfies AbilityResult);
+      this.clients.find(c=>c.sessionId===a.seat.id)?.send('ability-result',{round:a.round,sequence:a.sequence,ability:a.ability,outcome,tick:this.race!.tick} satisfies AbilityResult);
       return false;
     });
   }

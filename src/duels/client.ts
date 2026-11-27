@@ -19,6 +19,8 @@ interface Hooks {
   frame(frame:RaceFrame,view:RoomView):void;
   ownLine(samples:DrawSample[]):void;
   home():void;
+  /** Where your own car is drawn right now (diagnostics: display error against the server at press time). */
+  ownShown?():{x:number;z:number}|undefined;
 }
 /** Matches the server's DRAWING_GRACE_SECONDS (server/duel-room.ts). */
 const DRAWING_GRACE=90;
@@ -36,9 +38,11 @@ export class DuelClient {
   /** A press made in the last countdown beat, sent with the first racing frame. */
   private queued?:Ability;
   /** Sent commands awaiting the server's private reply, matched by round and sequence. */
-  private pending:{round:number;sequence:number;ability:Ability;at:number}[]=[];
+  private pending:{round:number;sequence:number;ability:Ability;at:number;shown?:{x:number;z:number}}[]=[];
+  /** Your car's recent server positions by tick, to measure how far the drawn car was from the room. */
+  private ownTrail:{tick:number;x:number;z:number;speed:number}[]=[];
   /** Development and test diagnostics: every command's outcome, or `unconfirmed` after 1.5 s. Never shown to players. */
-  readonly commandLog:{round:number;sequence:number;ability:Ability;outcome:AbilityOutcome|'unconfirmed';roundTripMs?:number}[]=[];
+  readonly commandLog:{round:number;sequence:number;ability:Ability;outcome:AbilityOutcome|'unconfirmed';roundTripMs?:number;displayErrorTicks?:number}[]=[];
   /** Smoothed one-way delay to the room, from command round trips (ms). */
   oneWayMs=0;
   private roundDrawn=0;
@@ -188,6 +192,7 @@ export class DuelClient {
         const own=frame.cars[this.seatIndex];
         if(own&&this.cooldowns?.round===frame.round){own.hopReadyAt=this.cooldowns.hopReadyAt;own.thrustReadyAt=this.cooldowns.thrustReadyAt;}
         this.latest=frame;
+        if(own){this.ownTrail.push({tick:frame.tick,x:own.position.x,z:own.position.z,speed:own.speed});if(this.ownTrail.length>120)this.ownTrail.shift();}
         if(this.queued&&!frame.countdown&&this.view.phase==='racing'){const ability=this.queued;this.queued=undefined;this.send(ability);}
         this.expirePending();
         this.hooks.frame(frame,this.view);
@@ -215,7 +220,7 @@ export class DuelClient {
       history.replaceState(null, '', invite);
     }
     if(view.phase==='lobby'){this.roundDrawn=0;this.waiting=false;}
-    if(this.view?.round!==view.round){this.latest=undefined;this.sequence=0;this.waiting=false;this.menu=false;this.queued=undefined;this.pending=[];this.cooldowns=undefined;}
+    if(this.view?.round!==view.round){this.ownTrail=[];this.latest=undefined;this.sequence=0;this.waiting=false;this.menu=false;this.queued=undefined;this.pending=[];this.cooldowns=undefined;}
     const previousPhase=this.view?.phase;
     this.view=view;
     if(view.phase==='results' && previousPhase!=='results' && this.latest)this.hooks.frame({...this.latest,events:[]},view);
@@ -311,7 +316,7 @@ export class DuelClient {
     if(!this.room||!this.view||!this.latest)return;
     const command={round:this.view.round,ability,sequence:++this.sequence,tick:this.latest.tick};
     this.room.send('ability',command);
-    this.pending.push({round:command.round,sequence:command.sequence,ability,at:performance.now()});
+    this.pending.push({round:command.round,sequence:command.sequence,ability,at:performance.now(),shown:this.hooks.ownShown?.()});
   }
   private log(entry:DuelClient['commandLog'][number]){this.commandLog.push(entry);if(this.commandLog.length>50)this.commandLog.shift();}
   /** The server's private reply. Button feedback and recharge rings already come from frames and cooldowns. */
@@ -320,7 +325,14 @@ export class DuelClient {
     if(i<0)return;
     const [p]=this.pending.splice(i,1),roundTrip=performance.now()-p.at;
     this.oneWayMs=this.oneWayMs?this.oneWayMs*.8+roundTrip/2*.2:roundTrip/2;
-    this.log({round:r.round,sequence:r.sequence,ability:r.ability,outcome:r.outcome,roundTripMs:Math.round(roundTrip)});
+    // How far (in ticks of travel) the car you saw was from the car the room moved when it applied the press.
+    let displayErrorTicks:number|undefined;
+    const k=this.ownTrail.findIndex(e=>e.tick>=r.tick),b=this.ownTrail[k],a=this.ownTrail[k-1];
+    if(p.shown&&a&&b&&b.speed>1){
+      const t=(r.tick-a.tick)/Math.max(1,b.tick-a.tick),x=a.x+(b.x-a.x)*t,z=a.z+(b.z-a.z)*t;
+      displayErrorTicks=Math.round(Math.hypot(p.shown.x-x,p.shown.z-z)/b.speed*60*10)/10;
+    }
+    this.log({round:r.round,sequence:r.sequence,ability:r.ability,outcome:r.outcome,roundTripMs:Math.round(roundTrip),displayErrorTicks});
   }
   /** Commands with no reply after 1.5 s stay unconfirmed in diagnostics only. */
   private expirePending(){
