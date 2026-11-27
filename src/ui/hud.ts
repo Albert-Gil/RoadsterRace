@@ -19,7 +19,7 @@ export function renderHud({ phase, race, mode, ownSeat, playerCount, lapCount, t
     const ghost = phase === 'racing' && race.ghostStartRemaining > 0;
     const leader = mode==='solo-race'?first:race.racers[standings[0].player].state;
     hud.dataset.round = tourLabel;
-    hud.querySelector('#race-time')!.textContent = formatTime(mode==='time-trial'?Math.max(0,first.time-first.lapStartedAt):race.time);
+    hud.querySelector('#race-time')!.textContent = formatTime(mode==='time-trial'?Math.max(0,first.time-(first.lapStartedAt??0)):race.time);
     hud.querySelector('#lap-label')!.textContent = mode!=='multiplayer'?'LAP':'LEADER LAP'; hud.querySelector('#race-lap')!.innerHTML = `${leader.lap} <i>/ ${lapCount}</i>`;
     hud.querySelector('#pace-label')!.textContent = mode==='time-trial'?'BEST LAP':(mode==='solo-race'||ownSeat!==undefined)&&!ghost?'POSITION':ghost ? 'GHOST START' : playerCount === 1 ? first.surface === 'sand' ? 'SAND' : first.drifting ? 'DRIFT' : 'PACE' : 'FINISHED';
     hud.querySelector('#race-speed')!.innerHTML = mode==='time-trial'?(personalBest!==undefined?formatTime(personalBest):'—'):mode==='solo-race'&&!ghost?`${standings.find(s=>s.player===0)!.rank} <i>/ 4</i>`:ownSeat!==undefined&&!ghost?`${standings.find(s=>s.player===ownSeat)?.rank??'–'} <i>/ ${playerCount}</i>`:ghost ? `${Math.ceil(race.ghostStartRemaining)} <i>s</i>` : playerCount === 1 ? `${Math.round(first.speed * 3.6)} <i>km/h</i>` : `${standings.filter(s => s.finished).length} <i>/ ${playerCount}</i>`;
@@ -27,9 +27,10 @@ export function renderHud({ phase, race, mode, ownSeat, playerCount, lapCount, t
   }
   controls.querySelectorAll<HTMLButtonElement>('.ability-control').forEach(pad => {
     const i = ownSeat ?? Number(pad.dataset.racer), hop = pad.dataset.ability === 'hop';
-    const s = race?.racers[i].state, remaining = s ? Math.max(0, (hop ? s.hopReadyAt : s.thrustReadyAt) - s.time) : 0;
+    const s = race?.racers[i].state, remaining = s ? Math.max(0, ((hop ? s.hopReadyAt : s.thrustReadyAt) ?? s.time) - s.time) : 0;
     const recovering = !!s && (s.time < s.recoveringUntil || s.recoveryWaiting);
-    pad.disabled = phase === 'countdown' || (phase === 'racing' && (!!s?.finished || recovering || hop && s?.movement === 'airborne'));
+    // Private Duels accept a press in the last countdown beat (sent at GO), so their pads stay live.
+    pad.disabled = phase === 'countdown' && ownSeat === undefined || (phase === 'racing' && (!!s?.finished || recovering || hop && s?.movement === 'airborne'));
     pad.style.setProperty('--charge', `${clamp(1 - remaining / (hop ? RULES.hopRecharge : RULES.thrustRecharge), 0, 1) * 360}deg`);
     if (hop) {
       pad.dataset.ready = String(remaining < 0.001 && s?.movement !== 'airborne');

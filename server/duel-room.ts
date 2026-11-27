@@ -16,7 +16,7 @@ const tickMs = 1000 / 60;
 let rooms = 0;
 const creations: number[] = [];
 type Options = { protocol: number; physics: number; compiler: number; circuit: DuelVenue; laps: number; name: string; paint: string; versions: Record<string,number> };
-interface Seat extends DriverSeat { route?: CompiledRoute; samples?: DrawSample[]; lastSequence: number; lastUpload: number }
+interface Seat extends DriverSeat { route?: CompiledRoute; samples?: DrawSample[]; lastSequence: number; lastUpload: number; sentCooldowns?: string }
 
 function readStroke(input: unknown, track: TrackDefinition) {
   if (!Array.isArray(input) || input.length < 4 || input.length > 16384) return;
@@ -108,7 +108,7 @@ export class DuelRoom extends Room {
     c.send('room',this.view);
     const seat=this.seat(c);
     if(seat?.samples) c.send('ownLine',{samples:seat.samples.map(p=>[p.x,p.z,p.time]),sequence:seat.lastSequence});
-    if(this.race) c.send('frame',this.frame());
+    if(this.race) { c.send('frame',this.frame()); const i=this.seats.indexOf(seat),st=this.race.racers[i]?.state; if(st) c.send('cooldowns',{round:this.view.round,hopReadyAt:st.hopReadyAt,thrustReadyAt:st.thrustReadyAt}); }
   }
   private lockLine(c: Client,data: {round?:number;samples?:unknown}) {
     const seat=this.seat(c);
@@ -124,6 +124,7 @@ export class DuelRoom extends Room {
   }
   private startRace() {
     this.race=new LocalRace(this.seats.map(s=>s.route!),this.track,this.view.laps);
+    this.seats.forEach(s=>s.sentCooldowns=undefined);
     this.countdown=180; this.accumulator=0; this.events=[]; this.view.phase='countdown';
     this.publish(); this.broadcast('frame',this.frame());
   }
@@ -148,8 +149,19 @@ export class DuelRoom extends Room {
         if(this.race.time>15*60) this.seats.forEach((s,i)=>{if(!this.race!.racers[i].state.finished)this.withdraw(s);});
         if(this.race.finished) {this.view.phase='results';this.broadcast('frame',this.frame());this.events=[];this.publish();return;}
       }
-      if((this.countdown||this.race.tick)%3===0) { this.broadcast('frame',this.frame()); this.events=[]; }
+      if((this.countdown||this.race.tick)%3===0) { this.broadcast('frame',this.frame()); this.events=[]; this.sendCooldowns(); }
     }
+  }
+  /** Each seat's own Thrust/Hop readiness, sent only to that seat and only when it changes (protocol 2). */
+  private sendCooldowns(force=false) {
+    if(!this.race)return;
+    this.seats.forEach((seat,i)=>{
+      const s=this.race!.racers[i]?.state;if(!s)return;
+      const message={round:this.view.round,hopReadyAt:s.hopReadyAt,thrustReadyAt:s.thrustReadyAt},key=message.round+':'+message.hopReadyAt+':'+message.thrustReadyAt;
+      if(!force&&seat.sentCooldowns===key)return;
+      const client=this.clients.find(c=>c.sessionId===seat.id);
+      if(client){client.send('cooldowns',message);seat.sentCooldowns=key;}
+    });
   }
   private withdraw(s:Seat) {
     const car=this.race?.racers[this.seats.indexOf(s)];

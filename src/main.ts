@@ -165,7 +165,7 @@ let previewGrid: { routes: CompiledRoute[]; track: typeof activeTrack; rotation:
 const clock = new FixedStepClock();
 // Thrust/hop pads and keys. Drawing input stays on the canvas handlers below.
 const input = new InputRouter(controls, {
-  humans, padsActive: () => ['ready', 'racing', 'coaching'].includes(phase), keysActive: () => !duel?.overlayOpen && ['ready', 'racing', 'countdown', 'coaching'].includes(phase),
+  humans, padsActive: () => ['ready', 'racing', 'coaching'].includes(phase) || !!duel && phase === 'countdown', keysActive: () => !duel?.overlayOpen && ['ready', 'racing', 'countdown', 'coaching'].includes(phase),
   activate, pause: () => pauseRace(),
   extraKey: e => {
     if (import.meta.env.DEV && e.code === 'KeyT' && !e.repeat) {
@@ -525,7 +525,7 @@ function goHome(force = false) {
 }
 function activate(player: number, ability: Ability = 'thrust') {
   if(player<0||player>=humans())return;
-  if(duel){if(phase==='racing')duel.press(ability);return;}
+  if(duel){if(phase==='racing'||phase==='countdown')duel.press(ability);return;}
   if (phase === 'ready' && ability === 'thrust') { readyPlayers[player] = true; renderPanel(); updateHud(); if (readyPlayers.every(Boolean)) { if (!audio.muted) audio.unlock(); startRace(); } }
   else if (phase === 'coaching' && race && tutorial && answerPrompt(tutorial, ability, race.racers[player].state.time)) {
     // The frozen race resumes with the requested ability; the other pad is ignored until then.
@@ -887,6 +887,7 @@ async function openDuel(code='', reclaimed?:Room, returnCircuit=activeCircuit.id
       draw(view){remote=undefined;loadDuelVenue(view);turn=Math.max(0,duel!.seatIndex);beginDrawing();},
       ownLine(samples){if(duel?.view && activeCircuit.id!==duel.view.circuit)loadDuelVenue(duel.view);const result=compileRoute(samples,activeTrack);if(result.ok){route=result.route;if(remote)world.drawLine(null);else world.drawLine(route,result.drawing);}},
       frame:receiveDuelFrame,
+      missed(ability){showNotice(`${ability==='hop'?'Hop':'Thrust'} missed: the room did not get it in time.`,1.4);},
       home(){duel=undefined;remote=undefined;lapCount=previous.laps;sessionOptions.mode=previous.mode;if(activeCircuit.id!==previous.circuit)loadCircuit(previous.circuit,false);goHome();},
     });
     duel.open(code,reclaimed);

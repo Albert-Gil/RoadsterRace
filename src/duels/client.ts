@@ -1,5 +1,5 @@
 import { Client, type Room } from '@colyseus/sdk';
-import { DUEL_PROTOCOL, duelVenues, unpackFrame, type WireFrame, type DuelVenue, type RoomView, type RaceFrame, type DrawingPacket } from './protocol';
+import { DUEL_PROTOCOL, duelVenues, unpackFrame, type Cooldowns, type WireFrame, type DuelVenue, type RoomView, type RaceFrame, type DrawingPacket } from './protocol';
 import { RULES } from '../core/simulation';
 import { COMPILER_VERSION } from '../core/route';
 import type { Ability, DrawSample } from '../core/types';
@@ -15,6 +15,8 @@ interface Hooks {
   draw(view:RoomView):void;
   frame(frame:RaceFrame,view:RoomView):void;
   ownLine(samples:DrawSample[]):void;
+  /** A Thrust/Hop the server never applied (late, or sent while it was recharging). */
+  missed(ability:Ability):void;
   home():void;
 }
 const OLD_INVITE='This invite is from an older version of the game. Ask your friend for a new invite.';
@@ -32,6 +34,10 @@ export class DuelClient {
   view?:RoomView;
   latest?:RaceFrame;
   private sequence=0;
+  private cooldowns?:Cooldowns;
+  /** A press made in the last countdown beat, sent with the first racing frame. */
+  private queued?:Ability;
+  private pending:{ability:Ability;at:number;before?:number}[]=[];
   private roundDrawn=0;
   private dialog=el('dialog');
   private content=el('section');
@@ -130,8 +136,18 @@ export class DuelClient {
       room.onMessage('frame',(wire:WireFrame)=>{
         const frame=unpackFrame(wire);
         if(this.closed||!this.view||frame.round!==this.view.round)return;
-        this.latest=frame;this.hooks.frame(frame,this.view);
+        const own=frame.cars[this.seatIndex];
+        if(own&&this.cooldowns?.round===frame.round){own.hopReadyAt=this.cooldowns.hopReadyAt;own.thrustReadyAt=this.cooldowns.thrustReadyAt;}
+        this.latest=frame;
+        if(this.queued&&!frame.countdown&&this.view.phase==='racing'){const ability=this.queued;this.queued=undefined;this.send(ability);}
+        this.expirePending();
+        this.hooks.frame(frame,this.view);
         if(this.view.phase==='results')this.present();
+      });
+      room.onMessage('cooldowns',(c:Cooldowns)=>{
+        const previous=this.cooldowns;this.cooldowns=c;
+        // A changed readiness time confirms that the server fired that ability.
+        this.pending=this.pending.filter(p=>!(previous?.round===c.round&&(p.ability==='hop'?c.hopReadyAt!==p.before:c.thrustReadyAt!==p.before)));
       });
       room.onMessage('ownLine',(data:{samples:DrawingPacket;sequence:number})=>{this.sequence=Math.max(this.sequence,data.sequence);this.hooks.ownLine(data.samples.map(([x,z,time])=>({x,z,time})));});
       room.onMessage('notice',(s:string)=>{this.waiting=false;this.present();this.status.textContent=s;if(!this.dialog.open){this.show('Check your line');this.status.textContent=s;this.button('Return to drawing',()=>this.dialog.close(),true);}});
@@ -152,7 +168,7 @@ export class DuelClient {
       history.replaceState(null, '', invite);
     }
     if(view.phase==='lobby'){this.roundDrawn=0;this.waiting=false;}
-    if(this.view?.round!==view.round){this.latest=undefined;this.sequence=0;this.waiting=false;this.menu=false;}
+    if(this.view?.round!==view.round){this.latest=undefined;this.sequence=0;this.waiting=false;this.menu=false;this.queued=undefined;this.pending=[];this.cooldowns=undefined;}
     const previousPhase=this.view?.phase;
     this.view=view;
     if(view.phase==='results' && previousPhase!=='results' && this.latest)this.hooks.frame({...this.latest,events:[]},view);
@@ -196,8 +212,23 @@ export class DuelClient {
     this.room.send('line',{round:this.view.round,samples:samples.map(p=>[p.x,p.z,p.time-start])});this.present();
   }
   press(ability:Ability){
-    if(this.menu||this.disconnected||!this.latest||this.view?.phase!=='racing')return;
-    this.room?.send('ability',{round:this.view.round,ability,sequence:++this.sequence,tick:this.latest.tick});
+    if(this.menu||this.disconnected||!this.latest)return;
+    // Within the last countdown beat a press is held and sent at GO; earlier presses are ignored.
+    if(this.view?.phase==='countdown'){if(this.latest.countdown>0&&this.latest.countdown<=60)this.queued=ability;return;}
+    if(this.view?.phase!=='racing')return;
+    this.send(ability);
+  }
+  private send(ability:Ability){
+    if(!this.room||!this.view||!this.latest)return;
+    this.room.send('ability',{round:this.view.round,ability,sequence:++this.sequence,tick:this.latest.tick});
+    this.pending.push({ability,at:performance.now(),before:this.cooldowns?.round===this.view.round?(ability==='hop'?this.cooldowns.hopReadyAt:this.cooldowns.thrustReadyAt):undefined});
+  }
+  /** Presses with no confirmation after 0.6 s get a "missed" cue instead of silently disappearing. */
+  private expirePending(){
+    const now=performance.now(),late=this.pending.filter(p=>now-p.at>600);
+    if(!late.length)return;
+    this.pending=this.pending.filter(p=>now-p.at<=600);
+    for(const p of late)this.hooks.missed(p.ability);
   }
   pause(){this.menu=true;this.present();}
   private resume(){this.menu=false;this.present();}

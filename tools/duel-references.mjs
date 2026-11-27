@@ -8,6 +8,7 @@ const {findCircuit}=await import('../src/content/circuits.ts');
 const {compileRoute,createPracticeSamples,COMPILER_VERSION}=await import('../src/core/route.ts');
 const {LocalRace}=await import('../src/core/local-race.ts');
 const {RULES}=await import('../src/core/simulation.ts');
+const {DUEL_PROTOCOL}=await import('../src/duels/protocol.ts');
 const refs=[];
 for(const circuit of ['coastal-launch','golden-gate','santa-monica']){
   const track=findCircuit(circuit).track;
@@ -28,6 +29,6 @@ for(const circuit of ['coastal-launch','golden-gate','santa-monica']){
   }
   if(!race.finished)throw Error('Reference failed to finish: '+circuit);
   console.log(circuit,race.tick,[...new Set(events.map(e=>e.type))]);
-  refs.push({protocol:1,circuit,trackVersion:track.version,physics:RULES.version,compiler:COMPILER_VERSION,laps:1,lines,inputs,events,checkpoints,order:race.standings().map(s=>s.player),finish:race.racers.map(r=>r.state.finishTime)});
+  refs.push({protocol:DUEL_PROTOCOL,circuit,trackVersion:track.version,physics:RULES.version,compiler:COMPILER_VERSION,laps:1,lines,inputs,events,checkpoints,order:race.standings().map(s=>s.player),finish:race.racers.map(r=>r.state.finishTime)});
 }
 await writeFile(new URL('../tests/fixtures/duel-reference.json',import.meta.url),JSON.stringify(refs)+'\n');
