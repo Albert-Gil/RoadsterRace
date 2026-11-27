@@ -404,11 +404,11 @@ export class RaceSimulation {
 /** Bounded fixed-step clock. Long interruptions are handled by the session's pause state. */
 export class FixedStepClock {
   accumulator = 0;
-  /** `rate` > 1 is the test-only speed-up (src/app/test-clock.ts): more simulated time per frame, same fixed steps. */
-  constructor(readonly rate = 1) {}
+  /** `rate` > 1 is the test-only speed-up and `catchUp` the test-only stall handling (src/app/test-clock.ts); same fixed steps. */
+  constructor(readonly rate = 1, readonly catchUp = rate > 1) {}
   advance(seconds: number, step: () => void) {
-    // Normal play drops time after a stall (at most 0.15 s per frame); test speed catches up to one real second.
-    const sped = this.rate > 1;
+    // Normal play drops time after a stall (at most 0.15 s per frame); the test clock catches up to one real second.
+    const sped = this.catchUp;
     this.accumulator += clamp(seconds * this.rate, 0, sped ? this.rate : 0.15);
     let count = 0;
     while (this.accumulator + 1e-10 >= RULES.dt && count < (sped ? Math.ceil(this.rate / RULES.dt) : 10)) { step(); this.accumulator -= RULES.dt; count++; }
