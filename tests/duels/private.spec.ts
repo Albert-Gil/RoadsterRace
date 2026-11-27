@@ -47,19 +47,36 @@ for(const [venue,count] of [['coastal-launch',2],['coastal-launch',4],['golden-g
     try{
       await host.goto('/');await host.getByRole('button',{name:'Multiplayer'}).click();
       await host.getByRole('button',{name:'Private Duel'}).click();
+      await host.getByLabel('Driver name',{exact:true}).fill('Harbor Racer');
+      await host.getByLabel('Car color',{exact:true}).selectOption('crimson');
       await host.getByRole('dialog').getByLabel('Circuit',{exact:true}).selectOption(venue);
       await host.getByRole('button',{name:'Create room'}).click();
       await expect(host.getByText('Private room',{exact:true})).toBeVisible({timeout:45000});
       const invite = host.url();
       expect(new URL(invite).searchParams.get('duelCircuit')).toBe(venue);
-      for (const guest of guests) {
+      for (const [i,guest] of guests.entries()) {
         await guest.goto(invite, {waitUntil:'domcontentloaded'});
+        await guest.getByLabel('Driver name',{exact:true}).fill('Guest '+(i+1));
+        await guest.getByLabel('Car color',{exact:true}).selectOption(['cobalt','solar','verdant'][i]);
+        await guest.getByRole('button',{name:'Join room',exact:true}).click();
         await expect(guest.getByRole('dialog').getByText('Private room',{exact:true})).toBeVisible({timeout:60000});
       }
       await expect(host.getByRole('dialog').locator('p').filter({hasText:'Joined'})).toHaveCount(count,{timeout:30000});
+      await expect(host.getByRole('dialog')).toContainText('Harbor Racer');
+      await expect(host.getByRole('dialog')).toContainText('Guest 1');
       await host.getByRole('button',{name:'Start drawing'}).click();
       await test.step('Draw and lock every private line',async()=>{await Promise.all(pages.map((p,i)=>draw(p,i===1)));});
       await Promise.all(pages.map(p=>waitForPhase(p,'racing',20000)));
+      for(const [i,page] of pages.entries()){
+        const presentation=await page.evaluate(()=>{
+          const game=(window as any).__roadster;
+          return {lines:game.getState().visibleRouteCount,drivers:game.getState().drivers};
+        });
+        expect(presentation.lines).toBe(0);
+        expect(presentation.drivers[0].name).toBe('Harbor Racer');
+        expect(presentation.drivers[0].paint).toBe('crimson');
+        expect(presentation.drivers[i].paint).toBe(['crimson','cobalt','solar','verdant'][i]);
+      }
       await Promise.all([
         guests[0].reload({waitUntil:'domcontentloaded'}),
         (async()=>{await host.locator('#hop-button').click();await host.locator('#thrust-button').click();})(),

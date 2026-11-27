@@ -25,7 +25,7 @@ async function planFriends(page: Page, count: number, steelPaint = false) {
     await page.getByRole('button', { name: 'Lock in my line' }).click();
   }
   await expect(page.getByRole('heading', { name: 'Take your corner.' })).toBeVisible();
-  expect((await state(page)).visibleRouteCount).toBe(count);
+  expect((await state(page)).visibleRouteCount).toBe(0);
 }
 
 test('four-player ghost start uses race time, survives pause and resets on rematch', async ({ page }) => {
@@ -66,6 +66,9 @@ test('two-player handoff, ready check, independent thrust, finish order and fres
   await page.getByRole('button', { name: 'Player 2 thrust', exact: true }).click();
   expect((await state(page)).phase).toBe('countdown'); expect((await state(page)).players.map((p: any) => p.time)).toEqual([0, 0]);
   await waitForPhase(page, 'racing');
+  expect((await state(page)).visibleRouteCount).toBe(0);
+  await page.keyboard.press('KeyT');
+  expect((await state(page)).visibleRouteCount).toBe(0);
   expect((await state(page)).players.map((p: any) => p.thrustCount)).toEqual([0, 0]);
   await page.keyboard.down('KeyA');
   await page.waitForFunction(() => { const s = (window as any).__roadster.getState().players[0]; return s.thrustCount > 0 && s.time > s.thrustReadyAt + 0.1; });
@@ -85,6 +88,7 @@ test('two-player handoff, ready check, independent thrust, finish order and fres
   await page.screenshot({ path: 'artifacts/multiplayer-results.png' });
   await page.getByRole('button', { name: 'Restart' }).click();
   expect((await state(page)).phase).toBe('ready'); expect((await state(page)).readyPlayers).toEqual([false, false]);
+  expect((await state(page)).visibleRouteCount).toBe(0);
   await page.keyboard.press('KeyA'); await page.keyboard.press('KeyL');
   const fresh = await state(page); expect(fresh.players.map((p: any) => p.time)).toEqual([0, 0]); expect(fresh.players.map((p: any) => p.thrustCount)).toEqual([0, 0]);
   await page.keyboard.press('Escape'); await page.getByRole('button', { name: 'Home', exact:true }).click();

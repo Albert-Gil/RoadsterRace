@@ -4,9 +4,12 @@ import { RULES } from '../core/simulation';
 import { COMPILER_VERSION } from '../core/route';
 import type { Ability, DrawSample } from '../core/types';
 import { duelEndpoint, savedSeat, storeSeat } from './seat';
+import { cleanDriverName } from '../presentation/race-settings';
 
 interface Hooks {
   driver: { name: string; paint: string };
+  finishes: readonly { id: string; name: string; color: string }[];
+  saveDriver(driver: { name: string; paint: string }): void;
   versions: Record<string,number>;
   draw(view:RoomView):void;
   frame(frame:RaceFrame,view:RoomView):void;
@@ -48,17 +51,29 @@ export class DuelClient {
   }
   open(initialCode='', reclaimed?: Room) {
     this.show('Private Duel');
+    const nameLabel=el('label','Driver name');
+    const name=el('input');name.value=this.hooks.driver.name;name.maxLength=18;name.setAttribute('autocomplete','nickname');
+    nameLabel.append(name);
+    const paintLabel=el('label','Car color');
+    const paint=el('select');paint.setAttribute('aria-label','Car color');
+    for(const finish of this.hooks.finishes)paint.add(new Option(finish.name,finish.id));
+    paint.value=this.hooks.driver.paint;paintLabel.append(paint);
+    const saveDriver=()=>{
+      this.hooks.driver={name:cleanDriverName(name.value,0),paint:paint.value};
+      this.hooks.saveDriver(this.hooks.driver);
+    };
+    this.content.append(nameLabel,paintLabel);
     const circuit=el('select');circuit.setAttribute('aria-label','Circuit');
     for(const [id,name] of Object.entries(duelVenues)) circuit.add(new Option(name,id));
     const laps=el('select');laps.setAttribute('aria-label','Race distance');
     for(let i=1;i<=6;i++)laps.add(new Option(i+' lap'+(i===1?'':'s'),String(i)));
     const code=el('input');code.placeholder='Room code';code.setAttribute('aria-label','Room code');code.maxLength=10;code.value=initialCode;code.autocapitalize='characters';
     this.content.append(circuit,laps);
-    this.button('Create room',()=>void this.connect('',circuit.value as DuelVenue,Number(laps.value)),true);
+    this.button('Create room',()=>{saveDriver();void this.connect('',circuit.value as DuelVenue,Number(laps.value));},true);
     this.content.append(code);
-    this.button('Join room',()=>{const id=code.value.trim().toUpperCase();if(/^[A-F0-9]{10}$/.test(id))void this.connect(id);else this.status.textContent='Enter the 10-character room code.';});
+    this.button('Join room',()=>{const id=code.value.trim().toUpperCase();if(/^[A-F0-9]{10}$/.test(id)){saveDriver();void this.connect(id);}else this.status.textContent='Enter the 10-character room code.';});
     this.button('Home',()=>this.leave());
-    if(initialCode)void this.connect(initialCode,undefined,undefined,reclaimed);
+    if(reclaimed)void this.connect(initialCode,undefined,undefined,reclaimed);
   }
   private async connect(code:string,circuit:DuelVenue='coastal-launch',laps=1,reclaimed?:Room) {
     if(this.connecting||this.closed)return;

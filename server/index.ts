@@ -11,7 +11,14 @@ const server = new Server({
     pingInterval: 10_000, pingMaxRetries: 6,
   }),
   greet: false,
-  express(app) { app.get('/health', (_req: unknown,res: import('node:http').ServerResponse)=>{res.setHeader('Access-Control-Allow-Origin','*');res.setHeader('Content-Type','application/json');res.end('{"ok":true}');}); },
+  express(app) {
+    app.get('/health', (_req: unknown, res: import('node:http').ServerResponse) => {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Cache-Control', 'no-store');
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ ok: true, revision: process.env.RENDER_GIT_COMMIT ?? null }));
+    });
+  },
 });
 server.define('private_duel',DuelRoom);
 await server.listen(Number(process.env.PORT || 2567),'0.0.0.0');

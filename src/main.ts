@@ -55,7 +55,7 @@ import { TUTORIAL_COPY, tutorialCoach, tutorialCompletePanel, tutorialIntroPanel
 import { TUTORIAL_CIRCUIT, TUTORIAL_LAPS, answerPrompt, duePrompt, freshTutorial, type TutorialProgress } from './app/tutorial';
 import { GameAudio } from './presentation/audio';
 import { GameScene } from './presentation/scene';
-import { applyPlayerColors, applyTheme, themes, hopEffects, heroImages, heroArtRevision, interfaceMotion, sectorDrawingAppearance } from './presentation/themes';
+import { applyPlayerColors, applyTheme, themes, hopEffects, heroImages, heroArtRevision, interfaceMotion, sectorDrawingAppearance, paintFinishes, rewardPaintFinishes } from './presentation/themes';
 import { cleanDriverName, escapeHtml, finishFor, loadPreferences, savePreferences } from './presentation/race-settings';
 import { raceSetupMarkup } from './presentation/race-setup';
 import { isGraphicsChoice, isRendererChoice, loadGraphicsPreference, saveGraphicsPreference, type RendererChoice } from './presentation/graphics';
@@ -161,8 +161,9 @@ const input = new InputRouter(controls, {
   extraKey: e => {
     if (import.meta.env.DEV && e.code === 'KeyT' && !e.repeat) {
       theme = theme.id === 'coastal' ? themes.graphite : themes.coastal; applyTheme(theme); brand(); world.setTheme(theme); applyDriverPresentation();
-      if (['ready', 'countdown', 'racing', 'paused', 'results'].includes(phase) && confirmedRoutes.length === playerCount) world.drawRaceLines(sessionOptions.mode==='solo-race'?confirmedRoutes.slice(0,1):confirmedRoutes);
-      else world.drawLine(route ?? (phase === 'drawing' && stroke.length ? stroke : null), route ? drawingTrim : undefined); renderPanel(); updateHud();
+      if (['ready', 'countdown', 'racing', 'paused', 'results'].includes(phase)) showRaceLines();
+      else world.drawLine(route ?? (phase === 'drawing' && stroke.length ? stroke : null), route ? drawingTrim : undefined);
+      renderPanel(); updateHud();
     }
   },
 });
@@ -447,9 +448,13 @@ function confirmRoute() {
   if (turn + 1 < humans()) { turn++; world.showVehicles(-1, playerCount); setPhase('handoff'); }
   else enterReady();
 }
+function showRaceLines() {
+  if (duel || sessionOptions.mode === 'multiplayer') world.drawLine(null);
+  else if (confirmedRoutes.length === playerCount) world.drawRaceLines(confirmedRoutes.slice(0, 1));
+}
 function enterReady() {
   clearRaceInput(); race = null; readyPlayers = Array(humans()).fill(false); previousPoses = [];
-  world.showVehicles(null, playerCount); world.drawRaceLines(sessionOptions.mode==='solo-race'?confirmedRoutes.slice(0,1):confirmedRoutes); setPhase('ready'); updateVehicles(1);
+  world.showVehicles(null, playerCount); showRaceLines(); setPhase('ready'); updateVehicles(1);
 }
 function startRace(resume = false) {
   if (confirmedRoutes.length !== playerCount) return;
@@ -461,7 +466,7 @@ function startRace(resume = false) {
   if (!resume) { resultAwards=[];sessionLapRecord=false; recorder=sessionOptions.mode==='time-trial'?new LapRecorder(lapRecordKey(activeTrack)):null;activeGhost=personalLap;world.setGhost(null); race = new LocalRace(confirmedRoutes, activeTrack, lapCount, activeTour ? roundIndex % playerCount : 0); recorder?.sample(race.racers[0].state); previousPoses = []; rechargeAnnounced = Array(playerCount).fill(true); world.vehicles.forEach(vehicle => vehicle.clearEffects()); }
   clearRaceInput(); resuming = resume; countdownRemaining = 3; countdownBeat = 3;
   countdownElement.dataset.lights = '0';
-  world.showVehicles(null, playerCount); world.drawRaceLines(sessionOptions.mode==='solo-race'?confirmedRoutes.slice(0,1):confirmedRoutes);
+  world.showVehicles(null, playerCount); showRaceLines();
   setPhase('countdown'); updateVehicles(1); audio.cue('countdown');
 }
 function pauseRace(reason='user') { if(duel){if(reason==='user' && phase==='racing')duel.pause();return;} if (phase !== 'racing' && phase !== 'countdown' && phase !== 'coaching') return;pauseReason=reason; clearRaceInput(); setPhase('paused'); }
@@ -815,9 +820,11 @@ async function openDuel(code='', reclaimed?:Room, returnCircuit=activeCircuit.id
     sessionOptions.mode='multiplayer';
     duel=new DuelClient({
       driver:{...preferences.drivers[0],name:cleanDriverName(preferences.drivers[0].name,0)},
+      finishes:[...paintFinishes,...rewardPaintFinishes].filter(p=>paintUnlocked(p.id,collection.state)),
+      saveDriver(driver){Object.assign(preferences.drivers[0],driver);saveSettings();},
       versions:Object.fromEntries(circuits.map(c=>[c.id,c.track.version])),
       draw(view){remote=undefined;loadDuelVenue(view);turn=Math.max(0,duel!.seatIndex);beginDrawing();},
-      ownLine(samples){if(duel?.view && activeCircuit.id!==duel.view.circuit)loadDuelVenue(duel.view);const result=compileRoute(samples,activeTrack);if(result.ok){route=result.route;if(remote)world.drawRaceLines([route]);else world.drawLine(route,result.drawing);}},
+      ownLine(samples){if(duel?.view && activeCircuit.id!==duel.view.circuit)loadDuelVenue(duel.view);const result=compileRoute(samples,activeTrack);if(result.ok){route=result.route;if(remote)world.drawLine(null);else world.drawLine(route,result.drawing);}},
       frame:receiveDuelFrame,
       home(){duel=undefined;remote=undefined;lapCount=previous.laps;sessionOptions.mode=previous.mode;if(activeCircuit.id!==previous.circuit)loadCircuit(previous.circuit,false);goHome();},
     });
@@ -834,7 +841,7 @@ function receiveDuelFrame(frame:RaceFrame,view:RoomView){
   const first=!remote || remote.round!==frame.round;
   if(first){
     loadDuelVenue(view);world.setDrawingFocus(null,false);world.showContinueHandle(null);world.showError();world.setPlanningPlayer(null);
-    world.showVehicles(null,playerCount);world.drawRaceLines(route?[route]:[]);world.vehicles.forEach(v=>v.clearEffects());
+    world.showVehicles(null,playerCount);world.drawLine(null);world.vehicles.forEach(v=>v.clearEffects());
   }
   previousPoses=first?[]:remote!.cars.map((s,i)=>{const p=frame.cars[i];return s.recoveryCount===p.recoveryCount?s:p;}).map(s=>({...s.position,y:s.elevation,heading:s.heading}));
   remote=frame;frameAt=performance.now();

@@ -2,6 +2,8 @@
 
 Multiplayer offers a same-device race and a private room. In a room, two to four human drivers each use one device. The host selects Newport Island, Golden Gate or Santa Monica and one to six laps. Open the invite or enter its code, draw privately, then lock in. The shared countdown begins once every driver has a valid line. The race menu leaves the shared clock running. Results show the same standings to everyone. Remaining drivers vote for the same lines or a fresh drawing round. Online races do not award local medals, records or challenge stamps.
 
+Each device chooses its own driver name and available paint before creating or joining a room, including through an invite. These choices persist in that device's driver preferences. Reloading an existing seat reconnects directly with its original room identity. Both multiplayer modes show only the current driver's line during drawing and preview and hide every line once planning is complete. The server sends each seat only its own stroke.
+
 ## Run locally
 
 Use Node 24 and the pinned pnpm. Install with `pnpm install --frozen-lockfile`. Run `pnpm duel:build`, then `pnpm duel:serve` in one terminal and `pnpm dev --host 0.0.0.0` in another. Development clients use port 2567 on the device hosting the game. For a different address, set `VITE_DUEL_SERVER` to the room service's HTTPS origin before starting Vite or building. Keep the website and room service independently deployable.
@@ -10,7 +12,7 @@ Use Node 24 and the pinned pnpm. Install with `pnpm install --frozen-lockfile`. 
 
 1. Deploy the repository's Render Blueprint (`render.yaml`) to a free Oregon web service. The health endpoint is `/health`. Keep the service on free compute for this beta.
 2. Set the GitHub Actions repository **variable** `ROADSTER_DUEL_SERVER` to the assigned public HTTPS origin. The existing verified Pages workflow embeds it when building the site. Use the assigned origin even if Render appends a suffix to the service name. No Render credentials belong in the game or its repository.
-3. Run the Pages workflow from the verified main revision. Open Multiplayer → Private Duel and join the invite from a separate network. The browser remains under the Pages project path while the SDK connects directly to the room service.
+3. Copy the room service's Deploy Hook URL from Render Settings to the GitHub Actions secret `RENDER_DEPLOY_HOOK_URL` in the `github-pages` environment. Render's independent auto-deploy is off. After verification, the Pages workflow requests the same commit on Render and waits for `/health` to report that full commit before publishing the site. If the server fails to update, Pages waits for a successful retry. Revert and release from `main` to roll back both services together.
 4. Check the first join after idle, an active two-device race and a reconnect from cellular. A sleeping free instance may take about a minute to start. A process restart closes its rooms. One free instance stores sessions in memory, without accounts or a database.
 
 ## Race authority and Unity interoperability
