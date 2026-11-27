@@ -10,11 +10,12 @@ import { hex } from './landscape/mesh';
 import { deckElevation, deckPlanningHeight, deckAt } from '../core/decks';
 import { surfaceTexture } from './textures';
 import { fleetHarbour } from './fleet-harbour';
-import { fleetAppearance as art, fleetWaterlineAppearance as wake, type PresentationTheme } from './themes';
+import { fleetAppearance as art, fleetWaterlineAppearance as wake, fleetRampGuideAppearance as guide, type PresentationTheme } from './themes';
 import { navalHull, navalProp, vesselFrame } from './fleet-model';
 import {carrierDeckSignature,aircraftApron} from './fleet-outfit';
 
 import { carrierLaneGeometry } from './fleet-carrier-lane';
+import { rampGuideQuads } from './fleet-ramp-guides';
 export { deckTriangles } from './fleet-deck-shapes';
 import { deckTriangles } from './fleet-deck-shapes';
 
@@ -60,6 +61,8 @@ export function fleetGeometry(track:TrackDefinition){
   for(const side of[-j.width/2,j.width/2]){const a={x:j.from.x+j.forward.z*side,z:j.from.z-j.forward.x*side},b={x:a.x+j.forward.x*j.rampLength,z:a.z+j.forward.z*j.rampLength};hull.quad([[a.x,base-.7,a.z],[b.x,base-.7,b.z],[b.x,base+j.lipHeight,b.z],[a.x,base,a.z]],art.hullShade);}
   for(const side of[-6,-3,0,3,6]){const a={x:j.from.x+j.forward.z*side,z:j.from.z-j.forward.x*side};hull.beam([a.x,base-.16,a.z],[a.x+j.forward.x*j.rampLength,base+j.lipHeight-.16,a.z+j.forward.z*j.rampLength],.12,art.ribs,5);}
  }
+ // Automatic ramps: bright edge strips and matching touchdown bars, in the existing paint batch.
+ for(const q of rampGuideQuads(track))paint.quad(q.points,guide.color);
  // Carrier runway lanes share existing floor/paint batches; the other ships stay unmarked.
  const lane=carrierLaneGeometry(track);deck.instance(lane.floor,{x:0,y:0,z:0});paint.instance(lane.markings,{x:0,y:0,z:0});details.instance(lane.kerbs,{x:0,y:0,z:0});
 
