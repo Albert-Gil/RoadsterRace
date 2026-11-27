@@ -42,6 +42,7 @@ export class DuelClient {
   private pending:{round:number;sequence:number;ability:Ability;at:number;shown?:{x:number;z:number}}[]=[];
   /** Your car's recent server positions by tick, to measure how far the drawn car was from the room. */
   private ownTrail:{tick:number;x:number;z:number;speed:number}[]=[];
+  private measuring:{entry:DuelClient['commandLog'][number];shown:{x:number;z:number};tick:number}[]=[];
   /** Development and test diagnostics: every command's outcome, or `unconfirmed` after 1.5 s. Never shown to players. */
   readonly commandLog:{round:number;sequence:number;ability:Ability;outcome:AbilityOutcome|'unconfirmed';roundTripMs?:number;displayErrorTicks?:number}[]=[];
   /** Smoothed one-way delay to the room, from command round trips (ms). */
@@ -196,7 +197,7 @@ export class DuelClient {
         const own=frame.cars[this.seatIndex];
         if(own&&this.cooldowns?.round===frame.round){own.hopReadyAt=this.cooldowns.hopReadyAt;own.thrustReadyAt=this.cooldowns.thrustReadyAt;}
         this.latest=frame;
-        if(own){this.ownTrail.push({tick:frame.tick,x:own.position.x,z:own.position.z,speed:own.speed});if(this.ownTrail.length>120)this.ownTrail.shift();}
+        if(own){this.ownTrail.push({tick:frame.tick,x:own.position.x,z:own.position.z,speed:own.speed});if(this.ownTrail.length>120)this.ownTrail.shift();this.measure();}
         if(this.queued&&!frame.countdown&&this.view.phase==='racing'){const ability=this.queued;this.queued=undefined;this.send(ability);}
         this.expirePending();
         this.hooks.frame(frame,this.view);
@@ -224,7 +225,7 @@ export class DuelClient {
       history.replaceState(null, '', invite);
     }
     if(view.phase==='lobby'){this.roundDrawn=0;this.waiting=false;}
-    if(this.view?.round!==view.round){this.ownTrail=[];this.latest=undefined;this.sequence=0;this.waiting=false;this.menu=false;this.queued=undefined;this.pending=[];this.cooldowns=undefined;}
+    if(this.view?.round!==view.round){this.ownTrail=[];this.measuring=[];this.latest=undefined;this.sequence=0;this.waiting=false;this.menu=false;this.queued=undefined;this.pending=[];this.cooldowns=undefined;}
     const previousPhase=this.view?.phase;
     this.view=view;
     if(view.phase==='results' && previousPhase!=='results' && this.latest)this.hooks.frame({...this.latest,events:[]},view);
@@ -329,14 +330,19 @@ export class DuelClient {
     if(i<0)return;
     const [p]=this.pending.splice(i,1),roundTrip=performance.now()-p.at;
     this.oneWayMs=this.oneWayMs?this.oneWayMs*.8+roundTrip/2*.2:roundTrip/2;
-    // How far (in ticks of travel) the car you saw was from the car the room moved when it applied the press.
-    let displayErrorTicks:number|undefined;
-    const k=this.ownTrail.findIndex(e=>e.tick>=r.tick),b=this.ownTrail[k],a=this.ownTrail[k-1];
-    if(p.shown&&a&&b&&b.speed>1){
-      const t=(r.tick-a.tick)/Math.max(1,b.tick-a.tick),x=a.x+(b.x-a.x)*t,z=a.z+(b.z-a.z)*t;
-      displayErrorTicks=Math.round(Math.hypot(p.shown.x-x,p.shown.z-z)/b.speed*60*10)/10;
-    }
-    this.log({round:r.round,sequence:r.sequence,ability:r.ability,outcome:r.outcome,roundTripMs:Math.round(roundTrip),displayErrorTicks});
+    const entry={round:r.round,sequence:r.sequence,ability:r.ability,outcome:r.outcome,roundTripMs:Math.round(roundTrip)} as DuelClient['commandLog'][number];
+    this.log(entry);
+    // How far (in ticks of travel) the car you saw was from the car the room moved when it applied the press;
+    // measured once a frame at or after that tick has arrived.
+    if(p.shown){this.measuring.push({entry,shown:p.shown,tick:r.tick});this.measure();}
+  }
+  private measure(){
+    this.measuring=this.measuring.filter(m=>{
+      const k=this.ownTrail.findIndex(e=>e.tick>=m.tick),b=this.ownTrail[k],a=this.ownTrail[k-1]??b;
+      if(!b)return this.measuring.length<20;
+      if(b.speed>1){const t=(m.tick-a.tick)/Math.max(1,b.tick-a.tick),x=a.x+(b.x-a.x)*t,z=a.z+(b.z-a.z)*t;m.entry.displayErrorTicks=Math.round(Math.hypot(m.shown.x-x,m.shown.z-z)/b.speed*60*10)/10;}
+      return false;
+    });
   }
   /** Commands with no reply after 1.5 s stay unconfirmed in diagnostics only. */
   private expirePending(){
