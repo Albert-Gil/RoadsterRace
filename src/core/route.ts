@@ -30,7 +30,7 @@ function validateLap(points: Point[], track: TrackDefinition): { error: RouteRes
     previous = projection;
   }
   const fail = (message: string, point: Point) => ({ error: { ok: false as const, message, point }, course });
-  if (backwards > track.length * DRAWING_RULES.backwardShare) return fail('Follow the arrows around the circuit. Try drawing the other way.', points[0]);
+  if (backwards > track.length * DRAWING_RULES.backwardShare) return fail('Draw the way the big arrows in the start box point. Try the other direction.', points[0]);
   if (unwrapped < track.length * DRAWING_RULES.minimumLapProgress || lapCoverage(points, drawnDistances, track) < DRAWING_RULES.minimumLapProgress) return fail('Continue around the circuit before crossing the finish line.', points[points.length - 1]);
   if (unwrapped > track.length * 1.08) return fail('Draw just one lap, then lift near the start.', points[points.length - 1]);
   return { error: null, course };
@@ -69,7 +69,7 @@ export function compileRoute(input: DrawSample[], track: TrackDefinition): Route
   const cleaned = cleanDrawnRoute(samples, track, true);
   // Erase corrections before resampling so their clocks cannot contaminate a retained segment.
   samples = prepareDrawingSamples(cleaned.samples);
-  if (samples.length < 12) return { ok: false, message: 'Follow the arrows and draw one complete lap in the circuit direction.', point: input[0] };
+  if (samples.length < 12) return { ok: false, message: 'Start in the glowing box and draw one complete lap the way its arrows point.', point: input[0] };
   const rawError = validateLap(samples, track).error;
   if (rawError) return rawError;
   const speeds = gestureSpeeds(samples, track.length);

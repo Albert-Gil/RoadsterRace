@@ -14,7 +14,7 @@ export interface PlanningView { preview: boolean; playerCount: number; turn: num
 export function planningPanel({ preview, playerCount, turn, playerName, humans, inTour, privateDuel = false, tutorial = false, message, note, sector }: PlanningView) {
   const heading = sector?.overview ? 'Circuit overview' : sector ? `Sector ${sector.index + 1} of ${sector.total}` : '';
   const hint = message || note || (sector?.overview ? `Draw in ${sector.total} sectors or choose the whole circuit.`
-    : sector && !preview ? (sector.continuing ? 'Touch the glowing end to continue.' : 'Draw from the start line. Lift to move on.') : '');
+    : sector && !preview ? (sector.continuing ? 'Touch the glowing end to continue.' : 'Start in the glowing box, the way its arrows point. Lift to move on.') : '');
   const guidance = heading || hint ? `<div class="planning-error ${message ? 'instruction' : 'planning-note'}" role="${message ? 'alert' : 'status'}">${heading ? `<strong>${heading}</strong>` : ''}${hint ? `<span>${escapeHtml(hint)}</span>` : ''}</div>` : '';
   const exampleIcon = '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 18h6m-5 3h4M12 3a6 6 0 0 0-3.5 10.9c.6.4 1 1.1 1 1.9V16h5v-.2c0-.8.4-1.5 1-1.9A6 6 0 0 0 12 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>';
   const leave = inTour || tutorial || privateDuel;

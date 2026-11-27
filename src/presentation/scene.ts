@@ -24,6 +24,8 @@ import '@babylonjs/core/Meshes/instancedMesh';
 import type { InstancedMesh } from '@babylonjs/core/Meshes/instancedMesh';
 import { MeshBuilder } from '@babylonjs/core/Meshes/meshBuilder';
 import { VertexBuffer } from '@babylonjs/core/Buffers/buffer';
+import { VertexData } from '@babylonjs/core/Meshes/mesh.vertexData';
+import { startZoneAppearance, startZoneTriangles, type Triangle } from './start-zone';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
 import { Texture } from '@babylonjs/core/Materials/Textures/texture';
 import { Scene } from '@babylonjs/core/scene';
@@ -86,6 +88,7 @@ export class GameScene {
   private lines: PaceLine[] = [];
   private ignoredLines: PaceLine[] = [];
   private approach: Mesh;
+  private startFill: Mesh;
   private errorLine?: PaceLine;
   private activePlayer: number | null = null;
   private driverColors?: string[];
@@ -236,29 +239,25 @@ export class GameScene {
     }
     const startMat = mat('start-glow', theme.players[0]); startMat.emissiveColor = Color3.FromHexString(theme.players[0]).scale(0.5);
     this.marker = MeshBuilder.CreateGround('start-finish-gate', { width: gate.width, height: 1.6 }, this.scene); this.marker.position.set(gate.center.x, gateHeight+0.24, gate.center.z); this.marker.rotation.y = startHeading; this.marker.material = startMat; startMat.alpha = 0.32;
-    const guides: Vector3[][] = [];
-    const at = (across: number, along: number) => { const p = gatePoint(track, across, along); return new Vector3(p.x, gateHeight+0.26, p.z); };
-    const zone = drawingStartBounds(track);
-    for (const side of [-1, 1]) for (let along = zone.from; along < zone.to; along += 1.4) guides.push([at(side * zone.halfWidth, along), at(side * zone.halfWidth, Math.min(zone.to, along + 0.8))]);
-    for (const along of [zone.from, zone.to]) for (let across = -zone.halfWidth; across < zone.halfWidth; across += 1.4) guides.push([at(across, along), at(Math.min(zone.halfWidth, across + 0.8), along)]);
-    for (const across of [-gate.width / 4, gate.width / 4]) guides.push([at(across - 0.7, -6), at(across, -4.6), at(across + 0.7, -6)]);
-    const approach = MeshBuilder.CreateLineSystem('drawing-approach-zone', { lines: guides }, this.scene); approach.color = Color3.FromHexString(track.surface==='packed-snow'?theme.scene.structure:'#d4e6df'); approach.alpha = 0.8; this.approach = approach;
+    // The drawing start box: tinted fill, solid border and two large arrows on the main straight.
+    const zone = startZoneTriangles(track), guideColor = track.surface==='packed-snow'?theme.scene.structure:'#ffffff';
+    const zoneMesh = (name: string, triangles: Triangle[], color: string, alpha: number) => {
+      const positions = triangles.flatMap(t => t.flatMap(p => [p.x, gateHeight+0.27, p.z])), data = new VertexData();
+      data.positions = positions; data.indices = Array.from({ length: positions.length / 3 }, (_, i) => i); data.normals = triangles.flatMap(() => [0,1,0,0,1,0,0,1,0]);
+      const mesh = new Mesh(name, this.scene); data.applyToMesh(mesh);
+      const material = mat(name, color); material.emissiveColor = Color3.FromHexString(color); material.disableLighting = true; material.backFaceCulling = false; material.alpha = alpha;
+      mesh.material = material; mesh.isPickable = false; return mesh;
+    };
+    this.startFill = zoneMesh('drawing-start-fill', zone.fill, theme.players[0], startZoneAppearance.fillAlpha);
+    this.approach = zoneMesh('drawing-approach-zone', zone.guide, guideColor, startZoneAppearance.guideAlpha);
     const err = mat('error', '#ec765a'); err.emissiveColor = Color3.FromHexString('#ec765a');
     this.errorMarker = MeshBuilder.CreateTorus('route-error', { diameter: 4, thickness: 0.25, tessellation: 32 }, this.scene); this.errorMarker.material = err; this.errorMarker.isVisible = false;
     const caution = mat('ramp-caution', '#ffbf3c'); caution.emissiveColor = Color3.FromHexString('#ffbf3c');
     this.rampWarning = MeshBuilder.CreateTorus('ramp-warning', { diameter: 15, thickness: 1.6, tessellation: 40 }, this.scene); this.rampWarning.material = caution; this.rampWarning.setEnabled(false);
-    // Small arrows teach direction without a screen-space overlay covering the circuit.
-    if(!track.decks)for (const fraction of [10, 45, 95, 150, 195].map(value => value / 216)) {
-      const i = Math.min(n - 1, Math.floor(fraction * n));
-      const a = p[i], b = p[i + 1], angle = Math.atan2(b.x - a.x, b.z - a.z);
-      const dx = Math.sin(angle), dz = Math.cos(angle), arrowHeight=track.decks?(deckPlanningHeight(a,track)??0):(a.y??0);
-      const tri = MeshBuilder.CreateLines('direction-arrow', { points: [new Vector3(a.x - dx - dz * 0.8, arrowHeight+0.2, a.z - dz + dx * 0.8), new Vector3(a.x + dx, arrowHeight+0.2, a.z + dz), new Vector3(a.x - dx + dz * 0.8, arrowHeight+0.2, a.z - dz - dx * 0.8)] }, this.scene);
-      tri.color = Color3.FromHexString(track.surface==='packed-snow'?theme.scene.structure:'#edf4e8');
-    }
     // Bake static scenery by material: curbs and foliage should not each cost a draw call.
     const staticGroups = new Map<number, Mesh[]>();
     for (const m of [...this.scene.meshes]) {
-      if (!(m instanceof Mesh) || m.metadata?.dynamicScenery || m.getClassName() === 'LinesMesh' || m === this.marker || m === this.approach || m === this.errorMarker || m === this.rampWarning || !m.material) continue;
+      if (!(m instanceof Mesh) || m.metadata?.dynamicScenery || m.getClassName() === 'LinesMesh' || m === this.marker || m === this.approach || m === this.startFill || m === this.errorMarker || m === this.rampWarning || !m.material) continue;
       const group = staticGroups.get(m.material.uniqueId) ?? []; group.push(m); staticGroups.set(m.material.uniqueId, group);
     }
     for (const group of staticGroups.values()) {
@@ -635,13 +634,15 @@ export class GameScene {
   }
   /** Clears the preview markers; with a point, marks the first crash stretch. Ramp rings are cleared only by a bare call. */
   showError(point?: Point, section?: Point[]) { if (!point) this.showRampWarnings([]); this.errorLine?.dispose(); this.errorLine = undefined; this.errorMarker.isVisible = !!point; if (point) this.errorMarker.position.set(point.x, (this.track.decks?planningHeight(point,this.track):0)+0.3, point.z); if (section) this.errorLine = new PaceLine(this.scene, section, section.map(() => 9), this.theme, 0, false, true, false, this.track); }
-  showStart(show: boolean) { this.marker.isVisible = show; this.approach.isVisible = show; }
+  showStart(show: boolean) { this.marker.isVisible = show; this.approach.isVisible = show; this.startFill.isVisible = show; }
   get depthFeatures() { return { refinements: this.sceneryRuntime.refinements ?? [], hopCores: this.scene.meshes.filter(m=>m.name === 'four-downward-cold-gas-cores' && m.isEnabled() && m.isVisible).length, vehicleScale: sceneTuning.vehicle.racingScale, ghostVisible:this.lapGhost.visible, graphicsLevel: this.graphicsLevel, graphicsChoice: this.graphicsChoice, renderer: this.engine.isWebGPU ? 'webgpu' : 'webgl2', postPasses: this.post.passes, sky: this.scene.environmentTexture?.name ?? null, decorativeMotion: this.scene.meshes.filter(m => m.metadata?.dynamicScenery).map(m => ({name: m.name, rotation: m.rotation.asArray(), position: m.position.asArray()})), perspective: this.camera.mode === Camera.PERSPECTIVE_CAMERA, shadowMapSize: this.shadows.getShadowMap()?.getSize().width ?? 0, shadowCasters: [...this.shadowCasters].filter(m => !m.isDisposed()).length, staticShadows: { enabled: this.shadowCache?.enabled ?? false, ...this.shadowCache?.stats, perFrameCasters: this.shadows.getShadowMap()?.renderList?.length ?? 0 }, renderReady: this.scene.isReady(), worldReady: this.scene.isReady(), pending: this.scene.meshes.filter(m => !m.isReady(true)).map(m => m.name), carTriangles: this.vehicle.triangleCount, pace: this.theme.pace, lineWidths: this.lines.map(line => line.cssWidths), ignoredStrokeCount: this.ignoredLines.length }; }
   render(time: number, covered = false) {
     // The first frame starts deferred scenery loading. Once Home covers the canvas,
     // the DOM artwork and menus can run without redrawing the hidden track or its shadows.
     if (covered && this.renderedOnce) { this.lastFrame = 0; return; }
     const reduced = this.reducedMotion.matches, frameMs = this.lastFrame ? (time - this.lastFrame) * 1000 : 0; this.lastFrame = time;
+    // The start box border and arrows breathe gently while visible, so a first-time player finds them.
+    if (this.approach.isVisible && this.approach.material) { const z = startZoneAppearance; this.approach.material.alpha = reduced ? z.guideAlpha : z.pulseLow + (z.guideAlpha - z.pulseLow) * (0.5 + 0.5 * Math.cos(time * Math.PI * 2 * z.pulseHz)); }
     if (this.graphicsChoice === 'auto' && this.governor.sample(frameMs)) this.stepDownPending = true;
     // Rebuilding shadows and passes can stall a frame; never do it mid-race (it would trigger the slow-frame pause).
     if (this.stepDownPending && !['racing', 'countdown'].includes(this.layoutMode)) {
