@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { waitForPhase } from './ui';
+import { waitForPhase, voteEveryone } from './ui';
 mkdirSync('artifacts/santa-monica', { recursive: true });
 const state = (p: Page) => p.evaluate(() => (window as any).__roadster.getState());
 const graphics = (p: Page) => p.evaluate(() => (window as any).__roadster.getGraphics());
@@ -86,6 +86,6 @@ test('four players race mixed branches with bounded draw calls and a clean remat
   await waitForPhase(page, 'results', 120000);
   const finished = await state(page); expect(finished.players.every((p: any) => p.finished)).toBe(true); expect(Math.max(...calls)).toBeLessThanOrEqual(150);
   writeFileSync('artifacts/santa-monica/multiplayer-report.json', JSON.stringify({ maxDrawCalls: Math.max(...calls), players: finished.players, standings: finished.standings }, null, 2));
-  await page.screenshot({ path: 'artifacts/santa-monica/multiplayer-results.png' }); await page.getByRole('button', { name: 'Restart', exact: false }).click();
+  await page.screenshot({ path: 'artifacts/santa-monica/multiplayer-results.png' }); await voteEveryone(page, 'Race again');
   expect((await state(page)).readyPlayers).toEqual([false, false, false, false]);
 });

@@ -2,7 +2,7 @@ import { circuits } from '../../src/content/circuits';
 import { test, expect, type Page } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { createTournament, finalizeRound } from '../../src/core/tournament';
-import { waitForPhase } from './ui';
+import { waitForPhase, voteEveryone } from './ui';
 mkdirSync('artifacts/golden-gate', { recursive: true });
 const state = (page: Page) => page.evaluate(() => (window as any).__roadster.getState());
 test('older three-circuit championships are explained as incompatible after widening',async({page})=>{
@@ -60,7 +60,7 @@ test('Full Tour scores all registered circuits, survives refresh and ends with a
   expect(errors).toEqual([]); writeFileSync('artifacts/golden-gate/tournament-report.json', JSON.stringify({ reports, errors }, null, 2));
   await page.reload(); await page.getByRole('button', { name: 'Resume tournament', exact: false }).click();
   await expect(page.locator('#panel .eyebrow')).toHaveText('TOURNAMENT COMPLETE'); expect((await state(page)).tournament.results).toHaveLength(circuits.length);
-  await page.getByRole('button', { name: 'Race tournament again', exact: false }).click(); expect((await state(page)).tournament.results).toHaveLength(0);
+  await voteEveryone(page, 'Replay championship'); expect((await state(page)).tournament.results).toHaveLength(0);
 });
 test('custom schedule supports repeated circuits, 12 races, reorder, save/exit and discard', async ({ page }) => {
   await page.goto('/?circuit=golden-gate'); await page.getByRole('button', { name: 'Multiplayer', exact: false }).click();

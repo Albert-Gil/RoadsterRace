@@ -4,6 +4,8 @@ import type { Room } from '@colyseus/sdk';
 import { duelVenues, type RaceFrame, type RoomView } from './duels/protocol';
 import { rampAt, supported, groundHeight, FLIGHT_RULES } from './core/support';
 import { rampWarnings } from './core/ramp-warnings';
+import { resolveBallot, type BallotChoice } from './core/rematch-vote';
+import { ballotMarkup } from './ui/panels/ballot';
 import{snowSurfaceHeight}from'./presentation/surface-height';
 import { CPU_DRIVERS, humanCount, racerCount, controllerFor, type SessionOptions } from './core/session';
 import { computerRoute, stepComputers } from './core/computer';
@@ -151,6 +153,8 @@ let countdownRemaining = 0, resuming = false, best: number | null = null, previo
 let pauseReason='';
 /** Preview heads-up about stretches of the line the car cannot drive (it crashes there and is reset). */
 let planningNote: string | undefined;
+/** Shared-screen vote after a multiplayer race or a finished multiplayer championship, one entry per human seat. */
+let ballot: (BallotChoice | null)[] = [];
 let countdownBeat = 3, rechargeAnnounced: boolean[] = [];
 let world: GameScene;
 let previewGrid: { routes: CompiledRoute[]; track: typeof activeTrack; rotation: number; poses: ReturnType<typeof startingGrid> } | null = null;
@@ -346,7 +350,39 @@ function renderControls() {
   if(duel && playerCount>1){const i=Math.max(0,duel.seatIndex);controls.querySelector<HTMLElement>('.ability-cluster')?.style.setProperty('--identity', 'var(--player-'+(i+1)+')');const chip=controls.querySelector('.pod-identity');if(chip?.firstChild)chip.firstChild.textContent='P'+(i+1)+' ';}
 }
 function clearRaceInput() { race?.clearCommands(); input.clear(); clock.reset(); }
+/** Human seats that vote on Results: every human driver of the session or championship. */
+function ballotSeats(): { player: number; name: string }[] {
+  if (activeTour) return activeTour.drivers.flatMap((d, player) => d.controller === 'computer' ? [] : [{ player, name: d.name }]);
+  return Array.from({ length: humans() }, (_, player) => ({ player, name: driverName(player) }));
+}
+function ballotActive() {
+  if (phase !== 'results' || duel || sessionOptions.mode === 'tutorial' || activeChallenge || ballotSeats().length < 2) return false;
+  return activeTour ? activeTour.state.results.length === activeTour.state.rounds.length : sessionOptions.mode === 'multiplayer';
+}
+function ballotView() {
+  const tour = !!activeTour;
+  return ballotMarkup({ seats: ballotSeats().map(s => ({ ...s, name: escapeHtml(s.name) })), votes: ballot, heading: tour ? 'Play the championship again?' : 'Next race?',
+    options: tour ? [{ vote: 'same', label: 'Replay championship' }, { vote: 'home', label: 'Home' }] : [{ vote: 'same', label: 'Race again' }, { vote: 'redraw', label: 'New lines' }, { vote: 'home', label: 'Home' }] });
+}
+/** Same schedule, drivers, paints and laps; zero points and fresh drawings every round. */
+function replayTournament() {
+  if (!activeTour) return;
+  activeTour = { ...activeTour, state: createTournament(activeTour.state.rounds, activeTour.state.playerCount, activeTour.state.laps), ...(activeTour.challengeId ? { challengeEligible: true } : {}) }; challengeAttemptComplete = false; persistTour(); beginTourRound();
+}
+function castVote(seat: number, vote: string | undefined) {
+  const seats = ballotSeats(), allowed = activeTour ? ['same', 'home'] : ['same', 'redraw', 'home'];
+  if (!Number.isInteger(seat) || seat < 0 || seat >= seats.length || !vote || !allowed.includes(vote)) return;
+  ballot = seats.map((_, i) => i === seat ? vote as BallotChoice : ballot[i] ?? null);
+  const outcome = resolveBallot(ballot);
+  if (outcome === 'pending') { renderPanel(); panel.querySelector<HTMLElement>(`[data-action="vote"][data-seat="${seat}"][data-vote="${vote}"]`)?.focus(); return; }
+  ballot = [];
+  if (outcome === 'home') goHome();
+  else if (activeTour) replayTournament();
+  else if (outcome === 'same') { if (!audio.muted) audio.unlock(); enterReady(); }
+  else newSession(playerCount);
+}
 function setPhase(next: Phase) {
+  if (next === 'results' && phase !== 'results') ballot = [];
   if (next === 'drawing') strokeCompiler.prepare(activeTrack);
   else if (phase === 'drawing') strokeCompiler.close();
   // Coaching is a frozen race: it keeps the racing layout and is marked separately for the coach styles.
@@ -390,12 +426,12 @@ function panelMarkup(message?: string): string | null {
     case 'ready': return readyPanel({ playerCount, lapCount, readyPlayers, ghostSeconds: CONTACT_RULES.ghostStartSeconds, playerName });
     case 'paused': return pausedPanel({ soundOn: !audio.muted, status: pauseStatus() });
     case 'results':
-      if (activeTour) return tournamentResultsMarkup(activeTour, roundIndex) + (tourSaveFailed ? '<p class="save-status">Progress could not be saved. Keep this page open.</p>' : '');
+      if (activeTour) return tournamentResultsMarkup(activeTour, roundIndex, ballotActive() ? ballotView() : undefined) + (tourSaveFailed ? '<p class="save-status">Progress could not be saved. Keep this page open.</p>' : '');
       if (!race) return null;
       if (sessionOptions.mode === 'tutorial') return tutorialCompletePanel(race.racers[0].state.finishTime ?? undefined);
       return playerCount === 1
         ? timeTrialResultsPanel({ state: race.racers[0].state, lapCount, driver: playerName(0), trackName: activeTrack.name, personalBest: personalLap?.duration, newRecord: sessionLapRecord })
-        : raceResultsPanel({ standings: race.standings(), lapTimes: race.racers.map(r => r.state.lapTimes), playerName, cpuTag, trackName: activeTrack.name, lapCount });
+        : raceResultsPanel({ standings: race.standings(), lapTimes: race.racers.map(r => r.state.lapTimes), playerName, cpuTag, trackName: activeTrack.name, lapCount, ballot: ballotActive() ? ballotView() : undefined });
     case 'error': return errorPanel(message);
     default: return null;
   }
@@ -591,7 +627,8 @@ app.addEventListener('click', e => {
   if (action === 'tour-draw' && activeTour) newSession(activeTour.state.playerCount);
   if (action === 'tour-next' && activeTour && activeTour.state.results.length > roundIndex) beginTourRound();
   if (action === 'tour-resume') resumeTournament();
-  if (action === 'tour-again' && activeTour) { activeTour = { ...activeTour, state: createTournament(activeTour.state.rounds, activeTour.state.playerCount, activeTour.state.laps), ...(activeTour.challengeId ? { challengeEligible: true } : {}) }; challengeAttemptComplete = false; persistTour(); beginTourRound(); }
+  if (action === 'tour-again' && activeTour) replayTournament();
+  if (action === 'vote' && ballotActive()) castVote(Number(target!.dataset.seat), target!.dataset.vote);
   if (action === 'tour-discard') setPhase('tour-resume');
   if (action === 'tour-discard-cancel') setPhase('welcome');
   if (action === 'tour-discard-confirm') { savedTour = null; discardTournament(); setPhase('welcome'); }

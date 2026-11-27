@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { resultRows, waitForPhase } from './ui';
+import { resultRows, waitForPhase, voteEveryone } from './ui';
 import{CONTACT_RULES}from'../../src/core/vehicle-contact';
 import { formatTime } from '../../src/ui/format';
 
@@ -51,7 +51,7 @@ test('four-player ghost start uses race time, survives pause and resets on remat
   const rows = await resultRows(page);
   expect(rows.map(r => r.time)).toEqual(result.standings.map((s: any) => formatTime(s.finishTime)));
   expect(rows.map(r => r.place.replace('=', ''))).toEqual(result.standings.map((s: any) => String(s.rank)));
-  await page.getByRole('button', { name: 'Restart', exact: false }).click();
+  await voteEveryone(page, 'Race again');
   for (const key of ['KeyA', 'KeyL', 'KeyQ', 'KeyP']) await page.keyboard.press(key);
   await page.waitForFunction(() => { const s = (window as any).__roadster.getState(); return s.phase === 'racing' && s.race.time > 0.1; });
   expect((await state(page)).ghostStartRemaining).toBeGreaterThan(CONTACT_RULES.ghostStartSeconds-1);
@@ -86,7 +86,7 @@ test('two-player handoff, ready check, independent thrust, finish order and fres
   expect(finished.standings[0].player).toBe(0); expect(finished.best).toBeNull();
   await expect(page.locator('.standings tbody tr')).toHaveCount(2);
   await page.screenshot({ path: 'artifacts/multiplayer-results.png' });
-  await page.getByRole('button', { name: 'Restart' }).click();
+  await voteEveryone(page, 'Race again');
   expect((await state(page)).phase).toBe('ready'); expect((await state(page)).readyPlayers).toEqual([false, false]);
   expect((await state(page)).visibleRouteCount).toBe(0);
   await page.keyboard.press('KeyA'); await page.keyboard.press('KeyL');
@@ -164,4 +164,42 @@ test('three players require three ready pads and expose only their three control
   await page.keyboard.press('KeyL');
   await page.waitForFunction(() => (window as any).__roadster.getState().players[1].thrustCount === 1);
   expect((await state(page)).players.map((p: any) => p.thrustCount)).toEqual([0, 1, 0]);
+});
+
+/** Ends the current race quickly: both cars finish their practice lines at full speed. */
+async function raceToResults(page: Page, keys: string[]) {
+  for (const key of keys) await page.keyboard.press(key);
+  await waitForPhase(page, 'racing');
+  await waitForPhase(page, 'results', 120000);
+}
+const seatButton = (page: Page, seat: number, label: string) => page.locator(`[data-action="vote"][data-seat="${seat}"]`).filter({ hasText: label });
+
+test('the results vote waits for every seat, can be changed, and any redraw or Home vote decides', async ({ page }) => {
+  test.setTimeout(720_000); // three complete races on the software renderer
+  await planFriends(page, 3);
+  await raceToResults(page, ['KeyA', 'KeyL', 'KeyQ']);
+  await expect(page.locator('.ballot-seat')).toHaveCount(3);
+  // Repeated taps are idempotent, and keyboard activation counts like a tap.
+  await seatButton(page, 0, 'Race again').click(); await seatButton(page, 0, 'Race again').click();
+  await seatButton(page, 1, 'New lines').focus(); await page.keyboard.press('Enter');
+  await expect(page.locator('.ballot-status')).toHaveText(/Waiting for 3/);
+  await expect(seatButton(page, 0, 'Race again')).toHaveAttribute('aria-pressed', 'true');
+  expect((await state(page)).phase).toBe('results');
+  // Seat 2 changes its mind; the unanimous vote reuses the lines and opens a fresh ready check.
+  await seatButton(page, 1, 'Race again').click();
+  await seatButton(page, 2, 'Race again').click();
+  let s = await state(page); expect(s.phase).toBe('ready'); expect(s.readyPlayers).toEqual([false, false, false]); expect(s.confirmedCount).toBe(3); expect(s.visibleRouteCount).toBe(0);
+  // One redraw vote sends everyone back through private drawing.
+  await raceToResults(page, ['KeyA', 'KeyL', 'KeyQ']);
+  await expect(page.locator('.ballot-option[aria-pressed="true"]')).toHaveCount(0);
+  await seatButton(page, 0, 'Race again').click(); await seatButton(page, 1, 'Race again').click(); await seatButton(page, 2, 'New lines').click();
+  s = await state(page); expect(s.phase).toBe('drawing'); expect(s.turn).toBe(0); expect(s.confirmedCount).toBe(0); expect(s.visibleRouteCount).toBe(0);
+  for (let i = 0; i < 3; i++) {
+    if (i) await page.getByRole('button', { name: `I'm Player ${i + 1}` }).click();
+    await page.evaluate(() => (window as any).__roadster.usePracticeLine()); await page.getByRole('button', { name: 'Lock in my line' }).click();
+  }
+  // Any Home vote returns the group to the main menu, whatever the others chose.
+  await raceToResults(page, ['KeyA', 'KeyL', 'KeyQ']);
+  await seatButton(page, 0, 'New lines').click(); await seatButton(page, 1, 'Home').click(); await seatButton(page, 2, 'Race again').click();
+  expect((await state(page)).phase).toBe('welcome');
 });

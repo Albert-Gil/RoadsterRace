@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { waitForPhase } from './ui';
+import { waitForPhase, voteEveryone } from './ui';
 mkdirSync('artifacts/orbital', { recursive: true });
 const state = (page: Page) => page.evaluate(() => (window as any).__roadster.getState());
 
@@ -120,6 +120,6 @@ for (const count of [2, 3, 4]) test(`Orbital ${count}-player race finishes with 
   expect(Math.max(...calls)).toBeLessThanOrEqual(150); expect(errors).toEqual([]);
   await page.screenshot({ path: `artifacts/orbital/${count}-player-results.png` });
   writeFileSync(`artifacts/orbital/${count}-player-report.json`, JSON.stringify({ maxDrawCalls: Math.max(...calls), players: finished.players, errors }, null, 2));
-  await page.getByRole('button', { name: 'Restart', exact: false }).click();
+  await voteEveryone(page, 'Race again');
   const fresh = await state(page); expect(fresh.circuitId).toBe('orbital-launchyard'); expect(fresh.readyPlayers).toEqual(Array(count).fill(false)); expect(fresh.confirmedCount).toBe(count);
 });

@@ -24,3 +24,8 @@ export const soundToggle = (page: Page) => page.getByRole('button', { name: 'Sou
 export const resultRows = (page: Page) => page.locator('.standings:not(.championship-table) tbody tr').evaluateAll(rows => rows.map(row => ({
   place: row.querySelector('td')?.textContent?.trim() ?? '', driver: row.querySelector('th')?.textContent?.trim() ?? '', time: row.querySelectorAll('td')[1]?.childNodes[0]?.textContent?.trim() ?? '',
 })));
+/** Every human seat taps the same choice on the shared-screen Results vote (ui/panels/ballot.ts). */
+export async function voteEveryone(page: Page, label: string) {
+  const seats = await page.locator('.ballot-seat').count();
+  for (let seat = 0; seat < seats; seat++) await page.locator(`[data-action="vote"][data-seat="${seat}"]`).filter({ hasText: label }).click();
+}

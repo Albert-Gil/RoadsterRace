@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
-import { waitForPhase } from './ui';
+import { waitForPhase, voteEveryone } from './ui';
 
 mkdirSync('artifacts/race-settings', { recursive: true });
 
@@ -74,7 +74,7 @@ test('custom names and paints survive a six-lap local race, results and rematch'
   await expect(page.locator('.standings')).toContainText('Ana & Max'); await expect(page.locator('.standings')).toContainText('Lee');
   await expect(page.locator('.standing-laps').first()).toContainText('L6');
   await page.screenshot({ path: 'artifacts/race-settings/six-lap-results.png' });
-  await page.getByRole('button', { name: 'Restart', exact: false }).click();
+  await voteEveryone(page, 'Race again');
   const rematch = await page.evaluate(() => (window as any).__roadster.getState());
   expect(rematch.phase).toBe('ready'); expect(rematch.lapCount).toBe(6); expect(rematch.drivers).toEqual(result.drivers);
   expect(errors).toEqual([]);
