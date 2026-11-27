@@ -102,6 +102,16 @@ describe('private duel transport and authority',()=>{
       expect(host.frame!.order.every(s=>s.finished && s.finishTime!>0)).toBe(true);
       for(const d of drivers)expect(d.frame!.order).toEqual(host.frame!.order);
       const vote=circuit==='santa-monica'?'redraw':'same';
+      if(count>=3){
+        // The vote stays open until every driver has chosen, and choices can change until then.
+        drivers[0].room.send('rematch',{round:1,vote:'redraw'});
+        for(const d of drivers.slice(1,-1))d.room.send('rematch',{round:1,vote:'same'});
+        drivers[0].room.send('rematch',{round:1,vote:'same'});
+        await until(()=>host.view?.drivers.filter(s=>s.vote).length===count-1 && host.view.drivers[0].vote==='same');
+        expect(host.view?.round).toBe(1);
+        // One redraw vote from the last driver decides for everyone.
+        if(vote==='redraw'){drivers.at(-1)!.room.send('rematch',{round:1,vote:'redraw'});await until(()=>drivers.every(d=>d.view?.round===2));}
+      }
       for(const d of drivers)d.room.send('rematch',{round:1,vote});
       await until(()=>drivers.every(d=>d.view?.round===2));
       if(vote==='redraw')expect(host.view?.drivers.every(s=>!s.ready)).toBe(true);

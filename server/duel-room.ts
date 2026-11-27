@@ -7,6 +7,7 @@ import { coastalTrack } from '../src/core/track';
 import { goldenGateTrack } from '../src/core/tracks/golden-gate';
 import { santaMonicaTrack } from '../src/core/tracks/santa-monica';
 import type { CompiledRoute, DrawSample, TrackDefinition } from '../src/core/types';
+import { resolveBallot } from '../src/core/rematch-vote';
 import { DUEL_PROTOCOL, packFrame, type AbilityCommand, type DriverSeat, type DuelVenue, type RaceFrame, type Rematch, type RoomView } from '../src/duels/protocol';
 
 export const duelTracks = new Map([coastalTrack, goldenGateTrack, santaMonicaTrack].map(track => [track.id, track]));
@@ -169,10 +170,16 @@ export class DuelRoom extends Room {
     else if(this.view.phase==='results') this.checkVotes();
     else this.publish();
   }
+  /**
+   * Resolves the results vote with the same rule as local play (src/core/rematch-vote.ts): once
+   * every connected driver has voted, any redraw means fresh lines, otherwise the same lines.
+   * Seats still inside their 30-second reconnect window keep the vote open; seats that leave
+   * (Home or an expired reconnect) drop out of it. Another race needs at least two drivers.
+   */
   private checkVotes() {
-    const remaining=this.seats.filter(s=>s.connected);
-    if(remaining.length>=2 && !this.reserved.size && remaining.every(s=>s.vote && s.vote===remaining[0].vote)) {
-      const redraw=remaining[0].vote==='redraw';this.seats=remaining;this.view.round++;this.race=undefined;
+    const remaining=this.seats.filter(s=>s.connected), outcome=resolveBallot(remaining.map(s=>s.vote));
+    if(remaining.length>=2 && !this.reserved.size && outcome!=='pending') {
+      const redraw=outcome==='redraw';this.seats=remaining;this.view.round++;this.race=undefined;
       for(const s of remaining){s.vote=null;s.withdrawn=false;s.lastSequence=0;s.ready=!redraw;if(redraw){s.samples=undefined;s.route=undefined;}}
       if(!redraw){this.startRace();return;}
       this.view.phase='drawing';

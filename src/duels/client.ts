@@ -139,9 +139,14 @@ export class DuelClient {
     if(view.phase==='results'){
       this.show('Race results');
       for(const s of this.latest?.order??[]){const driver=view.drivers[s.player];this.content.append(el('p',(driver.withdrawn?'DNF':s.rank+'.')+' '+driver.name+(s.finishTime!=null?' · '+s.finishTime.toFixed(2)+' s':'')));}
-      const vote=(v:string)=>this.room?.send('rematch',{round:view.round,vote:v});
-      this.button('Race Again',()=>vote('same'),true);this.button('Draw New Lines',()=>vote('redraw'));
-      this.content.append(el('p',view.drivers.filter(d=>d.connected).map(d=>d.name+' · '+(d.vote==='same'?'Race again':d.vote==='redraw'?'New lines':'Choosing')).join(' / ')));
+      // Same rule as local play: once everyone still here has voted, any "New lines" wins. Votes can change until then.
+      const vote=(v:string)=>this.room?.send('rematch',{round:view.round,vote:v}),mine=seat?.vote;
+      const again=this.button('Race again',()=>vote('same'),true),redraw=this.button('New lines',()=>vote('redraw'));
+      again.setAttribute('aria-pressed',String(mine==='same'));redraw.setAttribute('aria-pressed',String(mine==='redraw'));
+      const here=view.drivers.filter(d=>d.connected),waiting=here.filter(d=>!d.vote);
+      this.content.append(el('p',here.map(d=>d.name+' · '+(d.vote==='same'?'Race again':d.vote==='redraw'?'New lines':'Choosing')).join(' / ')));
+      if(here.length<2)this.content.append(el('p','Another race needs at least two drivers.'));
+      else if(waiting.length)this.content.append(el('p','Waiting for '+waiting.map(d=>d.name).join(', ')+'.'));
     }else if(view.phase==='lobby'||view.phase==='drawing'&&(seat?.ready||this.waiting)){
       this.show(view.phase==='lobby'?'Private room':'Waiting for lines');
       this.content.append(el('p',duelVenues[view.circuit]+' · '+view.laps+' lap'+(view.laps===1?'':'s')));

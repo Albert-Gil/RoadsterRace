@@ -101,7 +101,7 @@ for(const [venue,count] of [['coastal-launch',2],['coastal-launch',4],['golden-g
         expect(standings).toEqual(results[0].slice(0,count));
       }
       const redraw=venue==='santa-monica';
-      await Promise.all(pages.map(p=>p.getByRole('button',{name:redraw?'Draw New Lines':'Race Again',exact:true}).click()));
+      await Promise.all(pages.map(p=>p.getByRole('button',{name:redraw?'New lines':'Race again',exact:true}).click()));
       await Promise.all(pages.map(p=>waitForPhase(p,redraw?'drawing':'racing')));
       expect(errors).toEqual([]);
     }finally{await Promise.all(contexts.map(c=>c.close()));}
