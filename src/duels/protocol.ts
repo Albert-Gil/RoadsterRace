@@ -3,8 +3,17 @@ import type { Standing } from '../core/local-race';
 
 export const DUEL_PROTOCOL = 2;
 export const duelVenues = {
-  'coastal-launch': 'Newport Island', 'golden-gate': 'Golden Gate', 'santa-monica': 'Santa Monica',
+  'coastal-launch': 'Newport Island', 'golden-gate': 'Golden Gate', 'santa-monica': 'Santa Monica', 'san-diego-fleet': 'San Diego Fleet',
 } as const;
+/** Offered by every room server. Others (San Diego Fleet) need the server's DUEL_EXTRA_VENUES flag; /health lists what is on. */
+export const defaultDuelVenues = ['coastal-launch', 'golden-gate', 'santa-monica'] as const;
+/** Circuits to offer, from a /health body: its venue list (known ids only), else the defaults. */
+export function offeredVenues(health: unknown): string[] {
+  const listed = (health as { venues?: unknown } | null)?.venues;
+  if (!Array.isArray(listed)) return [...defaultDuelVenues];
+  const known = listed.filter((id): id is string => typeof id === 'string' && Object.prototype.hasOwnProperty.call(duelVenues, id));
+  return known.length ? known : [...defaultDuelVenues];
+}
 export type DuelVenue = keyof typeof duelVenues;
 export type DuelPhase = 'lobby' | 'drawing' | 'countdown' | 'racing' | 'results';
 export type Rematch = 'same' | 'redraw';

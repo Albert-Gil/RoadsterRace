@@ -7,11 +7,17 @@ import { RULES } from '../src/core/simulation';
 import { coastalTrack } from '../src/core/track';
 import { goldenGateTrack } from '../src/core/tracks/golden-gate';
 import { santaMonicaTrack } from '../src/core/tracks/santa-monica';
+import { sanDiegoFleetTrack } from '../src/core/tracks/san-diego-fleet';
 import type { CompiledRoute, DrawSample, TrackDefinition } from '../src/core/types';
 import { resolveBallot } from '../src/core/rematch-vote';
-import { DUEL_PROTOCOL, packFrame, type AbilityCommand, type DriverSeat, type DuelVenue, type RaceFrame, type Rematch, type RoomView } from '../src/duels/protocol';
+import { DUEL_PROTOCOL, defaultDuelVenues, packFrame, type AbilityCommand, type DriverSeat, type DuelVenue, type RaceFrame, type Rematch, type RoomView } from '../src/duels/protocol';
 
-export const duelTracks = new Map([coastalTrack, goldenGateTrack, santaMonicaTrack].map(track => [track.id, track]));
+const allDuelTracks = [coastalTrack, goldenGateTrack, santaMonicaTrack, sanDiegoFleetTrack];
+/** Circuits this server offers: the defaults plus any listed in DUEL_EXTRA_VENUES (read on each call, comma-separated). */
+export function duelTracks(): Map<string, TrackDefinition> {
+  const extra = (process.env.DUEL_EXTRA_VENUES ?? '').split(',').map(id => id.trim()).filter(Boolean);
+  return new Map(allDuelTracks.filter(t => (defaultDuelVenues as readonly string[]).includes(t.id) || extra.includes(t.id)).map(t => [t.id, t]));
+}
 const tickMs = 1000 / 60;
 let rooms = 0;
 /** Rooms one process admits. Render Free has 0.1 CPU: raise only after reading the step-time log. */
@@ -75,7 +81,7 @@ export class DuelRoom extends Room {
   private events: RaceFrame['events'] = [];
 
   async onCreate(options: Options) {
-    this.track = duelTracks.get(options.circuit)!;
+    this.track = duelTracks().get(options.circuit)!;
     if (!this.track || !Number.isInteger(options.laps) || options.laps < 1 || options.laps > 6) throw new ServerError(400,'Choose a beta circuit and 1–6 laps.');
     this.compatible(options);
     while (creations.length && creations[0] < Date.now()-60_000) creations.shift();
@@ -96,7 +102,7 @@ export class DuelRoom extends Room {
     // The host may change circuit and laps in the lobby or on results; a circuit change means fresh lines.
     this.onMessage('settings',(c,data:{circuit?:string;laps?:number})=>{
       if(c.sessionId!==this.view.host||(this.view.phase!=='lobby'&&this.view.phase!=='results'))return;
-      const track=duelTracks.get(data?.circuit as DuelVenue), laps=data?.laps;
+      const track=duelTracks().get(data?.circuit as DuelVenue), laps=data?.laps;
       if(!track||!Number.isInteger(laps)||laps!<1||laps!>6)return;
       if(this.seats.some(s=>s.versions[track.id]!==track.version)){c.send('notice','Someone in this room has a different version of that circuit.');return;}
       if(track.id!==this.track.id&&this.view.phase==='results'){this.forceRedraw=true;this.seats.forEach(s=>s.vote=null);}

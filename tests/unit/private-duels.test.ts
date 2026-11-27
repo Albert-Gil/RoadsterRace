@@ -4,11 +4,11 @@ import { WebSocketTransport } from '@colyseus/ws-transport';
 import { Client, type Room } from '@colyseus/sdk';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { DuelRoom } from '../../server/duel-room';
+import { DuelRoom, duelTracks } from '../../server/duel-room';
 import { createPracticeSamples, COMPILER_VERSION } from '../../src/core/route';
 import { RULES } from '../../src/core/simulation';
 import { findCircuit } from '../../src/content/circuits';
-import { DUEL_PROTOCOL, unpackFrame, type WireFrame, type RaceFrame, type RoomView } from '../../src/duels/protocol';
+import { DUEL_PROTOCOL, offeredVenues, unpackFrame, type WireFrame, type RaceFrame, type RoomView } from '../../src/duels/protocol';
 
 const delay=(ms:number)=>new Promise(resolve=>setTimeout(resolve,ms));
 async function until(predicate:()=>unknown){
@@ -41,6 +41,25 @@ describe('private duel transport and authority',()=>{
     client=new Client('http://127.0.0.1:'+(http.address() as AddressInfo).port);
   });
   afterAll(async()=>{await server.gracefullyShutdown(false);});
+  it('offers San Diego Fleet only when the server flag lists it',async()=>{
+    const fleet=findCircuit('san-diego-fleet').track;
+    const opts={circuit:fleet.id,laps:1,protocol:DUEL_PROTOCOL,physics:RULES.version,compiler:COMPILER_VERSION,versions:{[fleet.id]:fleet.version},name:'A',paint:'glacier'};
+    const before=process.env.DUEL_EXTRA_VENUES;
+    try{
+      delete process.env.DUEL_EXTRA_VENUES;
+      expect([...duelTracks().keys()]).toEqual(['coastal-launch','golden-gate','santa-monica']);
+      await expect(client.create('private_duel',opts)).rejects.toThrow(/beta circuit/);
+      process.env.DUEL_EXTRA_VENUES=' san-diego-fleet ,not-a-venue';
+      expect(duelTracks().get(fleet.id)?.version).toBe(fleet.version);
+      const room=await client.create('private_duel',opts);
+      const host=new Driver(room);
+      await until(()=>host.view?.circuit===fleet.id&&host.view.trackVersion===fleet.version);
+      await room.leave();
+    }finally{ if(before===undefined)delete process.env.DUEL_EXTRA_VENUES; else process.env.DUEL_EXTRA_VENUES=before; }
+    expect(offeredVenues({venues:['golden-gate','san-diego-fleet','bogus']})).toEqual(['golden-gate','san-diego-fleet']);
+    expect(offeredVenues({})).toEqual(['coastal-launch','golden-gate','santa-monica']);
+    expect(offeredVenues({venues:[]})).toEqual(['coastal-launch','golden-gate','santa-monica']);
+  });
   it('lets only the host change circuit and laps, forces fresh lines after a circuit change, and removes a slow drawer after the grace period',async()=>{
     const newport=findCircuit('coastal-launch').track,gate=findCircuit('golden-gate').track,versions={[newport.id]:newport.version,[gate.id]:gate.version};
     const opts={circuit:newport.id,laps:1,protocol:DUEL_PROTOCOL,physics:RULES.version,compiler:COMPILER_VERSION,versions,name:'A',paint:'glacier'};

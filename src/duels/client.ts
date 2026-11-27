@@ -1,5 +1,5 @@
 import { Client, type Room } from '@colyseus/sdk';
-import { DUEL_PROTOCOL, duelVenues, unpackFrame, type Cooldowns, type WireFrame, type DuelVenue, type RoomView, type RaceFrame, type DrawingPacket } from './protocol';
+import { DUEL_PROTOCOL, duelVenues, offeredVenues, unpackFrame, type Cooldowns, type WireFrame, type DuelVenue, type RoomView, type RaceFrame, type DrawingPacket } from './protocol';
 import { RULES } from '../core/simulation';
 import { COMPILER_VERSION } from '../core/route';
 import type { Ability, DrawSample } from '../core/types';
@@ -44,6 +44,8 @@ export class DuelClient {
   private queued?:Ability;
   private pending:{ability:Ability;at:number;before?:number}[]=[];
   private roundDrawn=0;
+  /** Circuits the room server offers; Fleet appears only once /health lists it. */
+  private venues=offeredVenues(null);
   private dialog=el('dialog');
   private content=el('section');
   private status=el('p');
@@ -83,7 +85,10 @@ export class DuelClient {
     };
     this.content.append(nameLabel,paintLabel);
     const circuit=el('select');circuit.setAttribute('aria-label','Circuit');
-    for(const [id,name] of Object.entries(duelVenues)) circuit.add(new Option(name,id));
+    const fillVenues=()=>{const keep=circuit.value;circuit.replaceChildren(...this.venues.map(id=>new Option(duelVenues[id as DuelVenue],id)));if(this.venues.includes(keep))circuit.value=keep;};
+    fillVenues();
+    // Ask the server which circuits it offers; this also starts waking a sleeping free instance.
+    if(duelEndpoint)void this.fetchHealth(20_000).then(health=>{if(health&&!this.closed){this.venues=offeredVenues(health);fillVenues();}});
     const laps=el('select');laps.setAttribute('aria-label','Race distance');
     for(let i=1;i<=6;i++)laps.add(new Option(i+' lap'+(i===1?'':'s'),String(i)));
     const invite=initialCode?checkRoomCode(initialCode):undefined;
@@ -99,6 +104,13 @@ export class DuelClient {
     }
     if(invite&&!invite.ok)this.status.textContent=invite.reason==='old-invite'?OLD_INVITE:'This invite link is not valid. Ask for a new one.';
     if(reclaimed&&invite?.ok)void this.connect(invite.code,undefined,undefined,reclaimed);
+  }
+  private async fetchHealth(timeout:number):Promise<unknown>{
+    const url=new URL(duelEndpoint!);url.protocol=url.protocol==='wss:'?'https:':url.protocol==='ws:'?'http:':url.protocol;
+    const abort=new AbortController();const timer=setTimeout(()=>abort.abort(),timeout);
+    try{const response=await fetch(new URL('/health',url),{signal:abort.signal,cache:'no-store'});return response.ok?await response.json():null;}
+    catch{return null;}
+    finally{clearTimeout(timer);}
   }
   private async connect(code:string,circuit:DuelVenue='coastal-launch',laps=1,reclaimed?:Room) {
     if(this.connecting||this.closed)return;
@@ -117,6 +129,7 @@ export class DuelClient {
         finally{clearTimeout(timer);}
         if(!response.ok)throw new Error(SERVER_UNREACHABLE);
         const health=await response.json().catch(()=>null) as Partial<ServerVersions>|null;
+        this.venues=offeredVenues(health);
         if(health&&typeof health.protocol==='number'&&typeof health.physics==='number'&&typeof health.compiler==='number'){
           const fit=compareVersions({protocol:health.protocol,physics:health.physics,compiler:health.compiler,tracks:health.tracks??{}},{protocol:DUEL_PROTOCOL,physics:RULES.version,compiler:COMPILER_VERSION,tracks:this.hooks.versions});
           if(fit==='client-outdated')throw new Error(GAME_OUTDATED);
@@ -186,7 +199,7 @@ export class DuelClient {
   private hostSettings(view:RoomView){
     if(view.host!==this.room?.sessionId)return;
     const circuit=el('select'),laps=el('select');circuit.setAttribute('aria-label','Circuit');laps.setAttribute('aria-label','Race distance');
-    for(const [id,name] of Object.entries(duelVenues))circuit.add(new Option(name,id));
+    for(const id of new Set([...this.venues,view.circuit]))circuit.add(new Option(duelVenues[id as DuelVenue],id));
     for(let i=1;i<=6;i++)laps.add(new Option(i+' lap'+(i===1?'':'s'),String(i)));
     circuit.value=view.circuit;laps.value=String(view.laps);
     const send=()=>this.room?.send('settings',{circuit:circuit.value,laps:Number(laps.value)});

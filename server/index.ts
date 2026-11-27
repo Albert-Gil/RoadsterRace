@@ -11,11 +11,11 @@ function releaseContract(): string | null {
   try { return JSON.parse(readFileSync(new URL('./contract.json', import.meta.url), 'utf8')).contract ?? null; } catch { return null; }
 }
 const contract = releaseContract();
-const venues = Object.keys(duelVenues).filter(id => duelTracks.has(id));
+const enabled = duelTracks(), venues = Object.keys(duelVenues).filter(id => enabled.has(id));
 const health = JSON.stringify({
   ok: true, revision: process.env.RENDER_GIT_COMMIT ?? null, contract,
   protocol: DUEL_PROTOCOL, physics: RULES.version, compiler: COMPILER_VERSION,
-  tracks: Object.fromEntries([...duelTracks.values()].map(track => [track.id, track.version])),
+  tracks: Object.fromEntries([...enabled.values()].map(track => [track.id, track.version])),
   venues,
 });
 

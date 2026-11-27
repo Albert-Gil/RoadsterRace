@@ -11,3 +11,5 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "24"
+      # San Diego Fleet stays out of duels until the real-device 4-player test passes.
+      # To enable it, set DUEL_EXTRA_VENUES=san-diego-fleet in the Render dashboard (docs/PRIVATE_DUELS.md).
