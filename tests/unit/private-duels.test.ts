@@ -5,7 +5,8 @@ import { Client, type Room } from '@colyseus/sdk';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { DuelRoom, duelTracks } from '../../server/duel-room';
-import { createPracticeSamples, COMPILER_VERSION } from '../../src/core/route';
+import { createPracticeSamples, compileRoute, COMPILER_VERSION } from '../../src/core/route';
+import { LocalRace } from '../../src/core/local-race';
 import { RULES } from '../../src/core/simulation';
 import { findCircuit } from '../../src/content/circuits';
 import { DUEL_PROTOCOL, offeredVenues, unpackFrame, type WireFrame, type RaceFrame, type RoomView } from '../../src/duels/protocol';
@@ -60,6 +61,40 @@ describe('private duel transport and authority',()=>{
     expect(offeredVenues({})).toEqual(['coastal-launch','golden-gate','santa-monica']);
     expect(offeredVenues({venues:[]})).toEqual(['coastal-launch','golden-gate','santa-monica']);
   });
+  it('races San Diego Fleet online with the same jumps, recoveries and finish times as a local race',async()=>{
+    const track=findCircuit('san-diego-fleet').track, before=process.env.DUEL_EXTRA_VENUES;
+    process.env.DUEL_EXTRA_VENUES='san-diego-fleet';
+    const options={name:'A',paint:'glacier',protocol:DUEL_PROTOCOL,physics:RULES.version,compiler:COMPILER_VERSION,versions:{[track.id]:track.version},circuit:track.id,laps:1};
+    const drivers:Driver[]=[];
+    try{
+      drivers.push(new Driver(await client.create('private_duel',options)));
+      const code=drivers[0].room.roomId;
+      for(let i=1;i<4;i++)drivers.push(new Driver(await client.joinById(code,{...options,name:'D'+(i+1)})));
+      await until(()=>drivers[0].view?.drivers.length===4);
+      drivers[0].room.send('start');
+      await until(()=>drivers.every(d=>d.view?.phase==='drawing'));
+      // 8 s and 8.5 s clear every ramp or splash once; 9 s and 12 s fall short repeatedly.
+      const lines=[8,8.5,9,12].map(seconds=>createPracticeSamples(track,seconds).map(p=>[p.x,p.z,p.time]));
+      drivers.forEach((d,i)=>d.room.send('line',{round:1,samples:lines[i]}));
+      await until(()=>drivers.every(d=>d.frame?.countdown));
+      const room=matchMaker.getLocalRoomById(code) as DuelRoom;
+      room.setTimestep();
+      for(let i=0;i<400 && drivers[0].view?.phase!=='results';i++){room['advance'](60*1000/60);await delay(0);}
+      await until(()=>drivers.every(d=>d.view?.phase==='results'));
+      const local=new LocalRace(lines.map(line=>{const r=compileRoute(line.map(([x,z,time])=>({x,z,time})),track);if(!r.ok)throw new Error(r.message);return r.route;}),track,1);
+      const kinds=new Set<string>();
+      while(!local.finished&&local.tick<20000){local.step();for(const e of local.drainEvents())kinds.add(e.type);}
+      expect(local.finished).toBe(true);
+      expect([...kinds]).toEqual(expect.arrayContaining(['takeoff','landing','recovery','finish']));
+      const online=drivers[0].frame!.order;
+      expect(online.map(s=>s.player)).toEqual(local.standings().map(s=>s.player));
+      online.forEach(s=>expect(s.finishTime).toBeCloseTo(local.racers[s.player].state.finishTime!,3));
+      for(const d of drivers)expect(d.frame!.order).toEqual(online);
+    }finally{
+      await Promise.allSettled(drivers.map(d=>d.room.leave()));
+      if(before===undefined)delete process.env.DUEL_EXTRA_VENUES; else process.env.DUEL_EXTRA_VENUES=before;
+    }
+  },90000);
   it('lets only the host change circuit and laps, forces fresh lines after a circuit change, and removes a slow drawer after the grace period',async()=>{
     const newport=findCircuit('coastal-launch').track,gate=findCircuit('golden-gate').track,versions={[newport.id]:newport.version,[gate.id]:gate.version};
     const opts={circuit:newport.id,laps:1,protocol:DUEL_PROTOCOL,physics:RULES.version,compiler:COMPILER_VERSION,versions,name:'A',paint:'glacier'};
