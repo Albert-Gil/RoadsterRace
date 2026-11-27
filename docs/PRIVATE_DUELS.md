@@ -15,7 +15,20 @@ Use Node 24 and the pinned pnpm. Install with `pnpm install --frozen-lockfile`. 
 3. Copy the room service's Deploy Hook URL from Render Settings to the GitHub Actions secret `RENDER_DEPLOY_HOOK_URL` in the `github-pages` environment. Render's independent auto-deploy is off. The server build writes `dist-server/contract.json`: a hash of every source module in the server bundle plus the lockfile (`server/contract.ts`). `/health` reports that contract with the protocol, physics, compiler and track versions. After verification, the Pages workflow builds the same contract and calls Render only when the live contract differs, then waits for `/health` to report it before publishing. Website-only releases therefore keep live rooms. A superseded commit publishes nothing (the newer run does). A missing server variable or hook produces a workflow warning and the website still publishes; without the variable the build hides Private Duels. If a requested server update never becomes healthy, the website waits for a successful retry. Revert and release from `main` to roll back both services together.
 4. Check the first join after idle, an active two-device race and a reconnect from cellular. A sleeping free instance may take about a minute to start. A process restart closes its rooms. One free instance stores sessions in memory, without accounts or a database.
 
-## Race authority and Unity interoperability
+## Enabling San Diego Fleet
+
+Fleet duels are built, tested in CI (`tests/unit/private-duels.test.ts`, `tests/duels/fleet.spec.ts`) and hidden until the room server sets `DUEL_EXTRA_VENUES=san-diego-fleet`. Enable it only after a real-device test passes:
+
+1. Steps 1–3 above are done and `/health` reports the current contract.
+2. In Render, add `DUEL_EXTRA_VENUES=san-diego-fleet` temporarily (Render restarts the service; live rooms close). `/health` must list `san-diego-fleet` under `venues`.
+3. Four real devices, at least one iPhone in Safari on cellular (Wi-Fi off) and one in portrait: create a Fleet room, 1 lap; everyone joins from the shared invite.
+4. Draw: one main route, one route through each support-ship shortcut, one deliberately slow line. Lock in. Check each preview shows the amber ramp rings for a slow line, and nobody sees anyone else's line.
+5. Mid-drawing, lock and unlock the iPhone, or switch it to another app for 10 s, then return: the drawing board comes back.
+6. Race: press Hop at a support-ship lip. Watch flights and a missed landing on another phone: the car rises and lands on the decks, and a missed landing recovers once, without flicker or a car hanging in the air.
+7. Results show the same standings and times on every device. Vote **Race again**, finish a second race, then **New lines**: everyone draws fresh with no old lines shown.
+8. Note any failure with the device, network, step and room code. If all pass, keep the variable; otherwise remove it (Fleet disappears from the pickers on the next app open).
+
+
 
 The Colyseus server runs one existing LocalRace per room at 60 Hz. Clients submit the combined sector stroke once, in metres and elapsed milliseconds. The server uses the ordinary route compiler including off-road hazards. Other drivers receive readiness only. All four cars are rendered from shared 20 Hz reports. The display interpolates between two poses and snaps across recovery. Input feedback is local, and the server decides whether a Hop or Thrust actually fires.
 
