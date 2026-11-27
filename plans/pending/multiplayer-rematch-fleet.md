@@ -201,4 +201,4 @@ Verified when: CI is green, performance budgets hold, the owner's real-device te
 | 2 Local multiplayer | done (2.1–2.4); championship replay covered by the existing tournament spec, run at release |
 | 3 Private Duels | done (3.1–3.7) |
 | 4 Fleet in duels (flag) | done (4.1–4.3); flag off in production |
-| 5 Release | 5.1 in progress; 5.2 owner checklist in `docs/PRIVATE_DUELS.md` (Enabling San Diego Fleet) |
+| 5 Release | 5.1 done in the cloud except the frame-time benchmark (needs a quiet GPU machine): typecheck, unit, test:legacy, duel suite 8/8; 6 local browser specs time out identically on baseline 52c0301 (software WebGL). 5.2 owner checklist in `docs/PRIVATE_DUELS.md` (Enabling San Diego Fleet) |
