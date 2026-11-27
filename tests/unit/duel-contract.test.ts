@@ -11,12 +11,14 @@ describe('room server release contract', () => {
     expect(contractHash([{ ...sources[0], content: 'export const a = 2;\n' }, sources[1]])).not.toBe(hash);
     expect(contractHash([...sources, { path: 'pnpm-lock.yaml', content: 'x' }])).not.toBe(hash);
   });
-  it('keeps live rooms when the contract is unchanged and never blocks the website for missing configuration', () => {
+  it('keeps live rooms when unchanged, publishes website-only releases and holds an outdated server without a hook', () => {
     const base = { contract: 'abc', liveContract: 'abc', serverConfigured: true, hookConfigured: true };
     expect(releaseDecision(base).action).toBe('skip-current');
     expect(releaseDecision({ ...base, liveContract: 'old' }).action).toBe('deploy');
     expect(releaseDecision({ ...base, liveContract: null }).action).toBe('deploy');
-    expect(releaseDecision({ ...base, liveContract: 'old', hookConfigured: false }).action).toBe('warn-outdated');
+    expect(releaseDecision({ ...base, liveContract: 'old', hookConfigured: false }).action).toBe('hold');
+    expect(releaseDecision({ ...base, liveContract: null, hookConfigured: false }).action).toBe('hold');
+    expect(releaseDecision({ ...base, hookConfigured: false }).action).toBe('skip-current');
     expect(releaseDecision({ ...base, serverConfigured: false, hookConfigured: false }).action).toBe('skip-unconfigured');
   });
 });

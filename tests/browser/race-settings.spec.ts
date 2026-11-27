@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
-import { waitForPhase, voteEveryone } from './ui';
+import { waitForPhase, voteEveryone, testPixelRatio, RACE_SPEED } from './ui';
 
 mkdirSync('artifacts/race-settings', { recursive: true });
 
@@ -48,7 +48,7 @@ test('solo preferences persist, one lap finishes cleanly, and six-lap bests stay
 
 test('custom names and paints survive a six-lap local race, results and rematch', async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
-  await page.goto('/'); await page.getByRole('button', { name: 'Multiplayer' }).click();
+  await page.goto('/?' + RACE_SPEED); await page.getByRole('button', { name: 'Multiplayer' }).click();
   await page.getByRole('button', { name: '6 laps', exact: true }).click();
   for (const [index, name, paint] of [[1, 'Ana & Max', 'Verdant green'], [2, 'Lee', 'Solar yellow']] as const) {
     await page.getByRole('textbox', { name: `Driver ${index} name` }).fill(name);

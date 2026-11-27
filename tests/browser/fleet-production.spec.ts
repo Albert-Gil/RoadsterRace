@@ -2,21 +2,21 @@ import{test,expect,type Page,type BrowserContext}from'@playwright/test';
 import{mkdirSync,writeFileSync}from'node:fs';
 import{sanDiegoFleetTrack as track}from'../../src/core/tracks/san-diego-fleet';
 import{createPracticeSamples}from'../../src/core/route';
-import{waitForPhase}from'./ui';
+import{waitForPhase,testPixelRatio,sendTouchStroke}from'./ui';
 const root='artifacts/fleet-production/browser';mkdirSync(root,{recursive:true});
 async function setup(page:Page){await page.goto('/?circuit=san-diego-fleet&graphics=medium');await page.getByRole('button',{name:'Time Trial',exact:true}).click();await page.getByRole('button',{name:'1 lap',exact:true}).click();await page.getByRole('button',{name:'Draw racing line',exact:true}).click();await page.waitForFunction(()=>(window as any).__roadster?.getGraphics().renderReady);}
 async function draw(page:Page,context:BrowserContext,branch?:string,touch=false){
  const raw=createPracticeSamples(track,7,branch??false),points=await page.evaluate(ps=>{const g=(window as any).__roadster;return ps.map(p=>({...g.project(p),fraction:p.time/7000}));},raw),cdp=await context.newCDPSession(page),epoch=Date.now()/1000;
- for(const [i,p]of points.entries()){
-  expect(p.x).toBeGreaterThan(0);expect(p.y).toBeGreaterThan(0);
-  if(touch)await cdp.send('Input.dispatchTouchEvent',{type:i===0?'touchStart':'touchMove',touchPoints:[{x:p.x,y:p.y,id:3}],timestamp:epoch+p.fraction*7});
-  else await cdp.send('Input.dispatchMouseEvent',{type:i===0?'mousePressed':'mouseMoved',x:p.x,y:p.y,button:i===0?'left':'none',buttons:1,clickCount:i===0?1:0,timestamp:epoch+p.fraction*7});
+ for(const p of points){expect(p.x).toBeGreaterThan(0);expect(p.y).toBeGreaterThan(0);}
+ if(touch)await sendTouchStroke(cdp,points.map(p=>({x:p.x,y:p.y,time:p.fraction*7})),3,7);
+ else for(const [i,p]of points.entries()){
+  await cdp.send('Input.dispatchMouseEvent',{type:i===0?'mousePressed':'mouseMoved',x:p.x,y:p.y,button:i===0?'left':'none',buttons:1,clickCount:i===0?1:0,timestamp:epoch+p.fraction*7});
  }
- const last=points.at(-1)!;if(touch)await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[],timestamp:epoch+7});else await cdp.send('Input.dispatchMouseEvent',{type:'mouseReleased',x:last.x,y:last.y,button:'left',buttons:0,clickCount:1,timestamp:epoch+7});await cdp.detach();await waitForPhase(page,'preview');
+ const last=points.at(-1)!;if(!touch)await cdp.send('Input.dispatchMouseEvent',{type:'mouseReleased',x:last.x,y:last.y,button:'left',buttons:0,clickCount:1,timestamp:epoch+7});await cdp.detach();await waitForPhase(page,'preview');
  return page.evaluate(()=>{const g=(window as any).__roadster;return{route:g.getRoute(),graphics:g.getGraphics()};});
 }
 for(const viewport of[{width:844,height:390},{width:390,height:844}])test(`fleet real touch drawing and both hidden decks ${viewport.width}`,async({browser})=>{
- const context=await browser.newContext({viewport,hasTouch:true,isMobile:true,deviceScaleFactor:2}),page=await context.newPage(),errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+ const context=await browser.newContext({viewport,hasTouch:true,isMobile:true,deviceScaleFactor:testPixelRatio(2)}),page=await context.newPage(),errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  for(const branch of[undefined,'support-a-lane','support-b-lane']){await setup(page);const r=await draw(page,context,branch,true);expect(r.route.hazards).toBeUndefined();expect(r.route.crossings.length).toBe(branch?5:4);await page.screenshot({path:`${root}/touch-${viewport.width}-${branch??'main'}.png`});}expect(errors).toEqual([]);await context.close();
 });
 test('live human fleet race earns independent medals and preserves them after reload; practice cannot earn',async({browser})=>{

@@ -108,12 +108,36 @@ test('an invite from the old 10-character format explains itself instead of fail
   await expect(page.getByRole('dialog')).toContainText('No open race uses this code', { timeout: 30000 });
 });
 
-test('an outdated room server is reported instead of creating a room nobody can join', async ({ page }) => {
+test('an outdated room server shows Online play is updating, keeps the invite and offers Try again', async ({ page }) => {
   // A server from before version reporting answers /health without a protocol.
   await page.route('**/health', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true }) }));
-  await page.goto('/'); await page.getByRole('button', { name: 'Multiplayer' }).click();
-  await page.getByRole('button', { name: 'Private Duel' }).click();
-  await page.getByRole('button', { name: 'Create room' }).click();
-  await expect(page.getByRole('dialog')).toContainText('The race server is updating');
+  await page.goto('/?duel=TIGER');
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByText('Online play is updating')).toBeVisible({ timeout: 30000 });
+  await expect(dialog.getByRole('button', { name: 'Create room' })).toBeDisabled();
+  await expect(dialog.getByRole('button', { name: 'Join room', exact: true })).toBeDisabled();
+  await expect(dialog.getByLabel('Room code')).toHaveValue('TIGER');
+  await expect(dialog.getByRole('button', { name: 'Try again' })).toBeVisible({ timeout: 30000 });
   await expect(page.getByText('Private room', { exact: true })).toHaveCount(0);
+  // The server catches up: Try again re-enables Create and Join.
+  await page.unroute('**/health');
+  await dialog.getByRole('button', { name: 'Try again' }).click();
+  await expect(dialog.getByRole('button', { name: 'Create room' })).toBeEnabled({ timeout: 30000 });
+  await expect(dialog.getByText('Online play is updating')).toBeHidden();
+});
+
+test('a server ahead of this tab offers Reload game once a newer website build is deployed', async ({ page }) => {
+  await page.route('**/health', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, protocol: 99, physics: 99, compiler: 99, tracks: {} }) }));
+  await page.goto('/');
+  // Later fetches of the page itself see a different entry script: a newer deployment.
+  await page.route(url => url.pathname === '/' , async route => {
+    const html = await (await route.fetch()).text();
+    await route.fulfill({ contentType: 'text/html', body: html.replace(/(<script type="module"[^>]*src=")([^"]+)"/, '$1$2?next"') });
+  });
+  await page.getByRole('button', { name: 'Multiplayer' }).click();
+  await page.getByRole('button', { name: 'Private Duel' }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByText('Online play is updating')).toBeVisible({ timeout: 30000 });
+  await expect(dialog.getByRole('button', { name: 'Reload game' })).toBeVisible({ timeout: 30000 });
+  await expect(dialog.getByRole('button', { name: 'Create room' })).toBeDisabled();
 });

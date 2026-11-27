@@ -15,6 +15,8 @@
 .duel-dialog section { display:grid; gap:10px; }
 .duel-dialog label { display:grid; gap:6px; }
 .duel-dialog :is(h2,p) { margin:0; }
+.duel-dialog .duel-updating { display:grid; gap:8px; padding:12px; border:1px solid #e0b84f; border-radius:8px; background:rgb(224 184 79 / 12%); }
+.duel-dialog .duel-updating[hidden] { display:none; }
 .duel-dialog section > strong { font:700 1.4rem monospace; letter-spacing:.12em; }
 .duel-dialog :is(select,input) { min-height:44px; width:100%; box-sizing:border-box; padding:6px 12px; color:var(--text); background:var(--ink); border:1px solid var(--raised-border); font:inherit; font-size:16px; }
 .duel-dialog [role=status]:not(:empty) { margin-top:12px; }

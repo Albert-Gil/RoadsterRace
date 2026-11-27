@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import type { CDPSession, Page } from '@playwright/test';
 
 /**
  * Production-safe helpers: they read only the rendered interface, never the development
@@ -28,4 +28,22 @@ export const resultRows = (page: Page) => page.locator('.standings:not(.champion
 export async function voteEveryone(page: Page, label: string) {
   const seats = await page.locator('.ballot-seat').count();
   for (let seat = 0; seat < seats; seat++) await page.locator(`[data-action="vote"][data-seat="${seat}"]`).filter({ hasText: label }).click();
+}
+
+/** Device pixel ratio for a spec: the requested one on a GPU (WEBGL_BACKEND=d3d11), 1 on software WebGL, where each extra pixel slows every frame and every dispatched touch. */
+export const testPixelRatio = (gpu: number) => process.env.WEBGL_BACKEND === 'd3d11' ? gpu : 1;
+/** Test-only race speed (src/app/test-clock.ts) for specs that wait for whole races. */
+export const RACE_SPEED = 'simRate=4';
+
+/**
+ * Sends a whole touch stroke without waiting for each event's acknowledgement. The browser then coalesces
+ * several moves into one frame, and the game reads every coalesced sample with its own timestamp, so the
+ * drawn line is the same while a slow (software WebGL) frame no longer gates every single point.
+ * `time` is seconds after the stroke starts; `end` defaults to the last point's time.
+ */
+export async function sendTouchStroke(cdp: CDPSession, points: { x: number; y: number; time: number }[], id = 1, end = points.at(-1)!.time) {
+  const epoch = Date.now() / 1000;
+  const sends = points.map((p, i) => cdp.send('Input.dispatchTouchEvent', { type: i ? 'touchMove' : 'touchStart', touchPoints: [{ x: p.x, y: p.y, id }], timestamp: epoch + (i ? p.time : 0) }));
+  sends.push(cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [], timestamp: epoch + end }));
+  await Promise.all(sends);
 }

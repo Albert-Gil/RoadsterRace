@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { waitForPhase, voteEveryone } from './ui';
+import { waitForPhase, voteEveryone, testPixelRatio, RACE_SPEED, sendTouchStroke } from './ui';
 mkdirSync('artifacts/orbital', { recursive: true });
 const state = (page: Page) => page.evaluate(() => (window as any).__roadster.getState());
 
@@ -57,13 +57,11 @@ async function touchLine(page: Page, shape: 'blocked' | 'wide') {
   expect(await page.evaluate(points => points.filter(p => document.elementFromPoint(p.x, p.y)?.id !== 'race-canvas'), points)).toEqual([]);
   const cdp = await page.context().newCDPSession(page), epoch = Date.now() / 1000;
   await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: points[0].x, y: points[0].y, id: 1 }], timestamp: epoch });
-  for (const p of points.slice(1)) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: p.x, y: p.y, id: 1 }], timestamp: epoch + p.time });
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [], timestamp: epoch + points.at(-1)!.time }); await cdp.detach();
+  await sendTouchStroke(cdp, points); await cdp.detach();
 }
 
 test('Orbital phone touch drawing accepts a protected cut with a crash note and races a wide outer-sand line', async ({ browser }) => {
-  const context = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true });
+  const context = await browser.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: testPixelRatio(3), isMobile: true, hasTouch: true });
   const page = await context.newPage(), errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
   await page.addInitScript(() => {
     const evidence = { gaps: [] as number[], interruptions: [] as string[] }; (window as any).__captureTiming = evidence;
@@ -99,7 +97,7 @@ test('Orbital phone touch drawing accepts a protected cut with a crash note and 
 
 for (const count of [2, 3, 4]) test(`Orbital ${count}-player race finishes with independent thrust and a fresh rematch`, async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
-  await page.goto('/?circuit=orbital-launchyard'); await page.getByRole('button', { name: 'Multiplayer' }).click();
+  await page.goto('/?circuit=orbital-launchyard&' + RACE_SPEED); await page.getByRole('button', { name: 'Multiplayer' }).click();
   await page.getByRole('button', { name: `${count} players`, exact: true }).click(); await page.getByRole('button', { name: '1 lap', exact: true }).click();
   await page.getByRole('button', { name: 'Plan your lines' }).click();
   for (let i = 0; i < count; i++) {

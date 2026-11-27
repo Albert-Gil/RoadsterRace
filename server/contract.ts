@@ -28,13 +28,17 @@ export interface ReleaseInputs {
 export type ReleaseDecision =
   | { action: 'skip-unconfigured'; message: string }
   | { action: 'skip-current'; message: string }
-  | { action: 'warn-outdated'; message: string }
+  | { action: 'hold'; message: string }
   | { action: 'deploy'; message: string };
 
-/** What the Pages release does about the room server. Never blocks Pages unless a deploy it started fails. */
+/**
+ * What the Pages release does about the room server. A website-only release (no server configured) and an
+ * unchanged server publish at once. A changed or unverifiable server is deployed first; without a valid deploy
+ * hook the release holds, because publishing would leave players with a game the live server cannot serve.
+ */
 export function releaseDecision(input: ReleaseInputs): ReleaseDecision {
   if (!input.serverConfigured) return { action: 'skip-unconfigured', message: 'ROADSTER_DUEL_SERVER is not set, so this build hides Private Duels. Publishing the website only.' };
   if (input.liveContract === input.contract) return { action: 'skip-current', message: `The room server already runs contract ${input.contract}. Live rooms are kept.` };
-  if (!input.hookConfigured) return { action: 'warn-outdated', message: `The room server runs ${input.liveContract ?? 'an unknown or unreachable build'}, not ${input.contract}, and RENDER_DEPLOY_HOOK_URL is not set. Players will see "server updating" until it is redeployed.` };
+  if (!input.hookConfigured) return { action: 'hold', message: `The room server runs ${input.liveContract ?? 'an unknown or unreachable build'}, not ${input.contract}, and RENDER_DEPLOY_HOOK_URL is missing or invalid. The website is held: set the hook secret (docs/PRIVATE_DUELS.md) and re-run this release.` };
   return { action: 'deploy', message: `Deploying the room server for contract ${input.contract}.` };
 }

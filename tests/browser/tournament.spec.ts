@@ -2,7 +2,7 @@ import { circuits } from '../../src/content/circuits';
 import { test, expect, type Page } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { createTournament, finalizeRound } from '../../src/core/tournament';
-import { waitForPhase, voteEveryone } from './ui';
+import { waitForPhase, voteEveryone, RACE_SPEED } from './ui';
 mkdirSync('artifacts/golden-gate', { recursive: true });
 const state = (page: Page) => page.evaluate(() => (window as any).__roadster.getState());
 test('older three-circuit championships are explained as incompatible after widening',async({page})=>{
@@ -24,9 +24,9 @@ async function drawAndRace(page: Page, count = 2) {
   await page.keyboard.press('KeyA'); await page.keyboard.press('KeyL');
 }
 test('Full Tour scores all registered circuits, survives refresh and ends with a championship', async ({ page }) => {
-  test.setTimeout(540000);
+  test.setTimeout(process.env.WEBGL_BACKEND === 'd3d11' ? 540_000 : 1_500_000); // ten venue loads on software WebGL
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
-  await page.goto('/?circuit=golden-gate');
+  await page.goto('/?circuit=golden-gate&' + RACE_SPEED);
   await page.getByRole('button', { name: 'Multiplayer', exact: false }).click();
   await page.getByRole('button', { name: '4 players', exact: true }).click();
   await page.getByRole('button', { name: 'Tournament', exact: true }).click();
@@ -82,7 +82,7 @@ test('custom schedule supports repeated circuits, 12 races, reorder, save/exit a
 });
 test('Golden Gate solo and responsive garage preserve layout and clear projection', async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
-  await page.goto('/?circuit=golden-gate'); await page.getByRole('button', { name: "Time Trial", exact: false }).click();
+  await page.goto('/?circuit=golden-gate&' + RACE_SPEED); await page.getByRole('button', { name: "Time Trial", exact: false }).click();
   await expect(page.getByRole('button', { name: 'Golden Gate circuit', exact: true })).toHaveAttribute('aria-pressed', 'true');
   for (const viewport of [{ width: 390, height: 844 }, { width: 844, height: 390 }, { width: 1024, height: 768 }, { width: 1440, height: 900 }]) {
     await page.setViewportSize(viewport); await expect(page.getByRole('button', { name: 'Draw racing line', exact: false })).toBeInViewport();

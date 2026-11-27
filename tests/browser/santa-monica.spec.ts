@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { waitForPhase, voteEveryone } from './ui';
+import { waitForPhase, voteEveryone, testPixelRatio, RACE_SPEED, sendTouchStroke } from './ui';
 mkdirSync('artifacts/santa-monica', { recursive: true });
 const state = (p: Page) => p.evaluate(() => (window as any).__roadster.getState());
 const graphics = (p: Page) => p.evaluate(() => (window as any).__roadster.getGraphics());
@@ -25,13 +25,11 @@ async function touchLap(page: Page, jump: boolean) {
   expect(await page.evaluate(points => points.filter(p => document.elementFromPoint(p.x, p.y)?.id !== 'race-canvas'), points)).toEqual([]);
   const cdp = await page.context().newCDPSession(page), epoch = Date.now() / 1000;
   await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: points[0].x, y: points[0].y, id: 1 }], timestamp: epoch });
-  for (const p of points.slice(1)) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: p.x, y: p.y, id: 1 }], timestamp: epoch + p.time });
-  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [], timestamp: epoch + 7 }); await cdp.detach();
+  await sendTouchStroke(cdp, points, 1, 7); await cdp.detach();
 }
 
 test('real touch draws bypass and jump in landscape, portrait and tablet; rides respect reduced motion', async ({ browser }) => {
-  const context = await browser.newContext({ viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true, deviceScaleFactor: 3 });
+  const context = await browser.newContext({ viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true, deviceScaleFactor: testPixelRatio(3) });
   const page = await context.newPage(), errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
   await page.goto('/?circuit=santa-monica'); await page.getByRole('button', { name: "Time Trial" }).click();
   await expect(page.getByRole('button', { name: 'Santa Monica circuit', exact: true })).toHaveAttribute('aria-pressed', 'true');
@@ -58,7 +56,7 @@ test('real touch draws bypass and jump in landscape, portrait and tablet; rides 
 
 test('jump race renders elevation, pauses safely, completes, and retry resets flight', async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
-  await page.goto('/?circuit=santa-monica');
+  await page.goto('/?circuit=santa-monica&' + RACE_SPEED);
   await page.getByRole('button', { name: "Time Trial" }).click(); await page.getByRole('button', { name: '1 lap', exact: true }).click(); await page.getByRole('button', { name: 'Draw racing line' }).click();
   await touchLap(page, true); await page.getByRole('button', { name: 'Race this line' }).click();
   await page.waitForFunction(() => (window as any).__roadster.getState().race?.elevation > 1.4);
@@ -73,7 +71,7 @@ test('jump race renders elevation, pauses safely, completes, and retry resets fl
 });
 
 test('four players race mixed branches with bounded draw calls and a clean rematch', async ({ page }) => {
-  await page.goto('/?circuit=santa-monica'); await page.getByRole('button', { name: 'Multiplayer' }).click(); await page.getByRole('button', { name: '4 players', exact: true }).click(); await page.getByRole('button', { name: '1 lap', exact: true }).click(); await page.getByRole('button', { name: 'Plan your lines' }).click();
+  await page.goto('/?circuit=santa-monica&' + RACE_SPEED); await page.getByRole('button', { name: 'Multiplayer' }).click(); await page.getByRole('button', { name: '4 players', exact: true }).click(); await page.getByRole('button', { name: '1 lap', exact: true }).click(); await page.getByRole('button', { name: 'Plan your lines' }).click();
   for (let i = 0; i < 4; i++) {
     if (i) await page.getByRole('button', { name: `I'm Player ${i + 1}` }).click();
     await page.evaluate(jump => (window as any).__roadster.usePracticeLine(jump), i % 2 === 0); await page.getByRole('button', { name: 'Lock in my line' }).click();

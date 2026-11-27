@@ -69,7 +69,7 @@ describe('playable circuit registry', () => {
       for (let i = 0; i < 18000 && !race.state.finished; i++) race.step();
       expect(race.state.finished).toBe(true); expect(race.state.lapTimes).toHaveLength(2);
       expect(Number.isFinite(race.state.position.x + race.state.position.z)).toBe(true);
-    });
+    }, 90_000); // A 24-second plan on a long circuit simulates ~18,000 steps; ~25 s alone, slower beside other workers.
     test('a deliberate wide outer-sand plan remains valid and completes the race', () => {
       const track = circuit.track, samples = createPracticeSamples(track, 7).map((p, i, all) => {
         const a = all[Math.max(0, i - 1)], b = all[Math.min(all.length - 1, i + 1)], len = Math.hypot(b.x - a.x, b.z - a.z) || 1;
