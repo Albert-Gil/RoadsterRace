@@ -210,13 +210,20 @@ Verified when: all checks green, both release stages pass the public smoke check
 | Phase | Status |
 | --- | --- |
 | 0 Test harness | done: `?simRate` (and `simRate=1` catch-up), pipelined touch strokes, 3 unit shards |
-| 1 Release handoff (stage 1) | done; stage-1 bundle delivered (ends 118f1b1); owner push + public smoke pending |
+| 1 Release handoff (stage 1) | done and released: run #99 held Pages until the hook secret was set (as designed), then the re-run deployed Render and passed public-smoke |
 | 2 Duel messages (stage 2, protocol 4) | done (2.1–2.6); latency spec asserts display error ≤ 3 ticks median |
 | 3 Drawing session | done (`src/drawing/session.ts`) |
 | 4 Input ownership | done (`src/input/press-context.ts`, `press-guard.ts`) |
 | 5 Fleet fixes | done: Hop warnings measured on real lines, Hop cue, computer v4 (Easy 62.96 s, Normal 60.58 s, Hard 59.80 s) |
 | 6 Multiplayer guide | done |
-| 7 Verification and rollout | 7.1 in progress |
+| 7 Verification and rollout | 7.1 done in the cloud (below); 7.2 owner: push stage 2, public smoke, iPhone checklist, frame-time benchmark |
+
+### 7.1 evidence (cloud, software WebGL, 2026-11-27)
+- `pnpm typecheck`, `pnpm build`, `pnpm duel:build` pass. Unit suite: 1071/1072 on first run; the one failure (Fleet CPU test hard-coding Normal 0.97) fixed and passing.
+- `LEGACY_BASELINE=49ac803 pnpm test:legacy`: all 30 handling fixtures match (race results unchanged).
+- Duel suite 9/9 (Fleet 4-device, latency, private rooms, updating screens). `DUEL_LATENCY=all` 5/5.
+- Browser: 32/35 release specs pass at default budgets; course switching and four-player ghost start pass with a 10 min budget (slow software rendering); the Fleet medal spec needs ffmpeg for video, not installed here. Drawing specs 25/28; the two LAX sector Retry/Previous runs fail identically on the pre-refactor tree (camera-moving timing).
+- Own car online: measured display error at each press, drawn vs the 100 ms buffer alone (median ticks): 0 ms 35.1 vs 40.3 (one starved run), 50 ms 16.1 vs 21.5, 150 ms 20.1 vs 26.2, 250 ms 27.7 vs 33.0, 150 ± 40 ms 21.6 vs 26.1. Here the page's own round trip is ~0.5 s even at 0 ms network delay, so the ≤ 3 tick target cannot be checked in the cloud; the spec asserts it whenever the measured round trip is within 100 ms of the network's, and always that the drawn car is closer than the buffer alone.
 
 ## Deviations
 - Room codes use digits 2–9 (256 × 8 = 2048 codes), not 0–9: 0 and 1 read like O and I.
