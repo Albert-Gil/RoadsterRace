@@ -1,10 +1,11 @@
 import { Client, type Room } from '@colyseus/sdk';
-import { DUEL_PROTOCOL, duelVenues, offeredVenues, unpackFrame, type Cooldowns, type WireFrame, type DuelVenue, type RoomView, type RaceFrame, type DrawingPacket } from './protocol';
+import { DUEL_PROTOCOL, duelVenues, offeredVenues, unpackFrame, type AbilityOutcome, type AbilityResult, type Cooldowns, type WireFrame, type DuelVenue, type RoomView, type RaceFrame, type DrawingPacket } from './protocol';
 import { RULES } from '../core/simulation';
 import { COMPILER_VERSION } from '../core/route';
 import type { Ability, DrawSample } from '../core/types';
 import { duelEndpoint, savedSeat, storeSeat } from './seat';
 import { checkRoomCode } from './codes';
+import { describeDuelError, duelError, duelErrorAction, DuelFailure, mapConnectionFailure, type DuelError } from './errors';
 import { judgeHealth, recheckWhileUpdating, type HealthReply, type HealthVerdict } from './compatibility';
 import { newerBuildDeployed } from '../app/stale-build';
 import { cleanDriverName } from '../presentation/race-settings';
@@ -17,18 +18,10 @@ interface Hooks {
   draw(view:RoomView):void;
   frame(frame:RaceFrame,view:RoomView):void;
   ownLine(samples:DrawSample[]):void;
-  /** A Thrust/Hop the server never applied (late, or sent while it was recharging). */
-  missed(ability:Ability):void;
   home():void;
 }
 /** Matches the server's DRAWING_GRACE_SECONDS (server/duel-room.ts). */
 const DRAWING_GRACE=90;
-const REMOVED='The host removed you from the race because your line took too long.';
-const OLD_INVITE='This invite is from an older version of the game. Ask your friend for a new invite.';
-const SERVER_ASLEEP='The race server did not wake up. Try again in a minute.';
-const SERVER_UNREACHABLE='The race server is unreachable right now. Check your connection and try again.';
-const SEAT_EXPIRED='Your seat in that race has expired. Join again with the room code.';
-const NO_SUCH_ROOM='No open race uses this code. Check it, or ask for a new invite.';
 function el<K extends keyof HTMLElementTagNameMap>(tag:K,content='') {
   const e=document.createElement(tag);e.textContent=content;return e;
 }
@@ -42,7 +35,12 @@ export class DuelClient {
   private cooldowns?:Cooldowns;
   /** A press made in the last countdown beat, sent with the first racing frame. */
   private queued?:Ability;
-  private pending:{ability:Ability;at:number;before?:number}[]=[];
+  /** Sent commands awaiting the server's private reply, matched by round and sequence. */
+  private pending:{round:number;sequence:number;ability:Ability;at:number}[]=[];
+  /** Development and test diagnostics: every command's outcome, or `unconfirmed` after 1.5 s. Never shown to players. */
+  readonly commandLog:{round:number;sequence:number;ability:Ability;outcome:AbilityOutcome|'unconfirmed';roundTripMs?:number}[]=[];
+  /** Smoothed one-way delay to the room, from command round trips (ms). */
+  oneWayMs=0;
   private roundDrawn=0;
   /** Circuits the room server offers; Fleet appears only once /health lists it. */
   private venues=offeredVenues(null);
@@ -64,6 +62,7 @@ export class DuelClient {
     this.dialog.append(this.content,this.status);
     document.body.append(this.dialog);
     this.dialog.addEventListener('cancel',e=>{e.preventDefault();if(this.menu)this.resume();});
+    if(import.meta.env.DEV)(window as unknown as {__roadsterDuel?:DuelClient}).__roadsterDuel=this;
   }
   private show(title:string) {
     this.content.replaceChildren(el('h2',title));this.status.textContent='';
@@ -105,14 +104,14 @@ export class DuelClient {
     this.content.prepend(notice);
     const create=this.button('Create room',()=>{saveDriver();void this.connect('',circuit.value as DuelVenue,Number(laps.value));},true);
     this.content.append(code);
-    const join=this.button('Join room',()=>{const check=checkRoomCode(code.value);if(check.ok){saveDriver();void this.connect(check.code);}else this.status.textContent=check.reason==='old-invite'?OLD_INVITE:'Enter the room word from your invite, for example TIGER.';});
+    const join=this.button('Join room',()=>{const check=checkRoomCode(code.value);if(check.ok){saveDriver();void this.connect(check.code);}else this.status.textContent=check.reason==='old-invite'?describeDuelError(duelError('old-invite')):'Enter the room word from your invite, for example TIGER.';});
     this.button('Home',()=>this.leave());
     this.entry={buttons:[create,join],notice,fillVenues};
     if(invite?.ok&&!reclaimed&&savedSeat(invite.code)){
       // A saved seat whose quick reclaim failed during startup: offer it explicitly.
       const rejoin=this.button('Rejoin race',()=>void this.connect(invite.code),true);notice.after(rejoin);this.entry.buttons.push(rejoin);
     }
-    if(invite&&!invite.ok)this.status.textContent=invite.reason==='old-invite'?OLD_INVITE:'This invite link is not valid. Ask for a new one.';
+    if(invite&&!invite.ok)this.status.textContent=invite.reason==='old-invite'?describeDuelError(duelError('old-invite')):'This invite link is not valid. Ask for a new one.';
     if(reclaimed&&invite?.ok)void this.connect(invite.code,undefined,undefined,reclaimed);
   }
   private async probe(timeout:number):Promise<HealthVerdict>{
@@ -150,7 +149,7 @@ export class DuelClient {
   }
   private async connect(code:string,circuit:DuelVenue='coastal-launch',laps=1,reclaimed?:Room) {
     if(this.connecting||this.closed)return;
-    if(!duelEndpoint){this.status.textContent='The private race server is not configured for this build.';return;}
+    if(!duelEndpoint){this.status.textContent=describeDuelError(duelError('not-configured'));return;}
     this.connecting=true;this.status.textContent='Connecting to the race server…';
     const wake=window.setTimeout(()=>{this.status.textContent='Waking race server… The first room can take a minute.';},2500);
     try {
@@ -158,8 +157,8 @@ export class DuelClient {
       if (!room) {
         // Wake a sleeping free instance before the SDK starts its shorter seat-reservation timeout.
         const verdict=await this.probe(100_000);
-        if(verdict.kind==='asleep')throw new Error(SERVER_ASLEEP);
-        if(verdict.kind==='unreachable')throw new Error(SERVER_UNREACHABLE);
+        if(verdict.kind==='asleep')throw new DuelFailure(duelError('server-asleep'));
+        if(verdict.kind==='unreachable')throw new DuelFailure(duelError('server-unreachable'));
         if(verdict.kind==='updating'){this.status.textContent='';void this.enterUpdating(verdict);return;}
         this.venues=verdict.venues;
         if(this.closed)return;
@@ -168,11 +167,14 @@ export class DuelClient {
         const token=code && savedSeat(code);
         if(token){
           try{room=await client.reconnect(token);}
-          catch{storeSeat(null);throw new Error(SEAT_EXPIRED);}
+          catch{storeSeat(null);throw new DuelFailure(duelError('seat-expired'));}
         }else if(code){
           try{room=await client.joinById(code,options);}
-          catch(error){throw new Error(error instanceof Error&&/not found|invalid|locked/i.test(error.message)?NO_SUCH_ROOM:error instanceof Error?error.message:NO_SUCH_ROOM);}
-        }else room=await client.create('private_duel',options);
+          catch(error){throw new DuelFailure(mapConnectionFailure(error,'join'));}
+        }else{
+          try{room=await client.create('private_duel',options);}
+          catch(error){throw new DuelFailure(mapConnectionFailure(error,'create'));}
+        }
       }
       if(this.closed){await room.leave();return;}
       this.room=room;storeSeat(room.reconnectionToken);
@@ -189,20 +191,17 @@ export class DuelClient {
         this.hooks.frame(frame,this.view);
         if(this.view.phase==='results')this.present();
       });
-      room.onMessage('cooldowns',(c:Cooldowns)=>{
-        const previous=this.cooldowns;this.cooldowns=c;
-        // A changed readiness time confirms that the server fired that ability.
-        this.pending=this.pending.filter(p=>!(previous?.round===c.round&&(p.ability==='hop'?c.hopReadyAt!==p.before:c.thrustReadyAt!==p.before)));
-      });
+      room.onMessage('cooldowns',(c:Cooldowns)=>{this.cooldowns=c;});
+      room.onMessage('ability-result',(r:AbilityResult)=>this.settle(r));
       room.onMessage('ownLine',(data:{samples:DrawingPacket;sequence:number})=>{this.sequence=Math.max(this.sequence,data.sequence);this.hooks.ownLine(data.samples.map(([x,z,time])=>({x,z,time})));});
-      room.onMessage('notice',(s:string)=>{this.waiting=false;this.present();this.status.textContent=s;if(!this.dialog.open){this.show('Check your line');this.status.textContent=s;this.button('Return to drawing',()=>this.dialog.close(),true);}});
-      room.onDrop(()=>{this.disconnected=true;this.show('Reconnecting…');this.content.append(el('p','Your car is following its line.'));this.button('Home',()=>this.leave());});
+      room.onMessage('error',(error:DuelError)=>this.roomError(error));
+      room.onDrop(()=>{this.disconnected=true;this.pending=[];this.queued=undefined;this.show('Reconnecting…');this.content.append(el('p','Your car is following its line.'));this.button('Home',()=>this.leave());});
       room.onReconnect(()=>{this.disconnected=false;storeSeat(room.reconnectionToken);room.send('sync');});
       // A tab can receive a close callback while navigating away. Retain its
       // credential through reload; the explicit Home action releases the seat.
-      room.onLeave((code:number)=>{if(!this.closed){this.show('Room closed');if(code===4002)this.content.append(el('p',REMOVED));this.button('Home',()=>this.leave(),true);}});
+      room.onLeave((code:number)=>{if(!this.closed){this.show('Room closed');if(code===4002)this.content.append(el('p',describeDuelError(duelError('removed'))));this.button('Home',()=>this.leave(),true);}});
       room.send('sync');
-    }catch(e){if(!this.closed)this.status.textContent=e instanceof Error?e.message:'Could not connect. Check the room code and try again.';}
+    }catch(e){if(!this.closed)this.connectionError(mapConnectionFailure(e,code?(savedSeat(code)?'reconnect':'join'):'create'),()=>void this.connect(code,circuit,laps));}
     finally{clearTimeout(wake);this.connecting=false;}
   }
   private receive(view:RoomView) {
@@ -277,6 +276,27 @@ export class DuelClient {
     const start=samples[0].time;this.waiting=true;
     this.room.send('line',{round:this.view.round,samples:samples.map(p=>[p.x,p.z,p.time-start])});this.present();
   }
+  /**
+   * Room errors by category. Drawing: back to your retained line. Lobby: a status line in the lobby or on
+   * Results, keeping selections. Connection errors arrive through connect() instead.
+   */
+  private roomError(error:DuelError){
+    const text=describeDuelError(error);
+    if(error.category==='drawing'){
+      this.waiting=false;
+      if(this.dialog.open)this.present();
+      if(!this.dialog.open||this.content.querySelector('h2')?.textContent==='Waiting for lines'){this.show('Check your line');this.button('Return to drawing',()=>this.dialog.close(),true);}
+      this.status.textContent=text;
+    }else if(error.category==='lobby'){if(this.view?.phase==='lobby'||this.view?.phase==='results')this.status.textContent=text;}
+    else this.connectionError(error);
+  }
+  /** Connection errors on the entry screen, with the action that fits (Create/Join stay available for a new code). */
+  private connectionError(error:DuelError,retry?:()=>void){
+    this.status.replaceChildren(describeDuelError(error));
+    const action=duelErrorAction(error);
+    if(action==='updating'){void this.probe(20_000).then(v=>this.enterUpdating(v.kind==='updating'?v:{kind:'updating',ahead:'server'}));return;}
+    if(action==='retry'&&retry){const b=el('button','Try again');b.type='button';b.className='secondary-button';b.onclick=()=>{this.status.textContent='';retry();};this.status.append(' ',b);}
+  }
   press(ability:Ability){
     if(this.menu||this.disconnected||!this.latest)return;
     // Within the last countdown beat a press is held and sent at GO; earlier presses are ignored.
@@ -286,15 +306,23 @@ export class DuelClient {
   }
   private send(ability:Ability){
     if(!this.room||!this.view||!this.latest)return;
-    this.room.send('ability',{round:this.view.round,ability,sequence:++this.sequence,tick:this.latest.tick});
-    this.pending.push({ability,at:performance.now(),before:this.cooldowns?.round===this.view.round?(ability==='hop'?this.cooldowns.hopReadyAt:this.cooldowns.thrustReadyAt):undefined});
+    const command={round:this.view.round,ability,sequence:++this.sequence,tick:this.latest.tick};
+    this.room.send('ability',command);
+    this.pending.push({round:command.round,sequence:command.sequence,ability,at:performance.now()});
   }
-  /** Presses with no confirmation after 0.6 s get a "missed" cue instead of silently disappearing. */
+  private log(entry:DuelClient['commandLog'][number]){this.commandLog.push(entry);if(this.commandLog.length>50)this.commandLog.shift();}
+  /** The server's private reply. Button feedback and recharge rings already come from frames and cooldowns. */
+  private settle(r:AbilityResult){
+    const i=this.pending.findIndex(p=>p.round===r.round&&p.sequence===r.sequence);
+    if(i<0)return;
+    const [p]=this.pending.splice(i,1),roundTrip=performance.now()-p.at;
+    this.oneWayMs=this.oneWayMs?this.oneWayMs*.8+roundTrip/2*.2:roundTrip/2;
+    this.log({round:r.round,sequence:r.sequence,ability:r.ability,outcome:r.outcome,roundTripMs:Math.round(roundTrip)});
+  }
+  /** Commands with no reply after 1.5 s stay unconfirmed in diagnostics only. */
   private expirePending(){
-    const now=performance.now(),late=this.pending.filter(p=>now-p.at>600);
-    if(!late.length)return;
-    this.pending=this.pending.filter(p=>now-p.at<=600);
-    for(const p of late)this.hooks.missed(p.ability);
+    const now=performance.now();
+    this.pending=this.pending.filter(p=>{if(now-p.at<=1500)return true;this.log({round:p.round,sequence:p.sequence,ability:p.ability,outcome:'unconfirmed'});return false;});
   }
   pause(){this.menu=true;this.present();}
   private resume(){this.menu=false;this.present();}

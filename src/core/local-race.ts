@@ -119,8 +119,8 @@ export class LocalRace {
   get time() { return this.tick * RULES.dt; }
   get ghostStartRemaining() { return this.racers.length > 1 ? Math.max(0, CONTACT_RULES.ghostStartSeconds - this.time) : 0; }
   get finished() { return this.racers.every(racer => racer.state.finished); }
-  pressThrust(player: number) { this.racers[player]?.pressThrust(); }
-  pressHop(player: number) { this.racers[player]?.pressHop(); }
+  pressThrust(player: number) { return this.racers[player]?.pressThrust() ?? false; }
+  pressHop(player: number) { return this.racers[player]?.pressHop() ?? false; }
   clearCommands() { this.racers.forEach(racer => racer.clearCommands()); }
   step() {
     if (this.finished) return;

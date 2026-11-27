@@ -99,4 +99,11 @@ export function unpackFrame(frame: WireFrame): RaceFrame {
     order: frame.order.map(([player, rank, progress, finished, finish]) => ({ player, rank, progress: progress / 100, finished: finished === 1, finishTime: finish === null ? null : finish / 1000 })) };
 }
 export interface AbilityCommand { round: number; sequence: number; tick: number; ability: Ability }
+/**
+ * Private reply to the seat that sent an ability command (protocol 4). `fired`, `recharging` and `unavailable`
+ * are decided at the fixed step that applies the real rules; `too-late` (outside the tick window or not racing)
+ * and `duplicate` (an old sequence, or the same ability already queued) are decided on receipt.
+ */
+export type AbilityOutcome = 'fired' | 'recharging' | 'too-late' | 'unavailable' | 'duplicate';
+export interface AbilityResult { round: number; sequence: number; ability: Ability; outcome: AbilityOutcome }
 export type DrawingPacket = [x: number, z: number, milliseconds: number][];

@@ -20,16 +20,18 @@ async function until(predicate:()=>unknown){
 class Driver {
   view?:RoomView;
   frame?:RaceFrame;
-  notice='';
+  error?:{category:string;reason:string;detail?:string};
   line:unknown;
   cooldowns?:{round:number;hopReadyAt:number;thrustReadyAt:number};
   frames:RaceFrame[]=[];
+  results:{round:number;sequence:number;ability:string;outcome:string}[]=[];
   constructor(readonly room:Room) {
     room.onMessage('room',(v:RoomView)=>this.view=v);
     room.onMessage('frame',(f:WireFrame)=>{this.frame=unpackFrame(f);this.frames.push(this.frame);});
     room.onMessage('ownLine',data=>this.line=data);
-    room.onMessage('notice',message=>this.notice=message);
+    room.onMessage('error',e=>this.error=e);
     room.onMessage('cooldowns',c=>this.cooldowns=c);
+    room.onMessage('ability-result',r=>this.results.push(r));
     room.send('sync');
   }
 }
@@ -50,7 +52,7 @@ describe('private duel transport and authority',()=>{
     try{
       delete process.env.DUEL_EXTRA_VENUES;
       expect([...duelTracks().keys()]).toEqual(['coastal-launch','golden-gate','santa-monica']);
-      await expect(client.create('private_duel',opts)).rejects.toThrow(/beta circuit/);
+      await expect(client.create('private_duel',opts)).rejects.toThrow('settings-invalid');
       process.env.DUEL_EXTRA_VENUES=' san-diego-fleet ,not-a-venue';
       expect(duelTracks().get(fleet.id)?.version).toBe(fleet.version);
       const room=await client.create('private_duel',opts);
@@ -131,6 +133,42 @@ describe('private duel transport and authority',()=>{
       if(before===undefined)delete process.env.DUEL_EXTRA_VENUES; else process.env.DUEL_EXTRA_VENUES=before;
     }
   },90000);
+  it('replies privately to each ability command with the outcome the rules decided',async()=>{
+    const track=findCircuit('coastal-launch').track;
+    const options={name:'A',paint:'glacier',protocol:DUEL_PROTOCOL,physics:RULES.version,compiler:COMPILER_VERSION,versions:{[track.id]:track.version},circuit:track.id,laps:1};
+    const host=new Driver(await client.create('private_duel',options));
+    const guest=new Driver(await client.joinById(host.room.roomId,{...options,name:'B'}));
+    try{
+      await until(()=>host.view?.drivers.length===2);
+      host.room.send('start');await until(()=>guest.view?.phase==='drawing');
+      const samples=createPracticeSamples(track,7).map(p=>[p.x,p.z,p.time]);
+      for(const d of [host,guest])d.room.send('line',{round:1,samples});
+      await until(()=>host.frame?.countdown);
+      // A press during the countdown cannot apply.
+      host.room.send('ability',{round:1,sequence:1,tick:0,ability:'thrust'});
+      await until(()=>host.results.length===1);expect(host.results[0]).toMatchObject({sequence:1,outcome:'unavailable'});
+      const room=matchMaker.getLocalRoomById(host.room.roomId) as DuelRoom;room.setTimestep();
+      const tickMs=1000/60,advance=async(ticks:number)=>{for(let i=0;i<ticks;i++)room['advance'](tickMs);await delay(0);};
+      while(room['view'].phase!=='racing')await advance(12);
+      await advance(120);
+      const tick=()=>room['race']!.tick,send=(sequence:number,ability:string,at=tick())=>host.room.send('ability',{round:1,sequence,tick:at,ability});
+      const result=async(sequence:number)=>{await until(()=>host.results.some(r=>r.sequence===sequence));return host.results.find(r=>r.sequence===sequence)!.outcome;};
+      send(2,'thrust');await delay(40);await advance(1);
+      expect(await result(2)).toBe('fired');
+      send(2,'thrust');expect(await result(2)).toBe('fired'); // the original reply; the resend is a duplicate
+      await until(()=>host.results.filter(r=>r.sequence===2).length===2);expect(host.results.filter(r=>r.sequence===2)[1].outcome).toBe('duplicate');
+      send(3,'thrust');await delay(40);await advance(1);
+      expect(await result(3)).toBe('recharging');
+      // Hop and Thrust pressed together get one reply each.
+      send(4,'hop');send(5,'thrust');await delay(40);await advance(1);
+      expect(await result(4)).toBe('fired');expect(await result(5)).toBe('recharging');
+      send(6,'hop',tick()-61);expect(await result(6)).toBe('too-late');
+      host.room.send('ability',{round:0,sequence:7,tick:tick(),ability:'hop'});await delay(60);
+      expect(host.results.some(r=>r.sequence===7)).toBe(false);
+      // Other seats never hear another seat's outcomes.
+      expect(guest.results).toEqual([]);
+    }finally{await Promise.allSettled([host,guest].map(d=>d.room.leave()));}
+  },60000);
   it('lets only the host change circuit and laps, forces fresh lines after a circuit change, and removes a slow drawer after the grace period',async()=>{
     const newport=findCircuit('coastal-launch').track,gate=findCircuit('golden-gate').track,versions={[newport.id]:newport.version,[gate.id]:gate.version};
     const opts={circuit:newport.id,laps:1,protocol:DUEL_PROTOCOL,physics:RULES.version,compiler:COMPILER_VERSION,versions,name:'A',paint:'glacier'};
@@ -149,18 +187,21 @@ describe('private duel transport and authority',()=>{
   });
   it('rejects mismatched versions, declines a fifth seat and hands room controls to the next driver',async()=>{
     const track=findCircuit('coastal-launch').track, opts={circuit:track.id,laps:1,protocol:DUEL_PROTOCOL,physics:RULES.version,compiler:COMPILER_VERSION,versions:{[track.id]:track.version}};
-    await expect(client.create('private_duel',{...opts,protocol:0})).rejects.toThrow();
+    await expect(client.create('private_duel',{...opts,protocol:0})).rejects.toThrow('version-mismatch');
     const host=new Driver(await client.create('private_duel',opts));
     const drivers=[host];
     try{
       for(let i=0;i<3;i++)drivers.push(new Driver(await client.joinById(host.room.roomId,opts)));
       await expect(client.joinById(host.room.roomId,opts)).rejects.toThrow();
+      await expect(client.create('private_duel',{...opts,laps:9})).rejects.toThrow('settings-invalid');
       await host.room.leave();drivers.shift();
       await until(()=>drivers[0].view?.host===drivers[0].room.sessionId);
       drivers[0].room.send('start');
       await until(()=>drivers.every(d=>d.view?.phase==='drawing'));
       drivers[0].room.send('line',{round:1,samples:[[0,0,0],[0,1,1],[0,2,2],[0,3,-1]]});
-      await until(()=>drivers[0].notice.length>0);
+      await until(()=>drivers[0].error);
+      expect(drivers[0].error).toMatchObject({category:'drawing',reason:'line-unreadable'});
+      expect(drivers.slice(1).every(d=>!d.error)).toBe(true);
       expect(drivers.every(d=>!d.view?.drivers.some(s=>s.ready))).toBe(true);
     }finally{await Promise.allSettled(drivers.map(d=>d.room.leave()));}
   });

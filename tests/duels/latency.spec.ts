@@ -29,10 +29,17 @@ for (const [rtt, jitter] of scenarios) test(`latency ${rtt} ms ± ${jitter} ms: 
     await host.getByRole('button', { name: 'Start drawing' }).click();
     await Promise.all([draw(host, false), draw(guest, true)]);
     await Promise.all([host, guest].map(p => waitForPhase(p, 'racing', 30000)));
-    // Wait out the ghost start, then press Hop once and expect it to fire or to say it was missed.
+    // Press Hop and Thrust together: each command gets exactly one private outcome (no player-facing toast).
     await host.waitForTimeout(1500);
-    await host.locator('#hop-button').click();
-    await expect.poll(async () => (await host.locator('#hop-button').getAttribute('data-ready')) === 'false' || /missed/i.test(await host.locator('.race-notice').textContent() ?? ''), { timeout: 4000 + rtt * 4 }).toBe(true);
+    await host.locator('#hop-button').click(); await host.locator('#thrust-button').click();
+    const log = () => host.evaluate(() => (window as any).__roadsterDuel.commandLog as { ability: string; outcome: string; sequence: number }[]);
+    await expect.poll(async () => (await log()).length, { timeout: 4000 + rtt * 4 }).toBeGreaterThanOrEqual(2);
+    const outcomes = await log();
+    expect(outcomes.map(o => o.ability).sort()).toEqual(['hop', 'thrust']);
+    expect(new Set(outcomes.map(o => o.sequence)).size).toBe(outcomes.length);
+    for (const o of outcomes) expect(['fired', 'recharging', 'too-late', 'unavailable']).toContain(o.outcome);
+    expect(await guest.evaluate(() => (window as any).__roadsterDuel.commandLog.length)).toBe(0);
+    await expect(host.locator('.race-notice')).not.toContainText(/missed/i);
     // Sample the displayed own car: progress along the course must not step backwards (recoveries jump further than 25 m).
     const progress = await host.evaluate(async () => {
       const g = (window as any).__roadster, t = g.getTrack(), w = g.getWorld(), out: number[] = [];

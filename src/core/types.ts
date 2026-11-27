@@ -86,6 +86,8 @@ export interface CompiledRoute {
 export interface DrawingTrim { leadIn: DrawSample[]; tail: DrawSample[]; joined: boolean }
 export type RouteResult = { ok: true; route: CompiledRoute; drawing?: DrawingTrim } | { ok: false; message: string; point?: Point; section?: Point[] };
 export type Ability = 'thrust' | 'hop';
+/** What the rules did with a queued press at the step that evaluated it (bookkeeping only; never changes the race). */
+export type RuleOutcome = 'fired' | 'recharging' | 'unavailable';
 export interface LapSummary {lap:number;duration:number;barrierContacts:number;carContacts:number;recoveries:number}
 export type RaceEvent = { type: 'thrust' | 'hop' | 'drift' | 'lap' | 'finish' | 'collision' | 'car-impact' | 'scrape' | 'recovery' | 'takeoff' | 'landing' | 'splash'; time: number; point?: Point; intensity?: number; otherPlayer?: number; lapSummary?:LapSummary; /** Successful landing provenance; telemetry only, never used to drive physics. */ crossingId?: string; flightOrigin?: RaceState['flightOrigin']; /** Extra reset hold (s) after crashing into a hazard. */ penalty?: number };
 export interface RaceState {

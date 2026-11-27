@@ -6,7 +6,7 @@ import { barrierContact, blockedRouteSection, insidePolygon, sweepVehicle } from
 import { DEFAULT_LAPS, validateLapCount } from './race-options';
 import { RULES } from './rules';
 import { createContactLog, stepRacers } from './stepping';
-import type { CompiledRoute, Point, RaceEvent, RaceState, TrackDefinition } from './types';
+import type { Ability, CompiledRoute, Point, RaceEvent, RaceState, RuleOutcome, TrackDefinition } from './types';
 import { branchProjection, flightGravity, FLIGHT_RULES, groundHeight, jumpCoordinates, rampAt, supported, takeoffCrossing,terrainTakeoffCrossing, vehicleSupported } from './support';
 import { locateRoad, roadPoint } from './elevation';
 import { permittedHopBarriers } from './hop-shortcuts';
@@ -45,6 +45,8 @@ export class RaceSimulation {
   markLapIncident(kind:'barrierContacts'|'carContacts'|'recoveries'){this.lapIncidents[kind]++;}
   private queuedThrust = false;
   private queuedHop = false;
+  /** Outcome of the last evaluated press per ability, until taken (Private Duel acknowledgments). */
+  private outcomes: Partial<Record<Ability, RuleOutcome>> = {};
   private lastSafeDistance = 0;
   private stuckTicks = 0;
   private lastCollisionTick = -1000;
@@ -67,8 +69,17 @@ export class RaceSimulation {
       slipAngle: 0, lineError: 0, drifting: false, driftCount: 0, sandAmount: 0, surface: 'asphalt', checkpoint: 1,
       thrustCount: 0, finished: false, finishTime: null, collisionCount: 0, recoveryCount: 0, recoveringUntil: -1, recoveryWaiting: false };
   }
-  pressThrust() { if (!this.state.finished) this.queuedThrust = true; }
-  pressHop() { if (!this.state.finished) this.queuedHop = true; }
+  /** Queues a press for the next step; false when the car has finished and no press can apply. */
+  pressThrust() { if (this.state.finished) return false; this.queuedThrust = true; return true; }
+  pressHop() { if (this.state.finished) return false; this.queuedHop = true; return true; }
+  /** The outcome of the last evaluated press of this ability, once; undefined while none is settled. */
+  takeOutcome(ability: Ability) { const outcome = this.outcomes[ability]; delete this.outcomes[ability]; return outcome; }
+  /** Recovery and respawn drop queued presses: they could not fire. */
+  private dropCommands() {
+    if (this.queuedThrust) this.outcomes.thrust = 'unavailable';
+    if (this.queuedHop) this.outcomes.hop = 'unavailable';
+    this.clearCommands();
+  }
   allowedHopBarriers(to = this.state.position) {
     const allowed=permittedHopBarriers(this.state,this.route,this.track,to);
     if(this.track.sections){const jump=this.track.jumps?.find(j=>j.kind==='crest'&&j.id===this.state.activeJump&&this.route.jumps?.includes(j.id));if(jump){const c=jumpCoordinates(to,jump);if(c.along>=-this.track.carLength&&c.along<=jump.corridorLength&&Math.abs(c.across)<=(jump.width-this.track.carWidth)/2)allowed.push(...this.track.barriers.filter(b=>b.kind==='cliff-face').map(b=>b.id));}}
@@ -129,7 +140,7 @@ export class RaceSimulation {
   private settleAfterRecovery(now: number, hold: number) {
     const s = this.state;
     s.velocity = { x: 0, z: 0 }; s.speed = 0; s.acceleration = 0; s.steeringRate = 0;
-    s.elevation = groundHeight(s.position, this.track); if(this.track.sections)s.supportSectionId=s.position.sectionId;if(this.track.decks)s.supportSurfaceId=deckAt(s.position,this.track)?.id; s.verticalVelocity = 0; s.movement = 'grounded'; s.activeJump = null;s.intendedLandingSurfaceId=undefined; s.flightOrigin = null; s.flightStartedAt = -1; this.invalidFlight = false; this.clearCommands();
+    s.elevation = groundHeight(s.position, this.track); if(this.track.sections)s.supportSectionId=s.position.sectionId;if(this.track.decks)s.supportSurfaceId=deckAt(s.position,this.track)?.id; s.verticalVelocity = 0; s.movement = 'grounded'; s.activeJump = null;s.intendedLandingSurfaceId=undefined; s.flightOrigin = null; s.flightStartedAt = -1; this.invalidFlight = false; this.dropCommands();
     s.thrustUntil = now; s.recoveringUntil = now + hold; s.recoveryCount++; s.drifting = false;
     // A failed crossing must not strand a respawned car without the abilities needed to retry it.
     // Availability begins after the hold; occupied respawns remain blocked independently.
@@ -160,13 +171,14 @@ export class RaceSimulation {
   integrate(dt: number, now: number): Point | null {
     const s = this.state;
     if (s.finished) return null;
-    if (now < s.recoveringUntil || s.recoveryWaiting) { this.clearCommands(); return null; }
+    if (now < s.recoveringUntil || s.recoveryWaiting) { this.dropCommands(); return null; }
     if (this.queuedThrust && now + 1e-8 >= s.thrustReadyAt) {
       s.thrustUntil = now + RULES.thrustDuration;
       s.thrustReadyAt = now + RULES.thrustRecharge;
       s.thrustCount++;
       this.events.push({ type: 'thrust', time: now });
-    }
+      this.outcomes.thrust = 'fired';
+    } else if (this.queuedThrust) this.outcomes.thrust = 'recharging';
     this.queuedThrust = false;
     if(this.track.sections||this.track.terrain){s.position=roadPoint(s.position,this.track,sampleRoute(this.route,s.distance).courseProgress);s.supportSectionId=s.position.sectionId;}
     const hopRamp = this.queuedHop ? rampAt(s.position, this.track) : undefined;
@@ -180,7 +192,8 @@ export class RaceSimulation {
       this.invalidFlight = false; s.elevation = groundHeight(s.position, this.track); s.verticalVelocity = RULES.hopLaunchSpeed;
       s.acceleration = 0; s.drifting = false; this.assistFlight(RULES.flightLaunchCorrection);
       this.events.push({ type: 'hop', time: now, point: { ...s.position } });
-    }
+      this.outcomes.hop = 'fired';
+    } else if (this.queuedHop) this.outcomes.hop = now + 1e-8 < s.hopReadyAt ? 'recharging' : 'unavailable';
     this.queuedHop = false;
     if (s.movement === 'airborne') return this.integrateFlight(dt, now);
     const surface = sampleSurface(s.position, this.track);
