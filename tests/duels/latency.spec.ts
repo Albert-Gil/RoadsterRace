@@ -42,8 +42,10 @@ for (const [rtt, jitter] of scenarios) test(`latency ${rtt} ms ± ${jitter} ms: 
     await expect(host.locator('.race-notice')).not.toContainText(/missed/i);
     // Your own car is drawn where the room will be when a press lands: measured against the server's car at
     // the tick each press was applied (Thrust only, so no flight interrupts the lead).
+    await host.locator('body').focus();
     await host.waitForTimeout(1500);
-    for (let i = 0; i < 6; i++) { await host.locator('#thrust-button').click(); await host.waitForTimeout(400); }
+    // Space is Thrust for the one driver on this device; a press while recharging still gets a reply with its tick.
+    for (let i = 0; i < 6; i++) { await host.keyboard.press('Space'); await host.waitForTimeout(400); }
     await expect.poll(async () => (await log()).length, { timeout: 4000 + rtt * 4 }).toBeGreaterThanOrEqual(8);
     const errors = (await log()).slice(2).map(o => (o as { displayErrorTicks?: number }).displayErrorTicks).filter((e): e is number => e !== undefined).sort((a, b) => a - b);
     expect(errors.length).toBeGreaterThanOrEqual(4);
