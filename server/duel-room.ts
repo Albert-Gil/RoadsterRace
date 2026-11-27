@@ -9,7 +9,7 @@ import { santaMonicaTrack } from '../src/core/tracks/santa-monica';
 import type { CompiledRoute, DrawSample, TrackDefinition } from '../src/core/types';
 import { DUEL_PROTOCOL, packFrame, type AbilityCommand, type DriverSeat, type DuelVenue, type RaceFrame, type Rematch, type RoomView } from '../src/duels/protocol';
 
-const tracks = new Map([coastalTrack, goldenGateTrack, santaMonicaTrack].map(track => [track.id, track]));
+export const duelTracks = new Map([coastalTrack, goldenGateTrack, santaMonicaTrack].map(track => [track.id, track]));
 const tickMs = 1000 / 60;
 let rooms = 0;
 const creations: number[] = [];
@@ -51,7 +51,7 @@ export class DuelRoom extends Room {
   private events: RaceFrame['events'] = [];
 
   async onCreate(options: Options) {
-    this.track = tracks.get(options.circuit)!;
+    this.track = duelTracks.get(options.circuit)!;
     if (!this.track || !Number.isInteger(options.laps) || options.laps < 1 || options.laps > 6) throw new ServerError(400,'Choose a beta circuit and 1–6 laps.');
     this.compatible(options);
     while (creations.length && creations[0] < Date.now()-60_000) creations.shift();
