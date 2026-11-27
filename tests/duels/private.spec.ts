@@ -77,6 +77,11 @@ for(const [venue,count] of [['coastal-launch',2],['coastal-launch',4],['golden-g
         expect(presentation.drivers[0].paint).toBe('crimson');
         expect(presentation.drivers[i].paint).toBe(['crimson','cobalt','solar','verdant'][i]);
       }
+      // Your own car carries corner brackets, and the HUD shows your position out of all drivers.
+      for(const page of pages){
+        await expect(page.locator('.own-car-bracket:not([hidden])')).toHaveCount(1);
+        await expect(page.locator('#pace-label')).toHaveText(/POSITION|GHOST START/);
+      }
       await Promise.all([
         guests[0].reload({waitUntil:'domcontentloaded'}),
         (async()=>{await host.locator('#hop-button').click();await host.locator('#thrust-button').click();})(),

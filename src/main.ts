@@ -89,6 +89,9 @@ const countdownElement = document.querySelector<HTMLElement>('.countdown')!, con
 const pauseButton = document.querySelector<HTMLButtonElement>('.pause-button')!, notice = document.querySelector<HTMLElement>('.race-notice')!;
 const diagnosticSection = document.querySelector<HTMLElement>('#diagnostics')!, raceProgress = document.querySelector<HTMLElement>('.race-progress')!;
 const labels = [...document.querySelectorAll<HTMLElement>('.vehicle-label')];
+/** Private Duels: subtle corner brackets that follow your own car for the whole race. */
+const ownBracket = Object.assign(document.createElement('div'), { className: 'own-car-bracket', hidden: true });
+labels[0]?.parentElement?.append(ownBracket);
 const coach = document.querySelector<HTMLElement>('.tutorial-coach')!;
 const settingsDialog = document.querySelector<HTMLDialogElement>('#settings')!;
 const heroPicture = document.querySelector<HTMLElement>('.home-hero')!, heroImage = heroPicture.querySelector('img')!, heroSource = heroPicture.querySelector('source')!;
@@ -541,6 +544,20 @@ function updateHud() {
     tourLabel: activeTour ? `ROUND ${roundIndex + 1}/${activeTour.state.rounds.length} · ${activeTrack.name.toUpperCase()}` : '',
     personalBest: personalLap?.duration, readyPlayers, driverName, hud, controls, raceProgress });
 }
+/** Corner brackets around your own car in a Private Duel, sized from its projected length, kept inside the course area. */
+function placeOwnBracket(own: RaceFrame['cars'][number] | undefined) {
+  const seat = duel?.seatIndex ?? -1, visible = !!own && seat >= 0 && ['countdown', 'racing'].includes(phase) && !own.finished && own.time >= own.recoveringUntil && !own.recoveryWaiting;
+  ownBracket.hidden = !visible;
+  if (!visible) return;
+  const pose = world.vehicles[seat]?.root.position, heading = own!.heading, half = activeTrack.carLength / 2;
+  const centre = pose ? { x: pose.x, y: pose.y, z: pose.z } : { x: own!.position.x, y: own!.elevation, z: own!.position.z };
+  const nose = world.project({ x: centre.x + Math.sin(heading) * half, y: centre.y, z: centre.z + Math.cos(heading) * half });
+  const tail = world.project({ x: centre.x - Math.sin(heading) * half, y: centre.y, z: centre.z - Math.cos(heading) * half });
+  const middle = world.project(centre), size = clamp(Math.hypot(nose.x - tail.x, nose.y - tail.y) * 1.5, 30, 90);
+  const safe = document.querySelector('#course-space')!.getBoundingClientRect();
+  ownBracket.style.setProperty('--size', `${size}px`);
+  ownBracket.style.left = `${clamp(middle.x, safe.left + size / 2, safe.right - size / 2)}px`; ownBracket.style.top = `${clamp(middle.y, safe.top + size / 2, safe.bottom - size / 2)}px`;
+}
 function updateVehicles(alpha: number) {
   const rotation = activeTour ? roundIndex % playerCount : 0;
   if (!remote && playerCount > 1 && !race && (!previewGrid || previewGrid.routes !== confirmedRoutes || previewGrid.poses.length !== confirmedRoutes.length || previewGrid.track !== activeTrack || previewGrid.rotation !== rotation)) {
@@ -575,6 +592,7 @@ function updateVehicles(alpha: number) {
       chipAnchors.push({ car: i, anchor: { car: world.project(pose), tail: world.project(tail) } });
     }
   }
+  placeOwnBracket(remote && duel ? remote.cars[duel.seatIndex] : undefined);
   if (chipAnchors.length) {
     const safe = document.querySelector('#course-space')!.getBoundingClientRect();
     gridLabelPositions(chipAnchors.map(c => c.anchor)).forEach((p, k) => {

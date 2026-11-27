@@ -600,3 +600,9 @@ button:focus-visible,summary:focus-visible { outline:2px solid var(--text); outl
 .ballot-option:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .ballot-status { margin: 0; font-size: .9em; opacity: .85; }
 @media (max-width: 520px) { .ballot-seat { grid-template-columns: auto 1fr; } .ballot-options { grid-column: 1 / -1; justify-content: stretch; } .ballot-option { flex: 1; } }
+/* Private Duels: your own car's corner brackets (main.ts placeOwnBracket). */
+.own-car-bracket { --size: 40px; --tick: 9px; --ink: rgb(255 255 255 / 92%); position: absolute; z-index: 2; width: var(--size); height: var(--size); pointer-events: none; transform: translate(-50%, -50%); filter: drop-shadow(0 0 2px rgb(0 0 0 / 80%));
+  background: linear-gradient(var(--ink), var(--ink)) top left / var(--tick) 2px no-repeat, linear-gradient(var(--ink), var(--ink)) top left / 2px var(--tick) no-repeat,
+    linear-gradient(var(--ink), var(--ink)) top right / var(--tick) 2px no-repeat, linear-gradient(var(--ink), var(--ink)) top right / 2px var(--tick) no-repeat,
+    linear-gradient(var(--ink), var(--ink)) bottom left / var(--tick) 2px no-repeat, linear-gradient(var(--ink), var(--ink)) bottom left / 2px var(--tick) no-repeat,
+    linear-gradient(var(--ink), var(--ink)) bottom right / var(--tick) 2px no-repeat, linear-gradient(var(--ink), var(--ink)) bottom right / 2px var(--tick) no-repeat; }
