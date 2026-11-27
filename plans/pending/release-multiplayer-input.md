@@ -209,11 +209,17 @@ Verified when: all checks green, both release stages pass the public smoke check
 ## Progress
 | Phase | Status |
 | --- | --- |
-| 0 Test harness | not started |
-| 1 Release handoff (stage 1) | not started |
-| 2 Duel messages (stage 2, protocol 4) | not started |
-| 3 Drawing session | not started |
-| 4 Input ownership | not started |
-| 5 Fleet fixes | not started |
-| 6 Multiplayer guide | not started |
-| 7 Verification and rollout | not started |
+| 0 Test harness | done: `?simRate` (and `simRate=1` catch-up), pipelined touch strokes, 3 unit shards |
+| 1 Release handoff (stage 1) | done; stage-1 bundle delivered (ends 118f1b1); owner push + public smoke pending |
+| 2 Duel messages (stage 2, protocol 4) | done (2.1–2.6); latency spec asserts display error ≤ 3 ticks median |
+| 3 Drawing session | done (`src/drawing/session.ts`) |
+| 4 Input ownership | done (`src/input/press-context.ts`, `press-guard.ts`) |
+| 5 Fleet fixes | done: Hop warnings measured on real lines, Hop cue, computer v4 (Easy 62.96 s, Normal 60.58 s, Hard 59.80 s) |
+| 6 Multiplayer guide | done |
+| 7 Verification and rollout | 7.1 in progress |
+
+## Deviations
+- Room codes use digits 2–9 (256 × 8 = 2048 codes), not 0–9: 0 and 1 read like O and I.
+- Own-car lead cap is 200 ms (plan: 150 ms, "may move"): at 150 ± 40 ms the frame age plus two one-way delays exceeds 150 ms.
+- Ability results carry the server tick (needed to measure the display error at each press).
+- Support-ship Hop thresholds are measured on real drawn shortcut lines (the straight run-up measurement found 15.75 m/s, but 8 s lines at 16.7 m/s still failed).
