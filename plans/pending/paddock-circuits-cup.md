@@ -193,6 +193,8 @@ Verified when: a group can create a cup, race three circuits before a deadline, 
 | 1.2 long specs | Software-WebGL time budget (×3 unless d3d11) instead of the test clock | Deviation from the step text: course switching and the four-player ghost start keep real-speed behaviour |
 | 2.2 default budget | `DUEL_MAX_ROOMS` 2 and `DUEL_CAPACITY` 9.2 (two Fleet rooms); idle process always admits one room | Deviation: "two Newport rooms" (2.0) would have refused rooms admitted today (Fleet 4.6, Santa Monica 3.0); the heavy circuits are what the weight limits |
 | 3.2 split | Whole 3D scene on demand (not per venue); Home before the scene; held Home press | The 3.1 report showed Babylon (≈1.9 MB of 2.6 MB first-screen JS) as the bulk; venue scenery is ≈0.3 MB |
+| 4.3 loading seam | `?duelSceneDelay=ms` (development and duel-test builds) holds a round's scene as loading | Scene creation is synchronous today; the seam tests the paddock flow without a slow device |
+| 4.3 race menu | Compact notice over the race (as the mid-race reconnect) | A full-screen menu would hide a race that keeps running |
 
 ## Not yet specified
 - Phase 2.2 tuning: real weights and budget come from `/stats` on the live server (`DUEL_WEIGHTS`, `DUEL_CAPACITY`).
@@ -217,7 +219,7 @@ Verified when: a group can create a cup, race three circuits before a deadline, 
 | 1 CI | done on branch (stage 2 bundle) |
 | 2 Server capacity | done on branch (stage 2 bundle); live tuning from /stats pending |
 | 3 Load time | done on branch (stage 2 bundle): entry 1396 → 275 kB; Home 10.0 → 4.6 s, scene 10.0 → 7.0 s (sandbox, Lighthouse mobile throttling) |
-| 4 Paddock + guided race | not started |
+| 4 Paddock + guided race | done on branch (stage 3 bundle): screen model, full-screen paddock, loading/compact notices, covered rendering, fades, first-race tips |
 | 5 More circuits | not started |
 | 6 Weekend Cup | not started |
 | 9 Rollout | not started |
