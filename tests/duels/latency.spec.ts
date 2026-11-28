@@ -53,6 +53,8 @@ for (const [rtt, jitter] of scenarios) test(`latency ${rtt} ms ± ${jitter} ms: 
     const median = (values: number[]) => [...values].sort((a, b) => a - b)[Math.floor(values.length / 2)];
     const shown = median(measured.map(o => o.displayErrorTicks!)), buffered = median(measured.map(o => o.bufferedErrorTicks!)), roundTrip = median(measured.map(o => o.roundTripMs!));
     console.log(`display error at press, ${rtt} ms: drawn ${shown} ticks, buffer alone ${buffered} ticks, measured round trip ${roundTrip} ms`);
+    // Per press: errors, round trip and the display's state (mode, catching up, route distances, lead).
+    for (const o of measured) console.log(JSON.stringify(o));
     // Your car is always drawn closer to the room than the buffer alone would draw it.
     expect(shown).toBeLessThan(buffered);
     // When the page itself keeps up (round trip within 100 ms of the network's), the drawn car is within 3 ticks.

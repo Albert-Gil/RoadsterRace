@@ -21,7 +21,7 @@ interface Hooks {
   ownLine(samples:DrawSample[]):void;
   home():void;
   /** Where your own car is drawn right now (diagnostics: display error against the server at press time). */
-  ownShown?():{x:number;z:number;buffered?:{x:number;z:number}}|undefined;
+  ownShown?():{x:number;z:number;buffered?:{x:number;z:number};display?:Record<string,unknown>}|undefined;
 }
 /** Matches the server's DRAWING_GRACE_SECONDS (server/duel-room.ts). */
 const DRAWING_GRACE=90;
@@ -39,12 +39,12 @@ export class DuelClient {
   /** A press made in the last countdown beat, sent with the first racing frame. */
   private queued?:Ability;
   /** Sent commands awaiting the server's private reply, matched by round and sequence. */
-  private pending:{round:number;sequence:number;ability:Ability;at:number;shown?:{x:number;z:number;buffered?:{x:number;z:number}}}[]=[];
+  private pending:{round:number;sequence:number;ability:Ability;at:number;shown?:{x:number;z:number;buffered?:{x:number;z:number};display?:Record<string,unknown>}}[]=[];
   /** Your car's recent server positions by tick, to measure how far the drawn car was from the room. */
   private ownTrail:{tick:number;x:number;z:number;speed:number}[]=[];
-  private measuring:{entry:DuelClient['commandLog'][number];shown:{x:number;z:number;buffered?:{x:number;z:number}};tick:number}[]=[];
+  private measuring:{entry:DuelClient['commandLog'][number];shown:{x:number;z:number;buffered?:{x:number;z:number};display?:Record<string,unknown>};tick:number}[]=[];
   /** Development and test diagnostics: every command's outcome, or `unconfirmed` after 1.5 s. Never shown to players. */
-  readonly commandLog:{round:number;sequence:number;ability:Ability;outcome:AbilityOutcome|'unconfirmed';roundTripMs?:number;displayErrorTicks?:number;bufferedErrorTicks?:number}[]=[];
+  readonly commandLog:{round:number;sequence:number;ability:Ability;outcome:AbilityOutcome|'unconfirmed';roundTripMs?:number;displayErrorTicks?:number;bufferedErrorTicks?:number;display?:Record<string,unknown>}[]=[];
   /** Smoothed one-way delay to the room, from command round trips (ms). */
   oneWayMs=0;
   private roundDrawn=0;
@@ -350,6 +350,7 @@ export class DuelClient {
         m.entry.displayErrorTicks=ticks(m.shown);
         // For comparison: where the 100 ms buffer alone would have drawn your car.
         if(m.shown.buffered)m.entry.bufferedErrorTicks=ticks(m.shown.buffered);
+        if(m.shown.display)m.entry.display=m.shown.display;
       }
       return false;
     });

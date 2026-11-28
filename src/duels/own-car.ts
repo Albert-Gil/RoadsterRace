@@ -57,8 +57,10 @@ type Mode = 'lead' | 'flight' | 'buffer';
 /**
  * Where your own car is drawn online, frame by frame. Grounded: the lead pose (stopping at lips). In flight:
  * the newest authoritative pose (the room has confirmed the takeoff). Recovery or finish: the 100 ms buffer.
- * Switching between them shrinks the gap over at least 1.5x the time needed to cover it, and the car is never
- * stepped backwards along the line; a recovery resets everything (the car is moved by the room).
+ * Switching between them, or a target that falls behind what is drawn (a shorter lead, braking the lead did
+ * not foresee), shrinks the gap over 1.5x the time needed to cover it, so the car slows instead of stepping
+ * backwards or stopping (it waits only for a target that stops). A recovery resets everything (the car is
+ * moved by the room).
  */
 export class OwnCarDisplay {
   private serverDistance?: number;
@@ -66,27 +68,42 @@ export class OwnCarDisplay {
   private shown?: { pose: OwnPose; distance: number; mode: Mode };
   private handoff?: { offset: { x: number; z: number; y: number }; start: number; duration: number };
   private readonly lips: number[];
+  /** Diagnostics for the last frame (the latency spec reports it with each press). */
+  state: { mode?: Mode; catchingUp: boolean; serverDistance?: number; shownDistance?: number; leadMs: number } = { catchingUp: false, leadMs: 0 };
   constructor(readonly route: CompiledRoute, readonly track: TrackDefinition) { this.lips = lipDistances(route, track); }
+
+  /** The room's car on the line, searched near its last distance; a clearly closer point elsewhere wins (a lost track). */
+  private locate(p: { x: number; z: number }, near?: number) {
+    const windowed = routeDistanceNear(this.route, p, near);
+    if (near === undefined) return windowed;
+    const global = routeDistanceNear(this.route, p), gap = (d: number) => { const q = sampleRoute(this.route, d); return Math.hypot(q.x - p.x, q.z - p.z); };
+    return gap(global) + 4 < gap(windowed) ? global : windowed;
+  }
 
   update(now: number, car: CarView, leadMs: number, buffered: OwnPose | undefined, height?: (p: { x: number; z: number }) => number | undefined): OwnPose {
     if (car.recoveryCount !== this.recoveries) { this.recoveries = car.recoveryCount; this.serverDistance = undefined; this.shown = undefined; this.handoff = undefined; }
-    this.serverDistance = routeDistanceNear(this.route, car.position, this.serverDistance);
+    this.serverDistance = this.locate(car.position, this.serverDistance);
     const lead = ownCarAhead(this.route, car, leadMs, height, this.serverDistance, this.lips);
     const latest: OwnPose = { x: car.position.x, z: car.position.z, y: car.elevation, heading: car.heading };
     const mode: Mode = lead ? 'lead' : car.movement === 'airborne' && !car.finished ? 'flight' : 'buffer';
     const target = lead ?? (mode === 'flight' ? latest : buffered ?? latest);
-    if (this.shown && this.shown.mode !== mode) {
-      const offset = { x: this.shown.pose.x - target.x, z: this.shown.pose.z - target.z, y: this.shown.pose.y - target.y };
+    const blendFrom = (from: OwnPose) => {
+      const offset = { x: from.x - target.x, z: from.z - target.z, y: from.y - target.y };
       this.handoff = { offset, start: now, duration: Math.max(200, 1500 * Math.hypot(offset.x, offset.z) / Math.max(5, car.speed)) };
-    }
-    if (this.handoff && now - this.handoff.start >= this.handoff.duration) this.handoff = undefined;
-    const k = this.handoff ? 1 - (now - this.handoff.start) / this.handoff.duration : 0;
-    const pose: OwnPose = this.handoff ? { x: target.x + this.handoff.offset.x * k, z: target.z + this.handoff.offset.z * k, y: target.y + this.handoff.offset.y * k, heading: target.heading } : target;
-    const distance = routeDistanceNear(this.route, pose, this.shown?.distance ?? this.serverDistance);
+    };
+    if (this.shown && this.shown.mode !== mode) blendFrom(this.shown.pose);
+    const blended = () => {
+      if (this.handoff && now - this.handoff.start >= this.handoff.duration) this.handoff = undefined;
+      const k = this.handoff ? 1 - (now - this.handoff.start) / this.handoff.duration : 0;
+      return this.handoff ? { x: target.x + this.handoff.offset.x * k, z: target.z + this.handoff.offset.z * k, y: target.y + this.handoff.offset.y * k, heading: target.heading } : target;
+    };
+    let pose = blended(), distance = routeDistanceNear(this.route, pose, this.shown?.distance ?? this.serverDistance), catchingUp = false;
     if (this.shown) {
-      let back = this.shown.distance - distance; if (back > this.route.length / 2) back -= this.route.length;
-      if (back > 0 && back < 25) { this.shown = { ...this.shown, mode }; return this.shown.pose; }
+      let back = this.shown.distance - distance;
+      if (back > this.route.length / 2) back -= this.route.length; else if (back < -this.route.length / 2) back += this.route.length;
+      if (back > 0.05 && back < 25) { blendFrom(this.shown.pose); pose = this.shown.pose; distance = this.shown.distance; catchingUp = true; }
     }
+    this.state = { mode, catchingUp, serverDistance: this.serverDistance, shownDistance: distance, leadMs };
     this.shown = { pose, distance, mode };
     return pose;
   }

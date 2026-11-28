@@ -850,7 +850,7 @@ async function openDuel(code='', reclaimed?:Room, returnCircuit=activeCircuit.id
       draw(view){remote=undefined;shown=undefined;playback.reset();ownDisplay=undefined;loadDuelVenue(view);turn=Math.max(0,duel!.seatIndex);beginDrawing();},
       ownLine(samples){if(duel?.view && activeCircuit.id!==duel.view.circuit)loadDuelVenue(duel.view);const result=compileRoute(samples,activeTrack);if(result.ok){route=result.route;if(remote)world.drawLine(null);else world.drawLine(route,result.drawing);}},
       frame:receiveDuelFrame,
-      ownShown(){const v=world.vehicles[duel?.seatIndex??0]?.root.position;return v?{x:v.x,z:v.z,buffered:ownBuffered}:undefined;},
+      ownShown(){const v=world.vehicles[duel?.seatIndex??0]?.root.position;return v?{x:v.x,z:v.z,buffered:ownBuffered,display:ownDisplay&&{...ownDisplay.state}}:undefined;},
       home(){duel=undefined;remote=undefined;shown=undefined;playback.reset();lapCount=previous.laps;sessionOptions.mode=previous.mode;if(activeCircuit.id!==previous.circuit)loadCircuit(previous.circuit,false);goHome();},
     });
     duel.open(code,reclaimed);

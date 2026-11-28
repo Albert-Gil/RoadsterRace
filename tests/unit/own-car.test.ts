@@ -42,7 +42,7 @@ describe('your own car drawn closer to the present', () => {
   });
 });
 
-import { OwnCarDisplay, lipDistances } from '../../src/duels/own-car';
+import { OwnCarDisplay, lipDistances} from '../../src/duels/own-car';
 
 describe('your own car near Fleet jumps', () => {
   const fleet = findCircuit('san-diego-fleet').track;
@@ -90,5 +90,35 @@ describe('your own car near Fleet jumps', () => {
     const pose = display.update(5000, flying, 200, undefined);
     expect(pose.y).toBe(27);
     expect(Math.hypot(pose.x - flying.position.x, pose.z - flying.position.z)).toBeLessThan(0.01);
+  });
+});
+
+describe('your own car when the lead shrinks', () => {
+  it('slows to meet a lead that fell behind it instead of stopping, and stays close to the room', () => {
+    const display = new OwnCarDisplay(route, track);
+    let d = 100, last = -Infinity, now = 0, worst = 0;
+    // 30 m/s; the lead is 200 ms, then drops to 0 for a moment (a shorter round trip), then returns.
+    for (let i = 0; i < 90; i++, now += 1000 / 15) {
+      d += 30 / 15;
+      const lead = i >= 30 && i < 34 ? 1 : 200;
+      const pose = display.update(now, car(d), lead, undefined);
+      const at = routeDistanceNear(route, pose, d);
+      expect(at).toBeGreaterThanOrEqual(last - 1e-6);
+      if (i > 30 && i < 40) expect(at - last, `frame ${i}`).toBeGreaterThan(0.2);
+      worst = Math.max(worst, Math.abs(at - (d + 30 * Math.min(lead, OWN_AHEAD_CAP_MS) / 1000)));
+      last = at;
+    }
+    // Never further from its target than the lead that disappeared (6 m at 30 m/s).
+    expect(worst).toBeLessThanOrEqual(6.1);
+  });
+  it('waits for a target that stopped behind it rather than stepping back', () => {
+    const display = new OwnCarDisplay(route, track);
+    display.update(0, car(100), 200, undefined);
+    let pose = display.update(1, car(100, { speed: 0.5 }), 200, undefined);
+    for (let now = 50; now <= 1000; now += 50) pose = display.update(now, car(100, { speed: 0.5 }), 200, undefined);
+    expect(routeDistanceNear(route, pose, 100)).toBeGreaterThan(100.5);
+    expect(display.state.catchingUp).toBe(true);
+    for (let now = 1050, d = 100; now <= 2000; now += 50) { d += 1; pose = display.update(now, car(d), 200, undefined); }
+    expect(display.state.catchingUp).toBe(false);
   });
 });
