@@ -3,6 +3,7 @@ import { Server } from '@colyseus/core';
 import { WebSocketTransport } from '@colyseus/ws-transport';
 import { DuelRoom, duelTracks } from './duel-room';
 import { guardJoins } from './join-limiter';
+import { stats } from './stats';
 import { DUEL_PROTOCOL, duelVenues } from '../src/duels/protocol';
 import { RULES } from '../src/core/simulation';
 import { COMPILER_VERSION } from '../src/core/route';
@@ -36,10 +37,19 @@ const server = new Server({
       res.setHeader('Content-Type', 'application/json');
       res.end(health);
     });
+    // Step times, rooms and cold-start time for sizing the room limit; no secrets or player data.
+    app.get('/stats', (_req: unknown, res: import('node:http').ServerResponse) => {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Cache-Control', 'no-store');
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify(stats.snapshot()));
+    });
   },
 });
 server.define('private_duel',DuelRoom);
 await server.listen(Number(process.env.PORT || 2567),'0.0.0.0');
+stats.readyMs = Date.now() - stats.startedAt;
+console.log(JSON.stringify({ type: 'duel-ready', readyMs: stats.readyMs }));
 // Repeated failed joins from one address (guessed room codes) are refused for a minute.
 const http = (server.transport as unknown as { server?: import('node:http').Server }).server;
 if (http) guardJoins(http);

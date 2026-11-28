@@ -2,13 +2,15 @@
 // duel test servers). A fresh browser opens the site, waits until it serves the expected build,
 // creates a Newport Island room and joins it from a second browser context; both players leave.
 // Any failure exits 1 and leaves screenshots in artifacts/public-smoke/.
-//   node tools/public-smoke.mjs --url https://<user>.github.io/RoadsterRace/ [--build abc1234]
+// With --server, it then prints the room server's /stats (step times per circuit, rooms, cold-start time)
+// to the log and the job summary; a server without /stats only warns.
+//   node tools/public-smoke.mjs --url https://<user>.github.io/RoadsterRace/ [--build abc1234] [--server https://<room server>]
 import { chromium } from '@playwright/test';
-import { mkdirSync } from 'node:fs';
+import { appendFileSync, mkdirSync } from 'node:fs';
 import { parseArgs } from 'node:util';
 import { browserOptions } from './browser-options.mjs';
 
-const { values } = parseArgs({ options: { url: { type: 'string' }, build: { type: 'string' }, 'build-wait': { type: 'string', default: '360' } } });
+const { values } = parseArgs({ options: { url: { type: 'string' }, build: { type: 'string' }, 'build-wait': { type: 'string', default: '360' }, server: { type: 'string' } } });
 if (!values.url) { console.error('Usage: node tools/public-smoke.mjs --url <site> [--build <id>]'); process.exit(2); }
 const site = new URL(values.url), evidence = 'artifacts/public-smoke';
 mkdirSync(evidence, { recursive: true });
@@ -45,6 +47,21 @@ async function enterLobby(page, press) {
   }
 }
 
+/** Prints the room server's live numbers; informational, never fails the check. */
+async function reportStats(server) {
+  try {
+    const response = await fetch(new URL('/stats', server), { signal: AbortSignal.timeout(20_000) });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const stats = await response.json(), lines = [`Room server: up ${stats.uptimeSeconds} s, ready ${stats.readyMs ?? '?'} ms after start, rooms ${JSON.stringify(stats.rooms)}`];
+    for (const [circuit, s] of Object.entries({ ...stats.stepsLastHour, ...stats.stepsLastMinute }))
+      lines.push(`  ${circuit}: step median ${s.medianMs} ms, p95 ${s.p95Ms} ms, max ${s.maxMs} ms over ${s.samples} steps; behind ${s.behindMs} ms (budget ${stats.tickBudgetMs} ms)`);
+    console.log(lines.join('\n'));
+    if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, ['### Room server /stats', '```', ...lines, '```', ''].join('\n'));
+  } catch (error) {
+    console.log(`::warning::Could not read ${server}/stats: ${error.message}`);
+  }
+}
+
 const browser = await chromium.launch(browserOptions());
 const pages = [];
 try {
@@ -75,3 +92,4 @@ try {
 } finally {
   await browser.close();
 }
+if (values.server) await reportStats(values.server);

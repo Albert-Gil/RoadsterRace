@@ -11,6 +11,7 @@ import { santaMonicaTrack } from '../src/core/tracks/santa-monica';
 import { sanDiegoFleetTrack } from '../src/core/tracks/san-diego-fleet';
 import type { Ability, CompiledRoute, DrawSample, TrackDefinition } from '../src/core/types';
 import { resolveBallot } from '../src/core/rematch-vote';
+import { stats } from './stats';
 import { DUEL_PROTOCOL, defaultDuelVenues, packFrame, type AbilityCommand, type AbilityOutcome, type AbilityResult, type DriverSeat, type DuelVenue, type RaceFrame, type Rematch, type RoomView } from '../src/duels/protocol';
 
 const allDuelTracks = [coastalTrack, goldenGateTrack, santaMonicaTrack, sanDiegoFleetTrack];
@@ -21,24 +22,12 @@ export function duelTracks(): Map<string, TrackDefinition> {
 }
 const tickMs = 1000 / 60;
 let rooms = 0;
-/** Rooms one process admits. Render Free has 0.1 CPU: raise only after reading the step-time log. */
+/** Rooms one process admits. Render Free has 0.1 CPU: raise only after reading /stats or the duel-steps log. */
 const MAX_ROOMS = Math.max(1, Number(process.env.DUEL_MAX_ROOMS ?? 2));
 /** Seconds a driver may keep drawing before the host can remove them. */
 export const DRAWING_GRACE_SECONDS = 90;
 /** How stale a press's observed tick may be (1 s): a slow phone's press still counts, applied on arrival. */
 const ABILITY_WINDOW_TICKS = 60;
-const steps: number[] = [];
-let stepLog: ReturnType<typeof setInterval> | undefined;
-/** One line per minute: how long simulation steps take on this instance (ms), to size MAX_ROOMS. */
-function recordStep(ms: number) {
-  steps.push(ms);
-  stepLog ??= setInterval(() => {
-    if (!steps.length) return;
-    const sorted = steps.splice(0).sort((a, b) => a - b), at = (q: number) => +sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * q))].toFixed(3);
-    console.log(JSON.stringify({ type: 'duel-steps', rooms, samples: sorted.length, medianMs: at(.5), p95Ms: at(.95), maxMs: at(1) }));
-  }, 60_000);
-  stepLog.unref?.();
-}
 const creations: number[] = [];
 type Options = { protocol: number; physics: number; compiler: number; circuit: DuelVenue; laps: number; name: string; paint: string; versions: Record<string,number>; since?: number };
 interface Seat extends DriverSeat { versions: Record<string, number>; route?: CompiledRoute; samples?: DrawSample[]; lastSequence: number; lastUpload: number; sentCooldowns?: string }
@@ -66,7 +55,8 @@ export class DuelRoom extends Room {
   maxClients = 4;
   maxMessagesPerSecond = 30;
   patchRate = null;
-  private counted = false;
+  /** The circuit this room was counted under (its stats entry), or empty when it was refused. */
+  private counted = '';
   private seats: Seat[] = [];
   private view!: RoomView;
   private track!: TrackDefinition;
@@ -89,7 +79,7 @@ export class DuelRoom extends Room {
     this.compatible(options);
     while (creations.length && creations[0] < Date.now()-60_000) creations.shift();
     if (rooms >= MAX_ROOMS || creations.length >= 30) throw new ServerError(429,'server-full' satisfies DuelReason);
-    rooms++; this.counted = true; creations.push(Date.now());
+    rooms++; this.counted = this.track.id; stats.roomOpened(this.counted); creations.push(Date.now());
     // Six unambiguous characters players can type; retry on the (rare) clash with a live room.
     let code = newRoomCode(n => randomBytes(n));
     while (matchMaker.getLocalRoomById(code)) code = newRoomCode(n => randomBytes(n));
@@ -109,6 +99,7 @@ export class DuelRoom extends Room {
       if(!track||!Number.isInteger(laps)||laps!<1||laps!>6){this.fail(c,'settings-invalid');return;}
       if(this.seats.some(s=>s.versions[track.id]!==track.version)){this.fail(c,'circuit-version');return;}
       if(track.id!==this.track.id&&this.view.phase==='results'){this.forceRedraw=true;this.seats.forEach(s=>s.vote=null);}
+      if(this.counted){stats.roomClosed(this.counted);this.counted=track.id;stats.roomOpened(this.counted);}
       this.track=track;this.view.circuit=track.id as DuelVenue;this.view.laps=laps!;this.view.trackVersion=track.version;this.publish();
     });
     // After the grace period the host can remove a driver who is still drawing; everyone else then races.
@@ -200,13 +191,14 @@ export class DuelRoom extends Room {
     if(!this.race || (this.view.phase!=='countdown' && this.view.phase!=='racing')) {
       if(Date.now()-this.idleSince>15*60_000) void this.disconnect(); return;
     }
+    if(dt>250) stats.recordBehind(this.track.id,dt-250);
     this.accumulator+=Math.min(250,dt);
     while(this.accumulator>=tickMs) {
       this.accumulator-=tickMs;
       if(this.countdown>0) {
         this.countdown--; if(!this.countdown){this.view.phase='racing';this.publish();}
       } else {
-        const began=performance.now(); this.race.step(); recordStep(performance.now()-began); this.events.push(...this.race.drainEvents()); this.settleAbilities();
+        const began=performance.now(); this.race.step(); stats.recordStep(this.track.id,performance.now()-began); this.events.push(...this.race.drainEvents()); this.settleAbilities();
         if(this.race.time>15*60) this.seats.forEach((s,i)=>{if(!this.race!.racers[i].state.finished)this.withdraw(s);});
         if(this.race.finished) {this.view.phase='results';this.broadcast('frame',this.frame());this.events=[];this.publish();return;}
       }
@@ -276,5 +268,5 @@ export class DuelRoom extends Room {
     }
     this.publish();
   }
-  onDispose() { if(this.counted) rooms--; }
+  onDispose() { if(this.counted) { rooms--; stats.roomClosed(this.counted); } }
 }

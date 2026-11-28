@@ -213,7 +213,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
       - name: Create and join a room on the public site
-        run: node tools/public-smoke.mjs --url "${{ needs.deploy.outputs.page_url }}" --build "${GITHUB_SHA::7}"
+        run: node tools/public-smoke.mjs --url "${{ needs.deploy.outputs.page_url }}" --build "${GITHUB_SHA::7}" --server "${{ vars.ROADSTER_DUEL_SERVER }}"
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
