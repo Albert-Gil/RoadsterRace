@@ -210,7 +210,7 @@ Verified when: a group can create a cup, race three circuits before a deadline, 
 ## Progress
 | Phase | Status |
 | --- | --- |
-| 0 Online fixes | in progress |
+| 0 Online fixes | done (stage 1: unit tests, LAX sector 10/10 repeats, duel suite 10/10, input-ownership 2/2) |
 | 1 CI | not started |
 | 2 Server capacity | not started |
 | 3 Load time | not started |
