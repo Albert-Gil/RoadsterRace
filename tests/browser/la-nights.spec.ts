@@ -10,9 +10,10 @@ test('LA nights automatic channel shortcut completes an actual recorded race',as
  // practice stroke reaches only 19 m/s and fails this jump even on the old build.
  const points=await page.evaluate(async()=>{const g=(window as any).__roadster,path='/src/core/route.ts',{createPracticeSamples}=await import(path);return createPracticeSamples(g.getTrack(),6.5,true).map((p:any)=>({...g.project(p),time:p.time/1000}));});
  const cdp=await context.newCDPSession(page),epoch=Date.now()/1000;
- await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:points[0].x,y:points[0].y,id:7}],timestamp:epoch});
- for(const p of points.slice(1))await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:p.x,y:p.y,id:7}],timestamp:epoch+p.time});
- await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[],timestamp:epoch+6.5});await cdp.detach();
+ // Sent without waiting for each acknowledgement (explicit timestamps; see sendTouchStroke in ./ui).
+ const touchSends = [cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:points[0].x,y:points[0].y,id:7}],timestamp:epoch})];
+ for (const p of points.slice(1)) touchSends.push(cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:p.x,y:p.y,id:7}],timestamp:epoch+p.time}));
+ touchSends.push(cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[],timestamp:epoch+6.5})); await Promise.all(touchSends);await cdp.detach();
  await page.screenshot({path:'artifacts/la-nights/jump-plan.png'});await page.getByRole('button',{name:'Race this line',exact:true}).click();await waitForPhase(page,'racing');
  await page.waitForFunction(()=>{const s=(window as any).__roadster.getState().race;return s.flightOrigin==='ramp'&&s.elevation>1.5;});
  await page.screenshot({path:'artifacts/la-nights/channel-flight.png'});

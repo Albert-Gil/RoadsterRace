@@ -44,9 +44,10 @@ async function stroke(page: Page, touch: boolean, lead = true, overshoot = 2) {
   const cdp = await page.context().newCDPSession(page), epoch = Date.now() / 1000;
   if (touch) {
     await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: points[0].x, y: points[0].y, id: 3 }], timestamp: epoch });
-    for (const p of points.slice(1)) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: p.x, y: p.y, id: 3 }], timestamp: epoch + p.time });
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [], timestamp: epoch + points.at(-1)!.time });
+    // Sent without waiting for each acknowledgement (explicit timestamps; see sendTouchStroke in ./ui).
+    const touchSends = [cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: points[0].x, y: points[0].y, id: 3 }], timestamp: epoch })];
+    for (const p of points.slice(1)) touchSends.push(cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: p.x, y: p.y, id: 3 }], timestamp: epoch + p.time }));
+    touchSends.push(cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [], timestamp: epoch + points.at(-1)!.time })); await Promise.all(touchSends);
   } else {
     await cdp.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: points[0].x, y: points[0].y, button: 'left', buttons: 1, clickCount: 1, timestamp: epoch });
     for (const p of points.slice(1)) await cdp.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: p.x, y: p.y, buttons: 1, timestamp: epoch + p.time });

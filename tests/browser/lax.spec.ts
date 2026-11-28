@@ -25,9 +25,10 @@ for(const view of[{width:1440,height:900,touch:false},{width:844,height:390,touc
  for(const p of points){expect(p.x).toBeGreaterThan(0);expect(p.x).toBeLessThan(view.width);expect(p.y).toBeGreaterThan(0);expect(p.y).toBeLessThan(view.height);}
  const cdp=await context.newCDPSession(page),epoch=Date.now()/1000;
  if(view.touch){
-  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:points[0].x,y:points[0].y,id:9}],timestamp:epoch});
-  for(const p of points.slice(1))await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:p.x,y:p.y,id:9}],timestamp:epoch+7*p.fraction});
-  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[],timestamp:epoch+7});
+  // Sent without waiting for each acknowledgement (explicit timestamps; see sendTouchStroke in ./ui).
+  const touchSends = [cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:points[0].x,y:points[0].y,id:9}],timestamp:epoch})];
+  for (const p of points.slice(1)) touchSends.push(cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:p.x,y:p.y,id:9}],timestamp:epoch+7*p.fraction}));
+  touchSends.push(cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[],timestamp:epoch+7})); await Promise.all(touchSends);
  }else{
   await cdp.send('Input.dispatchMouseEvent',{type:'mousePressed',x:points[0].x,y:points[0].y,button:'left',buttons:1,clickCount:1,timestamp:epoch});
   for(const p of points.slice(1))await cdp.send('Input.dispatchMouseEvent',{type:'mouseMoved',x:p.x,y:p.y,button:'left',buttons:1,timestamp:epoch+7*p.fraction});

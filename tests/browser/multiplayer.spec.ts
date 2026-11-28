@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { resultRows, waitForPhase, voteEveryone } from './ui';
+import { resultRows, waitForPhase, voteEveryone, softwareBudget } from './ui';
 import{CONTACT_RULES}from'../../src/core/vehicle-contact';
 import { formatTime } from '../../src/ui/format';
 
@@ -29,6 +29,7 @@ async function planFriends(page: Page, count: number, steelPaint = false) {
 }
 
 test('four-player ghost start uses race time, survives pause and resets on rematch', async ({ page }) => {
+  test.setTimeout(softwareBudget(180_000)); // two four-car races at real speed (the test watches the ghost period)
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   await planFriends(page, 4);
   await expect(page.locator('#panel')).toContainText(`first ${CONTACT_RULES.ghostStartSeconds} s`);

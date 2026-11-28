@@ -1,4 +1,4 @@
-import type { CDPSession, Page } from '@playwright/test';
+import type { Browser, BrowserContext, BrowserContextOptions, CDPSession, Page } from '@playwright/test';
 
 /**
  * Production-safe helpers: they read only the rendered interface, never the development
@@ -46,4 +46,21 @@ export async function sendTouchStroke(cdp: CDPSession, points: { x: number; y: n
   const sends = points.map((p, i) => cdp.send('Input.dispatchTouchEvent', { type: i ? 'touchMove' : 'touchStart', touchPoints: [{ x: p.x, y: p.y, id }], timestamp: epoch + (i ? p.time : 0) }));
   sends.push(cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [], timestamp: epoch + end }));
   await Promise.all(sends);
+}
+
+/** A time budget for slow software WebGL (CI and the cloud): three times the GPU budget unless WEBGL_BACKEND=d3d11. */
+export const softwareBudget = (gpuMs: number) => process.env.WEBGL_BACKEND === 'd3d11' ? gpuMs : gpuMs * 3;
+
+/** A context that records video when Playwright's ffmpeg is installed, and the same context without video otherwise. */
+export async function contextWithOptionalVideo(browser: Browser, options: BrowserContextOptions): Promise<{ context: BrowserContext; page: Page; video: boolean }> {
+  try {
+    const context = await browser.newContext(options);
+    try { return { context, page: await context.newPage(), video: true }; }
+    catch (error) { await context.close(); throw error; }
+  } catch (error) {
+    if (!options.recordVideo || !/ffmpeg/i.test(String(error))) throw error;
+    const { recordVideo: _skip, ...rest } = options;
+    const context = await browser.newContext(rest);
+    return { context, page: await context.newPage(), video: false };
+  }
 }

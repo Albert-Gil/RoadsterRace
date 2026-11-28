@@ -1,10 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { waitForPhase, voteEveryone, testPixelRatio, RACE_SPEED, sendTouchStroke } from './ui';
+import { waitForPhase, voteEveryone, testPixelRatio, RACE_SPEED, sendTouchStroke, softwareBudget } from './ui';
 mkdirSync('artifacts/orbital', { recursive: true });
 const state = (page: Page) => page.evaluate(() => (window as any).__roadster.getState());
 
 test('course switching clears plans, retains drivers and distance, scopes bests and releases old scenes', async ({ page }) => {
+  test.setTimeout(softwareBudget(180_000)); // several venue loads
   const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
   await page.goto('/'); await page.getByRole('button', { name: 'Multiplayer' }).click();
   await page.getByRole('textbox', { name: 'Driver 1 name' }).fill('Avery');

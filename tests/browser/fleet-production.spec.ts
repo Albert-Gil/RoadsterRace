@@ -2,7 +2,7 @@ import{test,expect,type Page,type BrowserContext}from'@playwright/test';
 import{mkdirSync,writeFileSync}from'node:fs';
 import{sanDiegoFleetTrack as track}from'../../src/core/tracks/san-diego-fleet';
 import{createPracticeSamples}from'../../src/core/route';
-import{waitForPhase,testPixelRatio,sendTouchStroke}from'./ui';
+import{waitForPhase,testPixelRatio,sendTouchStroke,contextWithOptionalVideo}from'./ui';
 const root='artifacts/fleet-production/browser';mkdirSync(root,{recursive:true});
 async function setup(page:Page){await page.goto('/?circuit=san-diego-fleet&graphics=medium');await page.getByRole('button',{name:'Time Trial',exact:true}).click();await page.getByRole('button',{name:'1 lap',exact:true}).click();await page.getByRole('button',{name:'Draw racing line',exact:true}).click();await page.waitForFunction(()=>(window as any).__roadster?.getGraphics().renderReady);}
 async function draw(page:Page,context:BrowserContext,branch?:string,touch=false){
@@ -20,7 +20,8 @@ for(const viewport of[{width:844,height:390},{width:390,height:844}])test(`fleet
  for(const branch of[undefined,'support-a-lane','support-b-lane']){await setup(page);const r=await draw(page,context,branch,true);expect(r.route.hazards).toBeUndefined();expect(r.route.crossings.length).toBe(branch?5:4);await page.screenshot({path:`${root}/touch-${viewport.width}-${branch??'main'}.png`});}expect(errors).toEqual([]);await context.close();
 });
 test('live human fleet race earns independent medals and preserves them after reload; practice cannot earn',async({browser})=>{
- const context=await browser.newContext({viewport:{width:1440,height:900},recordVideo:{dir:`${root}/video`,size:{width:1280,height:720}}}),page=await context.newPage();await setup(page);const report=await draw(page,context);expect(report.route.hazards).toBeUndefined();await page.getByRole('button',{name:'Race this line',exact:true}).click();await waitForPhase(page,'racing');
+ // Video is evidence only: without Playwright's ffmpeg the same assertions run unrecorded.
+ const {context,page}=await contextWithOptionalVideo(browser,{viewport:{width:1440,height:900},recordVideo:{dir:`${root}/video`,size:{width:1280,height:720}}});await setup(page);const report=await draw(page,context);expect(report.route.hazards).toBeUndefined();await page.getByRole('button',{name:'Race this line',exact:true}).click();await waitForPhase(page,'racing');
  await page.waitForFunction(()=>(window as any).__roadster.getState().race.movement==='airborne',undefined,{timeout:90000});await page.screenshot({path:`${root}/fleet-crossing.png`});const graphics=await page.evaluate(()=>(window as any).__roadster.getGraphics());expect(graphics.drawCalls).toBeLessThanOrEqual(90);
  await waitForPhase(page,'results',120000);const p=await page.evaluate(()=>JSON.parse(localStorage.getItem('roadster-race.progression.v1')??'null'));expect(p.medals['san-diego-fleet','lax']).toEqual(expect.arrayContaining(['finish','clean']));expect(p.medals['san-diego-fleet']).not.toContain('rival');await page.getByRole('button',{name:'Collection ↗',exact:true}).click();await expect(page.locator('.collection-heading')).toBeVisible();await page.screenshot({path:`${root}/collection-results.png`});await page.reload();await page.getByRole('button',{name:'Collection',exact:true}).click();expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('roadster-race.progression.v1')!).medals['san-diego-fleet'])).toEqual(p.medals['san-diego-fleet']);writeFileSync(`${root}/live-race.json`,JSON.stringify({graphics,progression:p},null,2));const video=page.video();await context.close();await video?.saveAs(`${root}/fleet-gameplay.webm`);
 });
