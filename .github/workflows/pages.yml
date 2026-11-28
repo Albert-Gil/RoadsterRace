@@ -62,6 +62,39 @@ jobs:
           name: private-duel-browser-evidence
           path: test-results/
 
+  # Drawing, input and local multiplayer browser specs on software WebGL, with the test-only race clock where
+  # the specs ask for it (src/app/test-clock.ts). Four groups run in parallel; deployment requires them all.
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        group:
+          - tests/browser/drawing-consistency.spec.ts tests/browser/route-cleanup.spec.ts
+          - tests/browser/sector-drawing.spec.ts
+          - tests/browser/input-ownership.spec.ts tests/browser/race-settings.spec.ts
+          - tests/browser/multiplayer.spec.ts
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          # pnpm is installed after this step; setup-node v5+ would otherwise try to cache with it.
+          package-manager-cache: false
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.25.0
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm exec playwright test ${{ matrix.group }} --reporter=line
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: browser-evidence-${{ strategy.job-index }}
+          path: test-results/
+          if-no-files-found: ignore
+
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -105,7 +138,7 @@ jobs:
 
   deploy:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    needs: [unit, verify, private-duels]
+    needs: [unit, verify, private-duels, browser]
     runs-on: ubuntu-latest
     timeout-minutes: 18
     permissions:
