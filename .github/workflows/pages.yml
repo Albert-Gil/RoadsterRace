@@ -26,11 +26,13 @@ jobs:
       matrix:
         shard: [1, 2, 3]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
-      - uses: pnpm/action-setup@v4
+          # pnpm is installed after this step; setup-node v5+ would otherwise try to cache with it.
+          package-manager-cache: false
+      - uses: pnpm/action-setup@v6
         with:
           version: 11.25.0
       - run: pnpm install --frozen-lockfile
@@ -42,17 +44,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
-      - uses: pnpm/action-setup@v4
+          # pnpm is installed after this step; setup-node v5+ would otherwise try to cache with it.
+          package-manager-cache: false
+      - uses: pnpm/action-setup@v6
         with:
           version: 11.25.0
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm exec playwright test --config playwright.duels.config.ts
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: private-duel-browser-evidence
@@ -68,11 +72,13 @@ jobs:
         # with independent groups and require them all before deployment.
         group: [coastal-launch, launchsite, golden-gate, santa-monica, la-nights, snowy-tahoe, capitan-yosemite, canyon-south-rim, san-diego-fleet, lax, phone, multiplayer, solo, tournament]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
-      - uses: pnpm/action-setup@v4
+          # pnpm is installed after this step; setup-node v5+ would otherwise try to cache with it.
+          package-manager-cache: false
+      - uses: pnpm/action-setup@v6
         with:
           version: 11.25.0
       - run: pnpm install --frozen-lockfile
@@ -86,14 +92,14 @@ jobs:
           PAGES_ONLY: ${{ matrix.group }}
       - name: Save smoke-test evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: pages-test-evidence-${{ matrix.group }}
           path: artifacts/pages/
           if-no-files-found: ignore
       - name: Package website only
         if: matrix.group == 'coastal-launch' && github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: dist
 
@@ -113,16 +119,18 @@ jobs:
       published: ${{ steps.current.outputs.current }}
       page_url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
-      - uses: pnpm/action-setup@v4
+          # pnpm is installed after this step; setup-node v5+ would otherwise try to cache with it.
+          package-manager-cache: false
+      - uses: pnpm/action-setup@v6
         with:
           version: 11.25.0
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
       - name: Check that this release is still main
         id: current
         env:
@@ -147,7 +155,7 @@ jobs:
       - name: Publish verified build
         if: steps.current.outputs.current == 'true'
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
 
   # After publishing, a fresh browser opens the public site, waits for this release's build,
   # creates a Newport Island room and joins it from a second browser; both leave. A failure
@@ -158,20 +166,22 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
-      - uses: pnpm/action-setup@v4
+          # pnpm is installed after this step; setup-node v5+ would otherwise try to cache with it.
+          package-manager-cache: false
+      - uses: pnpm/action-setup@v6
         with:
           version: 11.25.0
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
       - name: Create and join a room on the public site
         run: node tools/public-smoke.mjs --url "${{ needs.deploy.outputs.page_url }}" --build "${GITHUB_SHA::7}"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: public-smoke-evidence
