@@ -27,14 +27,31 @@ export function judgeHealth(reply: HealthReply, local: ServerVersions): HealthVe
 }
 
 export const RECHECK_WINDOW_MS = 15_000, RECHECK_INTERVAL_MS = 3_000;
-export interface RecheckIo { probe(): Promise<HealthVerdict>; delay(ms: number): Promise<unknown>; now(): number; stopped?(): boolean }
-/** Rechecks an `updating` verdict every 3 s for up to 15 s; returns the first other verdict, or the last one. */
+export interface RecheckIo {
+  /** One /health check that must give up within `timeoutMs` (the time left in the window). */
+  probe(timeoutMs: number): Promise<HealthVerdict>;
+  delay(ms: number): Promise<unknown>;
+  now(): number;
+  stopped?(): boolean;
+}
+/**
+ * Rechecks an `updating` verdict every 3 s within one 15 s deadline for the whole loop: each probe may use only
+ * the time left, so a slow or silent server cannot stretch the window. Returns the first verdict that is not
+ * `updating`, or the last one (or the first, if stopped before any recheck).
+ */
 export async function recheckWhileUpdating(io: RecheckIo, first: HealthVerdict): Promise<HealthVerdict> {
   let verdict = first;
   const deadline = io.now() + RECHECK_WINDOW_MS;
-  while (verdict.kind === 'updating' && io.now() + RECHECK_INTERVAL_MS <= deadline && !io.stopped?.()) {
-    await io.delay(RECHECK_INTERVAL_MS);
-    verdict = await io.probe();
+  while (verdict.kind === 'updating' && !io.stopped?.()) {
+    const wait = Math.min(RECHECK_INTERVAL_MS, deadline - io.now());
+    if (wait <= 0) break;
+    await io.delay(wait);
+    const left = deadline - io.now();
+    if (left <= 0 || io.stopped?.()) break;
+    const next = await io.probe(left);
+    if (io.stopped?.()) break;
+    // A probe that ran out of time says nothing new about versions; keep "updating".
+    if (next.kind !== 'asleep') verdict = next;
   }
   return verdict;
 }

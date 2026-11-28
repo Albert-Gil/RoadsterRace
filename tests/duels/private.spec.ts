@@ -141,3 +141,25 @@ test('a server ahead of this tab offers Reload game once a newer website build i
   await expect(dialog.getByRole('button', { name: 'Reload game' })).toBeVisible({ timeout: 30000 });
   await expect(dialog.getByRole('button', { name: 'Create room' })).toBeDisabled();
 });
+
+test('the updating screen gives up within its 15 s window when the server stops answering, and Home leaves at once', async ({ page }) => {
+  let first = true;
+  await page.route('**/health', async route => {
+    if (first) { first = false; await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true }) }); return; }
+    // Later checks never answer.
+  });
+  await page.goto('/?duel=TIGER7');
+  const dialog = page.getByRole('dialog');
+  await expect(dialog.getByText('Online play is updating')).toBeVisible({ timeout: 30000 });
+  const shown = Date.now();
+  await expect(dialog.getByRole('button', { name: 'Home', exact: true })).toBeEnabled();
+  await expect(dialog.getByRole('button', { name: 'Try again' })).toBeVisible({ timeout: 25000 });
+  expect(Date.now() - shown).toBeLessThan(20000);
+  // Leaving during a check: nothing reopens afterwards.
+  await dialog.getByRole('button', { name: 'Try again' }).click();
+  await dialog.getByRole('button', { name: 'Home', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.waitForTimeout(16000);
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.locator('.playground')).toHaveAttribute('data-phase', 'welcome');
+});

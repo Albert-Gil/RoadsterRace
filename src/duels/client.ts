@@ -6,7 +6,7 @@ import type { Ability, DrawSample } from '../core/types';
 import { duelEndpoint, savedSeat, storeSeat } from './seat';
 import { checkRoomCode, decodeSince, encodeSince } from './codes';
 import { describeDuelError, duelError, duelErrorAction, DuelFailure, mapConnectionFailure, type DuelError } from './errors';
-import { judgeHealth, recheckWhileUpdating, type HealthReply, type HealthVerdict } from './compatibility';
+import { judgeHealth, recheckWhileUpdating, RECHECK_WINDOW_MS, type HealthReply, type HealthVerdict } from './compatibility';
 import { newerBuildDeployed } from '../app/stale-build';
 import { pressTracker } from '../input/press-guard';
 import { cleanDriverName } from '../presentation/race-settings';
@@ -123,13 +123,16 @@ export class DuelClient {
     if(invite&&!invite.ok)this.status.textContent=invite.reason==='old-invite'?describeDuelError(duelError('old-invite')):'This invite link is not valid. Ask for a new one.';
     if(reclaimed&&invite?.ok)void this.connect(invite.code,undefined,undefined,reclaimed);
   }
+  /** Aborts every /health request and recheck in flight when the player leaves. */
+  private probes=new AbortController();
   private async probe(timeout:number):Promise<HealthVerdict>{
     const url=new URL(duelEndpoint!);url.protocol=url.protocol==='wss:'?'https:':url.protocol==='ws:'?'http:':url.protocol;
     const abort=new AbortController();const timer=setTimeout(()=>abort.abort(),timeout);
+    const leaving=()=>abort.abort();this.probes.signal.addEventListener('abort',leaving);
     let reply:HealthReply;
     try{const response=await fetch(new URL('/health',url),{signal:abort.signal,cache:'no-store'});reply={kind:'http',status:response.status,body:await response.json().catch(()=>null)};}
     catch{reply=abort.signal.aborted?{kind:'timeout'}:{kind:'error'};}
-    finally{clearTimeout(timer);}
+    finally{clearTimeout(timer);this.probes.signal.removeEventListener('abort',leaving);}
     return judgeHealth(reply,{protocol:DUEL_PROTOCOL,physics:RULES.version,compiler:COMPILER_VERSION,tracks:this.hooks.versions});
   }
   /**
@@ -143,7 +146,9 @@ export class DuelClient {
     entry.buttons.forEach(b=>b.disabled=true);this.status.textContent='';
     const say=(detail:string,action?:HTMLButtonElement)=>{entry.notice.hidden=false;entry.notice.replaceChildren(el('strong','Online play is updating'),el('p',detail),...(action?[action]:[]));};
     say('Checking again…');
-    const verdict=await recheckWhileUpdating({probe:()=>this.probe(20_000),delay:ms=>new Promise(r=>setTimeout(r,ms)),now:()=>performance.now(),stopped:()=>this.closed||run!==this.updatingRun},first);
+    const stopped=()=>this.closed||run!==this.updatingRun;
+    const delay=(ms:number)=>new Promise<void>(r=>{const t=setTimeout(r,ms);this.probes.signal.addEventListener('abort',()=>{clearTimeout(t);r();},{once:true});});
+    const verdict=await recheckWhileUpdating({probe:left=>this.probe(left),delay,now:()=>performance.now(),stopped},first);
     if(this.closed||run!==this.updatingRun)return;
     if(verdict.kind!=='updating'){
       entry.buttons.forEach(b=>b.disabled=false);entry.notice.hidden=true;
@@ -153,7 +158,7 @@ export class DuelClient {
     const newer=await newerBuildDeployed().catch(()=>false);
     if(this.closed||run!==this.updatingRun)return;
     const action=el('button',newer?'Reload game':'Try again');action.type='button';action.className='primary-button';
-    action.onclick=newer?()=>location.reload():()=>void this.probe(20_000).then(v=>this.enterUpdating(v));
+    action.onclick=newer?()=>location.reload():()=>{action.disabled=true;void this.probe(RECHECK_WINDOW_MS).then(v=>this.enterUpdating(v.kind==='asleep'?{kind:'updating',ahead:verdict.ahead}:v));};
     say(newer?'A newer version of the game is ready.':verdict.ahead==='server'?'Online races need the newest version of the game, which is still being published.':'The race server is being updated. This usually takes a few minutes.',action);
   }
   private async connect(code:string,circuit:DuelVenue='coastal-launch',laps=1,reclaimed?:Room) {
@@ -357,7 +362,7 @@ export class DuelClient {
   pause(){this.menu=true;this.present();}
   private resume(){this.menu=false;this.present();}
   leave(){
-    this.closed=true;this.dialog.remove();storeSeat(null);
+    this.closed=true;this.probes.abort();this.dialog.remove();storeSeat(null);
     if(this.room)void this.room.leave().catch(()=>{});
     const url=new URL(location.href);url.searchParams.delete('duel');url.searchParams.delete('duelCircuit');url.searchParams.delete('since');history.replaceState(null,'',url);
     this.hooks.home();

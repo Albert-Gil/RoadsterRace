@@ -15,15 +15,27 @@ describe('Private Duel entry compatibility', () => {
     expect(judgeHealth({ kind: 'http', status: 200, body: { ok: true } }, local)).toEqual({ kind: 'updating', ahead: 'client' });
     expect(judgeHealth(body({ tracks: { 'coastal-launch': 9 } }), local)).toEqual({ kind: 'updating', ahead: 'server' });
   });
-  it('rechecks every 3 s for at most 15 s and stops at the first answer that is not updating', async () => {
+  it('rechecks every 3 s and stops at the first answer that is not updating', async () => {
     let clock = 0, probes = 0;
     const replies: HealthVerdict[] = [{ kind: 'updating', ahead: 'server' }, { kind: 'ok', venues: [] }];
     const io = { now: () => clock, delay: async (ms: number) => { clock += ms; }, probe: async () => replies[Math.min(probes++, replies.length - 1)] };
     expect(await recheckWhileUpdating(io, { kind: 'updating', ahead: 'server' })).toEqual({ kind: 'ok', venues: [] });
     expect(clock).toBe(6000);
-    clock = 0; probes = 0;
-    const stuck = { ...io, probe: async () => { probes++; return { kind: 'updating', ahead: 'client' } as HealthVerdict; } };
-    expect((await recheckWhileUpdating(stuck, { kind: 'updating', ahead: 'client' })).kind).toBe('updating');
-    expect(clock).toBe(15000); expect(probes).toBe(5);
+  });
+  it('keeps the whole loop within 15 s even when every check waits out its timeout', async () => {
+    let clock = 0;
+    const timeouts: number[] = [];
+    const io = { now: () => clock, delay: async (ms: number) => { clock += ms; },
+      probe: async (left: number) => { timeouts.push(left); clock += left; return { kind: 'asleep' } as HealthVerdict; } };
+    expect((await recheckWhileUpdating(io, { kind: 'updating', ahead: 'client' })).kind).toBe('updating');
+    expect(clock).toBeLessThanOrEqual(15000);
+    expect(timeouts).toEqual([12000]);
+  });
+  it('stops at once when the player leaves', async () => {
+    let clock = 0, stopped = false, probes = 0;
+    const io = { now: () => clock, delay: async (ms: number) => { clock += ms; stopped = true; }, stopped: () => stopped,
+      probe: async () => { probes++; return { kind: 'ok', venues: [] } as HealthVerdict; } };
+    expect((await recheckWhileUpdating(io, { kind: 'updating', ahead: 'server' })).kind).toBe('updating');
+    expect(probes).toBe(0);
   });
 });
