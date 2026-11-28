@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { findCircuit } from '../../src/content/circuits';
 import { compileRoute, createPracticeSamples } from '../../src/core/route';
 import { DrawingSession } from '../../src/drawing/session';
 
 const track = findCircuit('coastal-launch').track, lap = createPracticeSamples(track, 7);
+// The values the game uses today (src/presentation/themes.ts), passed in as the page does.
+const settings = { zoomPerSector: { 2: 1.6, 3: 2, 4: 2.3 }, retakeMetres: 30 };
 /** Feeds a lap as pointer events: down at the first sample, moves, up at the last (times in ms). */
 function stroke(session: DrawingSession, samples = lap, pointer = 1, offset = 0) {
   expect(session.begin(pointer, samples[0], samples[0].time + offset)).toBe(true);
@@ -13,7 +16,7 @@ function stroke(session: DrawingSession, samples = lap, pointer = 1, offset = 0)
 
 describe('drawing session (whole lap)', () => {
   it('records the stroke exactly and compiles it to the same route as the samples', () => {
-    const session = new DrawingSession(track, 1, 0), end = stroke(session);
+    const session = new DrawingSession(track, 1, 0, settings), end = stroke(session);
     expect(end?.kind).toBe('compile');
     if (end?.kind !== 'compile') return;
     expect(end.request.samples.map(p => [p.x, p.z, p.time])).toEqual(lap.map(p => [p.x, p.z, p.time]));
@@ -23,23 +26,23 @@ describe('drawing session (whole lap)', () => {
     if (outcome.kind === 'preview' && reference.ok) expect(outcome.route).toEqual(reference.route);
   });
   it('refuses a start outside the start box', () => {
-    const session = new DrawingSession(track, 1, 0);
+    const session = new DrawingSession(track, 1, 0, settings);
     expect(session.begin(1, { x: lap[40].x, z: lap[40].z }, 0)).toBe(false);
     expect(session.samples).toEqual([]);
   });
   it('drops a compiler reply for an older stroke, another turn or another venue', () => {
-    const session = new DrawingSession(track, 1, 0), first = stroke(session);
+    const session = new DrawingSession(track, 1, 0, settings), first = stroke(session);
     if (first?.kind !== 'compile') throw new Error('no compile');
     const late = compileRoute(first.request.samples, track);
     stroke(session, lap, 2, 5000); // redraw before the first reply arrives
     expect(session.accept(first.request, late, first.progress).kind).toBe('stale');
-    const next = new DrawingSession(track, 1, 1);
+    const next = new DrawingSession(track, 1, 1, settings);
     expect(next.accept(first.request, late, first.progress).kind).toBe('stale');
-    const golden = findCircuit('golden-gate').track, elsewhere = new DrawingSession(golden, 1, 0);
+    const golden = findCircuit('golden-gate').track, elsewhere = new DrawingSession(golden, 1, 0, settings);
     expect(elsewhere.accept({ ...first.request, session: elsewhere, turn: 0, revision: elsewhere.revision }, late, first.progress).kind).toBe('stale');
   });
   it('clears an interrupted fresh lap', () => {
-    const session = new DrawingSession(track, 1, 0);
+    const session = new DrawingSession(track, 1, 0, settings);
     session.begin(1, lap[0], 0); session.add(lap[1], 10);
     expect(session.cancel()).toBe('cleared');
     expect(session.samples).toEqual([]);
@@ -50,10 +53,10 @@ describe('drawing session (whole lap)', () => {
 describe('drawing session (phone sectors)', () => {
   const half = lap.slice(0, Math.floor(lap.length / 2));
   it('continues a lifted stroke in a sector, joining the clock without the pause', () => {
-    const session = new DrawingSession(track, 3, 0);
+    const session = new DrawingSession(track, 3, 0, settings);
     expect(session.sectorMode).toBe(true);
     expect(session.chooseWhole()).toBe(true); expect(session.sectorMode).toBe(false);
-    const phone = new DrawingSession(track, 3, 0);
+    const phone = new DrawingSession(track, 3, 0, settings);
     phone.overview = false;
     const end = stroke(phone, half);
     expect(end?.kind).toBe('sector');
@@ -70,7 +73,7 @@ describe('drawing session (phone sectors)', () => {
     expect(finish?.kind).toBe('compile');
   });
   it('restores the cut-back line when a continuing touch is interrupted, and undoes touches', () => {
-    const phone = new DrawingSession(track, 3, 0);
+    const phone = new DrawingSession(track, 3, 0, settings);
     phone.overview = false;
     stroke(phone, half);
     const kept = phone.samples.length;
@@ -85,5 +88,13 @@ describe('drawing session (phone sectors)', () => {
     expect(phone.undo()).toBe('restart');
     expect(phone.restartSector(0)).toBe(true);
     expect(phone.samples).toEqual([]);
+  });
+});
+
+describe('drawing rules stay independent of presentation', () => {
+  it('imports nothing from src/presentation and takes its settings from the host', () => {
+    expect(readFileSync('src/drawing/session.ts', 'utf8')).not.toMatch(/presentation/);
+    const wide = new DrawingSession(track, 3, 0, { zoomPerSector: { 3: 5 }, retakeMetres: 1 });
+    expect(wide.zoom).toBe(5);
   });
 });

@@ -2,8 +2,12 @@ import { distance } from '../core/geometry';
 import { canStartDrawing } from '../core/start-finish';
 import { drawingSectors, drawnProgress, joinSectorTail, sectorAt, sectorSampleDuration, type DrawingSector } from '../core/drawing-sectors';
 import type { CompiledRoute, DrawSample, DrawingTrim, Point, RouteResult, TrackDefinition } from '../core/types';
-import { sectorDrawingAppearance } from '../presentation/themes';
 
+/**
+ * Drawing behaviour the session needs from its host, passed in at the start so a visual theme can never change
+ * how a line is recorded: the sector zoom per sector count and how far back a continuing touch may retake.
+ */
+export interface DrawingSettings { zoomPerSector: Readonly<Record<number, number>>; retakeMetres: number }
 /** Below this share of the lap, a lifted phone stroke continues in a sector instead of compiling. */
 export const SECTOR_LAP_SHARE = 0.9;
 
@@ -47,13 +51,13 @@ export class DrawingSession {
   private beforeTouch?: { first: number; tail: DrawSample[]; starts: number[] };
   readonly venue: string;
 
-  constructor(readonly track: TrackDefinition, sectorCount: number, readonly turn: number) {
+  constructor(readonly track: TrackDefinition, sectorCount: number, readonly turn: number, readonly settings: DrawingSettings) {
     this.sectors = sectorCount > 1 ? drawingSectors(track, sectorCount) : [];
     this.overview = this.sectors.length > 1;
     this.venue = track.id + ':' + track.version;
   }
   get sectorMode() { return this.sectors.length > 1; }
-  get zoom() { return sectorDrawingAppearance.zoomPerSector[this.sectors.length] ?? 1; }
+  get zoom() { return this.settings.zoomPerSector[this.sectors.length] ?? 1; }
   get last() { return this.samples.at(-1); }
   get drawing() { return this.pointer !== null; }
   private changed() { this.revision++; this.dirty = true; }
@@ -88,7 +92,7 @@ export class DrawingSession {
   continueCandidates() {
     const out: number[] = [];
     let travelled = 0;
-    for (let i = this.samples.length - 1; i >= (this.sectorStarts[this.sectorIndex] ?? 0) && travelled <= sectorDrawingAppearance.retakeMetres; i--) {
+    for (let i = this.samples.length - 1; i >= (this.sectorStarts[this.sectorIndex] ?? 0) && travelled <= this.settings.retakeMetres; i--) {
       if (i < this.samples.length - 1) travelled += distance(this.samples[i], this.samples[i + 1]);
       out.push(i);
     }

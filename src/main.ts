@@ -154,8 +154,10 @@ let lapCount = preferences.laps;
 const bestTimes = new Map<string, number>();
 const bestKey = () => `${activeTrack.id}:${activeTrack.version}:${lapCount}:${RULES.version}:${COMPILER_VERSION}`;
 let drawingTrim: DrawingTrim | undefined;
+/** Drawing behaviour handed to each session (src/drawing/session.ts); copied once so a theme change cannot alter it. */
+const drawingSettings = { zoomPerSector: { ...sectorDrawingAppearance.zoomPerSector }, retakeMetres: sectorDrawingAppearance.retakeMetres };
 /** The current driver's drawing turn (src/drawing/session.ts); the page keeps pointer capture, projection and rendering. */
-let drawing = new DrawingSession(activeTrack, 0, 0);
+let drawing = new DrawingSession(activeTrack, 0, 0, drawingSettings);
 const strokeCompiler = new StrokeCompiler();
 let countdownRemaining = 0, resuming = false, best: number | null = null, previousPoses: { x: number; z: number; heading: number; y: number }[] = [], noticeUntil = 0, lastFrame = performance.now();
 let pauseReason='';
@@ -249,7 +251,7 @@ function selectCircuit(id: string) {
 function loadCircuit(id: string, persist = true) {
   const next = findCircuit(id);
   cancelStroke(); clearRaceInput();
-  route = null; race = null; confirmedRoutes = []; readyPlayers = []; previousPoses = []; drawing = new DrawingSession(activeTrack, 0, 0); turn = 0; playerCount = 1;
+  route = null; race = null; confirmedRoutes = []; readyPlayers = []; previousPoses = []; drawing = new DrawingSession(activeTrack, 0, 0, drawingSettings); turn = 0; playerCount = 1;
   const engine = world.engine; world.dispose(false);
   activeCircuit = next; activeTrack = next.track;
   audio.setVenue(next.scenery);
@@ -469,7 +471,7 @@ function beginDrawing() {
   const authored = phoneDrawingSectors[activeTrack.id];
   const mode = preferences.drawingMode ?? 'auto';
   const count = mode === 'sectors' ? authored ?? 2 : mode === 'auto' && phoneSizedTouchScreen() ? authored ?? 1 : 1;
-  drawing = new DrawingSession(activeTrack, count > 1 && sessionOptions.mode !== 'tutorial' ? count : 1, turn);
+  drawing = new DrawingSession(activeTrack, count > 1 && sessionOptions.mode !== 'tutorial' ? count : 1, turn, drawingSettings);
   world.showContinueHandle(null); world.setDrawingFocus(null, false);
   world.setPlanningPlayer(playerCount > 1 ? turn : null); world.showVehicles(-1, playerCount);
   world.vehicles.forEach(vehicle => vehicle.clearEffects());
@@ -506,7 +508,7 @@ function confirmRoute() {
   world.showError();
   confirmedRoutes[turn] = route;
   if (humans()===1) { if(sessionOptions.mode==='solo-race'){try{confirmedRoutes=[route,...[0,1,2].map(i=>computerRoute(activeTrack,sessionOptions.difficulty,i,sessionOptions.seed+roundIndex))];}catch(error){renderPanel(error instanceof Error?error.message:'Computer plans could not start.');return;}} startRace(); return; }
-  route = null; drawing = new DrawingSession(activeTrack, 0, turn); world.drawLine(null); notice.textContent = '';
+  route = null; drawing = new DrawingSession(activeTrack, 0, turn, drawingSettings); world.drawLine(null); notice.textContent = '';
   if (turn + 1 < humans()) { turn++; world.showVehicles(-1, playerCount); setPhase('handoff'); }
   else enterReady();
 }
