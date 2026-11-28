@@ -19,11 +19,16 @@ export class FramePlayback {
   push(frame: RaceFrame, receivedAt: number) {
     const last = this.frames.at(-1);
     if (last && (frame.round !== last.round || frame.tick < last.tick)) this.reset();
+    // The server sends tick zero throughout the three-second countdown. Only
+    // racing frames can establish the origin, including GO at that same tick.
+    if (frame.countdown === 0 && !Number.isFinite(this.origin)) {
+      this.origin = receivedAt - frame.tick * TICK_MS;
+    }
     if (last && frame.tick === last.tick && frame.round === last.round) { this.frames[this.frames.length - 1] = frame; return; }
     this.frames.push(frame);
     if (this.frames.length > this.keep) this.frames.shift();
     // Slowly forget old minima so a lasting route change on the network is followed.
-    this.origin = Math.min(this.origin + 0.02, receivedAt - frame.tick * TICK_MS);
+    if (frame.countdown === 0) this.origin = Math.min(this.origin + 0.02, receivedAt - frame.tick * TICK_MS);
   }
   reset() { this.frames = []; this.origin = Infinity; }
   get latest() { return this.frames.at(-1); }

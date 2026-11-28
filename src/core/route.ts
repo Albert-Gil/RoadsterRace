@@ -48,9 +48,24 @@ function lapCoverage(points: Point[], drawnDistances: number[], track: TrackDefi
   let covered = 0;
   for (let i = 0; i < n; i++) {
     const at = (i + 0.5) / n * track.length, station = samplePolyline(track.centerline, track.distances, at);
-    if (projectToPolyline(station, points, drawnDistances).distance <= near || branches.some(b => at >= b.entryProgress && at <= b.exitProgress)) covered++;
+    if (passesWithin(station, points, near) || branches.some(b => at >= b.entryProgress && at <= b.exitProgress)) covered++;
   }
   return covered / n;
+}
+
+/** Lap coverage needs only the first segment inside the station's radius. */
+function passesWithin(station: Point, points: Point[], radius: number) {
+  const minX = station.x - radius - 1e-8, maxX = station.x + radius + 1e-8;
+  const minZ = station.z - radius - 1e-8, maxZ = station.z + radius + 1e-8;
+  for (let i = 1; i < points.length; i++) {
+    const a = points[i - 1], b = points[i];
+    if ((a.x < minX && b.x < minX) || (a.x > maxX && b.x > maxX) ||
+        (a.z < minZ && b.z < minZ) || (a.z > maxZ && b.z > maxZ)) continue;
+    const dx = b.x - a.x, dz = b.z - a.z;
+    const t = clamp(((station.x - a.x) * dx + (station.z - a.z) * dz) / (dx * dx + dz * dz || 1), 0, 1);
+    if (Math.hypot(station.x - lerp(a.x, b.x, t), station.z - lerp(a.z, b.z, t)) <= radius) return true;
+  }
+  return false;
 }
 
 export function compileRoute(input: DrawSample[], track: TrackDefinition): RouteResult {

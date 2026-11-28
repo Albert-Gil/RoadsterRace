@@ -112,13 +112,25 @@ export function sweepVehicle(from: Point, to: Point, oldHeading: number, heading
 
 export function blockedRouteSection(points: Point[], track: TrackDefinition, permitted: readonly string[] = []) {
   const physical = permitted.length ? { ...track, barriers: track.barriers.filter(b => !permitted.includes(b.id)) } : track;
-  const crossingPhysical=track.sections?{...physical,barriers:physical.barriers.filter(b=>b.kind!=='cliff-face')}:physical;
   for (let i = 1; i < points.length; i++) {
-    const a = points[i - 1], b = points[i], heading = Math.atan2(b.x - a.x, b.z - a.z), count = Math.max(1, Math.ceil(distance(a, b) / 0.4));
+    const a = points[i - 1], b = points[i];
+    // The capsule at every sample fits inside this swept rectangle. After a
+    // car contact most steering probes cross clear road for up to three seconds.
+    const reach = track.carLength / 2 + 0.12 + 1e-8;
+    const minX = Math.min(a.x, b.x) - reach, maxX = Math.max(a.x, b.x) + reach;
+    const minZ = Math.min(a.z, b.z) - reach, maxZ = Math.max(a.z, b.z) + reach;
+    const nearby = physical.barriers.filter(barrier => {
+      const box = bounds(barrier);
+      return box.maxX >= minX && box.minX <= maxX && box.maxZ >= minZ && box.minZ <= maxZ;
+    });
+    if (!nearby.length) continue;
+    const local = { ...physical, barriers: nearby };
+    const localCrossing = track.sections ? { ...local, barriers: nearby.filter(b => b.kind !== 'cliff-face') } : local;
+    const heading = Math.atan2(b.x - a.x, b.z - a.z), count = Math.max(1, Math.ceil(distance(a, b) / 0.4));
     for (let j = 0; j <= count; j++) {
       const p = mix(a, b, j / count);
       const approvedCrossing=track.sections&&track.jumps?.some(j=>j.kind==='crest'&&p.courseProgress!==undefined&&p.courseProgress>=j.entryProgress&&p.courseProgress<=j.exitProgress&&Math.abs((p.x-j.from.x)*j.forward.z-(p.z-j.from.z)*j.forward.x)<=(j.width-track.carWidth)/2);
-      if (barrierContact(p, heading, approvedCrossing?crossingPhysical:physical, 0.12, (track.sections||track.terrain) ? p.y??0 : 0)) return { point: p, section: [a, b] };
+      if (barrierContact(p, heading, approvedCrossing?localCrossing:local, 0.12, (track.sections||track.terrain) ? p.y??0 : 0)) return { point: p, section: [a, b] };
     }
   }
   return null;

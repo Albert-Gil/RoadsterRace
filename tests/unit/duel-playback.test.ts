@@ -5,6 +5,21 @@ import type { RaceFrame } from '../../src/duels/protocol';
 const frame = (tick: number): RaceFrame => ({ round: 1, tick, countdown: 0, cars: [], order: [], events: [] });
 const shownTick = (p: FramePlayback, now: number) => { const s = p.sample(now)!; return s.from.tick + (s.to.tick - s.from.tick) * s.alpha; };
 
+test('countdown packets at tick zero do not age the race clock, including on rematch', () => {
+  const p = new FramePlayback();
+  for (const round of [1, 2]) {
+    const start = round * 10_000;
+    for (let tick = 0; tick < 180; tick += 3) {
+      p.push({ ...frame(0), round, countdown: 180 - tick }, start + tick * 1000 / 60);
+    }
+    for (let tick = 0; tick <= 12; tick += 3) {
+      p.push({ ...frame(tick), round }, start + 3000 + tick * 1000 / 60);
+    }
+    expect(shownTick(p, start + 3200)).toBeCloseTo(6, 6);
+    expect(p.aheadOf(p.latest!, start + 3225, 10)).toBeCloseTo(45, 6);
+  }
+});
+
 test('steady frames play back smoothly 100 ms behind the server', () => {
   const p = new FramePlayback();
   for (let k = 0; k <= 10; k++) p.push(frame(k * 3), 1000 + k * 50);
