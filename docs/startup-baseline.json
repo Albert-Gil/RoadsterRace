@@ -1,0 +1,35 @@
+{
+  "profile": "Lighthouse mobile: 150 ms RTT, 1.6 Mbit/s down, 750 kbit/s up, 4x CPU (DevTools emulation)",
+  "dir": "dist-report (build 29e26d5)",
+  "runs": 5,
+  "firstScreenMedianMs": 10009,
+  "fcpMedianMs": 9908,
+  "scriptBytesMedian": 809513,
+  "samples": [
+    {
+      "firstScreenMs": 9755,
+      "fcpMs": 9700,
+      "scriptBytes": 809513
+    },
+    {
+      "firstScreenMs": 10040,
+      "fcpMs": 9940,
+      "scriptBytes": 809513
+    },
+    {
+      "firstScreenMs": 10009,
+      "fcpMs": 9908,
+      "scriptBytes": 809513
+    },
+    {
+      "firstScreenMs": 10184,
+      "fcpMs": 10108,
+      "scriptBytes": 809513
+    },
+    {
+      "firstScreenMs": 9942,
+      "fcpMs": 9880,
+      "scriptBytes": 809513
+    }
+  ]
+}

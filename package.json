@@ -16,6 +16,7 @@
     "test:browser": "playwright test",
     "test:pages": "node tools/check-pages.mjs",
     "report:size": "node tools/size-report.mjs",
+    "report:bundle": "node tools/bundle-report.mjs",
     "docs:rules": "node tools/write-current-rules.mjs",
     "bake:env": "node tools/bake-environments.mjs",
     "bake:venue-light": "node tools/bake-venue-light.mjs",
