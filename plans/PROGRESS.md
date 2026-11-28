@@ -2,7 +2,7 @@
 
 | Plan | Status |
 | --- | --- |
-| [Online fixes, CI and load time, capacity, paddock, more online circuits, Weekend Cup](pending/paddock-circuits-cup.md) | Planned; awaiting approval |
+| [Online fixes, CI and load time, capacity, paddock, more online circuits, Weekend Cup](pending/paddock-circuits-cup.md) | Approved 2026-11-27; Phase 0 in progress |
 
 ## Archived
 | Plan | Outcome |

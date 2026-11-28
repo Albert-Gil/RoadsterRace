@@ -199,10 +199,18 @@ Verified when: a group can create a cup, race three circuits before a deadline, 
 - Always: physics, compiler and track versions unchanged; `test:legacy` identical; line privacy; server authority; flags off for new circuits by default; free hosting unless the owner decides otherwise.
 - Never in this plan: Android/iOS packaging, accounts, public matchmaking, server rewind, rule or track changes, paid services without the owner's decision.
 
+## Future plans (owner, 2026-11-27: out of scope now, keep for later)
+- Android and iOS store packaging.
+- Accounts.
+- Public matchmaking (open online play).
+- Server rewind / lag compensation.
+- Rule or track changes (e.g. softening Fleet's support-ship landing).
+- Paid hosting or services, only when the owner chooses them (e.g. Render Starter for the heavy circuits).
+
 ## Progress
 | Phase | Status |
 | --- | --- |
-| 0 Online fixes | not started |
+| 0 Online fixes | in progress |
 | 1 CI | not started |
 | 2 Server capacity | not started |
 | 3 Load time | not started |
