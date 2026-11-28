@@ -45,9 +45,13 @@ try {
     await multiplayer.waitFor({ state: 'visible', timeout: 180_000 });
     while (!(await multiplayer.isEnabled())) { if (Date.now() - began > 240_000) throw new Error('Multiplayer never enabled'); await page.waitForTimeout(25); }
     const firstScreenMs = Date.now() - began; ready = true;
+    // The 3D scene. Builds before the split (no data-scene) showed Home only once the scene existed.
+    const marked = await page.evaluate(() => document.querySelector('.playground')?.hasAttribute('data-scene'));
+    if (marked) await page.waitForFunction(() => document.querySelector('.playground')?.getAttribute('data-scene') === 'ready', null, { timeout: 240_000 }).catch(() => {});
+    const sceneReadyMs = Date.now() - began;
     const fcpMs = await page.evaluate(() => performance.getEntriesByName('first-contentful-paint')[0]?.startTime ?? null);
-    samples.push({ firstScreenMs, fcpMs: fcpMs === null ? null : Math.round(fcpMs), scriptBytes });
-    console.log(`run ${run + 1}: first screen ${firstScreenMs} ms, FCP ${Math.round(fcpMs ?? NaN)} ms, scripts ${(scriptBytes / 1000).toFixed(0)} kB`);
+    samples.push({ firstScreenMs, sceneReadyMs, fcpMs: fcpMs === null ? null : Math.round(fcpMs), scriptBytes });
+    console.log(`run ${run + 1}: first screen ${firstScreenMs} ms, scene ${sceneReadyMs} ms, FCP ${Math.round(fcpMs ?? NaN)} ms, scripts ${(scriptBytes / 1000).toFixed(0)} kB`);
     await context.close();
   }
 } finally {
@@ -55,7 +59,7 @@ try {
 }
 const result = {
   profile: 'Lighthouse mobile: 150 ms RTT, 1.6 Mbit/s down, 750 kbit/s up, 4x CPU (DevTools emulation)', dir: values.dir, runs,
-  firstScreenMedianMs: median(samples.map(s => s.firstScreenMs)), fcpMedianMs: median(samples.map(s => s.fcpMs ?? 0)),
+  firstScreenMedianMs: median(samples.map(s => s.firstScreenMs)), sceneReadyMedianMs: median(samples.map(s => s.sceneReadyMs)), fcpMedianMs: median(samples.map(s => s.fcpMs ?? 0)),
   scriptBytesMedian: median(samples.map(s => s.scriptBytes)), samples,
 };
 console.log(JSON.stringify(result, null, 2));

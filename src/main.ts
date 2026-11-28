@@ -64,12 +64,17 @@ import { raceResultsPanel, timeTrialResultsPanel } from './ui/panels/results';
 import { TUTORIAL_COPY, tutorialCoach, tutorialCompletePanel, tutorialIntroPanel, type CoachStep } from './ui/panels/tutorial';
 import { TUTORIAL_CIRCUIT, TUTORIAL_LAPS, answerPrompt, duePrompt, freshTutorial, type TutorialProgress } from './app/tutorial';
 import { GameAudio } from './presentation/audio';
-import { GameScene } from './presentation/scene';
+import type { GameScene } from './presentation/scene';
 import { applyPlayerColors, applyTheme, themes, hopEffects, heroImages, heroArtRevision, interfaceMotion, sectorDrawingAppearance, paintFinishes, rewardPaintFinishes } from './presentation/themes';
 import { cleanDriverName, escapeHtml, finishFor, loadPreferences, savePreferences } from './presentation/race-settings';
 import { raceSetupMarkup } from './presentation/race-setup';
 import { isGraphicsChoice, isRendererChoice, loadGraphicsPreference, saveGraphicsPreference, type RendererChoice } from './presentation/graphics';
-import { createEngine } from './presentation/engine';
+/**
+ * The 3D scene (Babylon.js and every venue's scenery) loads on demand, so the Home screen appears before it.
+ * A press on Home while it loads is held and carried out once the scene is ready.
+ */
+const sceneModules = Promise.all([import('./presentation/scene'), import('./presentation/engine')]);
+let Scene: typeof GameScene;
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
 let theme = new URLSearchParams(location.search).get('theme') === 'graphite' ? themes.graphite : themes.coastal;
@@ -81,6 +86,7 @@ app.innerHTML = appShellMarkup();
 app.addEventListener('error', event => { const image=event.target;if(image instanceof HTMLImageElement&&image.classList.contains('circuit-art'))image.hidden=true; },true);
 
 const playground = app.querySelector<HTMLElement>('.playground')!;
+playground.dataset.scene = 'loading';
 const coarsePointer = matchMedia('(pointer: coarse)');
 /** Larger touch screens get proportionally larger controls; the course rectangle follows via CSS. */
 function applyUiScale() { const scale = uiScale(innerWidth, innerHeight, coarsePointer.matches); playground.style.setProperty('--ui-scale', String(scale)); }
@@ -255,7 +261,7 @@ function loadCircuit(id: string, persist = true) {
   const engine = world.engine; world.dispose(false);
   activeCircuit = next; activeTrack = next.track;
   audio.setVenue(next.scenery);
-  world = new GameScene(canvas, activeTrack, theme, activeCircuit.scenery, engine, graphicsChoice); world.onGraphicsChange = onGraphicsChange;
+  world = new Scene(canvas, activeTrack, theme, activeCircuit.scenery, engine, graphicsChoice); world.onGraphicsChange = onGraphicsChange;
   applyDriverPresentation(); renderControls(); notice.textContent = ''; lastFrame = performance.now();
   best = bestTimes.get(bestKey()) ?? null;
   if (persist) {
@@ -621,8 +627,27 @@ function updateVehicles(alpha: number) {
   }
 }
 
+/** A Home press made while the scene was still loading (carried out when it is ready). */
+let heldAction: HTMLElement | undefined;
 app.addEventListener('click', e => {
-  const target = (e.target as HTMLElement).closest<HTMLElement>('[data-action]'), action = target?.dataset.action;
+  const target = (e.target as HTMLElement).closest<HTMLElement>('[data-action]') ?? undefined;
+  if (!world && phase !== 'error') {
+    if (!target) return;
+    heldAction?.removeAttribute('aria-busy'); heldAction = target; target.setAttribute('aria-busy', 'true'); playground.dataset.waiting = 'true';
+    return;
+  }
+  runAction(target);
+});
+function releaseHeldAction() {
+  const target = heldAction; heldAction = undefined; delete playground.dataset.waiting;
+  if (!target) return;
+  target.removeAttribute('aria-busy');
+  // The panel may have been rewritten since: act on the same control (same data attributes) if it is still shown.
+  const same = target.isConnected ? target : [...app.querySelectorAll<HTMLElement>('[data-action]')].find(el => el.textContent === target.textContent && Object.keys(target.dataset).every(k => el.dataset[k] === target.dataset[k]));
+  if (same && !same.closest('[hidden]')) runAction(same);
+}
+function runAction(target: HTMLElement | undefined) {
+  const action = target?.dataset.action;
   if(action==='private-duel'){void openDuel();return;}
   if (action === 'tutorial') startTutorial();
   if (action === 'tutorial-draw' && phase === 'tutorial-intro') newSession(1);
@@ -705,7 +730,7 @@ app.addEventListener('click', e => {
     const back = ['home', 'redraw', 'redraw-all', 'configure-race', 'exit-diagnostics', 'tour-save-exit', 'tour-back-setup'].includes(action);
     audio.cue(back ? 'ui-back' : ['start-session', 'retry', 'tour-draw', 'tour-next', 'tour-resume', 'take-turn', 'tutorial-draw'].includes(action) ? 'ui-confirm' : 'ui-select');
   }
-});
+}
 
 panel.addEventListener('input', event => {
   const input = event.target as HTMLInputElement;
@@ -885,6 +910,10 @@ try {
   const invitation=new URL(location.href).searchParams.get('duel')?.toUpperCase();
   const inviteCheck=invitation ? checkRoomCode(invitation) : undefined, validInvite=inviteCheck?.ok ? inviteCheck.code : undefined;
   const returnCircuit=activeCircuit.id;
+  // Without an invite, Home appears now, over its hero picture; the scene joins it when loaded. The development
+  // server (which the browser specs drive through window.__roadster) keeps Home until the scene is ready unless
+  // ?earlyHome is given; built sites (Pages, the Private Duels suite) always show it early.
+  if(!inviteCheck&&(!import.meta.env.DEV||circuitQuery.has('earlyHome')))setPhase('welcome');
   if(validInvite)reclaimed=await reclaimBeforeGraphics(validInvite);
   // Use the room's invite hint to build its course once on a cold start.
   // Room messages still decide which venue to race and which rules to use.
@@ -892,8 +921,10 @@ try {
   if(validInvite && venueHint && Object.prototype.hasOwnProperty.call(duelVenues,venueHint)) {
     activeCircuit=findCircuit(venueHint);activeTrack=activeCircuit.track;audio.setVenue(activeCircuit.scenery);
   }
+  const [{ GameScene: loadedScene }, { createEngine }] = await sceneModules; Scene = loadedScene;
   const created = await createEngine(canvas, graphicsPreference.renderer); activeRenderer = created.renderer;
-  world = new GameScene(canvas, activeTrack, theme, activeCircuit.scenery, created.engine, graphicsChoice); world.onGraphicsChange = onGraphicsChange; applyDriverPresentation(); renderControls(); refreshLap(); refreshSettings(); setPhase('welcome');
+  world = new Scene(canvas, activeTrack, theme, activeCircuit.scenery, created.engine, graphicsChoice); world.onGraphicsChange = onGraphicsChange; applyDriverPresentation(); renderControls(); refreshLap(); refreshSettings(); setPhase(phase); playground.dataset.scene = 'ready';
+  releaseHeldAction();
   // An old or broken invite still opens the duel dialog, which explains what to do.
   if(validInvite || inviteCheck)void openDuel(validInvite ?? invitation!,reclaimed,returnCircuit);
   canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); pauseRace(); showNotice('The graphics were interrupted. Reload if the circuit does not recover.', 10); });

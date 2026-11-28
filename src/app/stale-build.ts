@@ -6,9 +6,10 @@ import type { Phase } from './phases';
  * venue keeps its road but loses that scenery. When the deployed page names a different entry
  * script (a newer build, not a dropped connection), the page reloads once to fetch it: at once on
  * Home or race setup, otherwise the next time the player is back there; never while drawing or
- * racing. A second failure within a minute of a reload does not reload again.
+ * racing. The error screen is safe too: a missing 3D scene chunk at start (it loads on demand) leaves
+ * nothing to keep. A second failure within a minute of a reload does not reload again.
  */
-const SAFE: readonly Phase[] = ['welcome', 'setup', 'tour-intro', 'tour-resume'];
+const SAFE: readonly Phase[] = ['welcome', 'setup', 'tour-intro', 'tour-resume', 'error'];
 const KEY = 'roadster-stale-build-reload', QUIET_MS = 60_000;
 
 export interface StaleBuildHost { phase(): Phase; reload(): void; storage?: Pick<Storage, 'getItem' | 'setItem'>; now?(): number }

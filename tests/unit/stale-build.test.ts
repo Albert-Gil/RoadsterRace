@@ -12,6 +12,9 @@ describe('stale build recovery', () => {
   it('reloads at once on Home or race setup', () => {
     for (const phase of ['welcome', 'setup', 'tour-intro'] as Phase[]) { const h = host(phase); h.recovery.failed(); expect(h.state.reloads, phase).toBe(1); }
   });
+  it('reloads from the error screen when the on-demand scene chunk of an older build is gone', () => {
+    const h = host('error'); h.recovery.failed(); expect(h.state.reloads).toBe(1);
+  });
   it('never interrupts drawing or a race; reloads on the way back to setup or Home', () => {
     const h = host('racing'); h.recovery.failed(); expect(h.state.reloads).toBe(0); expect(h.recovery.pending).toBe(true);
     for (const phase of ['paused', 'racing', 'results', 'drawing', 'preview'] as Phase[]) { h.state.phase = phase; h.recovery.phaseChanged(); }

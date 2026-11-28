@@ -23,7 +23,7 @@ test('20 short recordings decode, music streams, and each venue selects its own 
 });
 
 test('menu music loops, follows phase changes, mute and interruption without affecting racing', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/'); await page.waitForFunction(() => Boolean((window as any).__roadster));
   const audio = () => page.evaluate(() => (window as any).__roadster.getAudio());
   expect((await audio()).music).toBeNull();
   await page.getByRole('button', { name: 'Time Trial', exact: true }).click();

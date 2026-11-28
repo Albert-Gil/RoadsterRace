@@ -98,6 +98,7 @@ Template: model / OS / Safari version / orientation / preset / start-to-ready ti
 - Best time lasts for the current page session. There is no global or persistent ranking.
 - Art is deliberately provisional. Optional imported models display through a generic adapter; model-specific animation requires its own adapter work.
 - Shader/model chunks are loaded on demand. A distribution gzip estimate is not a measured network transfer or mobile startup percentile.
+- First load: the entry script holds the game rules and menus (275 kB); the 3D scene (Babylon.js and every venue's scenery) loads on demand, hinted at low priority from `index.html`. Built sites show Home before the scene and carry out a Home press made while it loads once it is ready (`tests/browser/early-home.spec.ts`; the development server does this with `?earlyHome`). `node tools/bundle-report.mjs` lists what every chunk contains (baseline `docs/bundle-baseline.json`); `node tools/benchmark-startup.mjs --dir dist` times Home and the scene in Chromium under Lighthouse mobile throttling (150 ms RTT, 1.6 Mbit/s, 4× CPU, DevTools emulation on one machine, not a phone). On the cloud sandbox: Home 10.0 s → 4.6 s, scene ready 10.0 s → 7.0 s (medians of 5; `docs/startup-baseline.json`, `docs/startup-split.json`).
 - Production builds omit the development test API and T shortcut; URL preset selection works in both builds.
 
 ## Recommended next milestone

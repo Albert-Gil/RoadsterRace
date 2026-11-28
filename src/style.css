@@ -608,3 +608,8 @@ button:focus-visible,summary:focus-visible { outline:2px solid var(--text); outl
     linear-gradient(var(--ink), var(--ink)) top right / var(--tick) 2px no-repeat, linear-gradient(var(--ink), var(--ink)) top right / 2px var(--tick) no-repeat,
     linear-gradient(var(--ink), var(--ink)) bottom left / var(--tick) 2px no-repeat, linear-gradient(var(--ink), var(--ink)) bottom left / 2px var(--tick) no-repeat,
     linear-gradient(var(--ink), var(--ink)) bottom right / var(--tick) 2px no-repeat, linear-gradient(var(--ink), var(--ink)) bottom right / 2px var(--tick) no-repeat; }
+
+/* A Home press made while the 3D scene is still loading is held until it is ready (src/main.ts). */
+[data-action][aria-busy="true"] { cursor: progress; animation: held-press 0.9s ease-in-out infinite alternate; }
+@keyframes held-press { from { opacity: 1; } to { opacity: 0.6; } }
+@media (prefers-reduced-motion: reduce) { [data-action][aria-busy="true"] { animation: none; opacity: 0.7; } }
