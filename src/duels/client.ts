@@ -8,7 +8,9 @@ import { checkRoomCode, decodeSince, encodeSince } from './codes';
 import { describeDuelError, duelError, duelErrorAction, DuelFailure, mapConnectionFailure, type DuelError } from './errors';
 import { judgeHealth, recheckWhileUpdating, RECHECK_WINDOW_MS, type HealthReply, type HealthVerdict } from './compatibility';
 import { newerBuildDeployed } from '../app/stale-build';
-import { pressTracker } from '../input/press-guard';
+import { Paddock, type EntryForm } from './paddock';
+import { duelScreen } from './screen';
+import { CoachCards } from './coach';
 import { cleanDriverName } from '../presentation/race-settings';
 
 interface Hooks {
@@ -20,14 +22,15 @@ interface Hooks {
   frame(frame:RaceFrame,view:RoomView):void;
   ownLine(samples:DrawSample[]):void;
   home():void;
+  /** The circuit's artwork URL for the paddock background. */
+  circuitArt?(circuit:string):string|undefined;
+  /** The 3D scene can draw the room's circuit (course and grid); until then a racing room shows Loading circuit. */
+  sceneReady?():boolean;
   /** Where your own car is drawn right now (diagnostics: display error against the server at press time). */
   ownShown?():{x:number;z:number;buffered?:{x:number;z:number};display?:Record<string,unknown>}|undefined;
 }
 /** Matches the server's DRAWING_GRACE_SECONDS (server/duel-room.ts). */
 const DRAWING_GRACE=90;
-function el<K extends keyof HTMLElementTagNameMap>(tag:K,content='') {
-  const e=document.createElement(tag);e.textContent=content;return e;
-}
 export class DuelClient {
   private room?: Room;
   view?:RoomView;
@@ -50,75 +53,55 @@ export class DuelClient {
   private roundDrawn=0;
   /** Circuits the room server offers; Fleet appears only once /health lists it. */
   private venues=offeredVenues(null);
-  private dialog=el('dialog');
-  private content=el('section');
-  private status=el('p');
+  private paddock:Paddock;
+  private coach=new CoachCards();
+  private get status(){return this.paddock.status;}
   private closed=false;
   private connecting=false;
   private menu=false;
   private disconnected=false;
   private waiting=false;
   /** Entry-screen controls the updating state disables; the invite field and saved seat are left alone. */
-  private entry?:{buttons:HTMLButtonElement[];notice:HTMLElement;fillVenues():void};
+  private entry?:{buttons:HTMLButtonElement[];notice:HTMLElement;fillVenues():void;form:EntryForm};
   private updatingRun=0;
-  get overlayOpen(){return this.dialog.open;}
+  get overlayOpen(){return this.paddock.open;}
+  /** The paddock hides the whole scene: main skips rendering until it fades out. */
+  get covering(){return this.paddock.covering;}
   get seatIndex(){return this.view?.drivers.findIndex(s=>s.id===this.room?.sessionId)??0;}
   constructor(private hooks:Hooks){
-    this.dialog.className='duel-dialog';this.status.setAttribute('role','status');
-    this.dialog.append(this.content,this.status);
-    document.body.append(this.dialog);
-    this.dialog.addEventListener('cancel',e=>{e.preventDefault();if(this.menu)this.resume();});
+    const color=new Map(hooks.finishes.map(f=>[f.id,f.color]));
+    this.paddock=new Paddock(paint=>color.get(paint)??'#8a96a3',circuit=>hooks.circuitArt?.(circuit),{
+      start:()=>this.room?.send('start'),
+      vote:choice=>this.view&&this.room?.send('rematch',{round:this.view.round,vote:choice}),
+      settings:(circuit,laps)=>this.room?.send('settings',{circuit,laps}),
+      remove:id=>this.room?.send('remove',{id}),
+      resume:()=>this.resume(),
+      home:()=>this.leave(),
+    });
     if(import.meta.env.DEV)(window as unknown as {__roadsterDuel?:DuelClient}).__roadsterDuel=this;
   }
-  private shownTitle='';
-  private show(title:string) {
-    // A new screen in the room overlay: presses that began on the previous one cannot act here.
-    if(title!==this.shownTitle||!this.dialog.open){pressTracker.nextScreen();this.shownTitle=title;}
-    this.content.replaceChildren(el('h2',title));this.status.textContent='';
-    if(!this.dialog.open)this.dialog.showModal();
-  }
-  private button(label:string,action:()=>void,primary=false){
-    const b=el('button',label);b.type='button';b.className=primary?'primary-button':'secondary-button';b.onclick=action;
-    this.content.append(b);return b;
-  }
+  private venueList(ids:readonly string[]=this.venues){return ids.map(id=>({id,name:duelVenues[id as DuelVenue]??id}));}
   open(initialCode='', reclaimed?: Room) {
-    this.show('Private Duel');
-    const nameLabel=el('label','Driver name');
-    const name=el('input');name.value=this.hooks.driver.name;name.maxLength=18;name.setAttribute('autocomplete','nickname');
-    nameLabel.append(name);
-    const paintLabel=el('label','Car color');
-    const paint=el('select');paint.setAttribute('aria-label','Car color');
-    for(const finish of this.hooks.finishes)paint.add(new Option(finish.name,finish.id));
-    paint.value=this.hooks.driver.paint;paintLabel.append(paint);
+    const invite=initialCode?checkRoomCode(initialCode):undefined;
+    const form=this.paddock.entry(this.hooks.driver,this.hooks.finishes,this.venueList(),()=>this.leave(),!!invite?.ok);
     const saveDriver=()=>{
-      this.hooks.driver={name:cleanDriverName(name.value,0),paint:paint.value};
+      this.hooks.driver={name:cleanDriverName(form.name.value,0),paint:form.paint.value};
       this.hooks.saveDriver(this.hooks.driver);
     };
-    this.content.append(nameLabel,paintLabel);
-    const circuit=el('select');circuit.setAttribute('aria-label','Circuit');
-    const fillVenues=()=>{const keep=circuit.value;circuit.replaceChildren(...this.venues.map(id=>new Option(duelVenues[id as DuelVenue],id)));if(this.venues.includes(keep))circuit.value=keep;};
-    fillVenues();
+    const fillVenues=()=>Paddock.fillVenues(form.circuit,this.venueList());
     // Ask the server which circuits it offers; this also starts waking a sleeping free instance.
     if(duelEndpoint)void this.probe(20_000).then(verdict=>{
       if(this.closed)return;
       if(verdict.kind==='ok'){this.venues=verdict.venues;fillVenues();}
       else if(verdict.kind==='updating')void this.enterUpdating(verdict);
     });
-    const laps=el('select');laps.setAttribute('aria-label','Race distance');
-    for(let i=1;i<=6;i++)laps.add(new Option(i+' lap'+(i===1?'':'s'),String(i)));
-    const invite=initialCode?checkRoomCode(initialCode):undefined;
-    const code=el('input');code.placeholder='Room code, e.g. TIGER7';code.setAttribute('aria-label','Room code');code.maxLength=8;code.value=invite?.ok?invite.code:'';code.autocapitalize='characters';code.autocomplete='off';
-    this.content.append(circuit,laps);
-    const notice=el('div');notice.className='duel-updating';notice.setAttribute('role','status');notice.hidden=true;
-    this.content.prepend(notice);
-    const create=this.button('Create room',()=>{saveDriver();void this.connect('',circuit.value as DuelVenue,Number(laps.value));},true);
-    this.content.append(code);
-    const join=this.button('Join room',()=>{const check=checkRoomCode(code.value);if(check.ok){saveDriver();void this.connect(check.code);}else this.status.textContent=check.reason==='old-invite'?describeDuelError(duelError('old-invite')):'Enter the room code from your invite, for example TIGER7.';});
-    this.button('Home',()=>this.leave());
-    this.entry={buttons:[create,join],notice,fillVenues};
+    form.code.value=invite?.ok?invite.code:'';
+    form.create.onclick=()=>{saveDriver();void this.connect('',form.circuit.value as DuelVenue,Number(form.laps.value));};
+    form.join.onclick=()=>{const check=checkRoomCode(form.code.value);if(check.ok){saveDriver();void this.connect(check.code);}else this.status.textContent=check.reason==='old-invite'?describeDuelError(duelError('old-invite')):'Enter the room code from your invite, for example TIGER7.';};
+    this.entry={buttons:[form.create,form.join],notice:form.notice,fillVenues,form};
     if(invite?.ok&&!reclaimed&&savedSeat(invite.code)){
       // A saved seat whose quick reclaim failed during startup: offer it explicitly.
-      const rejoin=this.button('Rejoin race',()=>void this.connect(invite.code),true);notice.after(rejoin);this.entry.buttons.push(rejoin);
+      this.entry.buttons.push(form.addAction('Rejoin race',()=>void this.connect(invite.code)));
     }
     if(invite&&!invite.ok)this.status.textContent=invite.reason==='old-invite'?describeDuelError(duelError('old-invite')):'This invite link is not valid. Ask for a new one.';
     if(reclaimed&&invite?.ok)void this.connect(invite.code,undefined,undefined,reclaimed);
@@ -144,7 +127,7 @@ export class DuelClient {
     const entry=this.entry;if(!entry||this.closed)return;
     const run=++this.updatingRun;
     entry.buttons.forEach(b=>b.disabled=true);this.status.textContent='';
-    const say=(detail:string,action?:HTMLButtonElement)=>{entry.notice.hidden=false;entry.notice.replaceChildren(el('strong','Online play is updating'),el('p',detail),...(action?[action]:[]));};
+    const say=(detail:string,action?:{label:string;run:(b:HTMLButtonElement)=>void})=>Paddock.updating(entry.notice,detail,action);
     say('Checking again…');
     const stopped=()=>this.closed||run!==this.updatingRun;
     const delay=(ms:number)=>new Promise<void>(r=>{const t=setTimeout(r,ms);this.probes.signal.addEventListener('abort',()=>{clearTimeout(t);r();},{once:true});});
@@ -157,8 +140,7 @@ export class DuelClient {
     }
     const newer=await newerBuildDeployed().catch(()=>false);
     if(this.closed||run!==this.updatingRun)return;
-    const action=el('button',newer?'Reload game':'Try again');action.type='button';action.className='primary-button';
-    action.onclick=newer?()=>location.reload():()=>{action.disabled=true;void this.probe(RECHECK_WINDOW_MS).then(v=>this.enterUpdating(v.kind==='asleep'?{kind:'updating',ahead:verdict.ahead}:v));};
+    const action={label:newer?'Reload game':'Try again',run:newer?()=>location.reload():(b:HTMLButtonElement)=>{b.disabled=true;void this.probe(RECHECK_WINDOW_MS).then(v=>this.enterUpdating(v.kind==='asleep'?{kind:'updating',ahead:verdict.ahead}:v));}};
     say(newer?'A newer version of the game is ready.':verdict.ahead==='server'?'Online races need the newest version of the game, which is still being published.':'The race server is being updated. This usually takes a few minutes.',action);
   }
   private async connect(code:string,circuit:DuelVenue='coastal-launch',laps=1,reclaimed?:Room) {
@@ -212,11 +194,11 @@ export class DuelClient {
       room.onMessage('ability-result',(r:AbilityResult)=>this.settle(r));
       room.onMessage('ownLine',(data:{samples:DrawingPacket;sequence:number})=>{this.sequence=Math.max(this.sequence,data.sequence);this.hooks.ownLine(data.samples.map(([x,z,time])=>({x,z,time})));});
       room.onMessage('error',(error:DuelError)=>this.roomError(error));
-      room.onDrop(()=>{this.disconnected=true;this.pending=[];this.queued=undefined;this.show('Reconnecting…');this.content.append(el('p','Your car is following its line.'));this.button('Home',()=>this.leave());});
-      room.onReconnect(()=>{this.disconnected=false;storeSeat(room.reconnectionToken);room.send('sync');});
+      room.onDrop(()=>{this.disconnected=true;this.pending=[];this.queued=undefined;this.present();});
+      room.onReconnect(()=>{this.disconnected=false;storeSeat(room.reconnectionToken);room.send('sync');this.present();});
       // A tab can receive a close callback while navigating away. Retain its
       // credential through reload; the explicit Home action releases the seat.
-      room.onLeave((code:number)=>{if(!this.closed){this.show('Room closed');if(code===4002)this.content.append(el('p',describeDuelError(duelError('removed'))));this.button('Home',()=>this.leave(),true);}});
+      room.onLeave((code:number)=>{if(!this.closed)this.paddock.message('closed','Room closed',code===4002?describeDuelError(duelError('removed')):undefined,[{label:'Home',action:()=>this.leave(),primary:true}]);});
       room.send('sync');
     }catch(e){if(!this.closed)this.connectionError(mapConnectionFailure(e,code?(savedSeat(code)?'reconnect':'join'):'create'),()=>void this.connect(code,circuit,laps));}
     finally{clearTimeout(wake);this.connecting=false;}
@@ -239,56 +221,25 @@ export class DuelClient {
     }
     this.present();
   }
-  /** Host-only circuit and lap pickers (lobby and results). A new circuit after a race means fresh lines. */
-  private hostSettings(view:RoomView){
-    if(view.host!==this.room?.sessionId)return;
-    const circuit=el('select'),laps=el('select');circuit.setAttribute('aria-label','Circuit');laps.setAttribute('aria-label','Race distance');
-    for(const id of new Set([...this.venues,view.circuit]))circuit.add(new Option(duelVenues[id as DuelVenue],id));
-    for(let i=1;i<=6;i++)laps.add(new Option(i+' lap'+(i===1?'':'s'),String(i)));
-    circuit.value=view.circuit;laps.value=String(view.laps);
-    const send=()=>this.room?.send('settings',{circuit:circuit.value,laps:Number(laps.value)});
-    circuit.onchange=send;laps.onchange=send;
-    this.content.append(circuit,laps);
-    if(view.phase==='results')this.content.append(el('p','Changing the circuit means everyone draws new lines.'));
-  }
+  /** Renders the paddock for the room's current state (src/duels/screen.ts decides, src/duels/paddock.ts draws). */
   private present(){
-    const view=this.view;if(!view||!this.room||this.disconnected)return;
-    const seat=view.drivers[this.seatIndex];
-    if(view.phase==='results'){
-      this.show('Race results');
-      for(const s of this.latest?.order??[]){const driver=view.drivers[s.player];this.content.append(el('p',(driver.withdrawn?'DNF':s.rank+'.')+' '+driver.name+(s.finishTime!=null?' · '+s.finishTime.toFixed(2)+' s':'')));}
-      // Same rule as local play: once everyone still here has voted, any "New lines" wins. Votes can change until then.
-      const vote=(v:string)=>this.room?.send('rematch',{round:view.round,vote:v}),mine=seat?.vote;
-      const again=this.button('Race again',()=>vote('same'),true),redraw=this.button('New lines',()=>vote('redraw'));
-      again.setAttribute('aria-pressed',String(mine==='same'));redraw.setAttribute('aria-pressed',String(mine==='redraw'));
-      const here=view.drivers.filter(d=>d.connected),waiting=here.filter(d=>!d.vote);
-      this.content.append(el('p',here.map(d=>d.name+' · '+(d.vote==='same'?'Race again':d.vote==='redraw'?'New lines':'Choosing')).join(' / ')));
-      if(here.length<2)this.content.append(el('p','Another race needs at least two drivers.'));
-      else if(waiting.length)this.content.append(el('p','Waiting for '+waiting.map(d=>d.name).join(', ')+'.'));
-      this.hostSettings(view);
-    }else if(view.phase==='lobby'||view.phase==='drawing'&&(seat?.ready||this.waiting)){
-      this.show(view.phase==='lobby'?'Private room':'Waiting for lines');
-      this.content.append(el('p',duelVenues[view.circuit]+' · '+view.laps+' lap'+(view.laps===1?'':'s')));
-      if(view.phase==='lobby'){
-        this.content.append(el('strong',this.room.roomId));
-        const link=location.href,share=navigator as Navigator&{share?:(data:ShareData)=>Promise<void>};
-        if(typeof share.share==='function')this.button('Share invite',async()=>{try{await share.share!({title:'Roadster Race duel',text:'Race me in Roadster Race. Room '+this.room!.roomId,url:link});}catch{/* Dismissed share sheets need no message. */}},true);
-        this.button('Copy link',async()=>{try{await navigator.clipboard.writeText(link);this.status.textContent='Invite link copied.';}catch{this.status.textContent=link;}});
+    const view=this.view;if(!view||!this.room)return;
+    const screen=duelScreen({view,sessionId:this.room.sessionId,connection:this.disconnected?'reconnecting':'connected',sceneReady:this.hooks.sceneReady?.()??true,sendingLine:this.waiting,menu:this.menu,order:this.latest?.order});
+    this.paddock.raceBehind=view.phase==='countdown'||view.phase==='racing';
+    if(screen.kind==='race'){this.paddock.close();return;}
+    const removable:{id:string;name:string}[]=[];
+    if(screen.kind==='waiting'&&screen.isHost){
+      const waited=(performance.now()-this.drawingShownAt)/1000;
+      for(const d of view.drivers.filter(d=>!d.ready&&d.id!==this.room?.sessionId)){
+        if(waited>=DRAWING_GRACE)removable.push({id:d.id,name:d.name});
+        else if(this.graceTimer===undefined)this.graceTimer=window.setTimeout(()=>{this.graceTimer=undefined;this.present();},Math.max(500,(DRAWING_GRACE-waited)*1000+200));
       }
-      for(const d of view.drivers)this.content.append(el('p',d.name+(d.id===this.room.sessionId?' (you)':'')+' · '+(!d.connected?'Reconnecting':view.phase==='lobby'?'Joined':d.ready?'Ready':'Drawing')));
-      if(view.phase==='lobby')this.hostSettings(view);
-      if(view.phase==='lobby'&&view.host===this.room.sessionId)this.button('Start drawing',()=>this.room?.send('start'),true).disabled=view.drivers.length<2||view.drivers.some(s=>!s.connected);
-      if(view.phase==='drawing'&&view.host===this.room.sessionId){
-        const waited=(performance.now()-this.drawingShownAt)/1000;
-        for(const d of view.drivers.filter(d=>!d.ready&&d.id!==this.room?.sessionId)){
-          if(waited>=DRAWING_GRACE)this.button('Remove '+d.name,()=>this.room?.send('remove',{id:d.id}));
-          else if(this.graceTimer===undefined)this.graceTimer=window.setTimeout(()=>{this.graceTimer=undefined;this.present();},Math.max(500,(DRAWING_GRACE-waited)*1000+200));
-        }
-      }
-    }else if(this.menu){this.show('Race menu');this.content.append(el('p','The race continues.'));this.button('Resume',()=>this.resume(),true);}
-    else {this.dialog.close();return;}
-    this.button('Home',()=>this.leave());
+    }
+    const tip=this.coach.next(screen.kind,screen.isHost);
+    this.paddock.room(screen,{code:this.room.roomId,link:location.href,venues:this.venueList(),removable,coach:tip&&{id:tip,dismiss:()=>{this.coach.dismiss(tip);this.present();}}});
   }
+  /** While a racing room's scene is still loading, the paddock shows Loading circuit; main calls this once it can draw. */
+  sceneChanged(){if(this.view&&(this.view.phase==='countdown'||this.view.phase==='racing'))this.present();}
   lock(samples:DrawSample[]){
     if(!samples.length||!this.room||!this.view)return;
     const start=samples[0].time;this.waiting=true;
@@ -302,8 +253,8 @@ export class DuelClient {
     const text=describeDuelError(error);
     if(error.category==='drawing'){
       this.waiting=false;
-      if(this.dialog.open)this.present();
-      if(!this.dialog.open||this.content.querySelector('h2')?.textContent==='Waiting for lines'){this.show('Check your line');this.button('Return to drawing',()=>this.dialog.close(),true);}
+      if(this.paddock.open)this.present();
+      if(!this.paddock.open||this.paddock.shownTitle==='Waiting for lines')this.paddock.message('check-line','Check your line',undefined,[{label:'Return to drawing',action:()=>this.paddock.close(),primary:true}]);
       this.status.textContent=text;
     }else if(error.category==='lobby'){if(this.view?.phase==='lobby'||this.view?.phase==='results')this.status.textContent=text;}
     else this.connectionError(error);
@@ -313,7 +264,7 @@ export class DuelClient {
     this.status.replaceChildren(describeDuelError(error));
     const action=duelErrorAction(error);
     if(action==='updating'){void this.probe(20_000).then(v=>this.enterUpdating(v.kind==='updating'?v:{kind:'updating',ahead:'server'}));return;}
-    if(action==='retry'&&retry){const b=el('button','Try again');b.type='button';b.className='secondary-button';b.onclick=()=>{this.status.textContent='';retry();};this.status.append(' ',b);}
+    if(action==='retry'&&retry)Paddock.statusAction(this.status,'Try again',()=>{this.status.textContent='';retry();});
   }
   press(ability:Ability){
     if(this.menu||this.disconnected||!this.latest)return;
@@ -363,7 +314,7 @@ export class DuelClient {
   pause(){this.menu=true;this.present();}
   private resume(){this.menu=false;this.present();}
   leave(){
-    this.closed=true;this.probes.abort();this.dialog.remove();storeSeat(null);
+    this.closed=true;this.probes.abort();this.paddock.remove();storeSeat(null);
     if(this.room)void this.room.leave().catch(()=>{});
     const url=new URL(location.href);url.searchParams.delete('duel');url.searchParams.delete('duelCircuit');url.searchParams.delete('since');history.replaceState(null,'',url);
     this.hooks.home();

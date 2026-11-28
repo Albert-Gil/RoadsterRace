@@ -69,7 +69,7 @@ test('san-diego-fleet with 4 devices, both shortcuts, portrait drawing and priva
     const results = await Promise.all(pages.map(async p => {
       const d = p.getByRole('dialog');
       await expect(d.getByRole('heading',{name:'Race results'})).toBeVisible({timeout:180000});
-      return (await d.locator('section > p').allTextContents()).slice(0,4);
+      return (await d.locator('.seat-result').allTextContents()).slice(0,4);
     }));
     for (const result of results) {
       expect(result.every(row => /^\d+\. .+ · \d+\.\d{2} s$/.test(row))).toBe(true);

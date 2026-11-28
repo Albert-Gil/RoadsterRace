@@ -20,6 +20,67 @@
 .duel-dialog section > strong { font:700 1.4rem monospace; letter-spacing:.12em; }
 .duel-dialog :is(select,input) { min-height:44px; width:100%; box-sizing:border-box; padding:6px 12px; color:var(--text); background:var(--ink); border:1px solid var(--raised-border); font:inherit; font-size:16px; }
 .duel-dialog [role=status]:not(:empty) { margin-top:12px; }
+/* Private Duels paddock (src/duels/paddock.ts): full screen, led by the circuit's artwork. */
+.duel-dialog.paddock { width:100vw; max-width:none; height:100dvh; max-height:none; margin:0; padding:0; border:0; border-radius:0; background:var(--ink); overflow:hidden; }
+.paddock .paddock-art { position:absolute; inset:0; overflow:hidden; opacity:0; transition:opacity var(--motion-ms,220ms) ease; }
+.paddock .paddock-art.loaded { opacity:1; }
+.paddock .paddock-art img { width:100%; height:100%; object-fit:cover; filter:saturate(.9); }
+.paddock .paddock-art::after { content:''; position:absolute; inset:0; background:linear-gradient(90deg, rgb(8 12 18 / 94%) 0%, rgb(8 12 18 / 84%) 46%, rgb(8 12 18 / 46%) 100%), linear-gradient(0deg, rgb(8 12 18 / 80%), transparent 40%); }
+.paddock .paddock-panel { position:relative; display:flex; flex-direction:column; gap:16px; height:100%; overflow:auto; overscroll-behavior:contain;
+  padding:max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left)); width:min(620px, 100%); }
+.paddock .paddock-head { display:grid; gap:6px; }
+.paddock .paddock-kicker { display:inline-flex; align-items:center; gap:8px; color:var(--accent); font:700 12px/1 var(--font-body); letter-spacing:.16em; text-transform:uppercase; }
+.paddock .paddock-kicker::before { content:''; width:5px; height:12px; background:var(--accent); transform:skewX(-18deg); }
+.paddock h2 { font:italic 700 clamp(30px, 6vw, 44px)/1 var(--font-display); text-transform:uppercase; letter-spacing:.01em; }
+.paddock h3 { margin:0; color:var(--muted); font:700 12px/1 var(--font-body); letter-spacing:.14em; text-transform:uppercase; }
+.paddock .paddock-line { color:var(--muted); font-weight:600; }
+.paddock .paddock-line:empty { display:none; }
+.paddock .paddock-code { justify-self:start; margin-top:6px; padding:6px 14px; border:1px solid var(--accent); border-radius:6px; font:700 clamp(24px, 5vw, 32px) monospace; letter-spacing:.18em; background:rgb(8 12 18 / 60%); }
+.paddock .paddock-code[hidden], .paddock [hidden] { display:none !important; }
+.paddock .paddock-body { display:grid; gap:14px; }
+.paddock .paddock-group { display:grid; gap:10px; padding:14px; border:1px solid var(--raised-border); border-radius:10px; background:rgb(12 18 26 / 72%); }
+.paddock .paddock-seats { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:10px; margin:0; padding:0; list-style:none; }
+.paddock .seat-card { position:relative; display:grid; grid-template-columns:auto 1fr; grid-template-areas:'num name' 'car tags' 'car status' 'result result'; align-items:center; column-gap:12px; row-gap:2px; min-height:84px; padding:12px 14px; border:1px solid var(--raised-border); border-left:4px solid var(--accent); border-radius:10px; background:rgb(12 18 26 / 82%); }
+.paddock .seat-card.seat-you { border-color:color-mix(in srgb, var(--accent) 70%, var(--raised-border)); box-shadow:0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent) inset; }
+.paddock .seat-number { grid-area:num; justify-self:start; display:inline-grid; place-items:center; min-width:28px; height:24px; padding:0 6px; background:var(--fill); color:var(--accent-text); font:italic 700 18px/1 var(--font-display); clip-path:polygon(5px 0, 100% 0, calc(100% - 5px) 100%, 0 100%); }
+.paddock .seat-name { grid-area:name; overflow:hidden; font:700 18px/1.2 var(--font-body); text-overflow:ellipsis; white-space:nowrap; }
+.paddock .seat-car { grid-area:car; width:56px; color:var(--paint, #8a96a3); }
+.paddock .seat-car svg { display:block; width:100%; fill:currentColor; filter:drop-shadow(0 2px 3px rgb(0 0 0 / 50%)); }
+.paddock .seat-tags { grid-area:tags; color:var(--muted); font:600 12px/1.2 var(--font-body); letter-spacing:.08em; text-transform:uppercase; }
+.paddock .seat-status { grid-area:status; font:600 14px/1.2 var(--font-body); }
+.paddock .seat-card[data-status="ready"] .seat-status, .paddock .seat-card[data-status="race-again"] .seat-status, .paddock .seat-card[data-status="finished"] .seat-status { color:#7bd88f; }
+.paddock .seat-card[data-status="reconnecting"] .seat-status, .paddock .seat-card[data-status="out"] .seat-status { color:#e0b84f; }
+.paddock .seat-result { grid-area:result; margin-top:6px; font:italic 700 26px/1 var(--font-display); letter-spacing:.02em; }
+.paddock .seat-open { border-style:dashed; border-left-style:dashed; background:rgb(12 18 26 / 46%); color:var(--muted); grid-template-areas:'num name'; }
+.paddock .seat-open .seat-number { background:var(--raised); color:var(--muted); }
+.paddock .paddock-settings { display:grid; grid-template-columns:2fr 1fr; gap:10px; }
+.paddock .paddock-settings .paddock-note { grid-column:1 / -1; color:var(--muted); }
+.paddock .paddock-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:auto; padding-top:4px; }
+.paddock .paddock-actions > * { flex:1 1 160px; }
+.paddock .paddock-status { min-height:1.3em; color:var(--muted); font-weight:600; }
+@media (max-width: 520px) { .paddock .paddock-seats { grid-template-columns:1fr 1fr; } .paddock .seat-card { grid-template-columns:1fr; grid-template-areas:'num' 'name' 'car' 'tags' 'status' 'result'; min-height:0; } .paddock .seat-car { width:48px; } }
+@media (max-height: 500px) and (orientation: landscape) {
+  .paddock .paddock-panel { width:100%; display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1.2fr); grid-template-areas:'head seats' 'body seats' 'settings seats' 'actions seats' 'status seats'; grid-auto-rows:min-content; align-content:start; column-gap:20px; row-gap:10px; }
+  .paddock .paddock-head { grid-area:head; } .paddock .paddock-body { grid-area:body; } .paddock .paddock-seats { grid-area:seats; grid-template-columns:1fr; align-self:start; }
+  .paddock .paddock-settings { grid-area:settings; } .paddock .paddock-actions { grid-area:actions; margin-top:0; } .paddock .paddock-status { grid-area:status; }
+  .paddock .paddock-panel[data-wide] .paddock-body { grid-column:1 / -1; }
+  .paddock h2 { font-size:28px; } .paddock .paddock-code { font-size:22px; } .paddock .seat-card { min-height:0; padding:8px 12px; }
+}
+.paddock .paddock-coach { display:grid; grid-template-columns:1fr auto; gap:4px 14px; align-items:center; padding:12px 14px; border:1px solid color-mix(in srgb, var(--accent) 55%, var(--raised-border)); border-radius:10px; background:rgb(12 18 26 / 88%); }
+.paddock .paddock-coach strong { grid-column:1; font:italic 700 20px/1.1 var(--font-display); text-transform:uppercase; }
+.paddock .paddock-coach p { grid-column:1; margin:0; color:var(--muted); }
+.paddock .paddock-coach .paddock-coach-dismiss { grid-column:2; grid-row:1 / span 2; min-height:40px; }
+/* Short opacity fades in and out (src/duels/paddock.ts FADE_MS); none with reduced motion. */
+.duel-dialog.paddock { opacity:1; transition:opacity 180ms ease; }
+.duel-dialog.paddock[data-state="opening"], .duel-dialog.paddock[data-state="closing"] { opacity:0; }
+.duel-dialog.paddock[data-state="closing"] { pointer-events:none; }
+/* A dropped connection during a race: a compact notice over the race. */
+.duel-dialog.paddock[data-compact="true"] { width:min(420px, calc(100vw - 24px)); height:auto; max-height:calc(100dvh - 24px); margin:max(12px, env(safe-area-inset-top)) auto auto; border:1px solid var(--raised-border); border-radius:12px; box-shadow:var(--shadow); }
+.duel-dialog.paddock[data-compact="true"]::backdrop { background:rgb(5 10 15 / 30%); }
+.duel-dialog.paddock[data-compact="true"] .paddock-art { display:none; }
+.duel-dialog.paddock[data-compact="true"] .paddock-panel { width:100%; height:auto; padding:16px 18px; gap:10px; }
+.duel-dialog.paddock[data-compact="true"] h2 { font-size:26px; }
+@media (prefers-reduced-motion: reduce) { .paddock .paddock-art, .duel-dialog.paddock { transition:none; } }
 :root { --ink: #0b1016; --raised: rgb(255 255 255 / 7%); --raised-border: rgb(255 255 255 / 13%); --shadow: 0 18px 50px rgb(0 0 0 / 45%); font-family: var(--font-body); color: var(--text); background: var(--ink); font-synthesis: none; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; }
 html, body { touch-action: manipulation; overscroll-behavior: none; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body { margin: 0; background: var(--ink); }

@@ -20,7 +20,7 @@ export function settingsPanel({ soundOn, graphics: { choice, level, renderer, ac
     <div class="settings-grid">
       <div class="settings-column">
         <section class="setting-group" aria-labelledby="settings-audio"><h3 id="settings-audio" class="setting-label">Audio</h3>${soundToggle(soundOn, true)}<p class="setting-note">Engine, effects and menu music.</p></section>
-        <section class="setting-group" aria-labelledby="settings-device"><h3 id="settings-device" class="setting-label">Device</h3><button class="setting-row" data-action="diagnostics">${deviceIcon}<span class="setting-name">Touch test</span>${chevronIcon}</button><p class="setting-note">Check that four players can press at once.</p></section>
+        <section class="setting-group" aria-labelledby="settings-device"><h3 id="settings-device" class="setting-label">Device</h3><button class="setting-row" data-action="diagnostics">${deviceIcon}<span class="setting-name">Touch test</span>${chevronIcon}</button><p class="setting-note">Check that four players can press at once.</p><button class="setting-row" data-action="duel-tips"><span class="setting-name">Online race tips</span>${chevronIcon}</button><p class="setting-note" id="duel-tips-note">Show the Private Duel tips again on your next room.</p></section>
       </div>
       <div class="settings-column">
         <section class="setting-group" aria-labelledby="settings-graphics"><h3 id="settings-graphics" class="setting-label">Graphics</h3>

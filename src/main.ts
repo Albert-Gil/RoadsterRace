@@ -3,6 +3,7 @@ import { reclaimBeforeGraphics, wakeDuelServer } from './duels/seat';
 import { checkRoomCode } from './duels/codes';
 import { FramePlayback } from './duels/playback';
 import { OwnCarDisplay } from './duels/own-car';
+import { CoachCards } from './duels/coach';
 import type { Room } from '@colyseus/sdk';
 import { duelVenues, type RaceFrame, type RoomView } from './duels/protocol';
 import { rampAt, supported, groundHeight, FLIGHT_RULES } from './core/support';
@@ -65,7 +66,7 @@ import { TUTORIAL_COPY, tutorialCoach, tutorialCompletePanel, tutorialIntroPanel
 import { TUTORIAL_CIRCUIT, TUTORIAL_LAPS, answerPrompt, duePrompt, freshTutorial, type TutorialProgress } from './app/tutorial';
 import { GameAudio } from './presentation/audio';
 import type { GameScene } from './presentation/scene';
-import { applyPlayerColors, applyTheme, themes, hopEffects, heroImages, heroArtRevision, interfaceMotion, sectorDrawingAppearance, paintFinishes, rewardPaintFinishes } from './presentation/themes';
+import { applyPlayerColors, applyTheme, themes, hopEffects, heroImages, heroArtRevision, circuitArtRevision, interfaceMotion, sectorDrawingAppearance, paintFinishes, rewardPaintFinishes } from './presentation/themes';
 import { cleanDriverName, escapeHtml, finishFor, loadPreferences, savePreferences } from './presentation/race-settings';
 import { raceSetupMarkup } from './presentation/race-setup';
 import { isGraphicsChoice, isRendererChoice, loadGraphicsPreference, saveGraphicsPreference, type RendererChoice } from './presentation/graphics';
@@ -669,6 +670,7 @@ function runAction(target: HTMLElement | undefined) {
   if (action === 'settings' && ['welcome', 'setup'].includes(phase)) openSettings();
   if (action === 'close-settings') closeSettings();
   if (action === 'sound') toggleSound();
+  if (action === 'duel-tips') { CoachCards.reset(); const note = document.querySelector('#duel-tips-note'); if (note) note.textContent = 'Tips will show on your next Private Duel.'; }
   if (action === 'graphics' && settingsDialog.open && isGraphicsChoice(target!.dataset.graphics)) { graphicsChoice = target!.dataset.graphics; graphicsPreference.choice = graphicsChoice; saveGraphicsPreference(graphicsPreference); world.setGraphics(graphicsChoice); refreshSettings(`[data-graphics="${graphicsChoice}"]`); }
   // A different backend needs a new engine: save and reload. Settings opens only on Home and race setup, so no race is lost.
   if (action === 'renderer' && settingsDialog.open && isRendererChoice(target!.dataset.renderer) && target!.dataset.renderer !== graphicsPreference.renderer) { graphicsPreference.renderer = target!.dataset.renderer; saveGraphicsPreference(graphicsPreference); const url = new URL(location.href); url.searchParams.delete('renderer'); location.replace(url); }
@@ -860,6 +862,9 @@ document.querySelectorAll<HTMLButtonElement>('.diagnostic-pad').forEach(pad => {
   for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) pad.addEventListener(name, e => { ownership.up((e as PointerEvent).pointerId, name !== 'pointerup'); updateDiagnostics(); });
 });
 
+/** Test seam (development and duel-test builds): ?duelSceneDelay=ms treats each round's scene as still loading for that long. */
+const duelSceneDelayMs=import.meta.env.DEV?Number(circuitQuery.get('duelSceneDelay'))||0:0;
+let delayedRound=-1,delayedSince=0;
 async function openDuel(code='', reclaimed?:Room, returnCircuit=activeCircuit.id){
   if(duel||openingDuel)return;
   openingDuel=true;
@@ -875,6 +880,13 @@ async function openDuel(code='', reclaimed?:Room, returnCircuit=activeCircuit.id
       draw(view){remote=undefined;shown=undefined;playback.reset();ownDisplay=undefined;loadDuelVenue(view);turn=Math.max(0,duel!.seatIndex);beginDrawing();},
       ownLine(samples){if(duel?.view && activeCircuit.id!==duel.view.circuit)loadDuelVenue(duel.view);const result=compileRoute(samples,activeTrack);if(result.ok){route=result.route;if(remote)world.drawLine(null);else world.drawLine(route,result.drawing);}},
       frame:receiveDuelFrame,
+      circuitArt(id){const c=circuits.find(v=>v.id===id);return c?.artwork?assetUrl(c.artwork)+'?v='+circuitArtRevision:undefined;},
+      sceneReady(){
+        const view=duel?.view,built=!!world&&!!view&&activeCircuit.id===view.circuit;
+        if(!duelSceneDelayMs||!view||(view.phase!=='countdown'&&view.phase!=='racing'))return built;
+        if(delayedRound!==view.round){delayedRound=view.round;delayedSince=performance.now();window.setTimeout(()=>duel?.sceneChanged(),duelSceneDelayMs+50);}
+        return built&&performance.now()-delayedSince>=duelSceneDelayMs;
+      },
       ownShown(){const v=world.vehicles[duel?.seatIndex??0]?.root.position;return v?{x:v.x,z:v.z,buffered:ownBuffered,display:ownDisplay&&{...ownDisplay.state}}:undefined;},
       home(){duel=undefined;remote=undefined;shown=undefined;playback.reset();lapCount=previous.laps;sessionOptions.mode=previous.mode;if(activeCircuit.id!==previous.circuit)loadCircuit(previous.circuit,false);goHome();},
     });
@@ -885,7 +897,7 @@ async function openDuel(code='', reclaimed?:Room, returnCircuit=activeCircuit.id
 function loadDuelVenue(view:RoomView){
   if(activeCircuit.id!==view.circuit)loadCircuit(view.circuit,false);
   playerCount=view.drivers.length;lapCount=view.laps;world.setPlayers(playerCount);
-  applyDriverPresentation();renderControls();
+  applyDriverPresentation();renderControls();duel?.sceneChanged();
 }
 function receiveDuelFrame(frame:RaceFrame,view:RoomView){
   const first=!remote || remote.round!==frame.round;
@@ -947,7 +959,8 @@ try {
         shown={...sample.to,cars:sample.to.cars.map((car,i)=>i===own?{...ownCar,position:{x:pose.x,z:pose.z},elevation:pose.y,heading:pose.heading}:car)};previousPoses[own]={...pose};
       }
       updateVehicles(sample?.alpha??1);
-      world.render(now/1000,false);return;
+      // A full-screen paddock hides the scene: skip drawing it until the paddock starts to fade out.
+      if(!duel.covering)world.render(now/1000,false);return;
     }
     if (phase === 'racing' && elapsed > 0.5 && !testClock) pauseRace('render-delay');
     // A resumed tutorial race returns to its unanswered prompt before any further step.
@@ -996,7 +1009,7 @@ try {
       }
     } else if (phase === 'ready' || phase === 'countdown' || phase === 'paused' || phase === 'coaching') updateVehicles(1);
     if (now > noticeUntil && notice.textContent) notice.textContent = '';
-    world.render(now / 1000, phase === 'welcome' || phase === 'tour-resume');
+    if (!duel?.covering) world.render(now / 1000, phase === 'welcome' || phase === 'tour-resume');
   });
   if (import.meta.env.DEV) installDevApi(() => ({ phase, pauseReason, sessionOptions, humans, playerCount, personalLap, preferences, activeTour, roundIndex, race, activeCircuit, theme, lapCount, turn, confirmedRoutes, readyPlayers, world, route, drawingTrim, best, stroke: drawing.samples, activeTrack, raceTouches: input.touches, ownership, audio, usePractice, driverName, driverPaint, tutorial, activeChallenge }));
 } catch (error) { if(reclaimed)void reclaimed.leave().catch(()=>{}); console.error(error); canvas.hidden = true; setPhase('error'); renderPanel(error instanceof Error ? error.message : undefined); }

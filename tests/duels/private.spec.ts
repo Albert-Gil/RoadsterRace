@@ -80,7 +80,7 @@ for(const [venue,count] of [['coastal-launch',2],['coastal-launch',4],['golden-g
       }), {timeout:softwareGraphics ? 90000 : 45000}).toMatch(/^(racing|results)$/);
       const results=await Promise.all(pages.map(async p=>{
         const d=p.getByRole('dialog');await expect(d.getByRole('heading',{name:'Race results'})).toBeVisible({timeout:120000});
-        return d.locator('section > p').allTextContents();
+        return d.locator('.seat-result').allTextContents();
       }));
       for(const result of results){
         const standings = result.slice(0,count);
