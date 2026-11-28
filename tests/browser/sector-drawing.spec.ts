@@ -154,6 +154,25 @@ test('drawing view persists and portrait guidance clears the controls', async ({
   } finally { await context.close(); }
 });
 
+/**
+ * Waits until the sector camera has stopped and the drawing projection is stable (the line's end projects to
+ * the same screen point on consecutive frames), then returns that point.
+ */
+async function settledAnchor(page: import('@playwright/test').Page) {
+  return page.evaluate(() => new Promise<{x: number; y: number}>(resolve => {
+    const api = (window as any).__roadster;
+    let previous: {x: number; y: number} | undefined, stable = 0;
+    const check = () => {
+      const p = api.project(api.getRawStroke().at(-1));
+      const same = previous && Math.hypot(p.x - previous.x, p.y - previous.y) < 0.5;
+      stable = !api.getWorld().cameraMoving && same ? stable + 1 : 0;
+      previous = p;
+      if (stable >= 2) resolve(p); else requestAnimationFrame(check);
+    };
+    requestAnimationFrame(check);
+  }));
+}
+
 for (const portrait of [false, true]) test(`LAX ${portrait ? 'portrait' : 'landscape'} preserves earlier sectors on Retry and Previous and carries pace through joins`, async ({ browser }) => {
   test.setTimeout(360000);
   const context = await browser.newContext({ ...iphone, viewport: portrait ? {width:390, height:844} : iphone.viewport });
@@ -201,16 +220,16 @@ for (const portrait of [false, true]) test(`LAX ${portrait ? 'portrait' : 'lands
     }
     const raw = () => page.evaluate(() => (window as any).__roadster.getRawStroke() as {x:number;z:number;time:number}[]);
     const full = await raw();
+    // Watch for camera motion from the moment of the click, then wait for the sector view to settle.
+    await page.evaluate(() => { const w = window as any; w.__sawCameraMove = false; const watch = () => { if (w.__roadster.getWorld().cameraMoving) w.__sawCameraMove = true; if (!w.__stopWatch) requestAnimationFrame(watch); }; w.__stopWatch = false; requestAnimationFrame(watch); });
     await page.getByRole('button', {name:'Restart this sector'}).click();
     await expect(page.locator('.planning-note')).toContainText('Sector 4 of 4');
-    const anchor = await page.evaluate(() => {
-      const api = (window as any).__roadster;
-      return {point: api.project(api.getRawStroke().at(-1)), moving: api.getWorld().cameraMoving};
-    });
-    expect(anchor.moving).toBe(true);
+    const anchor = await settledAnchor(page);
+    expect(await page.evaluate(() => { const w = window as any; w.__stopWatch = true; return w.__sawCameraMove; })).toBe(true);
     const cdp = await context.newCDPSession(page);
-    await cdp.send('Input.dispatchTouchEvent', {type:'touchStart', touchPoints:[{x:anchor.point.x, y:anchor.point.y, id:1}]});
-    expect(await page.evaluate(() => {
+    await cdp.send('Input.dispatchTouchEvent', {type:'touchStart', touchPoints:[{x:anchor.x, y:anchor.y, id:1}]});
+    // Touching the glowing end continues the line: the handle hides and the view holds still.
+    await expect.poll(() => page.evaluate(() => {
       const world = (window as any).__roadster.getWorld();
       return !world.cameraMoving && !world.scene.getMeshByName('continue-handle').isVisible;
     })).toBe(true);
