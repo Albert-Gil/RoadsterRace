@@ -27,7 +27,10 @@ export function installPressGuard(doc: Document = document) {
       if (!pressTracker.keyDown(k.code, k.repeat) && ACTIVATION_KEYS.has(k.code) && (k.target as Element | null)?.closest?.('button, [role="button"], a[href]')) e.preventDefault();
     }],
     ['keyup', e => pressTracker.keyUp((e as KeyboardEvent).code, now())],
-    ['click', e => { if (!pressTracker.allowsClick((e as MouseEvent).detail, now())) { e.preventDefault(); e.stopImmediatePropagation(); } }],
+    ['click', e => {
+      const id = (e as Partial<PointerEvent>).pointerId;
+      if (!pressTracker.allowsClick((e as MouseEvent).detail, now(), typeof id === 'number' ? id : undefined)) { e.preventDefault(); e.stopImmediatePropagation(); }
+    }],
   ];
   for (const [type, listener] of listeners) doc.addEventListener(type, listener, true);
   return () => { for (const [type, listener] of listeners) doc.removeEventListener(type, listener, true); };

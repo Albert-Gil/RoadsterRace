@@ -33,4 +33,18 @@ describe('a press belongs to the screen where it began', () => {
   it('allows assistive activation with no pointer or key behind it', () => {
     expect(new PressTracker().allowsClick(0, 0)).toBe(true);
   });
+  it('keeps each finger separate through its click', () => {
+    const t = new PressTracker();
+    // Finger 5 holds an ability pad; finger 6 taps a Results button on the same screen.
+    t.pointerDown(5, 'pad'); t.pointerDown(6, 'menu');
+    t.pointerUp(5, 100); t.pointerUp(6, 105);
+    expect(t.allowsClick(1, 110, 6)).toBe(true);   // the tap's own click
+    expect(t.allowsClick(1, 110, 5)).toBe(false);  // a click attributed to the pad finger
+    // Released in the other order: the pad release must not hide the tap.
+    t.pointerDown(7, 'menu'); t.pointerDown(8, 'pad');
+    t.pointerUp(7, 200); t.pointerUp(8, 201);
+    expect(t.allowsClick(1, 210, 7)).toBe(true);
+    // With no pointer ID the latest release decides (here the pad: refused).
+    expect(t.allowsClick(1, 210)).toBe(false);
+  });
 });

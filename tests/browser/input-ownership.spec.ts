@@ -37,3 +37,30 @@ test('a press that began before the screen changed cannot activate the next scre
   expect(await page.locator('.playground').getAttribute('data-phase')).toBe('racing');
   expect(errors).toEqual([]);
 });
+
+test('on a shared screen, a pad finger releasing beside a Results tap neither blocks the tap nor votes itself', async ({ page }) => {
+  await page.goto('/?' + RACE_SPEED); await page.waitForFunction(() => Boolean((window as any).__roadster));
+  await page.getByRole('button', { name: 'Multiplayer' }).click();
+  await page.getByRole('button', { name: '2 players', exact: true }).click();
+  await page.getByRole('button', { name: '1 lap', exact: true }).click();
+  await page.getByRole('button', { name: 'Plan your lines' }).click();
+  await page.evaluate(() => (window as any).__roadster.usePracticeLine()); await page.getByRole('button', { name: 'Lock in my line' }).click();
+  await page.getByRole('button', { name: /I'm Player 2/ }).click();
+  await page.evaluate(() => (window as any).__roadster.usePracticeLine()); await page.getByRole('button', { name: 'Lock in my line' }).click();
+  await page.waitForFunction(() => (window as any).__roadster.getGraphics().renderReady);
+  for (const key of ['KeyA', 'KeyL']) await page.keyboard.press(key);
+  await waitForPhase(page, 'results', 180000);
+  // Finger 5 began on Player 2's pad during the race; finger 6 taps Player 1's "Race again" on Results.
+  const voted = await page.evaluate(() => {
+    const pad = document.querySelector<HTMLElement>('[data-racer="1"].ability-control')!, vote = document.querySelector<HTMLElement>('[data-action="vote"][data-seat="0"]')!;
+    const fire = (el: Element, type: string, id: number) => el.dispatchEvent(new PointerEvent(type, { pointerId: id, pointerType: 'touch', bubbles: true, cancelable: true, composed: true, isPrimary: id === 5, detail: 1 } as PointerEventInit));
+    fire(pad, 'pointerdown', 5); fire(vote, 'pointerdown', 6);
+    fire(vote, 'pointerup', 6); fire(pad, 'pointerup', 5);           // the pad finger lifts last
+    fire(vote, 'click', 5);                                          // a click attributed to the pad finger: refused
+    const afterPadClick = vote.getAttribute('aria-pressed');
+    fire(vote, 'click', 6);                                          // the tap's own click: votes
+    return { afterPadClick, afterTap: document.querySelector('[data-action="vote"][data-seat="0"]')?.getAttribute('aria-pressed') };
+  });
+  expect(voted.afterPadClick).toBe('false');
+  expect(voted.afterTap).toBe('true');
+});
