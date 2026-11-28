@@ -5,6 +5,7 @@ import { Client, type Room } from '@colyseus/sdk';
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { DuelRoom, duelTracks } from '../../server/duel-room';
+import { stats } from '../../server/stats';
 import { createPracticeSamples, compileRoute, COMPILER_VERSION } from '../../src/core/route';
 import { LocalRace } from '../../src/core/local-race';
 import { RULES } from '../../src/core/simulation';
@@ -219,6 +220,34 @@ describe('private duel transport and authority',()=>{
       expect(drivers.slice(1).every(d=>!d.error)).toBe(true);
       expect(drivers.every(d=>!d.view?.drivers.some(s=>s.ready))).toBe(true);
     }finally{await Promise.allSettled(drivers.map(d=>d.room.leave()));}
+  });
+  it('admits rooms by circuit weight and refuses a circuit change that does not fit',async()=>{
+    const newport=findCircuit('coastal-launch').track, gate=findCircuit('golden-gate').track;
+    const opts=(track:typeof newport)=>({circuit:track.id,laps:1,protocol:DUEL_PROTOCOL,physics:RULES.version,compiler:COMPILER_VERSION,versions:{[newport.id]:newport.version,[gate.id]:gate.version},name:'A',paint:'glacier'});
+    const before=process.env.DUEL_CAPACITY, open:Driver[]=[];
+    await until(()=>stats.openRooms===0);
+    try{
+      process.env.DUEL_CAPACITY='2';
+      // An idle server always takes one room, even one heavier than the budget.
+      open.push(new Driver(await client.create('private_duel',opts(gate))));
+      await expect(client.create('private_duel',opts(newport))).rejects.toThrow('server-full');
+      await open.pop()!.room.leave(); await until(()=>stats.openRooms===0);
+      open.push(new Driver(await client.create('private_duel',opts(newport))));
+      open.push(new Driver(await client.create('private_duel',opts(newport))));
+      expect(stats.snapshot().rooms).toEqual({[newport.id]:2});
+      await until(()=>open.every(d=>d.view?.circuit===newport.id));
+      open[0].room.send('settings',{circuit:gate.id,laps:2});
+      await until(()=>open[0].error);
+      expect(open[0].error).toMatchObject({category:'lobby',reason:'circuit-busy'});
+      await delay(60); expect(open[0].view!.circuit).toBe(newport.id);
+      await open.pop()!.room.leave(); await until(()=>stats.openRooms===1);
+      open[0].room.send('settings',{circuit:gate.id,laps:2});
+      await until(()=>open[0].view?.circuit===gate.id);
+      expect(stats.snapshot().rooms).toEqual({[gate.id]:1});
+    }finally{
+      if(before===undefined)delete process.env.DUEL_CAPACITY; else process.env.DUEL_CAPACITY=before;
+      await Promise.allSettled(open.map(d=>d.room.leave()));
+    }
   });
   it.each([
     ['coastal-launch',2,1],['coastal-launch',4,1],['golden-gate',4,6],['santa-monica',4,1],['golden-gate',3,1],

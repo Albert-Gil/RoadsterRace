@@ -163,3 +163,11 @@ test('the updating screen gives up within its 15 s window when the server stops 
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.locator('.playground')).toHaveAttribute('data-phase', 'welcome');
 });
+
+test('opening Multiplayer starts waking the room server before Private Duel is chosen', async ({ page }) => {
+  await page.goto('/');
+  const wake = page.waitForRequest(request => new URL(request.url()).pathname === '/health', { timeout: 10000 });
+  await page.getByRole('button', { name: 'Multiplayer' }).click();
+  await wake;
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+});

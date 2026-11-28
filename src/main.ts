@@ -1,5 +1,5 @@
 import type { DuelClient } from './duels/client';
-import { reclaimBeforeGraphics } from './duels/seat';
+import { reclaimBeforeGraphics, wakeDuelServer } from './duels/seat';
 import { checkRoomCode } from './duels/codes';
 import { FramePlayback } from './duels/playback';
 import { OwnCarDisplay } from './duels/own-car';
@@ -629,7 +629,7 @@ app.addEventListener('click', e => {
   if (action === 'tutorial-example') usePractice(false);
   if (action === 'play') exitTutorial();
   if (action === 'play' || action === 'time-trial') { sessionOptions.mode=action==='play'?'solo-race':'time-trial';sessionOptions.seed=Math.floor(Math.random()*0x7fffffff);setupCount = 1;refreshLap(); applyDriverPresentation(); setPhase('setup'); }
-  if (action === 'friends') { sessionOptions.mode='multiplayer';setupCount = 2; applyDriverPresentation(); setPhase('setup'); }
+  if (action === 'friends') { wakeDuelServer(); sessionOptions.mode='multiplayer';setupCount = 2; applyDriverPresentation(); setPhase('setup'); }
   if (action === 'circuit' && phase === 'setup') selectCircuit(target!.dataset.circuit!);
   if(action==='difficulty'&&phase==='setup'){sessionOptions.difficulty=target!.dataset.difficulty as SessionOptions['difficulty'];refreshSetup();}
   if (action === 'drawing-mode' && phase === 'setup') {

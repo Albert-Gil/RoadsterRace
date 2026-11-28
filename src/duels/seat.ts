@@ -6,6 +6,17 @@ const testEndpoint = import.meta.env.DEV && typeof location !== 'undefined' ? ne
 export const duelEndpoint = testEndpoint || import.meta.env.VITE_DUEL_SERVER ||
   (import.meta.env.DEV && typeof location !== 'undefined' ? location.protocol + '//' + location.hostname + ':2567' : '');
 
+let lastWake = -Infinity;
+/**
+ * Opening the Multiplayer menu starts waking a sleeping room server (Render Free sleeps after 15 min idle), so
+ * it is closer to ready when Private Duel is chosen. Fire-and-forget, at most once a minute; no credentials.
+ */
+export function wakeDuelServer(now = Date.now()) {
+  if (!duelEndpoint || now - lastWake < 60_000) return;
+  lastWake = now;
+  void fetch(new URL('/health', duelEndpoint), { cache: 'no-store', credentials: 'omit' }).catch(() => {});
+}
+
 export function storeSeat(token: string | null) {
   try {
     if (token) sessionStorage.setItem(seatStorageKey, token);

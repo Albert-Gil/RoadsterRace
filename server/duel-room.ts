@@ -12,6 +12,7 @@ import { sanDiegoFleetTrack } from '../src/core/tracks/san-diego-fleet';
 import type { Ability, CompiledRoute, DrawSample, TrackDefinition } from '../src/core/types';
 import { resolveBallot } from '../src/core/rematch-vote';
 import { stats } from './stats';
+import { admits, capacitySettings } from './capacity';
 import { DUEL_PROTOCOL, defaultDuelVenues, packFrame, type AbilityCommand, type AbilityOutcome, type AbilityResult, type DriverSeat, type DuelVenue, type RaceFrame, type Rematch, type RoomView } from '../src/duels/protocol';
 
 const allDuelTracks = [coastalTrack, goldenGateTrack, santaMonicaTrack, sanDiegoFleetTrack];
@@ -21,9 +22,8 @@ export function duelTracks(): Map<string, TrackDefinition> {
   return new Map(allDuelTracks.filter(t => (defaultDuelVenues as readonly string[]).includes(t.id) || extra.includes(t.id)).map(t => [t.id, t]));
 }
 const tickMs = 1000 / 60;
-let rooms = 0;
-/** Rooms one process admits. Render Free has 0.1 CPU: raise only after reading /stats or the duel-steps log. */
-const MAX_ROOMS = Math.max(1, Number(process.env.DUEL_MAX_ROOMS ?? 2));
+/** Circuit of each counted room on this process. Limits: server/capacity.ts (Render Free has 0.1 CPU; tune from /stats). */
+const openRooms: string[] = [];
 /** Seconds a driver may keep drawing before the host can remove them. */
 export const DRAWING_GRACE_SECONDS = 90;
 /** How stale a press's observed tick may be (1 s): a slow phone's press still counts, applied on arrival. */
@@ -78,8 +78,8 @@ export class DuelRoom extends Room {
     if (!this.track || !Number.isInteger(options.laps) || options.laps < 1 || options.laps > 6) throw new ServerError(400,'settings-invalid' satisfies DuelReason);
     this.compatible(options);
     while (creations.length && creations[0] < Date.now()-60_000) creations.shift();
-    if (rooms >= MAX_ROOMS || creations.length >= 30) throw new ServerError(429,'server-full' satisfies DuelReason);
-    rooms++; this.counted = this.track.id; stats.roomOpened(this.counted); creations.push(Date.now());
+    if (!admits(openRooms, this.track.id, capacitySettings()) || creations.length >= 30) throw new ServerError(429,'server-full' satisfies DuelReason);
+    this.count(this.track.id); creations.push(Date.now());
     // Six unambiguous characters players can type; retry on the (rare) clash with a live room.
     let code = newRoomCode(n => randomBytes(n));
     while (matchMaker.getLocalRoomById(code)) code = newRoomCode(n => randomBytes(n));
@@ -99,7 +99,10 @@ export class DuelRoom extends Room {
       if(!track||!Number.isInteger(laps)||laps!<1||laps!>6){this.fail(c,'settings-invalid');return;}
       if(this.seats.some(s=>s.versions[track.id]!==track.version)){this.fail(c,'circuit-version');return;}
       if(track.id!==this.track.id&&this.view.phase==='results'){this.forceRedraw=true;this.seats.forEach(s=>s.vote=null);}
-      if(this.counted){stats.roomClosed(this.counted);this.counted=track.id;stats.roomOpened(this.counted);}
+      if(this.counted&&track.id!==this.counted){
+        if(!admits(openRooms,track.id,capacitySettings(),this.counted)){this.fail(c,'circuit-busy');return;}
+        this.uncount();this.count(track.id);
+      }
       this.track=track;this.view.circuit=track.id as DuelVenue;this.view.laps=laps!;this.view.trackVersion=track.version;this.publish();
     });
     // After the grace period the host can remove a driver who is still drawing; everyone else then races.
@@ -268,5 +271,7 @@ export class DuelRoom extends Room {
     }
     this.publish();
   }
-  onDispose() { if(this.counted) { rooms--; stats.roomClosed(this.counted); } }
+  private count(circuit:string) { openRooms.push(circuit); this.counted=circuit; stats.roomOpened(circuit); }
+  private uncount() { const at=openRooms.indexOf(this.counted); if(at>=0) openRooms.splice(at,1); stats.roomClosed(this.counted); this.counted=''; }
+  onDispose() { if(this.counted) this.uncount(); }
 }

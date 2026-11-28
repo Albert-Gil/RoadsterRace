@@ -15,6 +15,7 @@ const REASONS = {
   'line-invalid': { category: 'drawing', text: 'This line cannot be raced. Please redraw.' },
   'circuit-version': { category: 'lobby', text: 'Someone in this room has a different version of that circuit.' },
   'settings-invalid': { category: 'lobby', text: 'Choose a circuit and 1–6 laps.' },
+  'circuit-busy': { category: 'lobby', text: 'The race server is too busy for that circuit right now. Pick another or try again shortly.' },
   'server-full': { category: 'connection', text: 'The race server is full right now. Try again shortly.', action: 'retry' },
   'server-asleep': { category: 'connection', text: 'The race server did not wake up. Try again in a minute.', action: 'retry' },
   'server-unreachable': { category: 'connection', text: 'The race server is unreachable right now. Check your connection and try again.', action: 'retry' },
