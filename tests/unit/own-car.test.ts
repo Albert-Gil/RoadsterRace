@@ -41,3 +41,54 @@ describe('your own car drawn closer to the present', () => {
     expect(playback.aheadOf(playback.latest!, 2130)).toBeCloseTo(50, 0);
   });
 });
+
+import { OwnCarDisplay, lipDistances } from '../../src/duels/own-car';
+
+describe('your own car near Fleet jumps', () => {
+  const fleet = findCircuit('san-diego-fleet').track;
+  const lines = [false, 'support-a-lane', 'support-b-lane'] as const;
+  const routeOf = (lane: false | string) => { const r = compileRoute(createPracticeSamples(fleet, 7, lane), fleet); if (!r.ok) throw new Error(r.message); return r.route; };
+  const carOn = (r: typeof route, distance: number, extra: Partial<CarView> = {}): CarView => {
+    const p = sampleRoute(r, distance);
+    return { ...car(0), position: { x: p.x, z: p.z }, heading: p.heading, speed: 30, ...extra } as CarView;
+  };
+  it('finds the car on its own section of the line, never a neighbouring deck', () => {
+    for (const lane of lines) {
+      const r = routeOf(lane);
+      for (let d = 5; d < r.length - 5; d += 3) {
+        const p = sampleRoute(r, d);
+        expect(Math.abs(routeDistanceNear(r, p, d - 4) - d)).toBeLessThan(1.5);
+      }
+    }
+  });
+  it('stops the lead at every takeoff lip until the room confirms the flight', () => {
+    for (const lane of lines) {
+      const r = routeOf(lane), lips = lipDistances(r, fleet);
+      expect(lips.length).toBeGreaterThan(0);
+      for (const lip of lips) {
+        const before = carOn(r, lip - 3);
+        const pose = ownCarAhead(r, before, 200, undefined, lip - 3, lips)!;
+        expect(routeDistanceNear(r, pose, lip - 3)).toBeLessThanOrEqual(lip + 0.01);
+      }
+    }
+  });
+  it('hands over to the authoritative flight and never steps backwards', () => {
+    const r = routeOf('support-a-lane'), lip = lipDistances(r, fleet)[0], display = new OwnCarDisplay(r, fleet);
+    let last = -Infinity;
+    for (let t = 0; t <= 30; t++) {
+      const d = lip - 12 + t * 0.5, airborne = d > lip;
+      const c = carOn(r, d, airborne ? { movement: 'airborne', elevation: 26 } : {});
+      const buffered = (() => { const p = sampleRoute(r, d - 3); return { x: p.x, z: p.z, y: 24, heading: p.heading }; })();
+      const pose = display.update(t * 16.7, c, 200, buffered);
+      const at = routeDistanceNear(r, pose, d);
+      expect(at).toBeGreaterThanOrEqual(last - 1e-6);
+      if (!airborne) expect(at).toBeLessThanOrEqual(lip + 0.01);
+      last = at;
+    }
+    // Long after takeoff the drawn car is the room's own flight pose.
+    const flying = carOn(r, lip + 10, { movement: 'airborne', elevation: 27 });
+    const pose = display.update(5000, flying, 200, undefined);
+    expect(pose.y).toBe(27);
+    expect(Math.hypot(pose.x - flying.position.x, pose.z - flying.position.z)).toBeLessThan(0.01);
+  });
+});
