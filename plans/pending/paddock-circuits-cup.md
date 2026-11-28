@@ -189,10 +189,13 @@ Verified when: a group can create a cup, race three circuits before a deadline, 
 | Cut-off counted run | Line locks at the countdown; server races it with the presses received | Gate 2026-11-27: quitting cannot buy a retry |
 | New online circuits | All six behind flags, enabled by `/stats` measurement, weighted room cap | Gate 2026-11-27 |
 | Order | Fixes → CI/capacity/load → paddock → circuits → Cup | Gate 2026-11-27 |
+| Own-car hotfix (after stage 1) | Forward-only catch-up instead of freezing; per-press display state in the latency spec | CI 150 ms ± 40 ms drew the car 78.8 ticks from the room (buffer 16.1); not reproduced on the sandbox (page round trip ~540 ms), so the spec now logs the display state per press |
+| 1.2 long specs | Software-WebGL time budget (×3 unless d3d11) instead of the test clock | Deviation from the step text: course switching and the four-player ghost start keep real-speed behaviour |
+| 2.2 default budget | `DUEL_MAX_ROOMS` 2 and `DUEL_CAPACITY` 9.2 (two Fleet rooms); idle process always admits one room | Deviation: "two Newport rooms" (2.0) would have refused rooms admitted today (Fleet 4.6, Santa Monica 3.0); the heavy circuits are what the weight limits |
+| 3.2 split | Whole 3D scene on demand (not per venue); Home before the scene; held Home press | The 3.1 report showed Babylon (≈1.9 MB of 2.6 MB first-screen JS) as the bulk; venue scenery is ≈0.3 MB |
 
 ## Not yet specified
-- Phase 2.2: the budget value comes from `/stats` on the live server (precise question then: which circuits fit, and how many rooms).
-- Phase 3.2: fog — which modules move out is decided by the 3.1 report; the 700 kB and 30 % targets are fixed.
+- Phase 2.2 tuning: real weights and budget come from `/stats` on the live server (`DUEL_WEIGHTS`, `DUEL_CAPACITY`).
 - Phase 6.3: exact screen layout follows the paddock's components (fog until Phase 4 lands).
 
 ## Always / Never
@@ -211,9 +214,9 @@ Verified when: a group can create a cup, race three circuits before a deadline, 
 | Phase | Status |
 | --- | --- |
 | 0 Online fixes | done (stage 1: unit tests, LAX sector 10/10 repeats, duel suite 10/10, input-ownership 2/2) |
-| 1 CI | not started |
-| 2 Server capacity | not started |
-| 3 Load time | not started |
+| 1 CI | done on branch (stage 2 bundle) |
+| 2 Server capacity | done on branch (stage 2 bundle); live tuning from /stats pending |
+| 3 Load time | done on branch (stage 2 bundle): entry 1396 → 275 kB; Home 10.0 → 4.6 s, scene 10.0 → 7.0 s (sandbox, Lighthouse mobile throttling) |
 | 4 Paddock + guided race | not started |
 | 5 More circuits | not started |
 | 6 Weekend Cup | not started |
