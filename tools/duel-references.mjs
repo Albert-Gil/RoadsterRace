@@ -10,7 +10,7 @@ const {LocalRace}=await import('../src/core/local-race.ts');
 const {RULES}=await import('../src/core/simulation.ts');
 const {DUEL_PROTOCOL}=await import('../src/duels/protocol.ts');
 const refs=[];
-for(const circuit of ['coastal-launch','golden-gate','santa-monica','san-diego-fleet']){
+for(const circuit of ['coastal-launch','golden-gate','santa-monica','san-diego-fleet','orbital-launchyard','canyon-south-rim','la-nights','snowy-tahoe','capitan-yosemite','lax']){
   const track=findCircuit(circuit).track;
   const lines=[0,1].map(i=>createPracticeSamples(track,circuit==='santa-monica'?(i?6.5:13):circuit==='golden-gate'?(i?6:9):circuit==='san-diego-fleet'?(i?8.5:8):6+i/3,circuit==='santa-monica').map(p=>[p.x,p.z,p.time]));
   const race=new LocalRace(lines.map(line=>{

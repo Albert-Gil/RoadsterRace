@@ -9,13 +9,19 @@ import { coastalTrack } from '../src/core/track';
 import { goldenGateTrack } from '../src/core/tracks/golden-gate';
 import { santaMonicaTrack } from '../src/core/tracks/santa-monica';
 import { sanDiegoFleetTrack } from '../src/core/tracks/san-diego-fleet';
+import { orbitalTrack } from '../src/core/tracks/orbital';
+import { canyonSouthRimTrack } from '../src/core/tracks/canyon-south-rim';
+import { laNightsTrack } from '../src/core/tracks/la-nights';
+import { snowyTahoeTrack } from '../src/core/tracks/snowy-tahoe';
+import { yosemiteTrack } from '../src/core/tracks/yosemite';
+import { laxTrack } from '../src/core/tracks/lax';
 import type { Ability, CompiledRoute, DrawSample, TrackDefinition } from '../src/core/types';
 import { resolveBallot } from '../src/core/rematch-vote';
 import { stats } from './stats';
 import { admits, capacitySettings } from './capacity';
 import { DUEL_PROTOCOL, defaultDuelVenues, packFrame, type AbilityCommand, type AbilityOutcome, type AbilityResult, type DriverSeat, type DuelVenue, type RaceFrame, type Rematch, type RoomView } from '../src/duels/protocol';
 
-const allDuelTracks = [coastalTrack, goldenGateTrack, santaMonicaTrack, sanDiegoFleetTrack];
+const allDuelTracks = [coastalTrack, goldenGateTrack, santaMonicaTrack, sanDiegoFleetTrack, orbitalTrack, canyonSouthRimTrack, laNightsTrack, snowyTahoeTrack, yosemiteTrack, laxTrack];
 /** Circuits this server offers: the defaults plus any listed in DUEL_EXTRA_VENUES (read on each call, comma-separated). */
 export function duelTracks(): Map<string, TrackDefinition> {
   const extra = (process.env.DUEL_EXTRA_VENUES ?? '').split(',').map(id => id.trim()).filter(Boolean);

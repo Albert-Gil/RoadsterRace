@@ -20,7 +20,7 @@ export const MEASURED_WEIGHTS: Readonly<Record<string, number>> = {
   'san-diego-fleet': 4.6, // 1.02 ms
   'orbital-launchyard': 3.5, // 0.77 ms
   'la-nights': 2.5, // 0.56 ms
-  'grand-canyon': 4.7, // 1.03 ms
+  'canyon-south-rim': 4.7, // 1.03 ms (shown as Grand Canyon)
   'snowy-tahoe': 8.9, // 1.96 ms
   'capitan-yosemite': 9.6, // 2.11 ms
   'lax': 11.2, // 2.47 ms

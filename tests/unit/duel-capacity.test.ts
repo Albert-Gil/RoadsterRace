@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { admits, capacitySettings, circuitWeight, DEFAULT_CAPACITY, MEASURED_WEIGHTS } from '../../server/capacity';
-import { duelVenues } from '../../src/duels/protocol';
+import { defaultDuelVenues } from '../../src/duels/protocol';
+
+/** Circuits rooms offered before the weighted limit: the defaults and San Diego Fleet. */
+const earlier = [...defaultDuelVenues, 'san-diego-fleet'];
 
 describe('weighted room capacity', () => {
   const defaults = capacitySettings({});
 
   it('still admits two rooms of every circuit offered before weights existed', () => {
     expect(defaults).toMatchObject({ maxRooms: 2, capacity: DEFAULT_CAPACITY });
-    for (const a of Object.keys(duelVenues)) for (const b of Object.keys(duelVenues)) expect(admits([a], b, defaults), `${a}+${b}`).toBe(true);
+    for (const a of earlier) for (const b of earlier) expect(admits([a], b, defaults), `${a}+${b}`).toBe(true);
     expect(admits(['coastal-launch', 'coastal-launch'], 'coastal-launch', defaults)).toBe(false);
   });
 
@@ -17,7 +20,7 @@ describe('weighted room capacity', () => {
       expect(admits([heavy], heavy, defaults), heavy).toBe(false);
       expect(admits(['san-diego-fleet'], heavy, defaults), heavy).toBe(false);
     }
-    expect(admits(['coastal-launch'], 'grand-canyon', defaults)).toBe(true);
+    expect(admits(['coastal-launch'], 'canyon-south-rim', defaults)).toBe(true);
     expect(circuitWeight('not-a-circuit', defaults)).toBe(Math.max(...Object.values(MEASURED_WEIGHTS)));
   });
 

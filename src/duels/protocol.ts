@@ -8,8 +8,14 @@ import type { Standing } from '../core/local-race';
 export const DUEL_PROTOCOL = 4;
 export const duelVenues = {
   'coastal-launch': 'Newport Island', 'golden-gate': 'Golden Gate', 'santa-monica': 'Santa Monica', 'san-diego-fleet': 'San Diego Fleet',
+  'orbital-launchyard': 'Launchsite', 'canyon-south-rim': 'Grand Canyon', 'la-nights': 'LA Nights', 'snowy-tahoe': 'Snowy Tahoe',
+  'capitan-yosemite': 'Capitan Yosemite', 'lax': 'LAX',
 } as const;
-/** Offered by every room server. Others (San Diego Fleet) need the server's DUEL_EXTRA_VENUES flag; /health lists what is on. */
+/**
+ * Offered by every room server. The others need the server's DUEL_EXTRA_VENUES flag (comma-separated ids);
+ * /health lists what is on and the app offers only those. Each is enabled once /stats shows the free
+ * server can run it (server/capacity.ts weights it).
+ */
 export const defaultDuelVenues = ['coastal-launch', 'golden-gate', 'santa-monica'] as const;
 /** Circuits to offer, from a /health body: its venue list (known ids only), else the defaults. */
 export function offeredVenues(health: unknown): string[] {

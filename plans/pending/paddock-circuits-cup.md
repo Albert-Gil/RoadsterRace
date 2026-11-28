@@ -195,6 +195,7 @@ Verified when: a group can create a cup, race three circuits before a deadline, 
 | 3.2 split | Whole 3D scene on demand (not per venue); Home before the scene; held Home press | The 3.1 report showed Babylon (≈1.9 MB of 2.6 MB first-screen JS) as the bulk; venue scenery is ≈0.3 MB |
 | 4.3 loading seam | `?duelSceneDelay=ms` (development and duel-test builds) holds a round's scene as loading | Scene creation is synchronous today; the seam tests the paddock flow without a slow device |
 | 4.3 race menu | Compact notice over the race (as the mid-race reconnect) | A full-screen menu would hide a race that keeps running |
+| 5.1 Grand Canyon id | `canyon-south-rim` (the circuit shown as Grand Canyon); `grand-canyon` is retired | The capacity weight is keyed by the shown circuit; step time re-measured 1.14 ms median |
 
 ## Not yet specified
 - Phase 2.2 tuning: real weights and budget come from `/stats` on the live server (`DUEL_WEIGHTS`, `DUEL_CAPACITY`).
@@ -220,6 +221,6 @@ Verified when: a group can create a cup, race three circuits before a deadline, 
 | 2 Server capacity | done on branch (stage 2 bundle); live tuning from /stats pending |
 | 3 Load time | done on branch (stage 2 bundle): entry 1396 → 275 kB; Home 10.0 → 4.6 s, scene 10.0 → 7.0 s (sandbox, Lighthouse mobile throttling) |
 | 4 Paddock + guided race | done on branch (stage 3 bundle): screen model, full-screen paddock, loading/compact notices, covered rendering, fades, first-race tips |
-| 5 More circuits | not started |
+| 5 More circuits | in progress (stage 4): six circuits behind DUEL_EXTRA_VENUES, equivalence and reference races, heavy-venue browser test |
 | 6 Weekend Cup | not started |
 | 9 Rollout | not started |
